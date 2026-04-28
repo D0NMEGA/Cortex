@@ -139,8 +139,72 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ## Traceability
 
-<!-- Filled by gsd-roadmapper during ROADMAP.md generation. -->
+Coverage: 65/65 v1 requirements mapped to phases (100%).
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| _(roadmapper will populate)_ | | |
+| FOUND-01 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| FOUND-02 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| FOUND-03 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| FOUND-04 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| FOUND-05 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| IPC-01 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-02 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-03 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-04 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-05 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-06 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-07 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| THREAD-01 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-02 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-03 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-04 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-05 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-06 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-07 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| DEC-01 | Phase 4: NDT1 Training on Indy/Loco | TBD |
+| DEC-02 | Phase 4: NDT1 Training on Indy/Loco | TBD |
+| DEC-03 | Phase 4: NDT1 Training on Indy/Loco | TBD |
+| DEC-04 | Phase 4: NDT1 Training on Indy/Loco | TBD |
+| DEC-05 | Phase 4: NDT1 Training on Indy/Loco | TBD |
+| DEC-06 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-07 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-08 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-09 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-10 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-11 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-12 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| RENDER-01 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-02 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-03 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-04 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-05 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-06 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-07 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-08 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-09 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| REFIT-01 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
+| REFIT-02 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
+| REFIT-03 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
+| SYS-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| SYS-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| SYS-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| SYS-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| SYS-05 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| SYS-06 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| DIST-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| DIST-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| DIST-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| DIST-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| PERF-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| PERF-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| PERF-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| PERF-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| LAT-01 | Phase 9: Photodiode Rig Hardware Build | TBD |
+| LAT-02 | Phase 9: Photodiode Rig Hardware Build | TBD |
+| LAT-03 | Phase 9: Photodiode Rig Hardware Build | TBD |
+| LAT-04 | Phase 9: Photodiode Rig Hardware Build | TBD |
+| LAT-05 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
+| LAT-06 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
+| LAT-07 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
+| LAT-08 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
