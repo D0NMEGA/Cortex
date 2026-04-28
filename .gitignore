@@ -1,0 +1,57 @@
+# === Build artifacts ===
+DerivedData/
+.build/
+build/
+*.xcuserstate
+xcuserdata/
+*.xcworkspace/xcshareddata/swiftpm/
+.swiftpm/
+Package.pins
+Packages/*/.build/
+
+# === XcodeGen output (regenerated; never committed) ===
+Cortex.xcodeproj/
+Cortex.xcworkspace/
+
+# === Apple platform / Xcode noise ===
+.DS_Store
+*.swp
+*.swo
+*~
+
+# === Code-signing material (NEVER commit; protects against accidental leak per Phase 1 threat model) ===
+*.p8
+*.p12
+*.cer
+*.certSigningRequest
+*.mobileprovision
+*.provisionprofile
+fastlane/Matchfile.local
+fastlane/.env
+fastlane/report.xml
+
+# === Coverage / profiling ===
+*.profraw
+*.profdata
+*.gcda
+*.gcno
+
+# === Logs / dumps ===
+*.log
+*.crash
+*.ips
+
+# === Editor noise ===
+.idea/
+.vscode/
+*.iml
+
+# === Bundler / fastlane ===
+.bundle/
+vendor/bundle/
+fastlane/.fastlane.tmp.bundle
+
+# === Python (for any decoder training side-tooling) ===
+__pycache__/
+*.pyc
+.venv/
