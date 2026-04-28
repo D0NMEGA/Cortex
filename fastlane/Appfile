@@ -1,0 +1,10 @@
+# fastlane/Appfile -- Phase 1 placeholder per CONTEXT.md D-09.
+#
+# All identity fields are commented out because Apple Developer Program enrollment
+# is deferred to Phase 8. Local Mac dev uses Personal Team auto-signing in Xcode.
+
+# app_identifier "com.donovansantine.cortex.mac"  # Commented out -- populated in Phase 8.
+# apple_id "donovan.santine@utexas.edu"           # Commented out -- populated in Phase 8.
+# team_id ""                                       # Populated in Phase 8 with real Developer Program team ID.
+
+# itc_team_id ""                                   # App Store Connect team ID -- Phase 8.

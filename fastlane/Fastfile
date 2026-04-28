@@ -1,0 +1,22 @@
+# fastlane/Fastfile -- Phase 1 placeholder.
+# Source: project-defined per CONTEXT.md D-10.
+#
+# Phase 1: this lane prints a deferral message. NO Apple Developer Portal contact.
+# Phase 8: real lanes for signing, notarization, TestFlight upload land here.
+
+default_platform(:mac)
+
+platform :mac do
+  desc "Phase 1 placeholder lane -- prints a deferral message; does not contact Apple Developer Portal."
+  lane :placeholder do
+    UI.message "fastlane scaffolded. Real lanes (signing, notarize, TestFlight) land in Phase 8 with paid Apple Developer Program enrollment."
+    UI.message "If you reached this lane, you are correctly running fastlane via Bundler. Smoke check passed."
+  end
+end
+
+platform :ios do
+  desc "Phase 1 placeholder lane (iOS)."
+  lane :placeholder do
+    UI.message "fastlane scaffolded for iOS. Phase 8 will activate signing + TestFlight lanes."
+  end
+end

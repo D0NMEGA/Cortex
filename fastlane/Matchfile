@@ -1,0 +1,16 @@
+# fastlane/Matchfile -- Phase 1 placeholder per CONTEXT.md D-10.
+#
+# CRITICAL: git_url MUST be a local file:/// URL in Phase 1.
+# A public GitHub URL here is a Phase 1 threat-model violation -- once certificates
+# exist (Phase 8), pushing to a public URL would leak them.
+# When Phase 8 lands, swap this for a PRIVATE GitHub repo URL with MATCH_PASSWORD.
+
+git_url("file:///Users/donmega/Library/Cortex-fastlane-certs")  # TBD: replaced with private GitHub URL in Phase 8
+git_branch("main")
+storage_mode("git")
+type("development")  # Phase 8 sets this to "appstore" for TestFlight uploads.
+
+# app_identifier and team_id intentionally commented out -- no Developer Program enrollment yet.
+# When Phase 8 enrolls, fill these in:
+# app_identifier(["com.donovansantine.cortex.mac", "com.donovansantine.cortex.ios", "com.donovansantine.cortex.daemon"])
+# team_id("REPLACE_WITH_REAL_TEAM_ID")
