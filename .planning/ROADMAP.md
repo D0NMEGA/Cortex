@@ -43,7 +43,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. App Group container is provisioned and an entitlement-validated empty `shm_open` test fixture in the container survives sandbox checks (replaces the deprecated `com.apple.security.temporary-exception.shared-memory` entitlement)
   3. `PrivacyInfo.xcprivacy` validates against the 2026 required-reason API list with `CA92.1` declared for `mach_absolute_time`
   4. SwiftPM dependency graph resolves from a clean clone with zero CocoaPods artefacts (no `Podfile`, no `Pods/`)
-**Plans**: TBD
+**Plans**: 7 plans
+- [ ] 01-01-PLAN.md — Repo skeleton + 4 SwiftPM packages + cortex_shm.h `_Static_assert` + .gitignore + spec move (FOUND-01, FOUND-04)
+- [ ] 01-02-PLAN.md — XcodeGen project.yml + 3 Xcode targets + entitlements + Info.plist + daemon-bundle SPM smoke (FOUND-01, FOUND-02)
+- [ ] 01-03-PLAN.md — PrivacyInfo.xcprivacy x2 + validate-privacy-manifest.sh with CA92.1 gate proof (FOUND-03)
+- [ ] 01-04-PLAN.md — fastlane scaffolding (Gemfile + Fastfile/Matchfile/Appfile placeholders) per D-09/D-10 (FOUND-01)
+- [ ] 01-05-PLAN.md — README.md + ADR-0001 (8 decisions, 3 critical findings) + ADR template + PR template (FOUND-01)
+- [ ] 01-06-PLAN.md — GitHub Actions ci.yml on macos-15 + Xcode 26.3 + SwiftFormat + SwiftLint + hot-path policy + caches (FOUND-05)
+- [ ] 01-07-PLAN.md — Manual SC#2 verification runbook + ShmCheck surface + sc2-evidence.md (FOUND-02; checkpoint:human-verify)
 
 ### Phase 2: IPC Primitive — kqueue+recvmsg + FlatBuffers + AES-GCM
 **Goal**: A sample frame leaves the acquisition daemon and arrives in the app process in sub-µs, encrypted, with the FD passed via `mach_msg` — the "thinnest viable" transport that the decoder will later sit on top of.
@@ -154,7 +161,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Foundation & 2026 Toolchain | v0 | 0/TBD | Not started | - |
+| 1. Foundation & 2026 Toolchain | v0 | 0/7 | Plans drafted | - |
 | 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 0/TBD | Not started | - |
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/TBD | Not started | - |
 | 4. NDT1 Training on Indy/Loco | v0 | 0/TBD | Not started | - |
