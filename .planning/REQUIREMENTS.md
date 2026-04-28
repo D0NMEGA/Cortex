@@ -9,10 +9,10 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### Foundation (FOUND)
 
-- [ ] **FOUND-01**: Repository scaffolded with Xcode 26 + Swift 6.2, targeting macOS 26 Tahoe and iPadOS 26
+- [x] **FOUND-01**: Repository scaffolded with Xcode 26 + Swift 6.2, targeting macOS 26 Tahoe and iPadOS 26 — Plan 01-01 (CortexCore mixed Swift+C package + 3 stubs); see [01-01-SUMMARY.md](phases/01-foundation-2026-toolchain/01-01-SUMMARY.md)
 - [ ] **FOUND-02**: App Group container configured for shared-memory IPC (replaces deprecated `com.apple.security.temporary-exception.shared-memory` entitlement)
 - [ ] **FOUND-03**: Privacy manifest `PrivacyInfo.xcprivacy` includes `CA92.1` reason code for `mach_absolute_time`
-- [ ] **FOUND-04**: SwiftPM-only dependency graph (no CocoaPods anywhere in the build)
+- [x] **FOUND-04**: SwiftPM-only dependency graph (no CocoaPods anywhere in the build) — Plan 01-01 (zero Podfile/Pods/ artifacts, four SwiftPM packages well-formed); see [01-01-SUMMARY.md](phases/01-foundation-2026-toolchain/01-01-SUMMARY.md)
 - [ ] **FOUND-05**: GitHub Actions CI runs on `macos-15` runner with Xcode 26 toolchain
 
 ### IPC Transport (IPC)
@@ -143,10 +143,10 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| FOUND-01 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| FOUND-01 | Phase 1: Foundation & 2026 Toolchain | 01-01 (complete) |
 | FOUND-02 | Phase 1: Foundation & 2026 Toolchain | TBD |
 | FOUND-03 | Phase 1: Foundation & 2026 Toolchain | TBD |
-| FOUND-04 | Phase 1: Foundation & 2026 Toolchain | TBD |
+| FOUND-04 | Phase 1: Foundation & 2026 Toolchain | 01-01 (complete) |
 | FOUND-05 | Phase 1: Foundation & 2026 Toolchain | TBD |
 | IPC-01 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
 | IPC-02 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
