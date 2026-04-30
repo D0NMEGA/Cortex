@@ -1,0 +1,50 @@
+# SwiftLint configuration per RESEARCH.md Q9.
+# Disabled rules avoid overlap with SwiftFormat (line_length, todo).
+# Opt-in rules cover the high-leverage checks for production-grade Swift.
+
+disabled_rules:
+  - line_length              # Already covered by SwiftFormat --maxwidth 120
+  - todo                     # Phase 1 has many TODOs; gate at v0/v1 instead.
+  - trailing_comma           # Conflicts with SwiftFormat --commas inline
+
+opt_in_rules:
+  - empty_count
+  - explicit_init
+  - first_where
+  - force_unwrapping
+  - sorted_imports
+  - unused_import
+  - unused_declaration
+  - convenience_type
+  - empty_collection_literal
+  - empty_string
+  - last_where
+  - operator_usage_whitespace
+  - prefer_self_type_over_type_of_self
+  - redundant_nil_coalescing
+  - redundant_type_annotation
+  - sorted_first_last
+  - toggle_bool
+
+included:
+  - Apps
+  - Packages
+
+excluded:
+  - .build
+  - Packages/CortexCore/.build
+  - Packages/CortexIPC/.build
+  - Packages/CortexRender/.build
+  - Packages/CortexDecoder/.build
+  - DerivedData
+  - Cortex.xcodeproj
+  - Cortex.xcworkspace
+  - vendor
+  - fastlane
+
+analyzer_rules:
+  - unused_declaration
+  - unused_import
+
+force_unwrapping:
+  severity: error            # Force unwrap is BANNED -- try! and as! allowed in tests only.
