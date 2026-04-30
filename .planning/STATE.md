@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plans 01-01, 01-02, 01-03, 01-04, 01-05, 01-06 complete (Wave 1 + Wave 2 + Wave 3 done); ready for Wave 4 Plan 01-07 (manual SC#2 cross-process shm_open verification runbook -- autonomous: false, requires user)
-last_updated: "2026-04-30T04:50:00Z"
-last_activity: 2026-04-30 -- Plan 01-06 (GitHub Actions CI on macos-15 + Xcode 26.3 + .swiftformat + .swiftlint.yml + hotpath-policy.sh) complete
+stopped_at: "Plan 01-07 Task 1 complete (ShmCheck surface added at commit 2f116bc); Task 2 (manual SC#2 runbook on Apple Silicon Mac) DEFERRED at user request -- runbook in 01-07-PLAN.md lines 339-501. Phase 1 NOT marked complete; verify_phase_goal NOT run. Resume: ensure Apple Silicon Mac + Xcode 26.x + Personal Team signing available, then run /gsd-execute-phase 1 again to re-enter the checkpoint."
+last_updated: "2026-04-30T04:55:00Z"
+last_activity: 2026-04-30 -- Plan 01-07 Task 1 (ShmCheck surface for SC#2 runbook) complete; Task 2 manual checkpoint deferred
 progress:
   total_phases: 10
   completed_phases: 0
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 ## Current Position
 
-Phase: 01 (foundation-2026-toolchain) — EXECUTING
-Plan: 6 of 7 (next -- 01-07 manual SC#2 verification runbook; Waves 1+2+3 complete: 01-01..01-06 done)
-Status: Ready to execute Wave 4 -- Plan 01-07 (manual SC#2 cross-process shm_open verification, autonomous: false, requires user execution on Apple Silicon Mac)
-Last activity: 2026-04-30 -- Plan 01-06 (GitHub Actions CI on macos-15 + Xcode 26.3 + .swiftformat + .swiftlint.yml + hotpath-policy.sh) complete
+Phase: 01 (foundation-2026-toolchain) — PAUSED at manual checkpoint
+Plan: 6 of 7 + 01-07 Task 1 (ShmCheck surface). Task 2 (manual runbook) deferred per user choice.
+Status: PAUSED -- waiting on user to execute the SC#2 manual runbook on an Apple Silicon Mac with Xcode 26.x and Personal Team signing. Runbook documented in `.planning/phases/01-foundation-2026-toolchain/01-07-PLAN.md` lines 339-501. Evidence template same file lines 443-499. Resume via `/gsd-execute-phase 1` once the runbook is done and `sc2-evidence.md` is committed.
+Last activity: 2026-04-30 -- Plan 01-07 Task 1 complete (commit 2f116bc); Task 2 deferred
 
-Progress: [█████████░] 86%
+Progress: [█████████░] 86% (Phase 1 cannot mark complete until SC#2 runbook evidence is committed)
 
 ## Performance Metrics
 
