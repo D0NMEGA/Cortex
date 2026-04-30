@@ -1,0 +1,155 @@
+# XcodeGen declarative spec -- generates Cortex.xcodeproj and Cortex.xcworkspace.
+# Source of truth for: target topology (D-01..D-04), bundle IDs (D-05..D-07),
+# App Group entitlement scope (D-07), Mac Catalyst opt-out (D-01), and SwiftPM
+# consumption (D-02). PrivacyInfo.xcprivacy paths included in sources: lists per
+# Plan 01-03 cross-phase note (RESEARCH.md Pitfall #7).
+#
+# Regenerate with: xcodegen
+# Both .xcodeproj and .xcworkspace are gitignored -- never commit them.
+#
+# References:
+#   .planning/phases/01-foundation-2026-toolchain/01-CONTEXT.md (D-01..D-16)
+#   .planning/phases/01-foundation-2026-toolchain/01-RESEARCH.md Q1, Q3, Q4 / Critical Finding #1, #4
+#   docs/adr/0001-foundation-and-2026-toolchain.md (ADR-0001)
+name: Cortex
+
+options:
+  bundleIdPrefix: com.donovansantine.cortex
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+  developmentLanguage: en
+  generateEmptyDirectories: true
+  createIntermediateGroups: true
+  defaultConfig: Debug
+
+settings:
+  base:
+    SWIFT_VERSION: "6.2"
+    SWIFT_STRICT_CONCURRENCY: complete
+    ALWAYS_SEARCH_USER_PATHS: NO
+    ENABLE_USER_SCRIPT_SANDBOXING: NO  # Disabled to keep validate-privacy-manifest.sh runnable from build phases if ever needed.
+
+packages:
+  CortexCore:
+    path: Packages/CortexCore
+  CortexIPC:
+    path: Packages/CortexIPC
+  CortexRender:
+    path: Packages/CortexRender
+  CortexDecoder:
+    path: Packages/CortexDecoder
+
+targets:
+  CortexiOS:
+    type: application
+    platform: iOS
+    sources:
+      - path: Apps/CortexiOS
+    dependencies:
+      - package: CortexCore
+    info:
+      path: Apps/CortexiOS/Info.plist
+      properties:
+        CFBundleDisplayName: Cortex
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        # CADisableMinimumFrameDurationOnPhone arrives in Phase 6 with the renderer.
+    entitlements:
+      path: Apps/CortexiOS/Cortex.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.donovansantine.cortex.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.ios
+        TARGETED_DEVICE_FAMILY: "2"        # iPad only (1=iPhone, 2=iPad). iPhone explicitly out of scope.
+        DEVELOPMENT_TEAM: ""               # Personal Team auto-signs locally; CI uses CODE_SIGNING_ALLOWED=NO.
+        CODE_SIGN_STYLE: Automatic
+        IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+
+  CortexMac:
+    type: application
+    platform: macOS
+    sources:
+      - path: Apps/CortexMac
+    dependencies:
+      - package: CortexCore
+      - target: CortexDaemon                # Build the daemon bundle as a peer artifact when CortexMac builds.
+    info:
+      path: Apps/CortexMac/Info.plist
+      properties:
+        CFBundleDisplayName: Cortex
+        LSUIElement: false
+        NSPrincipalClass: NSApplication
+    entitlements:
+      path: Apps/CortexMac/Cortex.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.donovansantine.cortex.shared
+        # NOT enabling the app sandbox entitlement in Phase 1.
+        # Per RESEARCH.md Critical Finding #1: unsandboxed Mac binaries can use the App
+        # Group container without provisioning-profile authorization. Sandbox is added
+        # in Phase 8 with paid Developer Program enrollment. Do not change this without
+        # updating ADR-0001.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.mac
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        SUPPORTS_MACCATALYST: NO            # Defense-in-depth against accidental Catalyst (RENDER-08).
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+
+  CortexDaemon:
+    type: bundle                            # Background-helper bundle per D-03.
+    platform: macOS
+    sources:
+      - path: Apps/CortexDaemon
+    dependencies:
+      - package: CortexCore
+    info:
+      path: Apps/CortexDaemon/Info.plist
+      properties:
+        CFBundlePackageType: BNDL
+        LSUIElement: true
+        NSHumanReadableCopyright: ""
+    entitlements:
+      path: Apps/CortexDaemon/Cortex.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.donovansantine.cortex.shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.daemon
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        SKIP_INSTALL: NO
+        WRAPPER_EXTENSION: bundle
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+
+schemes:
+  CortexiOS:
+    build:
+      targets:
+        CortexiOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+  CortexMac:
+    build:
+      targets:
+        CortexMac: all
+        CortexDaemon: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+  CortexDaemon:
+    build:
+      targets:
+        CortexDaemon: all
+    run:
+      config: Debug
