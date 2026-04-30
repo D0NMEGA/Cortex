@@ -9,7 +9,7 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### Foundation (FOUND)
 
-- [x] **FOUND-01**: Repository scaffolded with Xcode 26 + Swift 6.2, targeting macOS 26 Tahoe and iPadOS 26 — Plan 01-01 (CortexCore mixed Swift+C package + 3 stubs); see [01-01-SUMMARY.md](phases/01-foundation-2026-toolchain/01-01-SUMMARY.md)
+- [x] **FOUND-01**: Repository scaffolded with Xcode 26 + Swift 6.2, targeting macOS 26 Tahoe and iPadOS 26 — Plan 01-01 (CortexCore mixed Swift+C package + 3 stubs), Plan 01-04 (fastlane Phase-1 placeholders + Bundler-managed install); see [01-01-SUMMARY.md](phases/01-foundation-2026-toolchain/01-01-SUMMARY.md), [01-04-SUMMARY.md](phases/01-foundation-2026-toolchain/01-04-SUMMARY.md)
 - [ ] **FOUND-02**: App Group container configured for shared-memory IPC (replaces deprecated `com.apple.security.temporary-exception.shared-memory` entitlement)
 - [x] **FOUND-03**: Privacy manifest `PrivacyInfo.xcprivacy` includes `CA92.1` reason code for `mach_absolute_time` — Plan 01-03 (two manifests + validate-privacy-manifest.sh CI gate, negative-control proven to bite); see [01-03-SUMMARY.md](phases/01-foundation-2026-toolchain/01-03-SUMMARY.md)
 - [x] **FOUND-04**: SwiftPM-only dependency graph (no CocoaPods anywhere in the build) — Plan 01-01 (zero Podfile/Pods/ artifacts, four SwiftPM packages well-formed); see [01-01-SUMMARY.md](phases/01-foundation-2026-toolchain/01-01-SUMMARY.md)
@@ -143,7 +143,7 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|
-| FOUND-01 | Phase 1: Foundation & 2026 Toolchain | 01-01 (complete) |
+| FOUND-01 | Phase 1: Foundation & 2026 Toolchain | 01-01 (complete), 01-04 (complete) |
 | FOUND-02 | Phase 1: Foundation & 2026 Toolchain | TBD |
 | FOUND-03 | Phase 1: Foundation & 2026 Toolchain | 01-03 (complete) |
 | FOUND-04 | Phase 1: Foundation & 2026 Toolchain | 01-01 (complete) |

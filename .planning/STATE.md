@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plans 01-01 and 01-03 complete (out-of-order, Wave 1); ready for Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
-last_updated: "2026-04-28T20:10:59Z"
-last_activity: 2026-04-28 -- Plan 01-03 (PrivacyInfo.xcprivacy + validate-privacy-manifest.sh) complete
+stopped_at: Plans 01-01, 01-03, 01-04 complete (Wave 1, all three out-of-order parallel plans done); ready for Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
+last_updated: "2026-04-28T20:21:00Z"
+last_activity: 2026-04-28 -- Plan 01-04 (fastlane Phase-1 scaffolding -- Gemfile + Fastfile/Matchfile/Appfile placeholders; Bundler-managed install of fastlane 2.233.0) complete
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 7
-  completed_plans: 2
-  percent: 29
+  completed_plans: 3
+  percent: 43
 ---
 
 # Project State
@@ -26,30 +26,30 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 01 (foundation-2026-toolchain) — EXECUTING
-Plan: 2 of 7 (next — 01-02 XcodeGen project.yml; 01-03 already complete out-of-order via Wave 1)
+Plan: 3 of 7 (next — 01-02 XcodeGen project.yml; 01-03 and 01-04 already complete out-of-order via Wave 1)
 Status: Ready to execute Plan 01-02
-Last activity: 2026-04-28 -- Plan 01-03 (PrivacyInfo.xcprivacy + validate-privacy-manifest.sh) complete
+Last activity: 2026-04-28 -- Plan 01-04 (fastlane Phase-1 scaffolding) complete
 
-Progress: [███░░░░░░░] 29%
+Progress: [████░░░░░░] 43%
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 2
-- Average duration: 4m
-- Total execution time: ~8 minutes
+- Total plans completed: 3
+- Average duration: ~4m
+- Total execution time: ~13 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 2 | 8m | 4m |
+| 01 | 3 | 13m | 4.3m |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (5m), 01-03 (3m)
-- Trend: ↓ duration (two data points; Plan 03 lighter scope — 2 tasks, 3 files)
+- Last 5 plans: 01-01 (5m), 01-03 (3m), 01-04 (5m)
+- Trend: stable ~3-5m per Wave 1 plan; 01-04 included a Rule 3 environmental fix (brew Ruby install) that took ~30s but did not blow up the budget
 
 *Updated after each plan completion*
 
@@ -83,6 +83,16 @@ Recent architectural commitments shaping all phases:
 - Validator script uses only macOS-bundled `plutil` + `grep` — no homebrew installs, no Python, no jq. Runs on bare `macos-15` GitHub Actions runner per FOUND-05
 - Negative-control test executed: stripping `<string>CA92.1</string>` from a temp copy made the validator exit 1 with `ERROR: ... missing CA92.1 reason code (required for mach_absolute_time)`. The trap is armed and proven to bite — Phase 1 has structural defense against future drift the moment Plan 01-06 wires this into CI
 
+**Plan 01-04:**
+
+- fastlane pinned via `gem "fastlane", "~> 2.226"` in Gemfile; Bundler resolved to fastlane 2.233.0 + 94 transitive deps; Gemfile.lock committed as canonical pin with sha256 checksums
+- Matchfile uses `git_url("file:///Users/donmega/Library/Cortex-fastlane-certs")` per RESEARCH.md Q8 — local-only, never traverses network. Negative-grep verified no `https://github.com/` and no `git@github.com:` substrings in Matchfile (Phase 1 threat-model T-01-04-01 mitigated)
+- Appfile keeps `app_identifier`, `apple_id`, `team_id`, `itc_team_id` all commented out per D-09 (deferred enrollment); negative-grep verified no uncommented `team_id "..."` or `apple_id "..."` lines
+- Fastfile defines exactly two placeholder lanes (mac + ios), each prints a deferral `UI.message` and contains zero calls to `match`, `gym`, `pilot`, `deliver`, or `notarize`
+- Rule 3 (blocking) auto-fix: macOS system Ruby 2.6 cannot build json-2.7.6 native extension; ran `brew install ruby` (Ruby 4.0.3) and re-ran `bundle install` cleanly. Plan explicitly anticipated this case in Step 5; documented in 01-04-SUMMARY.md
+- All four Ruby files (Gemfile + Fastfile + Matchfile + Appfile) parse cleanly under `ruby -c`
+- Phase 8 swap targets explicitly documented in 01-04-SUMMARY.md: replace Matchfile `file:///` with private GitHub URL + `MATCH_PASSWORD`, change `type("development")` to `type("appstore")`, uncomment Appfile identity fields, add real lanes to Fastfile
+
 ### Pending Todos
 
 None yet.
@@ -99,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-28T20:08:50Z
-Stopped at: Plans 01-01 and 01-03 complete (Wave 1 out-of-order); ready for Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
+Last session: 2026-04-28T20:21:00Z
+Stopped at: Plans 01-01, 01-03, 01-04 complete (Wave 1 fully done out-of-order); ready for Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
 Resume file: .planning/phases/01-foundation-2026-toolchain/01-02-PLAN.md
