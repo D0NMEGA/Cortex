@@ -45,7 +45,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. SwiftPM dependency graph resolves from a clean clone with zero CocoaPods artefacts (no `Podfile`, no `Pods/`)
 **Plans**: 7 plans
 - [x] 01-01-PLAN.md — Repo skeleton + 4 SwiftPM packages + cortex_shm.h `_Static_assert` + .gitignore + spec move (FOUND-01, FOUND-04) — completed 2026-04-28, see [01-01-SUMMARY.md](phases/01-foundation-2026-toolchain/01-01-SUMMARY.md)
-- [ ] 01-02-PLAN.md — XcodeGen project.yml + 3 Xcode targets + entitlements + Info.plist + daemon-bundle SPM smoke (FOUND-01, FOUND-02)
+- [x] 01-02-PLAN.md — XcodeGen project.yml + 3 Xcode targets + entitlements + Info.plist + daemon-bundle SPM smoke evidence (FOUND-01, FOUND-02) — completed 2026-04-30, see [01-02-SUMMARY.md](phases/01-foundation-2026-toolchain/01-02-SUMMARY.md)
 - [x] 01-03-PLAN.md — PrivacyInfo.xcprivacy x2 + validate-privacy-manifest.sh with CA92.1 gate proof (FOUND-03) — completed 2026-04-28, see [01-03-SUMMARY.md](phases/01-foundation-2026-toolchain/01-03-SUMMARY.md)
 - [x] 01-04-PLAN.md — fastlane scaffolding (Gemfile + Fastfile/Matchfile/Appfile placeholders) per D-09/D-10 (FOUND-01) — completed 2026-04-28, see [01-04-SUMMARY.md](phases/01-foundation-2026-toolchain/01-04-SUMMARY.md)
 - [x] 01-05-PLAN.md — README.md + ADR-0001 (8 decisions, 3 critical findings) + ADR template + PR template (FOUND-01) — completed 2026-04-30, see [01-05-SUMMARY.md](phases/01-foundation-2026-toolchain/01-05-SUMMARY.md)
@@ -161,7 +161,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Foundation & 2026 Toolchain | v0 | 4/7 | In progress (01-01, 01-03, 01-04, 01-05 complete; 01-02, 01-06, 01-07 remaining) | - |
+| 1. Foundation & 2026 Toolchain | v0 | 5/7 | In progress (01-01, 01-02, 01-03, 01-04, 01-05 complete; 01-06, 01-07 remaining) | - |
 | 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 0/TBD | Not started | - |
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/TBD | Not started | - |
 | 4. NDT1 Training on Indy/Loco | v0 | 0/TBD | Not started | - |
