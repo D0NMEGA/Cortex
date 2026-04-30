@@ -49,7 +49,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 01-03-PLAN.md — PrivacyInfo.xcprivacy x2 + validate-privacy-manifest.sh with CA92.1 gate proof (FOUND-03) — completed 2026-04-28, see [01-03-SUMMARY.md](phases/01-foundation-2026-toolchain/01-03-SUMMARY.md)
 - [x] 01-04-PLAN.md — fastlane scaffolding (Gemfile + Fastfile/Matchfile/Appfile placeholders) per D-09/D-10 (FOUND-01) — completed 2026-04-28, see [01-04-SUMMARY.md](phases/01-foundation-2026-toolchain/01-04-SUMMARY.md)
 - [x] 01-05-PLAN.md — README.md + ADR-0001 (8 decisions, 3 critical findings) + ADR template + PR template (FOUND-01) — completed 2026-04-30, see [01-05-SUMMARY.md](phases/01-foundation-2026-toolchain/01-05-SUMMARY.md)
-- [ ] 01-06-PLAN.md — GitHub Actions ci.yml on macos-15 + Xcode 26.3 + SwiftFormat + SwiftLint + hot-path policy + caches (FOUND-05)
+- [x] 01-06-PLAN.md — GitHub Actions ci.yml on macos-15 + Xcode 26.3 + SwiftFormat + SwiftLint + hot-path policy + caches (FOUND-05)
 - [ ] 01-07-PLAN.md — Manual SC#2 verification runbook + ShmCheck surface + sc2-evidence.md (FOUND-02; checkpoint:human-verify)
 
 ### Phase 2: IPC Primitive — kqueue+recvmsg + FlatBuffers + AES-GCM
