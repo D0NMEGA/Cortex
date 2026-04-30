@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Plans 01-01, 01-03, 01-04 complete (Wave 1, all three out-of-order parallel plans done); ready for Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
-last_updated: "2026-04-28T20:21:00Z"
-last_activity: 2026-04-28 -- Plan 01-04 (fastlane Phase-1 scaffolding -- Gemfile + Fastfile/Matchfile/Appfile placeholders; Bundler-managed install of fastlane 2.233.0) complete
+stopped_at: Plans 01-01, 01-03, 01-04, 01-05 complete (Wave 1 fully done); ready for Wave 2 Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
+last_updated: "2026-04-30T04:35:13Z"
+last_activity: 2026-04-30 -- Plan 01-05 (README + ADR-0001 + ADR template + PR template) complete
 progress:
   total_phases: 10
   completed_phases: 0
   total_plans: 7
-  completed_plans: 3
-  percent: 43
+  completed_plans: 4
+  percent: 57
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 01 (foundation-2026-toolchain) — EXECUTING
-Plan: 3 of 7 (next — 01-02 XcodeGen project.yml; 01-03 and 01-04 already complete out-of-order via Wave 1)
-Status: Ready to execute Plan 01-02
-Last activity: 2026-04-28 -- Plan 01-04 (fastlane Phase-1 scaffolding) complete
+Plan: 4 of 7 (next -- 01-02 XcodeGen project.yml; Wave 1 complete: 01-01, 01-03, 01-04, 01-05 done)
+Status: Ready to execute Plan 01-02 (Wave 2)
+Last activity: 2026-04-30 -- Plan 01-05 (README + ADR-0001 + ADR template + PR template) complete
 
-Progress: [████░░░░░░] 43%
+Progress: [█████░░░░░] 57%
 
 ## Performance Metrics
 
@@ -93,6 +93,13 @@ Recent architectural commitments shaping all phases:
 - All four Ruby files (Gemfile + Fastfile + Matchfile + Appfile) parse cleanly under `ruby -c`
 - Phase 8 swap targets explicitly documented in 01-04-SUMMARY.md: replace Matchfile `file:///` with private GitHub URL + `MATCH_PASSWORD`, change `type("development")` to `type("appstore")`, uncomment Appfile identity fields, add real lanes to Fastfile
 
+**Plan 01-05:**
+
+- README kept minimal (Phase 1 foundation); credibility-grade README with architectural commitments table is DIST-04 (Phase 8)
+- ADR-0001 explicitly documents fastlane as Phase-1 placeholder per D-09/D-10 (honoring 01-04 cross-phase note)
+- ADR-0001 is the format precedent for ADR-0002+: ## Context / ## Decision / ## Consequences / ## Alternatives considered; sequential numbering 0001-0002-...; no decimals; supersession via new ADR
+- PR template's architectural commitment checklist mirrors Plan 06 CI gates (defense-in-depth)
+
 ### Pending Todos
 
 None yet.
@@ -109,6 +116,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-28T20:21:00Z
-Stopped at: Plans 01-01, 01-03, 01-04 complete (Wave 1 fully done out-of-order); ready for Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
+Last session: 2026-04-30T04:35:13Z
+Stopped at: Wave 1 complete (01-01, 01-03, 01-04, 01-05 all done); ready for Wave 2 Plan 01-02 (XcodeGen project.yml + 3 Xcode targets + entitlements)
 Resume file: .planning/phases/01-foundation-2026-toolchain/01-02-PLAN.md
