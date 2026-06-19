@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: "Plan 01-07 Task 1 complete (ShmCheck surface added at commit 2f116bc); Task 2 (manual SC#2 runbook on Apple Silicon Mac) DEFERRED at user request -- runbook in 01-07-PLAN.md lines 339-501. Phase 1 NOT marked complete; verify_phase_goal NOT run. Resume: ensure Apple Silicon Mac + Xcode 26.x + Personal Team signing available, then run /gsd-execute-phase 1 again to re-enter the checkpoint."
-last_updated: "2026-04-30T04:55:00Z"
-last_activity: 2026-04-30 -- Plan 01-07 Task 1 (ShmCheck surface for SC#2 runbook) complete; Task 2 manual checkpoint deferred
+status: active
+stopped_at: "Phase 1 (foundation-2026-toolchain) COMPLETE: 7/7 plans, verification passed (4/4 success criteria, FOUND-01..05 satisfied). SC#2 cross-process shm_open verified on Apple Silicon M5 Pro / Xcode 26.3 with committed evidence (sc2-evidence.md). Phase 2 (IPC primitive) NOT started — awaiting user go-ahead (auto-advance intentionally not taken given the interactive session)."
+last_updated: "2026-06-19T22:49:39.497Z"
+last_activity: 2026-06-19
 progress:
   total_phases: 10
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 7
-  completed_plans: 6
-  percent: 86
+  completed_plans: 7
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 01 — foundation-2026-toolchain
+**Current focus:** Phase 2 — IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) — not started
 
 ## Current Position
 
-Phase: 01 (foundation-2026-toolchain) — PAUSED at manual checkpoint
-Plan: 6 of 7 + 01-07 Task 1 (ShmCheck surface). Task 2 (manual runbook) deferred per user choice.
-Status: PAUSED -- waiting on user to execute the SC#2 manual runbook on an Apple Silicon Mac with Xcode 26.x and Personal Team signing. Runbook documented in `.planning/phases/01-foundation-2026-toolchain/01-07-PLAN.md` lines 339-501. Evidence template same file lines 443-499. Resume via `/gsd-execute-phase 1` once the runbook is done and `sc2-evidence.md` is committed.
-Last activity: 2026-04-30 -- Plan 01-07 Task 1 complete (commit 2f116bc); Task 2 deferred
+Phase: 2 (IPC Primitive) — not started
+Plan: None
+Status: Phase 1 COMPLETE and verified (passed — 4/4 success criteria). SC#2 cross-process shm_open verified on Apple Silicon M5 Pro / macOS 26 / Xcode 26.3 with committed evidence (`sc2-evidence.md`). Awaiting user decision to begin Phase 2 (auto-advance intentionally not taken).
+Last activity: 2026-06-19 — Phase 1 complete (Plan 01-07 SC#2 runbook PASS; 6 toolchain-surfaced defects fixed)
 
-Progress: [█████████░] 86% (Phase 1 cannot mark complete until SC#2 runbook evidence is committed)
+Progress: Phase 1 [██████████] 100% (7/7 plans) · Project [█░░░░░░░░░] 1/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 6
+- Total plans completed: 7 (all Phase 1)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -44,7 +44,7 @@ Progress: [█████████░] 86% (Phase 1 cannot mark complete unt
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01 | 6 | 32m | 5.3m |
+| 01 | 7 | - | - |
 
 **Recent Trend:**
 
