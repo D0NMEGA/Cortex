@@ -103,18 +103,22 @@ targets:
         CODE_SIGN_STYLE: Automatic
 
   CortexDaemon:
-    type: bundle                            # Background-helper bundle per D-03.
+    type: tool                              # Standalone command-line executable (mh_execute).
+                                            # Was type: bundle (D-03), but an mh_bundle cannot run
+                                            # standalone (`cannot execute binary file`) nor carry
+                                            # entitlements -- it is dlopen'd by a host. A daemon is
+                                            # its own process, so D-03's functional requirement
+                                            # (cross-process shm_open from the daemon, App Group
+                                            # entitlement honored = Phase 1 SC#2) requires mh_execute.
+                                            # Resolves the disposition Plan 01-02 deferred to Xcode 26
+                                            # (Critical Finding #4 / RESEARCH Pitfall #6). Final
+                                            # App-Store daemon packaging (XPC service / launchd helper)
+                                            # is a Phase 2 decision -- a bare tool is not App-Store-shippable.
     platform: macOS
     sources:
       - path: Apps/CortexDaemon
     dependencies:
       - package: CortexCore
-    info:
-      path: Apps/CortexDaemon/Info.plist
-      properties:
-        CFBundlePackageType: BNDL
-        LSUIElement: true
-        NSHumanReadableCopyright: ""
     entitlements:
       path: Apps/CortexDaemon/Cortex.entitlements
       properties:
@@ -124,8 +128,6 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.daemon
         MACOSX_DEPLOYMENT_TARGET: "26.0"
-        SKIP_INSTALL: NO
-        WRAPPER_EXTENSION: bundle
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_STYLE: Automatic
 
