@@ -19,4 +19,13 @@ _Static_assert(sizeof(CORTEX_SHM_NAME) <= 32,
                "CORTEX_SHM_NAME exceeds Darwin PSHMNAMLEN (31 bytes + null terminator). "
                "See cortex-spec.md §9 and Packages/CortexCore/Sources/CortexCoreC/include/cortex_shm.h.");
 
+#include <sys/types.h> // mode_t
+
+// Non-variadic wrapper around POSIX shm_open(2). Swift cannot import the C variadic
+// `shm_open(const char *, int, ...)` (it surfaces as "'shm_open' is unavailable:
+// Variadic function is unavailable"), so CortexCore calls this fixed-arity shim
+// instead. `mode` is only consulted by shm_open when O_CREAT is set in `oflag`,
+// matching the POSIX contract. Returns the fd on success, -1 with errno set on failure.
+int cortex_shm_open(const char *name, int oflag, mode_t mode);
+
 #endif // CORTEX_SHM_H

@@ -52,10 +52,11 @@ public enum ShmCheck {
   /// Run the SC#2 verification call: shm_open(CORTEX_SHM_NAME, O_CREAT|O_RDWR, 0600).
   /// Returns a result struct suitable for printing into the evidence file.
   public static func openSharedRegion(processLabel: String? = nil) -> ShmCheckResult {
-    let name = String(cString: CORTEX_SHM_NAME)
+    let name = CORTEX_SHM_NAME // imported from C as a Swift String constant
     let flags: Int32 = O_CREAT | O_RDWR
     let mode: mode_t = 0o600
-    let fd = shm_open(name, flags, mode)
+    // cortex_shm_open is the non-variadic C shim for shm_open (Swift can't call C variadics).
+    let fd = cortex_shm_open(name, flags, mode)
     let err = errno
 
     var inode: UInt64 = 0
@@ -85,7 +86,7 @@ public enum ShmCheck {
   /// Cleanup: shm_unlink the region (call only when finished verifying -- releases the kernel mapping).
   /// Phase 1 runbook does NOT call this so the shm region persists across the two processes.
   public static func unlinkSharedRegion() -> Bool {
-    let name = String(cString: CORTEX_SHM_NAME)
+    let name = CORTEX_SHM_NAME // imported from C as a Swift String constant
     return shm_unlink(name) == 0
   }
 }

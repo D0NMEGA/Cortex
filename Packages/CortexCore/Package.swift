@@ -30,7 +30,14 @@ let package = Package(
     ),
     .testTarget(
       name: "CortexCoreTests",
-      dependencies: ["CortexCore"]
+      dependencies: ["CortexCore"],
+      swiftSettings: [
+        // Mirror the CortexCore target's Approachable Concurrency default so tests can
+        // access MainActor-isolated API (Cortex.shmName, AppGroup.identifier, Time.*)
+        // synchronously under Swift 6.2 strict concurrency. Without this the test
+        // target is nonisolated and cannot reach the main target's isolated members.
+        .defaultIsolation(MainActor.self),
+      ]
     ),
   ]
 )

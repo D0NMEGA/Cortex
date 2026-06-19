@@ -11,5 +11,5 @@ public enum Cortex {
   /// The underlying C constant is enforced at C precompile time via _Static_assert
   /// in Packages/CortexCore/Sources/CortexCoreC/include/cortex_shm.h — changes that
   /// would break Darwin's 31-byte cap fail the build before tests run.
-  public static let shmName: String = String(cString: CORTEX_SHM_NAME)
+  public static let shmName: String = CORTEX_SHM_NAME // imported from C as a Swift String constant
 }
