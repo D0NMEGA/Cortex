@@ -12,15 +12,20 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 ### Validated
 
-(None yet — ship to validate)
+#### Foundation (Phase 1 — completed 2026-06-19)
+- [x] Repo skeleton on Xcode 26 + Swift 6.2 with macOS 26 Tahoe / iPadOS 26 targets — **FOUND-01** (4 SwiftPM packages + 3 XcodeGen targets build under Xcode 26.3 / Swift 6.2)
+- [x] App Group container scaffolding for shared-memory IPC (sidesteps deprecated entitlement) — **FOUND-02**: cross-process `shm_open` between CortexMac.app + CortexDaemon proven on Apple Silicon, entitlement-validated (`sc2-evidence.md`); replaces `com.apple.security.temporary-exception.shared-memory`
+- [x] `PrivacyInfo.xcprivacy` with required-reason API list (`CA92.1` for `mach_absolute_time`) — **FOUND-03** (validate-privacy-manifest.sh passes; CI-gated)
+- [x] Swift Package Manager only (no CocoaPods) — **FOUND-04** (zero Podfile/Pods; clean-clone resolve, 3/3 tests pass)
+- [x] CI on `macos-15` GitHub Actions runner — **FOUND-05** (ci.yml with Xcode 26.3 pin + 16 gates; gate armed — first PR exercises it)
 
 ### Active
 
 #### Foundation
-- [ ] Repo skeleton on Xcode 26 + Swift 6.2 with macOS 26 Tahoe / iPadOS 26 targets
-- [ ] App Group container scaffolding for shared memory IPC (sidesteps deprecated entitlement)
-- [ ] `kqueue`+`recvmsg` IPC primitive demonstrating sample-to-app transport
-- [ ] FlatBuffers wire format with `Sample { ts_ns: u64, channel_data: [f16] }` schema
+- [ ] `kqueue`+`recvmsg` IPC primitive demonstrating sample-to-app transport (Phase 2)
+- [ ] FlatBuffers wire format with `Sample { ts_ns: u64, channel_data: [f16] }` schema (Phase 2)
+
+> Repo skeleton + App Group container scaffolding → **moved to Validated (Phase 1)**. Phase 1 also resolved the daemon packaging: `CortexDaemon` is a standalone `type: tool` (mh_execute) placeholder — the App-Store-distributable form (XPC service / launchd helper) is a Phase 2 decision.
 
 #### Decoder Pipeline
 - [ ] NDT1 implementation (6 layers, h=1-2 heads, 128 hidden dim, 20ms binning, ~1.3M params)
@@ -56,11 +61,10 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 #### Distribution
 - [ ] `notarytool submit` + `xcrun stapler staple` workflow
-- [ ] `PrivacyInfo.xcprivacy` with required-reason API list (`CA92.1` for `mach_absolute_time`)
 - [ ] TestFlight distribution (100 internal / 10,000 external testers)
 - [ ] `fastlane match` + App Store Connect API key (`.p8` JWT) for signing
-- [ ] Swift Package Manager only (no CocoaPods)
-- [ ] CI on `macos-15` GitHub Actions runner
+
+> `PrivacyInfo.xcprivacy` (CA92.1) + SwiftPM-only + CI on macos-15 → **moved to Validated (Phase 1)**.
 
 #### Latency Measurement (v1, weeks 6-7)
 - [ ] Photodiode rig BOM ordered (BPW34 + OPA381 TIA + Saleae Logic Pro 8)
@@ -127,7 +131,8 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 | h=1-2 attention heads | Actual NDT1 design; commonly miscited as 4 heads — do not over-parameterize | — Pending |
 | 30×30 webgrid (not 6×6) | Lex Fridman / Bliss Chapman reference; Neuralink moved past 6×6 | — Pending |
 | Rust `rtrb` or C++ `rigtorp/SPSCQueue` for ring buffer | Rust preferred — `loom` lets you model-check memory ordering, Swift cannot | — Pending |
-| App Group container for shared memory | `com.apple.security.temporary-exception.shared-memory` deprecated for App Store | — Pending |
+| App Group container for shared memory | `com.apple.security.temporary-exception.shared-memory` deprecated for App Store | ✓ Validated Phase 1 — cross-process `shm_open` proven, entitlement-honored (sc2-evidence.md) |
+| CortexDaemon as standalone `type: tool` (mh_execute) | A loadable `mh_bundle` can't run standalone or carry entitlements; D-03 packaging disposition resolved on Xcode 26 | ◆ Phase 1 placeholder — final App-Store form (XPC/launchd) is a Phase 2 decision |
 | `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` for FD passing | Apple-recommended path over Unix-domain `SCM_RIGHTS` | — Pending |
 | Defer photodiode rig to weeks 6-7 | v0 with software timing ships first; v1 with photonic ground truth follows | — Pending |
 | Indy/Loco (Zenodo 3854034) as training data | Canonical BCI pretraining dataset; only viable synthetic source absent real electrodes | — Pending |
@@ -151,4 +156,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-28 after initialization*
+*Last updated: 2026-06-19 — Phase 1 (Foundation & 2026 Toolchain) complete; FOUND-01..05 validated, SC#2 cross-process shm_open verified.*
