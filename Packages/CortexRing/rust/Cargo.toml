@@ -26,11 +26,19 @@ cbindgen = "0.29"
 [target.'cfg(loom)'.dependencies]
 loom = "0.7"
 
+[features]
+# OFF by default. Toggles the OPTIONAL `rtrb` cross-check arm of `benches/throughput.rs` (D-R3).
+# With the feature off, the bench never references `rtrb`, so `cargo build --release --benches`
+# compiles whether or not `rtrb` resolves; with it on, the cross-check benchmark is included:
+#   cargo bench --bench throughput --features rtrb-xcheck
+rtrb-xcheck = []
+
 [dev-dependencies]
-# Plan 02 throughput cross-check (the 1M-frame stress test asserts FIFO + no loss).
+# criterion harness for benches/throughput.rs (the in-house ring's push/pop throughput).
 criterion = "0.5"
 # OPTIONAL bench cross-check ONLY — never the loom target, never a production dependency.
 # loom cannot instrument rtrb's std atomics; the in-house ring is the loom-verified one (D-R3).
+# Used solely by the `rtrb-xcheck`-gated arm of benches/throughput.rs.
 rtrb = "0.3"
 
 [[bench]]

@@ -153,7 +153,18 @@ impl<T> Producer<T> {
 
         // Publish — Release: makes the slot write above happen-before the consumer's matching
         // `tail.load(Acquire)`, so the consumer never reads a torn/stale slot (D-R4).
-        ring.tail.store(tail.wrapping_add(1), Ordering::Release);
+        //
+        // NEGATIVE CONTROL (SC#3a, Spike B): under `--cfg loom_negative_control` this becomes a
+        // `Relaxed` store, deliberately dropping the happens-before edge. The loom permutation test
+        // (`tests/loom_spsc.rs`) must then FAIL — loom finds an interleaving where the consumer sees
+        // the advanced `tail` without the slot write being ordered before its read. The executor
+        // toggles this cfg once to prove the proof bites, then drops it. The cfg is absent in every
+        // real build (production AND a normal `--cfg loom` run), so production is always `Release`.
+        #[cfg(not(loom_negative_control))]
+        let publish = Ordering::Release;
+        #[cfg(loom_negative_control)]
+        let publish = Ordering::Relaxed;
+        ring.tail.store(tail.wrapping_add(1), publish);
         Ok(())
     }
 }

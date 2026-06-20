@@ -18,7 +18,13 @@
 // `RUSTFLAGS="--cfg loom" cargo test --profile loom --test loom_spsc` selects this arm. loom's
 // `AtomicUsize`/`UnsafeCell`/`Arc`/`thread` carry the model-checker bookkeeping that records and
 // permutes every memory operation and thread interleaving.
+//
+// `cell`/`hint`/`thread` are part of the shim's deliberate re-export surface (the loom test crate
+// names `loom::thread::spawn`/`yield_now` through it), but the *library* compilation unit only
+// consumes `sync::Arc` + `atomic` + `cell_compat`, so allow the otherwise-"unused" re-exports here
+// (symmetric to the non-loom arm below).
 #[cfg(loom)]
+#[allow(unused_imports)]
 pub(crate) use loom::{cell, hint, sync, thread};
 
 #[cfg(loom)]
