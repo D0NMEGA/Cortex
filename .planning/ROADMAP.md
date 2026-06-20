@@ -77,7 +77,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A static-analysis CI gate fails the build if any hot-path source file calls `dispatch_async`, contains `lazy var`, holds a `pthread_mutex`, or imports `Foundation`/Obj-C runtime headers (audio-callback rules enforced as code policy)
   3. Rust `rtrb` SPSC ring with cache-line-padded atomics and Acquire/Release ordering moves 1M sample frames producer→consumer with zero observed reorderings under `loom` permutation testing in CI
   4. `cbindgen`-generated header lets Swift consume the Rust ring buffer via a stable C ABI, and a Swift integration test reads frames produced from the C/Rust side
-**Plans**: TBD
+**Plans**: 4 plans (3 waves)
+- [ ] 03-01-PLAN.md — FFI/build spine (Spike A): Rust staticlib + cbindgen header → xcframework .binaryTarget callable from Swift under swift build AND xcodebuild; freeze the C ABI + repr(C) Frame; pre-arm all Phase-3 CI gates (THREAD-06) [Wave 1]
+- [ ] 03-02-PLAN.md — In-house loom-verified SPSC ring: 128B-padded head/tail + Release/Acquire (no SeqCst), tiny loom permutation test + 1M-frame std-atomic FIFO stress test (D-R3/D-R5), real extern "C" bodies (THREAD-04, THREAD-05, THREAD-07) [Wave 2]
+- [ ] 03-03-PLAN.md — Foundation-free pthread USER_INTERACTIVE acquisition worker (productionized Benchmark.swift idiom) + extended hot-path policy gate (.rs tokens + self-test) + SC#1 instruments-evidence runbook (THREAD-01, THREAD-02, THREAD-03) [Wave 2]
+- [ ] 03-04-PLAN.md — Safe Swift wrapper over the cbindgen ABI + SC#4 integration test: produce N frames C/Rust-side, pop+verify value and order (THREAD-06) [Wave 3]
 
 ### Phase 4: NDT1 Training on Indy/Loco Synthetic Replay
 **Goal**: A correctly-sized NDT1 (1.3M params, 6 layers, h=1-2 heads, 128 hidden, 20ms binning — *not* the commonly-miscited 4-head variant) trains end-to-end on the canonical O'Doherty Indy/Loco dataset and emits a 4-bit palettized PyTorch checkpoint ready for ANE conversion. No CoreML or Apple Silicon work yet — this is pure decoder R&D.
@@ -168,7 +172,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 |-------|-----------|----------------|--------|-----------|
 | 1. Foundation & 2026 Toolchain | v0 | 7/7 | ✓ Complete | 2026-06-19 |
 | 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 5/5 | ✓ Complete | 2026-06-20 |
-| 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/TBD | Not started | - |
+| 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/4 | Planned | - |
 | 4. NDT1 Training on Indy/Loco | v0 | 0/TBD | Not started | - |
 | 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/TBD | Not started | - |
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 0/TBD | Not started | - |
