@@ -97,6 +97,14 @@ jobs:
       - name: Run CortexCore unit tests (Swift Testing)
         run: swift test --package-path Packages/CortexCore
 
+      - name: Run CortexIPC tests (Transport + Session + Harness — correctness only, IPC-01..06)
+        # Runs RingTests, DoorbellTests, SampleCodecTests, CryptoTests, KeychainTests, and the
+        # in-process HarnessE2ETests round trip (decoded==sent + all acked). Per D-18 this gates
+        # CORRECTNESS only and checks no performance number — the M4 timing claim is hardware-gated
+        # evidence in sc1-evidence.md, never checked on the M1 runner. The two-process spawn test
+        # XCTSkips when the daemon binary is unavailable in the runner.
+        run: swift test --package-path Packages/CortexIPC
+
       - name: SwiftFormat (lint)
         run: swiftformat --lint .
 
@@ -111,6 +119,20 @@ jobs:
 
       - name: Hot-path policy (D-15, no-op in Phase 1)
         run: ./Tools/scripts/hotpath-policy.sh
+
+      - name: No SCM_RIGHTS / cmsg structural check (SC#2 — FD passing MUST be mach_msg, not socket control messages)
+        # IPC-03/SC#2 mandate the shm fd is handed off via mach_msg + MACH_MSG_PORT_DESCRIPTOR
+        # (fileport), NEVER via BSD-socket control-message FD passing. This grep scans BOTH the
+        # IPC source tree AND the shared C shim tree and fails the build if a socket FD-passing
+        # path is ever reintroduced (defense-in-depth with the per-plan greps in Plans 02-02/02-04).
+        run: |
+          if grep -rnE 'SCM_RIGHTS|cmsg\(' \
+               Packages/CortexIPC/Sources \
+               Packages/CortexCore/Sources/CortexCoreC 2>/dev/null; then
+            echo "ERROR: SCM_RIGHTS/cmsg found — IPC-03/SC#2 mandate mach_msg + MACH_MSG_PORT_DESCRIPTOR, no socket FD passing." >&2
+            exit 1
+          fi
+          echo "OK: no SCM_RIGHTS / cmsg — FD passing is mach_msg-only (SC#2)"
 
       - name: Build CortexMac scheme (unsigned smoke)
         run: |
