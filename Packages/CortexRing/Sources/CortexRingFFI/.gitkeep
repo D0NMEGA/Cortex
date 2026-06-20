@@ -1,0 +1,3 @@
+# Keeps Sources/CortexRingFFI/ tracked. The CortexRingFFI module itself is the
+# CortexRingFFI.xcframework binaryTarget (built by Tools/scripts/build-rust.sh, gitignored);
+# there are no Swift sources here.

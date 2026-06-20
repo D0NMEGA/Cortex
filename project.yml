@@ -39,6 +39,13 @@ packages:
     path: Packages/CortexRender
   CortexDecoder:
     path: Packages/CortexDecoder
+  # Phase 3 Swift↔Rust FFI spine (D-R1). Consumes CortexRingFFI.xcframework via a SwiftPM
+  # .binaryTarget; the xcframework is built by Tools/scripts/build-rust.sh (gitignored, the
+  # `make bootstrap` analogue) BEFORE `xcodegen`/`swift package resolve`. The hot-path TARGET that
+  # depends on CortexRingPing is added in Plan 03; registering the package here proves the
+  # xcodebuild leg of Spike A resolves the binaryTarget end-to-end (CortexMac builds transitively).
+  CortexRing:
+    path: Packages/CortexRing
 
 targets:
   CortexiOS:
