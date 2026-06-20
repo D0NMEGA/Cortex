@@ -19,13 +19,19 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [x] Swift Package Manager only (no CocoaPods) — **FOUND-04** (zero Podfile/Pods; clean-clone resolve, 3/3 tests pass)
 - [x] CI on `macos-15` GitHub Actions runner — **FOUND-05** (ci.yml with Xcode 26.3 pin + 16 gates; gate armed — first PR exercises it)
 
+#### IPC Primitive (Phase 2 — completed 2026-06-20)
+- [x] POSIX shm ring + `kqueue`+`recvmsg` doorbell sample transport — **IPC-01 / IPC-02** (fixed-stride `ShmRing` acquire/release busy-poll + `socketpair`/`kqueue` `EVFILT_READ` doorbell; RingTests/DoorbellTests pass; Transport is Foundation-free, hot-path-gated)
+- [x] Cross-process FD passing via `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` (`fileport_makeport`/`makefd`), zero `SCM_RIGHTS` — **IPC-03 / SC#2** (CI grep-gated over both source trees; CF#3 rendezvous via `posix_spawnattr_setspecialport_np`, proven 3/3)
+- [x] FlatBuffers `Sample { ts_ns, channel_data:[ubyte] f16, seq }` codec with zero-copy Float16 rebind + half-pair length invariant — **IPC-04** (flatc 25.12.19 vendored == runtime; SampleCodecTests pass)
+- [x] AES-GCM via CryptoKit, HKDF per-direction subkeys, 96-bit deterministic seq-nonce — **IPC-05** (CryptoTests: fail-closed tamper, nonce-uniqueness, cross-direction isolation)
+- [x] Session secret in data-protection Keychain (`kCFBooleanTrue` + `AfterFirstUnlockThisDeviceOnly`) — **IPC-06 / SC#3** (CF#1 fallback: single-process round-trip + key delivered over `mach_msg`; cross-process access-group sharing deferred to Phase 8 — free-team signing cannot back the `keychain-access-groups` entitlement)
+- [x] Sub-µs encrypted round-trip on the shm-polled path — **IPC-07 / SC#1**: p50=167ns, **p99=208ns**, σ=89.7ns, n=199k on M5 Pro (≥ M4), hardware-gated evidence (`sc1-evidence.md`), ~4.8× margin under 1µs
+
 ### Active
 
-#### Foundation
-- [ ] `kqueue`+`recvmsg` IPC primitive demonstrating sample-to-app transport (Phase 2)
-- [ ] FlatBuffers wire format with `Sample { ts_ns: u64, channel_data: [f16] }` schema (Phase 2)
+> Foundation IPC items (`kqueue`+`recvmsg` primitive, FlatBuffers `Sample` schema) → **moved to Validated (Phase 2)**.
 
-> Repo skeleton + App Group container scaffolding → **moved to Validated (Phase 1)**. Phase 1 also resolved the daemon packaging: `CortexDaemon` is a standalone `type: tool` (mh_execute) placeholder — the App-Store-distributable form (XPC service / launchd helper) is a Phase 2 decision.
+> Repo skeleton + App Group container scaffolding → **moved to Validated (Phase 1)**. `CortexDaemon` remains a standalone `type: tool` Phase-2 producer; the App-Store-distributable form (XPC service / launchd helper) is deferred to Phase 7/8 (system integration / distribution).
 
 #### Decoder Pipeline
 - [ ] NDT1 implementation (6 layers, h=1-2 heads, 128 hidden dim, 20ms binning, ~1.3M params)
@@ -49,9 +55,9 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [ ] Acquisition/DSP hot path on pthread with `QOS_CLASS_USER_INTERACTIVE` (no Swift Task)
 - [ ] Lock-free SPSC ring buffer (Rust `rtrb` or C++ `rigtorp/SPSCQueue`) with cache-line padding and Acquire/Release ordering
 - [ ] `cbindgen` Swift bridge for the Rust SPSC queue
-- [ ] POSIX `shm_open` shared memory inside App Group container (≤31-byte names per Darwin `PSHMNAMLEN`)
-- [ ] `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` (via `fileport_makeport`) for cross-process FD passing
-- [ ] AES-GCM session encryption via CryptoKit `AES.GCM` (HKDF-derived key, Keychain-stored with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`)
+- [x] POSIX `shm_open` shared memory inside App Group container (≤31-byte names per Darwin `PSHMNAMLEN`) — **validated Phase 2 (IPC-01)**
+- [x] `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` (via `fileport_makeport`) for cross-process FD passing — **validated Phase 2 (IPC-03, no SCM_RIGHTS)**
+- [x] AES-GCM session encryption via CryptoKit `AES.GCM` (HKDF-derived key, Keychain-stored with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) — **validated Phase 2 (IPC-05/06)**
 
 #### System Integration
 - [ ] Apple BCI HID protocol integration as first-class input modality
@@ -123,17 +129,19 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 |----------|-----------|---------|
 | CoreML on ANE (not MLX) | MLX has unbounded P99 + no ANE; CoreML is the only path meeting <2ms p99 budget | — Pending |
 | pthread + `QOS_CLASS_USER_INTERACTIVE` (not Swift Task) | Swift cooperative scheduling cannot meet 1ms deadlines; 154 sources across Massicotte/Adamson/Napier confirm | — Pending |
-| `kqueue`+`recvmsg` over POSIX shm (not Network.framework) | Sub-µs vs 50-200µs overhead; disqualifying difference for 1ms deadline | — Pending |
+| `kqueue`+`recvmsg` over POSIX shm (not Network.framework) | Sub-µs vs 50-200µs overhead; disqualifying difference for 1ms deadline | ✓ Validated Phase 2 — shm busy-poll round-trip p99=208ns (CF#2: doorbell is the idle wake, the ring is the measured path) |
 | `CAMetalDisplayLink` (not `CADisplayLink`) | Bundles drawable acquisition, encode deadline, on-glass timestamp into one callback for beam-raced 120Hz | — Pending |
-| AES-GCM via CryptoKit (not ChaCha20-Poly1305) | Apple Silicon FEAT_AES makes AES-GCM faster; ChaCha is faster only on x86-without-AES-NI | — Pending |
+| AES-GCM via CryptoKit (not ChaCha20-Poly1305) | Apple Silicon FEAT_AES makes AES-GCM faster; ChaCha is faster only on x86-without-AES-NI | ✓ Validated Phase 2 — HKDF per-direction subkeys + deterministic seq-nonce; fail-closed, nonce-uniqueness tested (off the measured path per D-01) |
 | NDT1 not NDT2 | Multi-context pretraining adds session-conditioning latency unnecessary for single-user v0 | — Pending |
 | BC1S `(B, C, 1, S)` tensor layout | Only layout the ANE pins; standard `(B, S, C)` evicts to GPU/CPU | — Pending |
 | h=1-2 attention heads | Actual NDT1 design; commonly miscited as 4 heads — do not over-parameterize | — Pending |
 | 30×30 webgrid (not 6×6) | Lex Fridman / Bliss Chapman reference; Neuralink moved past 6×6 | — Pending |
 | Rust `rtrb` or C++ `rigtorp/SPSCQueue` for ring buffer | Rust preferred — `loom` lets you model-check memory ordering, Swift cannot | — Pending |
 | App Group container for shared memory | `com.apple.security.temporary-exception.shared-memory` deprecated for App Store | ✓ Validated Phase 1 — cross-process `shm_open` proven, entitlement-honored (sc2-evidence.md) |
-| CortexDaemon as standalone `type: tool` (mh_execute) | A loadable `mh_bundle` can't run standalone or carry entitlements; D-03 packaging disposition resolved on Xcode 26 | ◆ Phase 1 placeholder — final App-Store form (XPC/launchd) is a Phase 2 decision |
-| `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` for FD passing | Apple-recommended path over Unix-domain `SCM_RIGHTS` | — Pending |
+| CortexDaemon as standalone `type: tool` (mh_execute) | A loadable `mh_bundle` can't run standalone or carry entitlements; D-03 packaging disposition resolved on Xcode 26 | ✓ Phase 2 — kept as `type: tool`, now the Phase-2 producer (generates key, encrypts, writes ring, passes fd, rings doorbell); App-Store form (XPC/launchd) deferred to Phase 7/8 |
+| `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` for FD passing | Apple-recommended path over Unix-domain `SCM_RIGHTS` | ✓ Validated Phase 2 — `fileport_makeport`/`makefd`, zero SCM_RIGHTS (CI grep-gated); cross-process fd pass proven end-to-end |
+| CF#1 → single-process Keychain + key-over-`mach_msg` (Phase 2 spike) | Free/personal team (Y4A54395NZ) cannot back a team-prefixed `keychain-access-groups` entitlement on a bare tool — entitled binary AMFI-SIGKILLed; unentitled → `errSecMissingEntitlement (-34018)` | ✓ Phase 2 spike — fallback wired; cross-process access-group sharing deferred to Phase 8 (paid enrollment) |
+| CF#3 → `posix_spawnattr_setspecialport_np` rendezvous (not `bootstrap_register`) | `bootstrap_register` returns `BOOTSTRAP_NOT_PRIVILEGED` for ad-hoc names on modern macOS; special-port injection needs no launchd plist | ✓ Phase 2 spike (3/3) — ADOPT-WITH-RATIONALE vs locked D-08; `TASK_BOOTSTRAP_PORT` + reply-port handshake for fd directionality |
 | Defer photodiode rig to weeks 6-7 | v0 with software timing ships first; v1 with photonic ground truth follows | — Pending |
 | Indy/Loco (Zenodo 3854034) as training data | Canonical BCI pretraining dataset; only viable synthetic source absent real electrodes | — Pending |
 | ReFIT-Kalman recalibration on top of NDT1 | Gilja 2012 — what gets BrainGate from 4.16 → 8.5 BPS in humans | — Pending |
@@ -156,4 +164,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-19 — Phase 1 (Foundation & 2026 Toolchain) complete; FOUND-01..05 validated, SC#2 cross-process shm_open verified.*
+*Last updated: 2026-06-20 — Phase 2 (IPC Primitive) complete & verified (7/7 must-haves). IPC-01..07 validated; SC#1 sub-µs round-trip measured (p50=167ns / **p99=208ns** / σ=89.7ns, n=199k on M-series ≥ M4, `sc1-evidence.md`), SC#2 no-SCM_RIGHTS (mach_msg+fileport, CI-gated), SC#3 AES-GCM+Keychain, SC#4 compile-time asserts. Spikes: CF#1 keychain → single-process + key-over-mach_msg (access-group sharing deferred to Phase 8); CF#3 rendezvous → posix_spawnattr_setspecialport_np. Follow-ups: xcodebuild Float16 daemon-target config; `/gsd-secure-phase 02`.*
