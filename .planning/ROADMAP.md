@@ -61,7 +61,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Cross-process FD handoff via `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` (using `fileport_makeport`) succeeds across daemon-app boundary on macOS 26 — no `SCM_RIGHTS` fallback in code
   3. AES-GCM-encrypted FlatBuffers frames with HKDF-derived per-session keys decrypt cleanly on the receiver, with the key round-tripping Keychain (`kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`)
   4. shm name in code is ≤31 bytes (Darwin `PSHMNAMLEN`); a unit test fails the build if the constant is changed to a name that would silently break on Darwin
-**Plans**: TBD
+**Plans**: 5 plans
+- [ ] 02-01-PLAN.md — Foundation: CORTEX_CHANNEL_COUNT _Static_assert + CortexIPC split (Transport/Session) + hot-path gate re-scope (CF#4) + CF#1 keychain & CF#3 rendezvous spikes (IPC-01, IPC-03, IPC-06)
+- [ ] 02-02-PLAN.md — CortexIPCTransport: Foundation-free shm ring (busy-poll, CF#2) + kqueue/recvmsg doorbell + mach_msg+fileport FD passing C shim, no SCM_RIGHTS (IPC-01, IPC-02, IPC-03)
+- [ ] 02-03-PLAN.md — CortexIPCSession: FlatBuffers Sample codec (Float16 rebind) + AES-GCM/HKDF deterministic-nonce crypto + data-protection Keychain round-trip (IPC-04, IPC-05, IPC-06)
+- [ ] 02-04-PLAN.md — Two-process proof harness: CF#3 rendezvous + producer (daemon) + consumer + ack-bounce; CI-runnable end-to-end correctness (IPC-02, IPC-03, IPC-07)
+- [ ] 02-05-PLAN.md — SC#1 shm-polled M4 benchmark (sc1-evidence.md, CF#2/D-18) + CI correctness gates (CortexIPC tests, no-SCM_RIGHTS grep) (IPC-02, IPC-07)
 
 ### Phase 3: Real-Time Threading — pthread USER_INTERACTIVE + Rust SPSC Ring
 **Goal**: The acquisition/DSP hot path runs under audio-callback rules — pthread with `QOS_CLASS_USER_INTERACTIVE`, no Swift `Task`, no `dispatch_async`, no ARC retain/release on the path — and a `loom`-verified lock-free SPSC ring carries samples from that thread to the Swift UI layer via a `cbindgen` bridge.
@@ -162,7 +167,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Foundation & 2026 Toolchain | v0 | 5/7 | In progress (01-01, 01-02, 01-03, 01-04, 01-05 complete; 01-06, 01-07 remaining) | - |
-| 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 0/TBD | Not started | - |
+| 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 0/5 | Not started | - |
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/TBD | Not started | - |
 | 4. NDT1 Training on Indy/Loco | v0 | 0/TBD | Not started | - |
 | 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/TBD | Not started | - |
