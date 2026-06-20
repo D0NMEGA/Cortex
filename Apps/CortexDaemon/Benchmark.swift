@@ -53,28 +53,49 @@ public struct BenchResult: Sendable {
   public let rawSamples: [UInt64]
 }
 
-/// Shared state handed to the C pthread callbacks via an `Unmanaged` pointer. The producer and the
-/// consumer thread both reference the SAME `ShmRing` (same mapped region) and coordinate purely
-/// through the ring's release/acquire seq + ack counters — no Swift closures captured into the C
-/// callback, no mutex. `frames` includes the warm-up prefix.
-private final class BenchContext {
-  let ring: ShmRing
+/// Plain C-compatible thread-argument struct shared by the producer and consumer threads. EVERY
+/// member is a trivially-`Sendable` value (an `Unmanaged<ShmRing>` opaque handle, an `Int`, and a raw
+/// buffer pointer) — NO Swift class instance flows through the `@convention(c)` thread boundary as a
+/// region-tracked value. This is the load-bearing shape: passing a Swift class via `Unmanaged` while
+/// the same instance is also used on the spawning thread makes the Swift 6.2 mandatory `SendNonSendable`
+/// SIL diagnostic pass crash (signal 6) in `RegionAnalysis::runDataflow`. A POD struct of raw handles
+/// gives region analysis nothing non-Sendable to track, so it neither crashes nor false-positives.
+/// (Rule-3 blocking compiler-crash fix; the measured semantics — QoS-pinned shm busy-poll + ack — are
+/// unchanged.) The consumer reconstructs the `ShmRing` from the unretained `Unmanaged` handle.
+private struct BenchThreadArg {
+  /// The shared ring, as an unretained opaque handle (the caller keeps the strong reference alive for
+  /// the whole run, so the consumer's `takeUnretainedValue()` is valid).
+  let ringHandle: UnsafeMutableRawPointer
+  /// Total frames the consumer must observe before exiting (includes the warm-up prefix).
   let frames: Int
-  /// Slot payload reused every iteration (preallocated; correct stride; contents irrelevant — D-01
-  /// puts crypto off the timed path, so the bytes are a fixed dummy).
-  let slotBytes: [UInt8]
-  /// The producer-side per-frame round-trip samples (nanoseconds), PREALLOCATED to `frames` so the
-  /// timed loop appends with zero allocation. Only the producer thread writes this.
-  var samples: [UInt64]
+  /// Slot stride (the consumer's scratch size) — read from the ring layout once, passed as a plain Int.
+  let slotStride: Int
+}
 
-  init(ring: ShmRing, frames: Int) {
-    self.ring = ring
-    self.frames = frames
-    self.slotBytes = [UInt8](repeating: 0xA5, count: ring.layout.slotStride)
-    var s = [UInt64]()
-    s.reserveCapacity(frames)
-    self.samples = s
+/// The consumer pthread entry — a TOP-LEVEL `@convention(c)` function taking a pointer to a POD
+/// `BenchThreadArg` (no Swift class crosses the boundary as a tracked value). Pins
+/// `QOS_CLASS_USER_INTERACTIVE`, reconstructs the ring from the unretained handle, then busy-polls
+/// `ring.pollLatest` and immediately `ring.ack`s each new seq until `frames` distinct seqs have been
+/// consumed. Reuses one preallocated scratch buffer (no per-frame allocation). NO doorbell, NO crypto
+/// (CF#2 / D-01).
+private func cortexBenchConsumerThread(_ arg: UnsafeMutableRawPointer) -> UnsafeMutableRawPointer? {
+  let a = arg.assumingMemoryBound(to: BenchThreadArg.self).pointee
+  _ = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)
+
+  let ring = Unmanaged<ShmRing>.fromOpaque(a.ringHandle).takeUnretainedValue()
+  var scratch = [UInt8](repeating: 0, count: a.slotStride) // reused, no per-frame alloc
+  var lastSeen: UInt64 = 0
+  var consumed = 0
+  scratch.withUnsafeMutableBytes { out in
+    while consumed < a.frames {
+      if let s = ring.pollLatest(into: out, lastSeen: lastSeen), s > lastSeen {
+        ring.ack(seq: s)                                  // release-store the ack seq (D-02)
+        lastSeen = s
+        consumed += 1
+      }
+    }
   }
+  return nil
 }
 
 public enum Benchmark {
@@ -121,78 +142,68 @@ public enum Benchmark {
     }
     shm_unlink(ringName) // name no longer needed; the open fd + mapping keep the region alive
 
-    let ctx = BenchContext(ring: ring, frames: frames)
-    let ctxPtr = Unmanaged.passRetained(ctx).toOpaque()
+    // Preallocate the samples buffer (owned raw buffer → zero allocation / zero CoW on the timed path).
+    let frameCount = frames
+    let samples = UnsafeMutableBufferPointer<UInt64>.allocate(capacity: frameCount)
+    samples.initialize(repeating: 0)
+    defer { samples.deallocate() }
 
-    // Spawn the consumer thread. It pins USER_INTERACTIVE QoS, then busy-polls + acks until it has
-    // observed `frames` distinct seqs (the producer drives exactly that many).
-    var consumerThread: pthread_t?
-    let rc = pthread_create(&consumerThread, nil, Benchmark.consumerMain, ctxPtr)
-    guard rc == 0, let consumer = consumerThread else {
-      Unmanaged<BenchContext>.fromOpaque(ctxPtr).release()
-      fatalError("Benchmark could not create the consumer pthread (rc=\(rc))")
+    // The thread arg is a POD struct of raw handles only (no Swift class crosses the C boundary as a
+    // tracked value — the SendNonSendable-crash workaround). `ring` is held strongly by THIS function
+    // for the whole run, so the consumer's unretained handle stays valid. A fixed dummy slot payload
+    // of the correct stride (crypto is off the timed path, D-01).
+    let ringHandle = Unmanaged.passUnretained(ring).toOpaque()
+    var arg = BenchThreadArg(ringHandle: ringHandle, frames: frameCount, slotStride: ring.layout.slotStride)
+    let slot = [UInt8](repeating: 0xA5, count: ring.layout.slotStride)
+
+    withExtendedLifetime(ring) {
+      withUnsafeMutablePointer(to: &arg) { argPtr in
+        // Spawn the consumer thread (pins USER_INTERACTIVE QoS, busy-polls + acks `frames` seqs).
+        var consumerThread: pthread_t?
+        let rc = pthread_create(&consumerThread, nil, cortexBenchConsumerThread, UnsafeMutableRawPointer(argPtr))
+        guard rc == 0, let consumer = consumerThread else {
+          fatalError("Benchmark could not create the consumer pthread (rc=\(rc))")
+        }
+        // Producer (this thread): pin USER_INTERACTIVE QoS, then run the timed round-trip loop.
+        _ = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)
+        slot.withUnsafeBytes { slotBytes in
+          Self.producerLoop(ringHandle: ringHandle, frames: frameCount, slot: slotBytes, out: samples)
+        }
+        // Join the consumer (it exits after acking `frames` seqs).
+        pthread_join(consumer, nil)
+      }
     }
 
-    // Producer (this thread): pin USER_INTERACTIVE QoS, then run the timed round-trip loop.
-    _ = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)
-    Self.producerLoop(ctx)
-
-    // Join the consumer (it exits after acking `frames` seqs), then release the retained context.
-    pthread_join(consumer, nil)
-    let measured = ctx.samples
-    Unmanaged<BenchContext>.fromOpaque(ctxPtr).release()
-
+    // Copy the samples out (off the timed path — this copy is fine) and reduce to p50/p99/σ.
+    let measured = Array(samples)
     return Self.reduce(samples: measured, warmup: warmup)
   }
 
-  /// The producer timed loop (runs on the QoS-pinned main/producer thread). For each frame:
-  /// `t0 = now()` → `ring.write` (release-store seq) → busy-poll `ring.pollAck` until it returns the
-  /// matching seq (the D-02 ack-bounce) → `t1 = now()`; append `t1 − t0` to the PREALLOCATED samples
-  /// (no allocation on the timed path). NO doorbell, NO crypto here — only the ring seq/ack (CF#2).
-  @inline(__always)
-  private static func producerLoop(_ ctx: BenchContext) {
-    let ring = ctx.ring
+  /// The producer timed loop (runs on the QoS-pinned main/producer thread). Reconstructs the ring from
+  /// the unretained handle, then for each frame: `t0 = now()` → `ring.write` (release-store seq) →
+  /// busy-poll `ring.pollAck` until it returns the matching seq (the D-02 ack-bounce) → `t1 = now()`;
+  /// store `t1 − t0` by index into the PREALLOCATED owned buffer (zero allocation, zero CoW on the
+  /// timed path). NO doorbell, NO crypto here — only the ring seq/ack (CF#2). Takes raw handles (no
+  /// Swift class as a tracked arg) for the same SendNonSendable-crash workaround.
+  private static func producerLoop(ringHandle: UnsafeMutableRawPointer,
+                                   frames: Int,
+                                   slot: UnsafeRawBufferPointer,
+                                   out samples: UnsafeMutableBufferPointer<UInt64>) {
+    let ring = Unmanaged<ShmRing>.fromOpaque(ringHandle).takeUnretainedValue()
     var lastAck: UInt64 = 0
-    ctx.slotBytes.withUnsafeBytes { slot in
-      for _ in 0..<ctx.frames {
-        let t0 = nowNanos()
-        let seq = ring.write(slotBytes: slot)            // release-store the bumped producer seq
-        // Busy-poll the ack-bounce: spin until the consumer's ack seq reaches `seq` (acquire-load).
-        while true {
-          if let a = ring.pollAck(lastSeen: lastAck), a >= seq {
-            lastAck = a
-            break
-          }
-        }
-        let t1 = nowNanos()
-        ctx.samples.append(t1 &- t0)                      // preallocated → no allocation here
-      }
-    }
-  }
-
-  /// The consumer pthread entry (C calling convention; receives the retained `BenchContext` opaque
-  /// pointer). Pins USER_INTERACTIVE QoS, then busy-polls `ring.pollLatest` and immediately
-  /// `ring.ack`s each new seq until `frames` distinct seqs have been consumed. Reuses one
-  /// preallocated scratch buffer (no per-frame allocation). NO doorbell, NO crypto (CF#2 / D-01).
-  private static let consumerMain: @convention(c) (UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer? = { arg in
-    guard let arg else { return nil }
-    let ctx = Unmanaged<BenchContext>.fromOpaque(arg).takeUnretainedValue()
-    _ = pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)
-
-    let ring = ctx.ring
-    var scratch = [UInt8](repeating: 0, count: ring.layout.slotStride) // reused, no per-frame alloc
-    var lastSeen: UInt64 = 0
-    var consumed = 0
-    scratch.withUnsafeMutableBytes { out in
-      while consumed < ctx.frames {
-        if let s = ring.pollLatest(into: out, lastSeen: lastSeen), s > lastSeen {
-          ring.ack(seq: s)                                // release-store the ack seq (D-02)
-          lastSeen = s
-          consumed += 1
+    for i in 0..<frames {
+      let t0 = nowNanos()
+      let seq = ring.write(slotBytes: slot)              // release-store the bumped producer seq
+      // Busy-poll the ack-bounce: spin until the consumer's ack seq reaches `seq` (acquire-load).
+      while true {
+        if let a = ring.pollAck(lastSeen: lastAck), a >= seq {
+          lastAck = a
+          break
         }
       }
+      let t1 = nowNanos()
+      samples[i] = t1 &- t0                                // preallocated owned buffer → no allocation
     }
-    return nil
   }
 
   // MARK: - Reduction (percentiles + σ)
