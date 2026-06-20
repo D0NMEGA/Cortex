@@ -1,0 +1,44 @@
+[package]
+name = "cortex_ring"
+version = "0.1.0"
+edition = "2021"
+# In-house, loom-verifiable SPSC ring for the Phase-3 in-process acquisition→UI bridge.
+# Crate is the Swift↔Rust FFI spine (D-R1) AND, from Plan 02, the loom/stress target (D-R3/D-R5).
+
+[lib]
+# staticlib → libcortex_ring.a for the CortexRingFFI.xcframework (.binaryTarget consumes it).
+# rlib      → `cargo test` (the 1M stress test + the loom permutation test, Plan 02) builds the
+#             ring as a normal Rust lib. Both crate types come from one source — no algorithm
+#             duplication between production and the loom/stress harness (D-R1, RESEARCH §3).
+crate-type = ["staticlib", "rlib"]
+
+[build-dependencies]
+# build.rs runs cbindgen::generate(...) → include/cortex_ring.h (THREAD-06, RESEARCH §1).
+# Pinned to 0.29 to match the cbindgen CLI used by the drift gate (`brew install cbindgen`
+# ships 0.29.x; the 0.27 line referenced in the plan is superseded — the generate()/
+# write_to_file() API and cbindgen.toml schema are identical across 0.27→0.29).
+cbindgen = "0.29"
+
+# Pre-armed for Plan 02 (D-R5): loom is a cfg-gated dependency, so a production / non-loom
+# build NEVER links it. Only `RUSTFLAGS="--cfg loom" cargo test` pulls loom in.
+# loom 0.7 supports Acquire/Release; it treats SeqCst as AcqRel, so the ring uses
+# Acquire/Release exclusively and never SeqCst (D-R4, RESEARCH §1/§6 Pitfall #5).
+[target.'cfg(loom)'.dependencies]
+loom = "0.7"
+
+[dev-dependencies]
+# Plan 02 throughput cross-check (the 1M-frame stress test asserts FIFO + no loss).
+criterion = "0.5"
+# OPTIONAL bench cross-check ONLY — never the loom target, never a production dependency.
+# loom cannot instrument rtrb's std atomics; the in-house ring is the loom-verified one (D-R3).
+rtrb = "0.3"
+
+[[bench]]
+name = "throughput"
+harness = false
+
+# A dedicated loom profile keeps the exhaustive interleaving search fast (the thingbuf
+# pattern, RESEARCH §1). Plan 02 runs: RUSTFLAGS="--cfg loom" cargo test --profile loom.
+[profile.loom]
+inherits = "release"
+opt-level = 3
