@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 2 (IPC primitive) context gathered — 6 areas decided (D-01..D-18); ready for /gsd-plan-phase 2
-last_updated: "2026-06-20T06:38:52.608Z"
-last_activity: 2026-06-20 -- Phase 02 execution started
+last_updated: "2026-06-20T08:39:30.282Z"
+last_activity: 2026-06-20
 progress:
   total_phases: 10
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 12
-  completed_plans: 7
-  percent: 58
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 02 — ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm
+**Current focus:** Phase 2 complete & verified (✓ 7/7 must-haves, SC#1 p99=208ns) — Phase 3 (Real-Time Threading) next
 
 ## Current Position
 
-Phase: 02 (ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 02
-Last activity: 2026-06-20 -- Phase 02 execution started
+Phase: 3 (Real-Time Threading) — not started
+Plan: None
+Status: Phase 2 complete & verified; ready to plan Phase 3
+Last activity: 2026-06-20 — Phase 2 (IPC primitive) executed & verified (5/5 plans)
 
-Progress: Phase 1 [██████████] 100% (7/7 plans) · Project [█░░░░░░░░░] 1/10 phases
+Progress: Phase 2 [██████████] 100% (5/5 plans) · Project [██░░░░░░░░] 2/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 7 (all Phase 1)
+- Total plans completed: 12 (all Phase 1)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -45,6 +45,7 @@ Progress: Phase 1 [██████████] 100% (7/7 plans) · Project [
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 01 | 7 | - | - |
+| 02 | 5 | - | - |
 
 **Recent Trend:**
 
@@ -122,6 +123,9 @@ None yet.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
+| Build config | `xcodebuild` of the CortexDaemon Xcode target fails on `'Float16' is unavailable in macOS` in CortexIPCSession (SampleCodec) — generated-project deployment/arch config, NOT a code defect (`swift build`/SwiftPM + CI `swift test` are clean) | Open — set the daemon target's macOS deployment/arch so Float16 is available (SwiftPM already does); needed for the daemon `bench`-mode run (Option A in sc1-evidence.md) | 2026-06-20 (Plan 02-05 finding; 02-05-SUMMARY.md + sc1-evidence.md anomaly #2) |
+| Security | Phase 2 `SECURITY.md` not yet created (security_enforcement on) — per-PLAN STRIDE threat models exist; no consolidated audit | Open — run `/gsd-secure-phase 02` before advancing | 2026-06-20 (Phase 2 completion) |
+| Verification | SC#1 timing measured on M5 Pro (≥ M4) under a live dev session; a quiet-machine / dedicated iPad-Pro-M4 re-run via the sc1-evidence.md runbook would refine the tail (not the sub-µs verdict) | Open — optional refinement | 2026-06-20 (Plan 02-05; sc1-evidence.md) |
 | Verification | Plan 01-02 dynamic xcodebuild build smoke (CortexMac/CortexiOS/CortexDaemon `BUILD SUCCEEDED` under `CODE_SIGNING_ALLOWED=NO` + four sibling overrides + two `-skip*Validation` flags; CortexDaemon.bundle artifact existence on disk; PrivacyInfo.xcprivacy presence in built `.app` bundles) | Waiting for Xcode 26 environment | 2026-04-30 (Plan 01-02 toolchain-deferral disposition) — closed by Plan 01-06 CI on macos-15 + Xcode 26.3, OR by human on Xcode 26 dev machine. Verbatim re-run command set captured in `.planning/phases/01-foundation-2026-toolchain/01-02-daemon-spm-smoke.md` |
 
 ## Session Continuity

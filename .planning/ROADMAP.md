@@ -22,7 +22,7 @@ Two milestones anchor the roadmap:
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & 2026 Toolchain** - Repo skeleton on Xcode 26 + Swift 6.2 / macOS 26 Tahoe / iPadOS 26 with App Group container, privacy manifest, and CI green — completed 2026-06-19
-- [ ] **Phase 2: IPC Primitive — kqueue+recvmsg + FlatBuffers + AES-GCM** - Sub-µs sample-frame transport between acquisition daemon and app, encrypted, FD-passed via mach_msg
+- [x] **Phase 2: IPC Primitive — kqueue+recvmsg + FlatBuffers + AES-GCM** - Sub-µs sample-frame transport between acquisition daemon and app, encrypted, FD-passed via mach_msg — completed 2026-06-20 (SC#1 p99=208ns)
 - [ ] **Phase 3: Real-Time Threading — pthread USER_INTERACTIVE + Rust SPSC Ring** - Audio-callback-regime hot path with loom-verified lock-free ring buffer bridged to Swift via cbindgen
 - [ ] **Phase 4: NDT1 Training on Indy/Loco Synthetic Replay** - 1.3M-param NDT1 (6 layers, h=1-2, 128 dim, 20ms bins) trained on Zenodo 3854034 with 4-bit palettization
 - [ ] **Phase 5: NDT1 → CoreML deployment with ANE residency verified** - PyTorch checkpoint converted via coremltools with BC1S `(B,C,1,S)` layout, Instruments-confirmed 100% ANE residency, <2ms p99 inference
@@ -166,8 +166,8 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Foundation & 2026 Toolchain | v0 | 5/7 | In progress (01-01, 01-02, 01-03, 01-04, 01-05 complete; 01-06, 01-07 remaining) | - |
-| 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 0/5 | Not started | - |
+| 1. Foundation & 2026 Toolchain | v0 | 7/7 | ✓ Complete | 2026-06-19 |
+| 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 5/5 | ✓ Complete | 2026-06-20 |
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/TBD | Not started | - |
 | 4. NDT1 Training on Indy/Loco | v0 | 0/TBD | Not started | - |
 | 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/TBD | Not started | - |
