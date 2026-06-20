@@ -22,8 +22,9 @@
 
 /**
  * Opaque SPSC ring handle. The C side only ever holds a `*mut CortexSpsc`; the layout is private
- * to Rust (Plan 02 fills it with the real ring). `_private: [u8; 0]` is the cbindgen idiom for an
- * opaque type — it emits `typedef struct CortexSpsc CortexSpsc;` with no field exposure.
+ * to Rust. `_private: [u8; 0]` is the cbindgen idiom for an opaque type — it emits
+ * `typedef struct CortexSpsc CortexSpsc;` with no field exposure, so the C/Swift ABI is unchanged
+ * from Plan 01 even though the *real* backing ([`RingHandle`]) is now behind it.
  */
 typedef struct CortexSpsc {
   uint8_t _private[0];
@@ -57,35 +58,42 @@ extern "C" {
 
 /**
  * Spike-A smoke: a non-identity transform (`x XOR 0x5A5A5A5A`) so the Swift test proves a real
- * round-trip through the xcframework C ABI rather than a hard-coded Swift constant.
+ * round-trip through the xcframework C ABI rather than a hard-coded Swift constant. Unchanged from
+ * Plan 01.
  */
 uint32_t cortex_ping(uint32_t x);
 
 /**
- * Allocate an SPSC ring of `capacity` slots (the real algorithm in Plan 02 requires a power of
- * two). STUB: allocates the placeholder backing and returns its raw pointer; returns null if the
- * allocation logic ever panics (threat T-03-01-02).
+ * Allocate an SPSC ring of `capacity` slots and return an opaque handle, or null on failure.
+ *
+ * `capacity` MUST be a non-zero power of two (the ring's `mask = capacity - 1` wrap arithmetic
+ * requires it — threat T-03-02-04, integer/capacity guard). A zero or non-power-of-two capacity
+ * returns null rather than panicking. Returns null if allocation logic ever unwinds (T-03-02-05).
  */
 struct CortexSpsc *cortex_spsc_create(uintptr_t capacity);
 
 /**
- * Push one frame. Returns `false` when the ring is full. STUB: always returns `false` (the real
- * publish lands in Plan 02). Wrapped in `catch_unwind` because it dereferences caller-supplied
- * raw pointers (`AssertUnwindSafe` — raw pointers are not `UnwindSafe`, and on unwind we return
- * the safe `false` default without observing any broken invariant).
+ * Push one frame (copied by value from `*f`). Returns `false` when the ring is full, or when
+ * `r`/`f` is null. MUST be called only from the caller's single producer thread (SPSC contract).
+ *
+ * `catch_unwind` + `AssertUnwindSafe`: raw pointers are not `UnwindSafe`, and on unwind we return
+ * the safe `false` default without observing any broken invariant (T-03-02-05).
  */
 bool cortex_spsc_push(struct CortexSpsc *r, const struct CortexFrame *f);
 
 /**
- * Pop one frame into `out`. Returns `false` when the ring is empty. STUB: always returns `false`
- * (the real consume lands in Plan 02). Same `catch_unwind` rationale as `push`.
+ * Pop one frame into `*out`. Returns `false` when the ring is empty, or when `r`/`out` is null.
+ * MUST be called only from the caller's single consumer thread (SPSC contract).
  */
 bool cortex_spsc_pop(struct CortexSpsc *r, struct CortexFrame *out);
 
 /**
- * Destroy a ring previously returned by `cortex_spsc_create`. Reconstructs the box and drops it.
- * Null-safe and unwind-safe: a null handle is a no-op, and a panic during drop is swallowed so it
- * never crosses the C frame (threat T-03-01-02).
+ * Destroy a ring previously returned by `cortex_spsc_create`. Null-tolerant and unwind-safe.
+ *
+ * Reconstructs the `Box<RingHandle>` and drops it; dropping the handle drops both ends, dropping
+ * the last `Arc<Spsc>`, whose `Drop` drains any still-live slots (no double-free / no
+ * uninitialized-slot drop — threats T-03-02-01 / T-03-02-02). The caller MUST NOT use `r` after
+ * this call (use-after-free — T-03-02-01).
  */
 void cortex_spsc_destroy(struct CortexSpsc *r);
 
