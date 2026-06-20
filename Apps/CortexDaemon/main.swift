@@ -1,23 +1,43 @@
-// CortexDaemon -- placeholder background-helper bundle target per D-03.
-// Phase 1 ships a small SC#2 verification surface: on launch, the daemon calls
-// shm_open against CORTEX_SHM_NAME and prints the result to stdout, so the user
-// can visually compare against CortexMac's button-driven ShmCheck.
+// CortexDaemon — Phase-2 producer entry point (Plan 02-04 Task 2). Replaces the Phase-1 shm-open
+// verification stub (that Phase-1 helper type was deleted in Plan 02-02). The daemon is BOTH the
+// producer (parent) AND, when posix_spawn'd with the "consume" arg by the harness, the consumer
+// (child) — the same binary plays both roles in the D-07 two-process proof.
 //
-// Phase 2 will populate the IPC primitive (kqueue + recvmsg + POSIX shm) here,
-// consuming Packages/CortexIPC.
+// HARNESS FORM (documented in 02-04-SUMMARY): a self-spawning argv-dispatched daemon.
+//   • no arg / "produce" → parent: prepare the CF#3 rendezvous, posix_spawn this binary with
+//     "consume", hand off the key (over the channel) + the shm fd, produce frames, await the
+//     ack-bounce, reap the child (Harness.runParent, Plan 02-04 Task 3).
+//   • "consume" → child: acquire the rendezvous reply right, receive the key + fd, map the ring,
+//     busy-poll, open + decode + verify each frame, ack-bounce (HarnessConsumer.runChild, Task 3).
 //
-// The bundle's Cortex.entitlements declares the same App Group as CortexMac, so the
-// manual SC#2 runbook can verify cross-process shm_open works between the two
-// processes inside ~/Library/Group Containers/group.com.donovansantine.cortex.shared/.
+// The always-on CI correctness gate is the IN-PROCESS HarnessE2ETests (no spawn) — this binary's
+// two-process flow is the local/Plan-02-05 proof. Diagnostics use NSLog and never log key bytes
+// (T-02-04-06). The full daemon xcodebuild (this file + Producer.swift) is Plan 02-05's CI job; the
+// SwiftPM package build does not compile this Xcode target.
 
 import Foundation
 import CortexCore
+import CortexIPCTransport
+import CortexIPCSession
 
-NSLog("Cortex daemon stub (Phase 1). App Group: \(CortexCore.AppGroup.identifier).")
+let mode = CommandLine.arguments.dropFirst().first ?? "produce"
+NSLog("Cortex daemon (Phase 2). mode=%@. App Group: %@.", mode, CortexCore.AppGroup.identifier)
 
-let result = ShmCheck.openSharedRegion(processLabel: "CortexDaemon")
-print(result.description)
-NSLog("[Cortex SC#2 daemon] %@", String(describing: result))
-
-// Block briefly so the user can read stdout and inspect /Library/Group Containers in Finder.
-RunLoop.main.run(until: Date(timeIntervalSinceNow: 5.0))
+do {
+  switch mode {
+  case "consume":
+    // Child path: acquire the rendezvous right, receive key + fd, run the consumer loop, ack-bounce.
+    let result = try HarnessConsumer.runChild(frameCount: 1000)
+    NSLog("Cortex daemon consumer done: verified=%d acked=%@",
+          result.framesVerified, result.allAcked ? "true" : "false")
+    exit(result.allAcked && result.framesVerified == result.framesSent ? 0 : 1)
+  default:
+    // Parent path: prepare rendezvous, posix_spawn self with "consume", hand off, produce, reap child.
+    let status = try Harness.runParent(frameCount: 1000)
+    NSLog("Cortex daemon producer done: child exit status=%d", status)
+    exit(status)
+  }
+} catch {
+  NSLog("Cortex daemon (mode=%@) failed: %@", mode, String(describing: error))
+  exit(70) // EX_SOFTWARE
+}

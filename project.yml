@@ -119,6 +119,13 @@ targets:
       - path: Apps/CortexDaemon
     dependencies:
       - package: CortexCore
+      # Phase 2 (Plan 02-04): the daemon is the producer + posix_spawn'd consumer. Producer.swift /
+      # main.swift import the Foundation-free transport AND the session layer; the CortexIPC package
+      # exposes two products (the bare CortexIPC product was split in Plan 02-01), so depend on both.
+      - package: CortexIPC
+        product: CortexIPCTransport
+      - package: CortexIPC
+        product: CortexIPCSession
     entitlements:
       path: Apps/CortexDaemon/Cortex.entitlements
       properties:

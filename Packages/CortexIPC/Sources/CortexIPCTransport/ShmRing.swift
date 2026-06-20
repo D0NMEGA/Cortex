@@ -174,6 +174,15 @@ public final class ShmRing {
     Int(seq & UInt64(layout.depth - 1))
   }
 
+  // MARK: - FD accessor (producer hand-off)
+
+  /// Read-only access to the owned shm file descriptor, for `FDChannel.send(shmFD:)` (Plan 02-04
+  /// producer hand-off). Returns the real fd on a ring created via `init(create:)`/`init(name:create:)`;
+  /// returns -1 on a consumer ring (`init(adoptingFD:)` borrows the fd and does not own one to send).
+  /// Only the producer (which created the region) sends — closing the 02-02->02-04 cross-plan handoff
+  /// item (the fd was intentionally `private let ownedFD`). Read-only: does not transfer ownership.
+  public var fd: Int32 { ownedFD }
+
   // MARK: - Producer (data plane)
 
   /// Write a frame into the next slot and publish it. Copies up to `slotStride` bytes (clamped),
