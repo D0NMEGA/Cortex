@@ -63,8 +63,8 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. shm name in code is ≤31 bytes (Darwin `PSHMNAMLEN`); a unit test fails the build if the constant is changed to a name that would silently break on Darwin
 **Plans**: 5 plans
 - [x] 02-01-PLAN.md — Foundation: CORTEX_CHANNEL_COUNT _Static_assert + CortexIPC split (Transport/Session) + hot-path gate re-scope (CF#4) + CF#1 keychain & CF#3 rendezvous spikes (IPC-01, IPC-03, IPC-06)
-- [ ] 02-02-PLAN.md — CortexIPCTransport: Foundation-free shm ring (busy-poll, CF#2) + kqueue/recvmsg doorbell + mach_msg+fileport FD passing C shim, no SCM_RIGHTS (IPC-01, IPC-02, IPC-03)
-- [ ] 02-03-PLAN.md — CortexIPCSession: FlatBuffers Sample codec (Float16 rebind) + AES-GCM/HKDF deterministic-nonce crypto + data-protection Keychain round-trip (IPC-04, IPC-05, IPC-06)
+- [x] 02-02-PLAN.md — CortexIPCTransport: Foundation-free shm ring (busy-poll, CF#2) + kqueue/recvmsg doorbell + mach_msg+fileport FD passing C shim, no SCM_RIGHTS (IPC-01, IPC-02, IPC-03)
+- [x] 02-03-PLAN.md — CortexIPCSession: FlatBuffers Sample codec (Float16 rebind) + AES-GCM/HKDF deterministic-nonce crypto + data-protection Keychain round-trip (IPC-04, IPC-05, IPC-06)
 - [ ] 02-04-PLAN.md — Two-process proof harness: CF#3 rendezvous + producer (daemon) + consumer + ack-bounce; CI-runnable end-to-end correctness (IPC-02, IPC-03, IPC-07)
 - [ ] 02-05-PLAN.md — SC#1 shm-polled M4 benchmark (sc1-evidence.md, CF#2/D-18) + CI correctness gates (CortexIPC tests, no-SCM_RIGHTS grep) (IPC-02, IPC-07)
 
