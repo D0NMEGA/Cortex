@@ -1,0 +1,12 @@
+// Cortex IPC wire format (IPC-04). channel_data is raw IEEE-754 half (f16) bytes:
+// length MUST equal CORTEX_CHANNEL_COUNT * 2 (D-10). seq is the ring/doorbell sequence
+// number, reused as the AES-GCM deterministic nonce counter (D-16).
+namespace Cortex.IPC;
+
+table Sample {
+  ts_ns:ulong;          // mach_absolute_time-derived nanoseconds
+  channel_data:[ubyte]; // raw f16 bytes, length == CORTEX_CHANNEL_COUNT * 2
+  seq:ulong;            // ring/doorbell sequence; also the GCM nonce counter
+}
+
+root_type Sample;
