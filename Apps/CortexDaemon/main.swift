@@ -25,6 +25,22 @@ NSLog("Cortex daemon (Phase 2). mode=%@. App Group: %@.", mode, CortexCore.AppGr
 
 do {
   switch mode {
+  case "bench":
+    // SC#1 benchmark mode (Plan 02-05): run the shm-polled round-trip benchmark (CF#2) and write the
+    // histogram + raw-sample CSV. This is an IN-PROCESS two-pthread measurement (no posix_spawn needed
+    // — the timed path is the ring busy-poll + ack-bounce, NOT the rendezvous/doorbell). Optional args:
+    //   bench [frames] [warmup] [histogram-output-path]
+    // Defaults: 200k frames, 1k warm-up, ./sc1-histogram.txt (+ sc1-histogram.csv alongside). The
+    // numbers are meaningful ONLY on M4 (D-18); CI may smoke this for completion but never asserts it.
+    let args = Array(CommandLine.arguments.dropFirst())
+    let frames = (args.count > 1 ? Int(args[1]) : nil) ?? 200_000
+    let warmup = (args.count > 2 ? Int(args[2]) : nil) ?? 1_000
+    let outPath = args.count > 3 ? args[3] : "sc1-histogram.txt"
+    NSLog("Cortex daemon bench: frames=%d warmup=%d out=%@", frames, warmup, outPath)
+    let result = Benchmark.runRoundTrip(frames: frames, warmup: warmup)
+    Benchmark.printResult(result)
+    Benchmark.writeHistogram(result, to: outPath)
+    exit(0)
   case "consume":
     // Child path: acquire the rendezvous right, receive key + fd, run the consumer loop, ack-bounce.
     let result = try HarnessConsumer.runChild(frameCount: 1000)
