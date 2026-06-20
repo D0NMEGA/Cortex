@@ -12,8 +12,9 @@
 // SECURITY (threat T-02-04-03, ASVS V6.2): the mach_msg channel is a kernel-mediated capability only
 // the parent and the spawned child hold (the rendezvous send right). The secret never touches disk
 // in transit and is never logged (T-02-04-06). This is a bounded, inline, fixed-size payload — no
-// port descriptor, no fd, no SCM_RIGHTS. The bytes carry no length field on the wire; both sides
-// agree on the fixed 32-byte (256-bit, D-14) secret size at compile time.
+// port descriptor, no fd, and no BSD socket control-message rights-transfer path (the
+// no-rights-transfer invariant, SC#2). The bytes carry no length field on the wire; both sides agree
+// on the fixed 32-byte (256-bit, D-14) secret size at compile time.
 //
 // Foundation-allowed (CortexIPCSession, D-04/D-06). `nonisolated` so the off-main-actor consumer can
 // call it. Uses raw mach_msg directly (the same primitive cortex_fdmsg.c uses) — kept in Swift here

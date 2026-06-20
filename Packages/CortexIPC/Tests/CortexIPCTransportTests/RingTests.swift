@@ -98,10 +98,13 @@ struct RingTests {
   @Test("stride is the constant computed from CORTEX_CHANNEL_COUNT")
   func constantStride() throws {
     try withFreshRing { ring, _ in
-      // Recompute independently: roundUp16(perSlotSeq(8) + CHANNEL_COUNT*2 + GCM_TAG(16)).
-      let raw = 8 + Int(CORTEX_CHANNEL_COUNT) * 2 + 16
+      // Recompute independently: roundUp16(perSlotSeq(8) + CHANNEL_COUNT*2 + FlatBuffers framing
+      // headroom + GCM_TAG(16)). Plan 02-04 Rule-1 fix: the slot reserves the ENCRYPTED FlatBuffers
+      // frame, not the bare f16 payload, so the framing headroom is part of the stride.
+      let raw = 8 + Int(CORTEX_CHANNEL_COUNT) * 2 + ShmRingLayout.flatBuffersFramingHeadroom + 16
       let expected = (raw + 15) & ~15
-      #expect(ring.layout.slotStride == expected, "stride == roundUp16(8 + CHANNEL_COUNT*2 + 16)")
+      #expect(ring.layout.slotStride == expected,
+              "stride == roundUp16(8 + CHANNEL_COUNT*2 + framing + 16)")
       #expect(ring.layout.slotStride % 16 == 0, "stride is 16-byte aligned")
       #expect(ring.layout.depth > 0 && (ring.layout.depth & (ring.layout.depth - 1)) == 0,
               "depth is a power of two")

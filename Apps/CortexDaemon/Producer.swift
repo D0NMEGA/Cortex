@@ -9,7 +9,8 @@
 //     the shm ring (create), and create the doorbell.
 //   • handoff(to:): deliver the secret to the consumer OVER THE CHANNEL (CF#1 fallback — a second
 //     mach_msg sent BEFORE the fd message), then pass the shm fd via FDChannel (mach_msg + fileport,
-//     SC#2 — no SCM_RIGHTS). The consumer maps the same region from this fd.
+//     SC#2 — the no-rights-transfer invariant, no BSD socket control-message FD path). The consumer
+//     maps the same region from this fd.
 //   • produce(frameCount:): for each frame, build a deterministic Float16 pattern, encode a
 //     FlatBuffers Sample, AES-GCM-seal it with the seq-derived nonce (D-16), write ciphertext||tag
 //     into the next ring slot (release-store), ring the doorbell, then busy-poll the ack-bounce
@@ -18,6 +19,7 @@
 // SECURITY: the secret bytes are NEVER logged (T-02-04-06); only seq/counts are. This is Apps-target
 // orchestration (Foundation allowed) — the policed hot-path code it calls stays Foundation-free.
 import Foundation
+import Darwin
 import CryptoKit
 import CortexCore
 import CortexIPCTransport
@@ -77,8 +79,20 @@ public final class Producer {
   public func handoff(to dest: mach_port_t) throws {
     // CF#1 fallback: deliver the 256-bit secret over the secure channel (NOT a shared Keychain group).
     try SessionKeyChannel.send(secret: secret, to: dest)
-    // SC#2: pass the shm region fd as a fileport in a mach_msg port descriptor — no SCM_RIGHTS.
+    // SC#2: pass the shm region fd as a fileport in a mach_msg port descriptor — the no-rights-transfer
+    // invariant (no BSD socket control-message FD path).
     try FDChannel.send(shmFD: ring.fd, geometry: ring.layout, to: dest)
+  }
+
+  /// Monotonic nanosecond timestamp for the frame ts_ns (D-12). Computed inline from Darwin's
+  /// `mach_absolute_time()` (nonisolated) rather than CortexCore's `Time.machAbsoluteNanoseconds()`,
+  /// which is MainActor-isolated and would force a hop — the producer runs off the main actor, mirroring
+  /// the hot-path regime. Same mach_absolute_time → ns conversion as Time.swift.
+  private func nowNanos() -> UInt64 {
+    var info = mach_timebase_info_data_t()
+    mach_timebase_info(&info)
+    let raw = mach_absolute_time()
+    return raw &* UInt64(info.numer) / UInt64(info.denom)
   }
 
   /// Build the deterministic test pattern for `seq`: each channel = Float16(seq & 0xFF) so the
@@ -98,14 +112,14 @@ public final class Producer {
     var acked = 0
     for _ in 0..<frameCount {
       let seq = ring.loadProducerSeq() &+ 1
-      let tsNs = Time.machAbsoluteNanoseconds()
+      let tsNs = nowNanos()
       let pattern = patternF16(forSeq: seq)
       let plain = try SampleCodec.encode(tsNs: tsNs, seq: seq, channels: pattern)
       let (ct, tag) = try SessionCrypto.seal(plain, keys: keys, direction: .daemonToApp, seq: seq)
 
-      // Pack ciphertext||tag into the slot (the ring reserves slotStride bytes; geometry-agnostic copy).
-      var slot = ct
-      slot.append(contentsOf: tag)
+      // Pack [len LE][ct][tag] into the slot (FlatBuffers frames are variable-length, so the
+      // ciphertext length is carried explicitly; HarnessConsumer.consumeOne parses this layout).
+      let slot = HarnessConsumer.packSlot(ciphertext: ct, tag: tag)
       let written = slot.withUnsafeBytes { ring.write(slotBytes: $0) }
       // Notify the consumer it can wake from idle (the data path is the ring; this is the doorbell, D-01).
       doorbell.ring(seq: written)

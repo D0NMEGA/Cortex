@@ -28,9 +28,22 @@ public struct ShmRingLayout: Sendable, Equatable {
   /// Cache-line size used to pad the header counters apart (avoids producer/consumer false sharing).
   public static let cacheLine = 64
 
-  /// Bytes per slot: a per-slot seq tag (8) + the f16 payload (CHANNEL_COUNT*2) + the GCM tag (16),
-  /// rounded up to a 16-byte boundary. Plan 02-03 writes ciphertext+tag into this reserved space.
+  /// Bytes per slot: a per-slot seq tag (8) + the ENCRYPTED FlatBuffers frame (the f16 payload
+  /// CHANNEL_COUNT*2 PLUS FlatBuffers framing headroom) + the GCM tag (16), rounded up to a 16-byte
+  /// boundary. Plan 02-03 writes ciphertext+tag into this reserved space; Plan 02-04 verified the
+  /// encrypted wire frame is the framed Sample (not the bare f16 payload), so the framing headroom is
+  /// required (see `flatBuffersFramingHeadroom`).
   public let slotStride: Int
+
+  /// FlatBuffers framing headroom (bytes) reserved in the slot beyond the raw `CHANNEL_COUNT*2` f16
+  /// payload. The encrypted wire frame is the FlatBuffers-encoded `Sample` (root offset + vtable +
+  /// table + vector length prefix + alignment), measured at +24 bytes over the bare payload for
+  /// CHANNEL_COUNT=96; 64 gives generous slack for vtable/alignment variance across flatc versions.
+  /// Plan 02-04 Rule-1 fix: the original Plan 02-02 stride reserved only the bare payload, so the
+  /// encrypted framed Sample (216 B + 16 B tag = 232 B) overflowed the 224 B slot and `write` silently
+  /// truncated the ciphertext — breaking AES-GCM open() on the consumer. Reserving the framing makes
+  /// the encrypted frame fit (slotStride becomes 288 for CHANNEL_COUNT=96).
+  public static let flatBuffersFramingHeadroom = 64
   /// Number of slots — a power of two so `seq % depth` is a mask (D-03, implementer's discretion).
   public let depth: Int
   /// Header region holding `producerSeq` (offset 0) and `ackSeq` (offset cacheLine), each on its
@@ -54,8 +67,9 @@ public struct ShmRingLayout: Sendable, Equatable {
 
     let perSlotSeq = 8            // a copy of the frame's seq tag living inside the slot
     let payload = channelCount * 2 // raw f16 bytes (D-10)
+    let framing = ShmRingLayout.flatBuffersFramingHeadroom // FlatBuffers Sample encoding overhead
     let gcmTag = 16              // AES-GCM tag reserved for Plan 02-03 (D-03)
-    let raw = perSlotSeq + payload + gcmTag
+    let raw = perSlotSeq + payload + framing + gcmTag
     self.slotStride = (raw + 15) & ~15 // round up to 16
 
     self.depth = depth
