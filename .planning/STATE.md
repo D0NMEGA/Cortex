@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 2 (IPC primitive) context gathered — 6 areas decided (D-01..D-18); ready for /gsd-plan-phase 2
-last_updated: "2026-06-20T08:39:30.282Z"
-last_activity: 2026-06-20
+last_updated: "2026-06-20T22:47:55.110Z"
+last_activity: 2026-06-20 -- Phase 03 execution started
 progress:
   total_phases: 10
   completed_phases: 2
-  total_plans: 12
+  total_plans: 16
   completed_plans: 12
-  percent: 100
+  percent: 75
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 2 complete & verified (✓ 7/7 must-haves, SC#1 p99=208ns) — Phase 3 (Real-Time Threading) next
+**Current focus:** Phase 03 — real-time-threading-pthread-user-interactive-rust-spsc-ring
 
 ## Current Position
 
-Phase: 3 (Real-Time Threading) — not started
-Plan: None
-Status: Phase 2 complete & verified; ready to plan Phase 3
-Last activity: 2026-06-20 — Phase 2 (IPC primitive) executed & verified (5/5 plans)
+Phase: 03 (real-time-threading-pthread-user-interactive-rust-spsc-ring) — EXECUTING
+Plan: 1 of 4
+Status: Executing Phase 03
+Last activity: 2026-06-20 -- Phase 03 execution started
 
 Progress: Phase 2 [██████████] 100% (5/5 plans) · Project [██░░░░░░░░] 2/10 phases
 
