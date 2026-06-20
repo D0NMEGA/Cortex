@@ -6,8 +6,8 @@ import CortexRingFFI
 
 /// Calls the Rust `cortex_ping` across the C ABI and returns its result.
 ///
-/// The Rust side computes `x ^ 0x5A5A_5A5A` (a non-identity transform), so a green round-trip
+/// The Rust side computes `value ^ 0x5A5A_5A5A` (a non-identity transform), so a green round-trip
 /// proves a real FFI call through the xcframework rather than a hard-coded Swift constant.
-public func cortexPing(_ x: UInt32) -> UInt32 {
-  cortex_ping(x)
+public func cortexPing(_ value: UInt32) -> UInt32 {
+  cortex_ping(value)
 }

@@ -5,14 +5,16 @@
 import CortexRingPing
 import Testing
 
-@Test func pingRoundTrips() {
+@Test
+func `cortex_ping round-trips a real Rust XOR through the xcframework C ABI`() {
   // 1 ^ 0x5A5A_5A5A — a non-identity transform computed on the Rust side.
   #expect(cortexPing(1) == (1 ^ 0x5A5A_5A5A))
 }
 
-@Test func pingIsInvolution() {
+@Test
+func `cortex_ping is an involution: applying it twice returns the input`() {
   // XOR with a constant is its own inverse: applying cortex_ping twice returns the input.
   // A second independent round-trip hardens against an accidental identity/constant stub.
-  let x: UInt32 = 0xDEAD_BEEF
-  #expect(cortexPing(cortexPing(x)) == x)
+  let input: UInt32 = 0xDEAD_BEEF
+  #expect(cortexPing(cortexPing(input)) == input)
 }

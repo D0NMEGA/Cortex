@@ -10,4 +10,4 @@
 --self remove
 --patternlet hoist
 --header strip
---exclude .build,Packages/.build,Packages/CortexCore/.build,Packages/CortexIPC/.build,Packages/CortexRender/.build,Packages/CortexDecoder/.build,DerivedData,Cortex.xcodeproj,Cortex.xcworkspace,vendor,fastlane/Fastfile,fastlane/Matchfile,fastlane/Appfile
+--exclude .build,Packages/.build,Packages/CortexCore/.build,Packages/CortexIPC/.build,Packages/CortexRender/.build,Packages/CortexDecoder/.build,Packages/CortexRing/.build,DerivedData,Cortex.xcodeproj,Cortex.xcworkspace,vendor,fastlane/Fastfile,fastlane/Matchfile,fastlane/Appfile

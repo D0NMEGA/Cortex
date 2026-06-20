@@ -11,7 +11,7 @@ let package = Package(
   name: "CortexRing",
   platforms: [.macOS(.v26), .iOS(.v26)],
   products: [
-    .library(name: "CortexRingPing", targets: ["CortexRingPing"]),
+    .library(name: "CortexRingPing", targets: ["CortexRingPing"])
   ],
   targets: [
     // The Rust ABI, bundled as a binary xcframework (per-platform .a + cortex_ring.h + modulemap).
@@ -29,6 +29,6 @@ let package = Package(
     .testTarget(
       name: "CortexRingTests",
       dependencies: ["CortexRingPing"]
-    ),
+    )
   ]
 )
