@@ -37,7 +37,13 @@ set -euo pipefail
 # Packages/CortexCore/Sources/HotPath/), extend DIRS_ARRAY below to scope that subdir
 # specifically. The spec's intent (gate pre-armed for hot-path code) is preserved.
 if [[ -z "${DIRS:-}" ]]; then
-  DIRS_ARRAY=("Packages/CortexIPC/Sources")
+  # CF#4 (Phase 2, D-05): police ONLY the Foundation-free hot-path target. CortexIPCSession
+  # legitimately `import Foundation` (CryptoKit/Keychain/FlatBuffers) and would false-positive
+  # this gate, failing Phase 2's own CI. The script's Phase-1 comment anticipated exactly this
+  # ("extend DIRS_ARRAY to scope that subdir specifically"). When Phase 3 adds the pthread
+  # USER_INTERACTIVE hot path (e.g. under Apps/CortexDaemon/ or a CortexCore HotPath/ subdir),
+  # extend DIRS_ARRAY then.
+  DIRS_ARRAY=("Packages/CortexIPC/Sources/CortexIPCTransport")
 else
   # shellcheck disable=SC2206
   DIRS_ARRAY=($DIRS)
