@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: active
-stopped_at: "Phase 1 (foundation-2026-toolchain) COMPLETE: 7/7 plans, verification passed (4/4 success criteria, FOUND-01..05 satisfied). SC#2 cross-process shm_open verified on Apple Silicon M5 Pro / Xcode 26.3 with committed evidence (sc2-evidence.md). Phase 2 (IPC primitive) NOT started — awaiting user go-ahead (auto-advance intentionally not taken given the interactive session)."
-last_updated: "2026-06-19T22:49:39.497Z"
-last_activity: 2026-06-19
+status: verifying
+stopped_at: Phase 2 (IPC primitive) context gathered — 6 areas decided (D-01..D-18); ready for /gsd-plan-phase 2
+last_updated: "2026-06-20T04:19:56.275Z"
+last_activity: "2026-06-19 — Phase 1 complete (Plan 01-07 SC#2 runbook PASS; 6 toolchain-surfaced defects fixed)"
 progress:
   total_phases: 10
   completed_phases: 1
@@ -126,6 +126,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-30T04:46:18Z
-Stopped at: Wave 1 + Wave 2 complete (01-01, 01-02, 01-03, 01-04, 01-05 all done); ready for Wave 3 Plans 01-06 (CI ci.yml on macos-15) and 01-07 (manual SC#2 cross-process shm_open verification runbook)
-Resume file: .planning/phases/01-foundation-2026-toolchain/01-06-PLAN.md
+Last session: 2026-06-20T04:19:56.273Z
+Stopped at: Phase 2 (IPC primitive) context gathered — 6 areas decided (D-01..D-18); ready for /gsd-plan-phase 2
+Resume file: .planning/phases/02-ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm/02-CONTEXT.md
