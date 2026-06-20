@@ -98,3 +98,79 @@ sharing in Phase 2):
 
 Security note carried forward: the spike printed OSStatus + a byte-match boolean only — never key
 material (threat T-02-01-04). Plan 02-03's KeychainTests must follow the same discipline.
+
+---
+
+## CF#3 Rendezvous spike
+
+**Goal:** Prove a parent process can hand a Mach SEND right to a `posix_spawn`'d child and the child
+can message the parent back — WITHOUT a launchd plist and WITHOUT the deprecated `bootstrap_register`
+(which returns `BOOTSTRAP_NOT_PRIVILEGED (1100)` for ad-hoc names on modern macOS, per
+02-RESEARCH.md Critical Finding #3). This picks the rendezvous mechanism Plan 02-04's harness uses
+and reconciles it with locked decision D-08.
+
+**Spike artifact:** `Tools/spikes/rendezvous-spike/main.c` (pure C, no signing needed). Attempts the
+**non-deprecated** path FIRST per CF#3:
+- Parent: `mach_port_allocate(MACH_PORT_RIGHT_RECEIVE)` → `mach_port_insert_right(MACH_MSG_TYPE_MAKE_SEND)`
+  → `posix_spawnattr_setspecialport_np(&attr, sendRight, TASK_BOOTSTRAP_PORT)` → `posix_spawn` (self, arg `child`)
+  → `mach_msg(MACH_RCV_MSG | MACH_RCV_TIMEOUT, 10s)`.
+- Child: `task_get_special_port(mach_task_self(), TASK_BOOTSTRAP_PORT, &p)` → `mach_msg(MACH_SEND_MSG)`
+  one word (`0xC0FFEE`) to `p`.
+
+**Build + run recipe used:**
+```
+xcrun clang Tools/spikes/rendezvous-spike/main.c -o /tmp/cortex-rdv-spike
+/tmp/cortex-rdv-spike          # parent posix_spawns itself with `child`
+```
+- Compile: OK (no warnings).
+
+### Observed results (REAL)
+
+```
+parent: spawned child pid=70042; waiting for rendezvous word...
+child: sent word 0xC0FFEE over TASK_BOOTSTRAP_PORT rendezvous
+PASS: parent received word 0xC0FFEE from posix_spawn'd child over TASK_BOOTSTRAP_PORT
+```
+- Parent received the exact word `0xC0FFEE`; exit 0. **Deterministic across 3 consecutive runs** (3/3 PASS).
+
+### Verdict: **CF#3 = PASS** via `posix_spawnattr_setspecialport_np`
+
+The non-deprecated special-port injection works end-to-end on macOS 26.5 / Xcode 26.3 / M4 with **no
+launchd plist** and **no `bootstrap_register`**. The mechanism proven is
+`posix_spawnattr_setspecialport_np` (parent side) + `task_get_special_port` (child side), using
+**special-port index `TASK_BOOTSTRAP_PORT` (= 4)** as the rendezvous channel.
+
+### D-08 reconciliation: **ADOPT-WITH-RATIONALE**
+
+D-08 literally names "parent publishes a receive right under a bootstrap service name; child
+`bootstrap_look_up`s it." We **adopt `posix_spawnattr_setspecialport_np` instead**, because:
+- D-08's named API (`bootstrap_register`) is `__OSX_AVAILABLE_BUT_DEPRECATED(10.4→10.5)` and returns
+  `BOOTSTRAP_NOT_PRIVILEGED (1100)` for ad-hoc names on modern macOS; the non-deprecated
+  `bootstrap_check_in` requires a launchd plist, which D-08 explicitly avoids ("No launchd plist
+  needed for the proof").
+- `posix_spawnattr_setspecialport_np` achieves **D-08's INTENT** exactly — "the parent hands the
+  child the rendezvous right with no plist" — via a non-deprecated, verified-working path.
+- This is a mechanism substitution that preserves the locked decision's goal; flagged here for the
+  checker/user as an intentional, spike-validated deviation (not a silent change).
+
+### Directive for Plan 02-04 (binding)
+
+1. The harness driver injects the parent's rendezvous **SEND right** into the `posix_spawn`'d consumer
+   via `posix_spawnattr_setspecialport_np(&attr, sendRight, TASK_BOOTSTRAP_PORT)`; the consumer reads
+   it via `task_get_special_port(mach_task_self(), TASK_BOOTSTRAP_PORT, …)`. **No `bootstrap_register`,
+   no launchd plist** for the Phase-2 proof harness.
+2. **Special-port index Plan 02-04 uses: `TASK_BOOTSTRAP_PORT` (= 4).** Do NOT clobber the other
+   task special ports (1,2,3,5,6,9,10,11 = kernel/host/name/inspect/read/access/debug/resource).
+3. **Caveat (carry into Plan 02-04):** injecting `TASK_BOOTSTRAP_PORT` means the child loses its real
+   launchd bootstrap port. This is SAFE for the **Foundation-free `CortexIPCTransport` consumer**
+   (D-04) which needs no CFRunLoop/launchd services. If Plan 02-04 instead chooses a
+   Foundation/CoreFoundation consumer or an XCTest host that needs real bootstrap, fall back to the
+   `bootstrap_register`/`bootstrap_look_up` path (accept the deprecation warning) and record the
+   `BOOTSTRAP_*` return code — i.e. that fallback would be HONOR-WITH-SPIKE. The recommended path
+   (and the one validated here) is the Foundation-free consumer + special-port injection.
+4. Once the rendezvous right is in hand, the consumer proceeds to the Q1 `mach_msg` +
+   `MACH_MSG_PORT_DESCRIPTOR` + `fileport_makeport` dance to receive the shm fd (Plan 02-02 / IPC-03).
+
+Threat note (T-02-01-03): the special-port path injects the right directly at spawn — there is **no
+global bootstrap name for a third process to squat**, which is strictly safer than the bootstrap
+fallback's named-registration surface.
