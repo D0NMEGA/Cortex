@@ -53,6 +53,43 @@ jobs:
           brew update >/dev/null
           brew install xcodegen swiftformat swiftlint xcbeautify
 
+      # --- Phase 3 (THREAD-06 / D-R1): Rust toolchain + cbindgen ---
+      # Phase 3 introduces the first Rust in the repo; cargo/cbindgen are NOT preinstalled on
+      # macos-15 (RESEARCH §0 / Pitfall #1). Install + PROVE here so every downstream Rust gate
+      # (xcframework build, loom, 1M stress, cbindgen drift, Swift integration) can rely on it; a
+      # failed install fails CI loudly rather than silently skipping a gate.
+      - name: Cache Rust toolchain + cargo target (Phase 3)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            ~/.rustup/toolchains
+            Packages/CortexRing/rust/target
+          key: ${{ runner.os }}-rust-xcode26.3-${{ hashFiles('Packages/CortexRing/rust/Cargo.lock', 'Packages/CortexRing/rust/Cargo.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-rust-xcode26.3-
+
+      - name: Install Rust toolchain + cbindgen (Phase 3, THREAD-06)
+        run: |
+          set -euo pipefail
+          if ! command -v cargo >/dev/null 2>&1; then
+            brew install rustup-init
+            rustup-init -y --no-modify-path --default-toolchain stable
+          fi
+          # Put cargo/rustc/rustup on PATH for THIS step and export for all later steps.
+          source "$HOME/.cargo/env" 2>/dev/null || export PATH="$HOME/.cargo/bin:$PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+          rustup default stable
+          # Apple targets: macOS device (arm64) + macOS host (x86_64, in case the runner is Intel) +
+          # the two iOS targets the xcframework bundles (RESEARCH §3).
+          rustup target add aarch64-apple-darwin x86_64-apple-darwin aarch64-apple-ios aarch64-apple-ios-sim
+          # cbindgen 0.29 (matches the [build-dependencies] pin so the drift gate's header is stable).
+          command -v cbindgen >/dev/null 2>&1 || cargo install cbindgen
+          echo "=== toolchain proof ==="; cargo --version; rustc --version; cbindgen --version
+
       - name: Cache SwiftPM
         uses: actions/cache@v4
         with:
@@ -81,6 +118,13 @@ jobs:
           fi
           echo "OK: no CocoaPods artifacts"
 
+      # --- Phase 3 (D-R1): build the CortexRingFFI xcframework BEFORE xcodegen / resolve ---
+      # The SwiftPM .binaryTarget points at Packages/CortexRing/CortexRingFFI.xcframework, which is
+      # gitignored — so it MUST exist before `swift package resolve`/`xcodegen` parse CortexRing's
+      # Package.swift (RESEARCH §3 clean-clone caveat; this step is the CI `make bootstrap`).
+      - name: Build CortexRingFFI xcframework (Phase 3, D-R1)
+        run: ./Tools/scripts/build-rust.sh
+
       - name: Generate Xcode project from project.yml
         run: xcodegen
 
@@ -104,6 +148,41 @@ jobs:
         # evidence in sc1-evidence.md, never checked on the M1 runner. The two-process spawn test
         # XCTSkips when the daemon binary is unavailable in the runner.
         run: swift test --package-path Packages/CortexIPC
+
+      # --- Phase 3 Rust ring gates (SC#3a/b/c, SC#4) — pre-armed; Wave-2/3 code turns them green ---
+      # All correctness/model-checker only and runner-arch-independent (NOT M4-gated). The M4 SC#1
+      # Instruments trace is deliberately excluded — it is hardware-gated manual evidence
+      # (RESEARCH §5; D-18 precedent). Plan 03-01 OWNS all Phase-3 ci.yml edits; Plans 02/03/04 do
+      # not touch this file, they make these pre-armed gates go green (the Phase-1 hotpath-policy.sh
+      # / SCM_RIGHTS-grep "trap pre-armed" idiom).
+
+      - name: Rust ring unit + 1M-frame stress (SC#3b/SC#3c)
+        # Plan 02 lands the 1,000,000-frame FIFO/no-loss stress test + the align_of==128 cache-line
+        # padding assertion. Passes on the Spike-A skeleton (frame static assert + stub ABI) until then.
+        run: cargo test --release --manifest-path Packages/CortexRing/rust/Cargo.toml
+
+      - name: Rust ring loom permutation (SC#3a)
+        # Model-checker over a tiny ring (Plan 02). Permutes thread interleavings under the C11 model
+        # on the runner's own threads — runner-arch-independent, NOT M4-gated (unlike SC#1).
+        # Acquire/Release only (loom treats SeqCst as AcqRel — D-R4).
+        run: RUSTFLAGS="--cfg loom" cargo test --profile loom --manifest-path Packages/CortexRing/rust/Cargo.toml
+
+      - name: cbindgen header drift (SC#4 defense, D-13)
+        # Regenerate the vendored C header via build.rs, then fail if the committed header drifted
+        # from the Rust source — the C contract Swift links cannot silently diverge (threat
+        # T-03-01-03). Guarded on cbindgen presence, mirroring gen-flatbuffers.sh (D-13).
+        run: |
+          if command -v cbindgen >/dev/null 2>&1; then
+            cargo build --release --manifest-path Packages/CortexRing/rust/Cargo.toml
+            git diff --exit-code Packages/CortexRing/rust/include/cortex_ring.h
+          else
+            echo "cbindgen not present — skipping header drift gate (vendored header is committed)"
+          fi
+
+      - name: Swift integration over the Rust C ABI (SC#4)
+        # Runs PingSmokeTests now (Spike A); Plan 04 adds the produce→pop integration test. The
+        # xcframework was built earlier in the job. Correctness only — NO timing assertion (D-18).
+        run: swift test --package-path Packages/CortexRing
 
       - name: SwiftFormat (lint)
         run: swiftformat --lint .
