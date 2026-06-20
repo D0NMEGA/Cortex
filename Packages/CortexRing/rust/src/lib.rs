@@ -12,6 +12,11 @@
 
 pub mod ffi;
 pub mod frame;
+// The std↔loom cfg-shim (D-R3/D-R5) and the in-house SPSC ring it powers. The ring's atomics/cells
+// route through `crate::loom` so the SAME source is the production ring (driven by `ffi`), the body
+// of the 1M-frame std-atomic stress test, and the body of the tiny `--cfg loom` permutation test.
+pub mod loom;
+pub mod spsc;
 
 // Re-export the frozen frame type + channel constant at the crate root so downstream Rust
 // (the Plan 02 ring, the stress + loom tests) and cbindgen both resolve them from one place.

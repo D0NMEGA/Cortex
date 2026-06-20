@@ -42,3 +42,14 @@ harness = false
 [profile.loom]
 inherits = "release"
 opt-level = 3
+
+# `--cfg loom` is a first-class build configuration for this crate (the std↔loom shim in
+# src/loom.rs keys off it). Declare it to Rust 1.80+'s `check-cfg` so a normal `cargo build`
+# does not emit `unexpected cfg condition name: loom` for every `#[cfg(loom)]`/`#[cfg(not(loom))]`.
+# `loom_negative_control` is the documented one-toggle negative-control cfg the loom test uses to
+# prove the model checker catches a Relaxed-where-Release-required mutant (Task 2, SC#3a).
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = [
+    'cfg(loom)',
+    'cfg(loom_negative_control)',
+] }
