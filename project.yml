@@ -133,6 +133,14 @@ targets:
         product: CortexIPCTransport
       - package: CortexIPC
         product: CortexIPCSession
+      # Phase 3 (Plan 03-03): the daemon hosts the acquisition producer — the Foundation-free
+      # pthread USER_INTERACTIVE worker (CortexRingHotPath) that pushes CortexFrames into the Rust
+      # SPSC ring over the C ABI. The CortexRing package is already registered under packages:
+      # (Plan 01); this links the hot-path product + the CortexRingFFI xcframework into the daemon.
+      # The iOS/Mac app targets do NOT depend on it yet — wiring frames into the app UI is the
+      # Phase-6 consumer (RENDER SC#4), driven from a CAMetalDisplayLink callback.
+      - package: CortexRing
+        product: CortexRingHotPath
     entitlements:
       path: Apps/CortexDaemon/Cortex.entitlements
       properties:
