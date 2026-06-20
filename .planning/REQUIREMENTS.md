@@ -17,13 +17,13 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### IPC Transport (IPC)
 
-- [ ] **IPC-01**: POSIX `shm_open` shared memory inside App Group container with names ≤31 bytes (Darwin `PSHMNAMLEN` limit)
-- [ ] **IPC-02**: Raw `kqueue` + `recvmsg` socket pair primitive moves a sample frame between acquisition daemon and app process
-- [ ] **IPC-03**: Cross-process file descriptor passing via `mach_msg` with `MACH_MSG_PORT_DESCRIPTOR` (using `fileport_makeport`)
-- [ ] **IPC-04**: FlatBuffers `Sample { ts_ns: u64, channel_data: [f16] }` schema serializes/deserializes uniform 0.5ms blocks
-- [ ] **IPC-05**: AES-GCM session encryption via CryptoKit `AES.GCM` with HKDF-derived per-session keys
-- [ ] **IPC-06**: Session keys stored in Keychain with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`
-- [ ] **IPC-07**: Measured round-trip latency sub-µs over local socket pair
+- [x] **IPC-01**: POSIX `shm_open` shared memory inside App Group container with names ≤31 bytes (Darwin `PSHMNAMLEN` limit) — Plans 02-01, 02-02 (`ShmRing.swift` + `cortex_shm.h` `_Static_assert`; `CORTEX_SHM_NAME="/cortex.samples"` = 15 B; RingTests green); verified [02-VERIFICATION.md](phases/02-ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm/02-VERIFICATION.md)
+- [x] **IPC-02**: Raw `kqueue` + `recvmsg` socket pair primitive moves a sample frame between acquisition daemon and app process — Plans 02-02, 02-04, 02-05 (`Doorbell.swift` socketpair+kqueue EVFILT_READ+recvmsg, no control buffer; DoorbellTests 2/2); verified 02-VERIFICATION.md
+- [x] **IPC-03**: Cross-process file descriptor passing via `mach_msg` with `MACH_MSG_PORT_DESCRIPTOR` (using `fileport_makeport`) — Plans 02-01, 02-02, 02-04 (`cortex_fdmsg.c` fileport path + `cortex_rendezvous.c`; zero `SCM_RIGHTS`, CI grep gate); verified 02-VERIFICATION.md
+- [x] **IPC-04**: FlatBuffers `Sample { ts_ns: u64, channel_data: [f16] }` schema serializes/deserializes uniform 0.5ms blocks — Plan 02-03 (`sample.fbs` + `SampleCodec.swift` zero-copy Float16 rebind; SampleCodecTests 5/5); verified 02-VERIFICATION.md
+- [x] **IPC-05**: AES-GCM session encryption via CryptoKit `AES.GCM` with HKDF-derived per-session keys — Plan 02-03 (`SessionCrypto.swift` HKDF<SHA256> per-direction subkeys, 96-bit deterministic nonce, fail-closed; CryptoTests 6/6); verified 02-VERIFICATION.md
+- [x] **IPC-06**: Session keys stored in Keychain with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly` — Plans 02-01, 02-03 (`SessionKeychain.swift` data-protection keychain; KeychainTests 5/5; cross-process access-group sharing deferred → Phase 8 per CF#1); verified 02-VERIFICATION.md
+- [x] **IPC-07**: Measured round-trip latency sub-µs over local socket pair — Plans 02-04, 02-05 (`sc1-evidence.md` p99=208ns, n=199,000, M5 Pro ≥ M4; HarnessE2ETests correctness gate green); verified 02-VERIFICATION.md
 
 ### Threading (THREAD)
 
@@ -148,13 +148,13 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | FOUND-03 | Phase 1: Foundation & 2026 Toolchain | 01-03 (complete) |
 | FOUND-04 | Phase 1: Foundation & 2026 Toolchain | 01-01 (complete) |
 | FOUND-05 | Phase 1: Foundation & 2026 Toolchain | 01-06 (complete) |
-| IPC-01 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
-| IPC-02 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
-| IPC-03 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
-| IPC-04 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
-| IPC-05 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
-| IPC-06 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
-| IPC-07 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | TBD |
+| IPC-01 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-01 (complete), 02-02 (complete) |
+| IPC-02 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-02 (complete), 02-04 (complete), 02-05 (complete) |
+| IPC-03 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-01 (complete), 02-02 (complete), 02-04 (complete) |
+| IPC-04 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-03 (complete) |
+| IPC-05 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-03 (complete) |
+| IPC-06 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-01 (complete), 02-03 (complete) |
+| IPC-07 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-04 (complete), 02-05 (complete) |
 | THREAD-01 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
 | THREAD-02 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
 | THREAD-03 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
