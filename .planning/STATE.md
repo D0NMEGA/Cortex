@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main, verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
-last_updated: "2026-06-21T06:29:02.937Z"
-last_activity: 2026-06-21 -- Quick task 260621-iyg: CortexMac scheme now launches the app window (was launching the daemon)
+stopped_at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main (2e707cf), verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
+last_updated: "2026-06-21T19:47:20.817Z"
+last_activity: 2026-06-21 -- Phase 5 planning complete
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 21
+  total_plans: 26
   completed_plans: 21
-  percent: 100
+  percent: 81
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 Phase: 5 (NDT1 → CoreML Deployment with ANE Residency) — not started
 Plan: Not started
-Status: Phase 4 complete & verified — ready to plan Phase 5
-Last activity: 2026-06-21 -- Quick task 260621-iyg: CortexMac scheme now launches the app window (was launching the daemon)
+Status: Ready to execute
+Last activity: 2026-06-21 -- Phase 5 planning complete
 
 Progress: Phase 4 [██████████] 100% (5/5 plans complete) · Project [████░░░░░░] 4/10 phases
 
