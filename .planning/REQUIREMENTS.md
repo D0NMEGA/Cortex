@@ -167,13 +167,13 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | DEC-03 | Phase 4: NDT1 Training on Indy/Loco | 04-05 |
 | DEC-04 | Phase 4: NDT1 Training on Indy/Loco | 04-03 |
 | DEC-05 | Phase 4: NDT1 Training on Indy/Loco | 04-05 |
-| DEC-06 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
-| DEC-07 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
-| DEC-08 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
-| DEC-09 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
-| DEC-10 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
-| DEC-11 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
-| DEC-12 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
+| DEC-06 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-02 |
+| DEC-07 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-03 |
+| DEC-08 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-05 |
+| DEC-09 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-03 |
+| DEC-10 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-01 |
+| DEC-11 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-04 |
+| DEC-12 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-03 |
 | RENDER-01 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
 | RENDER-02 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
 | RENDER-03 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |

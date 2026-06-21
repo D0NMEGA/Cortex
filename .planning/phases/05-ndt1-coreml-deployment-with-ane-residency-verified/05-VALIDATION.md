@@ -2,8 +2,8 @@
 phase: 5
 slug: ndt1-coreml-deployment-with-ane-residency-verified
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-06-21
 ---
 
@@ -79,11 +79,11 @@ created: 2026-06-21
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies (or a Manual-Only entry above)
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references (Swift test target scaffolding)
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter (after planner maps every task)
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies (or a Manual-Only entry above)
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (Swift test target scaffolding — Plan 05-03 Task 1 creates CortexDecoderTests)
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter (after planner maps every task)
 
-**Approval:** pending
+**Approval:** granted by planner 2026-06-21 — 5 plans (05-01..05-05) map every DEC-06..12 to an `<automated>` verify (DEC-06 py compute_plan; DEC-07/09/10/12 swift; DEC-11 Mac-corroborating bench) or the Manual-Only iPad-M4 runbook (DEC-08 + SC#4 canonical, 05-HUMAN-UAT.md). Swift test target is Wave-0 scaffolding in 05-03 Task 1.

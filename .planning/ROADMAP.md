@@ -108,7 +108,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. `MLModelConfiguration.computeUnits` is set to `.cpuAndNeuralEngine` (a unit test fails the build if the value is `.all`); zero references to `_ANEClient` anywhere in the source tree (greppable assertion in CI)
   3. Decoder emits a 2-vector `(vx, vy)` fp16 cursor velocity every 20ms, with input tensor entering CoreML zero-copy via `MTLBuffer storageModeShared` + `MPSGraphTensorData(mtlBuffer:shape:dataType:)` (no host↔device copy on the inference path)
   4. End-to-end inference latency measures <2ms at p99 across 10,000 forward passes on M4 ANE, with the latency histogram committed alongside the Instruments trace
-**Plans**: TBD
+**Plans**: 5 plans (4 waves)
+- [ ] 05-01-PLAN.md — Velocity readout head: Conv2d(96->2) + static last-bin slice + closed-form ridge fit; convert.py emits (vx,vy) fp16 (FLOAT16 + tanh-GELU) (DEC-10) [Wave 1]
+- [ ] 05-02-PLAN.md — ANE op-eligibility gate (Python/Mac CI): MLComputePlan op scan on the compiled 4-bit package, every op ANE-eligible / zero CPU-only, einsum disposition + conditional meridian rewrite (DEC-06) [Wave 2]
+- [ ] 05-03-PLAN.md — Swift inference path: .cpuAndNeuralEngine (build-fails on .all) + zero-copy MLMultiArray(pixelBuffer:) over a shared IOSurface/MTLBuffer + (vx,vy) output + no-_ANEClient CI grep (DEC-07, DEC-09, DEC-12) [Wave 2]
+- [ ] 05-04-PLAN.md — In-process Swift latency bench: CortexDecoderBench warmup + 10k MLModel.prediction passes -> device-annotated p50/p99 histogram (Mac corroborating) (DEC-11) [Wave 3]
+- [ ] 05-05-PLAN.md — iPad-M4 HUMAN-UAT runbook: 100% ANE runtime placement (Instruments/Performance-Report/MLComputePlan) + canonical on-device <2ms p99 + reviewer artifact checklist (DEC-08; checkpoint:human-verify) [Wave 4]
 
 ### Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid
 **Goal**: A beam-raced 120Hz Metal renderer presents a 30×30 webgrid (the modern Bliss-Chapman / Neuralink reference, *not* the legacy 6×6 from Pandarinath 2017) on iPad Pro M4 ProMotion at ≤0.4ms GPU compute, with `dispatch_semaphore_t(value: 1)` enforcing one in-flight frame per Apple's "Synchronizing CPU and GPU Work" pattern. This phase can run in parallel with Phases 4-5 — only Phase 8 (system integration) needs both halves to converge.
@@ -179,7 +184,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 5/5 | ✓ Complete | 2026-06-20 |
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 4/4 | ✓ Complete | 2026-06-20 |
 | 4. NDT1 Training on Indy/Loco | v0 | 5/5 | ✓ Complete | 2026-06-21 |
-| 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/TBD | Not started | - |
+| 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/5 | Planned | - |
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 0/TBD | Not started | - |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 0/TBD | Not started | - |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 0/TBD | Not started | - |
