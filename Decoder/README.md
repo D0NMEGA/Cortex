@@ -42,6 +42,23 @@ uv run --project Decoder pytest Decoder/tests -q
 The `slow` marker (registered in `pyproject.toml`) tags long-running training / conversion
 tests so the quick CI run can exclude them with `-m "not slow"`.
 
+## Training convergence evidence (SC2)
+
+The masked-modeling training loop (`ndt1.train.train_ndt1`) converges to a **non-trivial held-out
+reconstruction**, measured as **co-bps (bits-per-spike)** beating the mean-firing-rate null. The
+quick suite runs only a short-budget **smoke** (`tests/test_training_smoke.py` — proves the loss
+decreases and stays finite); the full convergence number is a committed evidence artifact:
+
+- **Evidence:** [`.planning/phases/04-ndt1-training-on-indy-loco-synthetic-replay/04-training-evidence.md`](../.planning/phases/04-ndt1-training-on-indy-loco-synthetic-replay/04-training-evidence.md)
+  — held-out co-bps + null baseline + loss curve + the no-hardware-claim (any-Mac-CPU) disposition.
+- **Reproduce (synthetic fallback — needs no dataset):**
+  ```sh
+  uv run --project Decoder pytest -m slow -k test_heldout_cobps
+  ```
+  The test prefers a real Indy session if `Decoder/data/*.mat` is present (materialize via
+  `uv run --project Decoder python Decoder/scripts/download_indy.py`), else falls back to a
+  deterministic synthetic Poisson dataset so it runs anywhere.
+
 ## Linting
 
 ```sh
