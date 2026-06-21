@@ -62,3 +62,15 @@ fastlane/.fastlane.tmp.bundle
 __pycache__/
 *.pyc
 .venv/
+
+# --- Phase 4: Decoder Python subsystem artifacts (code + manifests are tracked; these are not) ---
+Decoder/.venv/
+Decoder/data/
+Decoder/**/*.mat
+Decoder/checkpoints/
+Decoder/**/*.pt
+Decoder/**/*.ckpt
+Decoder/**/*.mlpackage/
+Decoder/**/__pycache__/
+Decoder/.pytest_cache/
+Decoder/.ruff_cache/
