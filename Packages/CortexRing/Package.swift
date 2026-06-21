@@ -16,6 +16,10 @@ let package = Package(
     // producer that pushes CortexFrames into the Rust SPSC ring over the C ABI). CortexDaemon
     // depends on this product (project.yml); the hot-path policy gate polices its sources.
     .library(name: "CortexRingHotPath", targets: ["CortexRingHotPath"]),
+    // Plan 03-04: the safe RAII Swift consumer wrapper over the loom-verified Rust SPSC ring
+    // (cortex_spsc_create/push/pop/destroy). This is the renderer/UI-side bridge (THREAD-06,
+    // SC#4); Phase 6 drives it from a CAMetalDisplayLink callback (RENDER SC#4).
+    .library(name: "CortexRing", targets: ["CortexRing"])
   ],
   targets: [
     // The Rust ABI, bundled as a binary xcframework (per-platform .a + cortex_ring.h + modulemap).
@@ -39,9 +43,19 @@ let package = Package(
       name: "CortexRingHotPath",
       dependencies: ["CortexRingFFI"]
     ),
+    // The safe RAII consumer wrapper (Plan 03-04, THREAD-06; D-R6). It owns the `*mut CortexSpsc`
+    // create/destroy lifecycle and exposes idiomatic push/pop over the cbindgen C ABI, consuming
+    // the repr(C) `CortexFrame` directly from the modulemap (no hand-written Swift mirror that
+    // could drift). NO .defaultIsolation(MainActor.self): the Phase-6 renderer calls pop() from a
+    // CAMetalDisplayLink callback OFF the main actor, so this target stays isolation-neutral —
+    // matching the CortexRingPing / CortexRingHotPath / CortexIPCTransport precedent (Plan 02-01).
+    .target(
+      name: "CortexRing",
+      dependencies: ["CortexRingFFI"]
+    ),
     .testTarget(
       name: "CortexRingTests",
-      dependencies: ["CortexRingPing"]
+      dependencies: ["CortexRingPing", "CortexRing"]
     )
   ]
 )
