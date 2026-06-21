@@ -5,7 +5,7 @@ milestone_name: milestone
 status: executing
 stopped_at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main, verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
 last_updated: "2026-06-21T06:29:02.937Z"
-last_activity: 2026-06-21 -- Quick task 260621-32u: set DEVELOPMENT_TEAM=Y4A54395NZ for durable GUI signing
+last_activity: 2026-06-21 -- Quick task 260621-32u: set DEVELOPMENT_TEAM=57YW6M29S7 for durable GUI signing
 progress:
   total_phases: 10
   completed_phases: 4
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 5 (NDT1 → CoreML Deployment with ANE Residency) — not started
 Plan: Not started
 Status: Phase 4 complete & verified — ready to plan Phase 5
-Last activity: 2026-06-21 -- Quick task 260621-32u: set DEVELOPMENT_TEAM=Y4A54395NZ for durable GUI signing
+Last activity: 2026-06-21 -- Quick task 260621-32u: set DEVELOPMENT_TEAM=57YW6M29S7 for durable GUI signing
 
 Progress: Phase 4 [██████████] 100% (5/5 plans complete) · Project [████░░░░░░] 4/10 phases
 
@@ -125,7 +125,7 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260621-32u | Set DEVELOPMENT_TEAM to Y4A54395NZ on all three targets in project.yml and regenerate | 2026-06-21 | 921b2db | [260621-32u-set-development-team-to-y4a54395nz-on-al](./quick/260621-32u-set-development-team-to-y4a54395nz-on-al/) |
+| 260621-32u | Set DEVELOPMENT_TEAM to 57YW6M29S7 on all three targets in project.yml and regenerate | 2026-06-21 | 921b2db | [260621-32u-set-development-team-to-y4a54395nz-on-al](./quick/260621-32u-set-development-team-to-y4a54395nz-on-al/) |
 
 ## Deferred Items
 
