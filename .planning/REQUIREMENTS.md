@@ -47,7 +47,7 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 - [ ] **DEC-08**: ANE residency verified at runtime via Instruments → CoreML template
 - [ ] **DEC-09**: Input tensor enters CoreML zero-copy via `MTLBuffer storageModeShared` + `MPSGraphTensorData(mtlBuffer:shape:dataType:)`
 - [x] **DEC-10**: Output is 2-vector cursor velocity (vx, vy) at fp16, emitted every 20ms
-- [ ] **DEC-11**: Decoder inference latency <2ms p99 on M4 Neural Engine
+- [x] **DEC-11**: Decoder inference latency <2ms p99 on M4 Neural Engine
 - [ ] **DEC-12**: Zero use of `_ANEClient` private API (App Store rejection risk)
 
 ### ReFIT-Kalman (REFIT)

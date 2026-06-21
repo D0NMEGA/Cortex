@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-01-PLAN.md (DEC-10 velocity head). Plan 2 of 5 next.
-last_updated: "2026-06-21T21:25:27.985Z"
+stopped_at: Completed 05-04-PLAN.md (DEC-11 latency bench). Plan 5 of 5 (iPad HUMAN-UAT) next.
+last_updated: "2026-06-21T22:06:04.208Z"
 last_activity: 2026-06-21
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 26
-  completed_plans: 22
-  percent: 85
+  completed_plans: 25
+  percent: 96
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 05 (ndt1-coreml-deployment-with-ane-residency-verified) — EXECUTING
-Plan: 2 of 5
+Plan: 5 of 5 (4 of 5 complete — 05-01..05-04 done; 05-05 iPad HUMAN-UAT next)
 Status: Ready to execute
 Last activity: 2026-06-21
 
-Progress: Phase 4 [██████████] 100% (5/5 plans complete) · Project [████░░░░░░] 4/10 phases
+Progress: Phase 5 [████████░░] 80% (4/5 plans complete) · Project [████░░░░░░] 4/10 phases
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: Phase 4 [██████████] 100% (5/5 plans complete) · 
 
 *Updated after each plan completion*
 | Phase 05 P01 | 13 min | 3 tasks | 6 files |
+| Phase 05 P04 | 13 min | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -113,6 +114,7 @@ Recent architectural commitments shaping all phases:
 - Two Rule 1 (auto-fix bug) deviations applied during execution to satisfy literal acceptance criteria: (a) reworded a comment in `project.yml` to avoid the literal `com.apple.security.app-sandbox` token while preserving Phase-1-no-sandbox intent; (b) reworded comments in Apps/CortexMac/App.swift to avoid the case-sensitive `Catalyst` token while preserving native-AppKit-not-iOS-bridge intent. Build setting `SUPPORTS_MACCATALYST: NO` in project.yml is allowed (uppercase MACCATALYST does not match case-sensitive grep)
 - Toolchain-deferral disposition for the dynamic xcodebuild verification: local executor environment is CommandLineTools + Swift 6.0.3 (no Xcode 26, no xcodegen). Structural verification done locally to the maximum extent (plutil -lint clean × 6, YAML parses with 3 targets / 4 packages / 3 schemes, App Group grep == 3, app-sandbox grep empty across project.yml + 3 entitlements, case-sensitive Catalyst grep empty in Mac App.swift, swiftc -parse exits 0 on 5 Swift files). Dynamic xcodebuild build verification gate captured as a verbatim seven-step re-run command set in 01-02-daemon-spm-smoke.md — closed by Plan 01-06 CI on macos-15 + setup-xcode@v1 pinning 26.3 OR by a human on a Xcode 26 dev machine. Matches Plan 01-01 toolchain-deferral precedent
 - PrivacyInfo.xcprivacy auto-bundling pattern: relying on XcodeGen's directory recursion of `Apps/CortexiOS/` and `Apps/CortexMac/` to add the `.xcprivacy` to Copy Bundle Resources. Step 7 of the smoke command set explicitly verifies bundling on the Xcode 26 environment
+- [Phase 05]: DEC-11 latency is measured in-process in a dedicated CortexDecoderBench executable (10k ContinuousClock passes), NOT a swift test timing gate (D-18); the Mac number is device-annotated and CORROBORATING (CPU-placed at 1.29M params — the scale trap), with the canonical sub-2ms-p99-on-ANE claim handed to the iPad-M4 run of the same bench (Plan 05). — Keeps a flaky latency assertion out of CI and prevents a Mac CPU-latency number from being misrepresented as the canonical ANE claim (mirrors the 05-02 eligibility/placement split + THREAD-02/SC#1 device-gating).
 
 ### Pending Todos
 
@@ -141,6 +143,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-21T21:25:27.983Z
-Stopped at: Completed 05-01-PLAN.md (DEC-10 velocity head). Plan 2 of 5 next.
+Last session: 2026-06-21T22:05:53.011Z
+Stopped at: Completed 05-04-PLAN.md (DEC-11 latency bench). Plan 5 of 5 (iPad HUMAN-UAT) next.
 Resume file: None

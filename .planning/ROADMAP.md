@@ -112,7 +112,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 05-01-PLAN.md — Velocity readout head: Conv2d(96->2) + static last-bin slice + closed-form ridge fit; convert.py emits (vx,vy) fp16 (FLOAT16 + tanh-GELU) (DEC-10) [Wave 1]
 - [x] 05-02-PLAN.md — ANE op-eligibility gate (Python/Mac CI): MLComputePlan op scan on the compiled 4-bit package, every op ANE-eligible / zero CPU-only, einsum disposition + conditional meridian rewrite (DEC-06) [Wave 2]
 - [x] 05-03-PLAN.md — Swift inference path: .cpuAndNeuralEngine (build-fails on .all) + zero-copy MLMultiArray(pixelBuffer:) over a shared IOSurface/MTLBuffer + (vx,vy) output + no-_ANEClient CI grep (DEC-07, DEC-09, DEC-12) [Wave 2]
-- [ ] 05-04-PLAN.md — In-process Swift latency bench: CortexDecoderBench warmup + 10k MLModel.prediction passes -> device-annotated p50/p99 histogram (Mac corroborating) (DEC-11) [Wave 3]
+- [x] 05-04-PLAN.md — In-process Swift latency bench: CortexDecoderBench warmup + 10k MLModel.prediction passes -> device-annotated p50/p99 histogram (Mac corroborating) (DEC-11) [Wave 3]
 - [ ] 05-05-PLAN.md — iPad-M4 HUMAN-UAT runbook: 100% ANE runtime placement (Instruments/Performance-Report/MLComputePlan) + canonical on-device <2ms p99 + reviewer artifact checklist (DEC-08; checkpoint:human-verify) [Wave 4]
 
 ### Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid
