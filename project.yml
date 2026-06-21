@@ -72,7 +72,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.ios
         TARGETED_DEVICE_FAMILY: "2"        # iPad only (1=iPhone, 2=iPad). iPhone explicitly out of scope.
-        DEVELOPMENT_TEAM: ""               # Personal Team auto-signs locally; CI uses CODE_SIGNING_ALLOWED=NO.
+        DEVELOPMENT_TEAM: Y4A54395NZ        # Personal Team auto-signs locally; CI uses CODE_SIGNING_ALLOWED=NO.
         CODE_SIGN_STYLE: Automatic
         IPHONEOS_DEPLOYMENT_TARGET: "26.0"
 
@@ -106,7 +106,7 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "26.0"
         SUPPORTS_MACCATALYST: NO            # Defense-in-depth against accidental Catalyst (RENDER-08).
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: Y4A54395NZ
         CODE_SIGN_STYLE: Automatic
 
   CortexDaemon:
@@ -150,7 +150,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.daemon
         MACOSX_DEPLOYMENT_TARGET: "26.0"
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: Y4A54395NZ
         CODE_SIGN_STYLE: Automatic
 
 schemes:
