@@ -23,8 +23,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation & 2026 Toolchain** - Repo skeleton on Xcode 26 + Swift 6.2 / macOS 26 Tahoe / iPadOS 26 with App Group container, privacy manifest, and CI green — completed 2026-06-19
 - [x] **Phase 2: IPC Primitive — kqueue+recvmsg + FlatBuffers + AES-GCM** - Sub-µs sample-frame transport between acquisition daemon and app, encrypted, FD-passed via mach_msg — completed 2026-06-20 (SC#1 p99=208ns)
-- [ ] **Phase 3: Real-Time Threading — pthread USER_INTERACTIVE + Rust SPSC Ring** - Audio-callback-regime hot path with loom-verified lock-free ring buffer bridged to Swift via cbindgen
-- [ ] **Phase 4: NDT1 Training on Indy/Loco Synthetic Replay** - 1.3M-param NDT1 (6 layers, h=1-2, 128 dim, 20ms bins) trained on Zenodo 3854034 with 4-bit palettization
+- [x] **Phase 3: Real-Time Threading — pthread USER_INTERACTIVE + Rust SPSC Ring** - Audio-callback-regime hot path with loom-verified lock-free ring buffer bridged to Swift via cbindgen — completed 2026-06-20 (THREAD-01..07 validated, security 18/18 closed)
+- [x] **Phase 4: NDT1 Training on Indy/Loco Synthetic Replay** - 1.3M-param NDT1 (6 layers, h=1-2, 128 dim, 20ms bins) trained on Zenodo 3854034 with 4-bit palettization — completed 2026-06-21 (4/4 SC: 1.29M params, co-bps 0.3804 held-out, 3.471× palettization)
 - [ ] **Phase 5: NDT1 → CoreML deployment with ANE residency verified** - PyTorch checkpoint converted via coremltools with BC1S `(B,C,1,S)` layout, Instruments-confirmed 100% ANE residency, <2ms p99 inference
 - [ ] **Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid** - Beam-raced ProMotion presentation, ≤0.4ms GPU compute, zero-copy `storageModeShared` drawables
 - [ ] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1
@@ -96,8 +96,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 04-01-PLAN.md — Wave 0/1 scaffold: `Decoder/` + `pyproject.toml`/`uv.lock` (pinned 3.11/3.12) + torch/coremltools/h5py deps + ruff (no-bare-except gate) + seeded conftest fixtures + `.gitignore` for data/checkpoints/`.mlpackage` (DEC-02) [Wave 1]
 - [x] 04-02-PLAN.md — Dataset layer: `.mat` (h5py, v7.3) loader + 20ms binning -> `(num_bins, 96)` + chronological-tail split + Zenodo manifest/download (sha256) + **closes Phase-2 D-11** (CORTEX_CHANNEL_COUNT=96 reconciled vs cortex_shm.h/cortex_ring.h/frame.rs) (DEC-02) [Wave 2]
 - [x] 04-03-PLAN.md — NDT1ANE in BC1S form (Conv2d, single-head-chunk attention, `bchq,bkhc->bkhq` einsum) + masked-Poisson head + **SC1** (structural `num_heads in {1,2}` on every module + param guardrail) + **SC3** (BC1S forward-hook + zero-`nn.Linear` + (B,S,C) negative control) (DEC-01, DEC-04) [Wave 2]
-- [ ] 04-04-PLAN.md — Masked-modeling training loop -> held-out **co-bps** beats mean-rate null + short-budget CI smoke + committed `04-training-evidence.md` (SC2) (DEC-02) [Wave 3]
-- [ ] 04-05-PLAN.md — `ct.convert`->`.mlpackage` (mlprogram, CPU, no ANE) then `palettize_weights(OpPalettizerConfig(kmeans,nbits=4))` + size/Δloss characterization + `04-palettization-evidence.md` (SC4) (DEC-03, DEC-05) [Wave 3]
+- [x] 04-04-PLAN.md — Masked-modeling training loop -> held-out **co-bps** beats mean-rate null + short-budget CI smoke + committed `04-training-evidence.md` (SC2) (DEC-02) [Wave 3]
+- [x] 04-05-PLAN.md — `ct.convert`->`.mlpackage` (mlprogram, CPU, no ANE) then `palettize_weights(OpPalettizerConfig(kmeans,nbits=4))` + size/Δloss characterization + `04-palettization-evidence.md` (SC4) (DEC-03, DEC-05) [Wave 3]
 
 ### Phase 5: NDT1 → CoreML deployment with ANE residency verified
 **Goal**: The 4-bit palettized NDT1 checkpoint becomes a `.mlpackage` that runs entirely on the M4 Neural Engine in <2ms p99, with input arriving zero-copy from a `MTLBuffer storageModeShared` and output emitting a 2-vector cursor velocity at fp16 every 20ms. This is the load-bearing latency budget for the entire glass-to-glass claim.
@@ -177,8 +177,8 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 |-------|-----------|----------------|--------|-----------|
 | 1. Foundation & 2026 Toolchain | v0 | 7/7 | ✓ Complete | 2026-06-19 |
 | 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 5/5 | ✓ Complete | 2026-06-20 |
-| 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/4 | Planned | - |
-| 4. NDT1 Training on Indy/Loco | v0 | 0/5 | Planned | - |
+| 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 4/4 | ✓ Complete | 2026-06-20 |
+| 4. NDT1 Training on Indy/Loco | v0 | 5/5 | ✓ Complete | 2026-06-21 |
 | 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/TBD | Not started | - |
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 0/TBD | Not started | - |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 0/TBD | Not started | - |

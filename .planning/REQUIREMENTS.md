@@ -37,11 +37,11 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### Decoder Pipeline (DEC)
 
-- [ ] **DEC-01**: NDT1 architecture implemented — 6 transformer layers, h=1-2 attention heads, 128 hidden dim, 20ms spike binning, ~1.3M params
-- [ ] **DEC-02**: Training pipeline ingests O'Doherty Indy/Loco synthetic spike replay (Zenodo 3854034)
-- [ ] **DEC-03**: Trained PyTorch checkpoint converts to `.mlpackage` via coremltools
-- [ ] **DEC-04**: Tensor activations reshape to BC1S `(B, C, 1, S)` layout per `apple/ml-ane-transformers`
-- [ ] **DEC-05**: 4-bit palettization applied via `coremltools.optimize.palettize_weights` with `OpPalettizerConfig(nbits=4)`
+- [x] **DEC-01**: NDT1 architecture implemented — 6 transformer layers, h=1-2 attention heads, 128 hidden dim, 20ms spike binning, ~1.3M params
+- [x] **DEC-02**: Training pipeline ingests O'Doherty Indy/Loco synthetic spike replay (Zenodo 3854034)
+- [x] **DEC-03**: Trained PyTorch checkpoint converts to `.mlpackage` via coremltools
+- [x] **DEC-04**: Tensor activations reshape to BC1S `(B, C, 1, S)` layout per `apple/ml-ane-transformers`
+- [x] **DEC-05**: 4-bit palettization applied via `coremltools.optimize.palettize_weights` with `OpPalettizerConfig(nbits=4)`
 - [ ] **DEC-06**: Every model op validated against ANE op-support matrix (no CPU/GPU fallbacks on inference path)
 - [ ] **DEC-07**: `MLModelConfiguration.computeUnits = .cpuAndNeuralEngine` (NOT `.all`)
 - [ ] **DEC-08**: ANE residency verified at runtime via Instruments → CoreML template

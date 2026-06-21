@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 (NDT1 Training on Indy/Loco) executing — Wave 1 (04-01 scaffold) starting; 5 plans across 3 waves
-last_updated: "2026-06-21T05:23:24.668Z"
-last_activity: 2026-06-21 -- Phase 04 execution started
+stopped_at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main, verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
+last_updated: "2026-06-21T06:29:02.937Z"
+last_activity: 2026-06-21 -- Phase 4 complete & verified (4/4 success criteria)
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 21
-  completed_plans: 16
-  percent: 76
+  completed_plans: 21
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 04 — ndt1-training-on-indy-loco-synthetic-replay
+**Current focus:** Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — verified 4/4 SC (1.29M-param NDT1, co-bps 0.3804 held-out, 3.471× 4-bit palettization, Δloss 0.009). Phase 5 (NDT1 → CoreML/ANE deployment) next.
 
 ## Current Position
 
-Phase: 04 (ndt1-training-on-indy-loco-synthetic-replay) — EXECUTING
-Plan: 1 of 5
-Status: Executing Phase 04
-Last activity: 2026-06-21 -- Phase 04 execution started
+Phase: 5 (NDT1 → CoreML Deployment with ANE Residency) — not started
+Plan: Not started
+Status: Phase 4 complete & verified — ready to plan Phase 5
+Last activity: 2026-06-21 -- Phase 4 complete & verified
 
-Progress: Phase 4 [░░░░░░░░░░] 0% (0/5 plans — planned, not started) · Project [███░░░░░░░] 3/10 phases
+Progress: Phase 4 [██████████] 100% (5/5 plans complete) · Project [████░░░░░░] 4/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 16 (all Phase 1)
+- Total plans completed: 21 (Phases 1-4)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -47,11 +47,12 @@ Progress: Phase 4 [░░░░░░░░░░] 0% (0/5 plans — planned, no
 | 01 | 7 | - | - |
 | 02 | 5 | - | - |
 | 03 | 4 | - | - |
+| 04 | 5 | - | - |
 
 **Recent Trend:**
 
-- Last 5 plans: 01-01 (5m), 01-03 (3m), 01-04 (5m), 01-05 (5m), 01-02 (6m)
-- Trend: stable 3-6m per plan. Plan 01-02 ran ~6m (long end of envelope) due to writing 13 files plus the 286-line daemon-spm-smoke evidence file documenting the toolchain-deferral disposition; no Rule 1/2/3/4 deviations beyond two small comment rewordings to satisfy the literal acceptance criteria
+- Last 5 plans (Phase 4): 04-01 (~6m), 04-02 (~12m), 04-03 (~12m), 04-04 (~16m), 04-05 (~14m). Waves 2 & 3 each ran 2 plans concurrently in isolated worktrees.
+- Trend: Phase 4 plans ran ~6-16m (heavier ML implementation — torch model, training loop, CoreML conversion) vs Phase 1's 3-6m. 04-04 (training loop + slow co-bps evidence run) was the longest. Across the phase: 7 deviations total, all auto-fixed (mostly literal-grep comment rewordings, the documented project pattern), no scope creep, no new deps beyond the planned torch/coremltools/h5py.
 
 *Updated after each plan completion*
 
@@ -131,6 +132,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-21T05:15:12.277Z
-Stopped at: Phase 4 (NDT1 Training on Indy/Loco) planned — 5 plans (3 waves), plan-checker VERIFICATION PASSED; ready for /gsd-execute-phase 4
-Resume file: .planning/phases/04-ndt1-training-on-indy-loco-synthetic-replay/04-01-PLAN.md
+Last session: 2026-06-21T06:29:02.937Z
+Stopped at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main (2e707cf), verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
+Resume file: (Phase 5 not yet planned) — run /gsd-discuss-phase 5 or /gsd-plan-phase 5
