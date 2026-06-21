@@ -1,0 +1,30 @@
+{
+  "record": "3854034",
+  "source": "https://zenodo.org/records/3854034",
+  "array": "M1-only (96 channels)",
+  "note": "Curated subset of early/mid-2016 Indy M1-only sessions from O'Doherty/Cardoso/Makin/Sabes 2020 (Zenodo 3854034). Per the record: 'in most sessions M1 recordings were made alone (96 channels)'. indy_20160630_01 is the NLB'21 mc_rtt benchmark session. The loader (ndt1.data.load_session) enforces width == CORTEX_CHANNEL_COUNT (96) at load time and raises ValueError on any session that is actually 192-channel (M1+S1) — that is the runtime gate; this manifest is the reproducibility record. sha256 is PENDING until the first verified fetch by scripts/download_indy.py, which computes and writes it back.",
+  "channel_count": 96,
+  "bin_ms": 20.0,
+  "sessions": [
+    {
+      "id": "indy_20160407_02",
+      "url": "https://zenodo.org/records/3854034/files/indy_20160407_02.mat",
+      "sha256": "PENDING"
+    },
+    {
+      "id": "indy_20160411_01",
+      "url": "https://zenodo.org/records/3854034/files/indy_20160411_01.mat",
+      "sha256": "PENDING"
+    },
+    {
+      "id": "indy_20160627_01",
+      "url": "https://zenodo.org/records/3854034/files/indy_20160627_01.mat",
+      "sha256": "PENDING"
+    },
+    {
+      "id": "indy_20160630_01",
+      "url": "https://zenodo.org/records/3854034/files/indy_20160630_01.mat",
+      "sha256": "PENDING"
+    }
+  ]
+}
