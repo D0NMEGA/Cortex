@@ -169,6 +169,7 @@ schemes:
         CortexDaemon: all
     run:
       config: Debug
+      executable: CortexMac        # Launch the .app window, not the daemon (XcodeGen defaults run to the first runnable target = CortexDaemon alphabetically). Daemon still builds as a peer above.
     test:
       config: Debug
   CortexDaemon:
