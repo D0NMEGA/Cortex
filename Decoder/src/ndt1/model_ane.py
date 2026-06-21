@@ -22,11 +22,13 @@ itself contains zero dense fully-connected layers (verified by Plan 04-03 SC3b).
 """
 from __future__ import annotations
 
+import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
 
 from ndt1.attention import ANEAttention, LayerNormANE
+from ndt1.velocity_head import VelocityHead, load_ridge, ridge_fit
 
 try:  # Channel-width source-of-truth lives in Plan 04-02's channel_count module.
     from ndt1.channel_count import CORTEX_CHANNEL_COUNT
@@ -59,8 +61,10 @@ class _EncoderLayer(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         # PRE_NORM residual attention block.
         x = x + self.dropout(self.attn(self.norm1(x)))
-        # PRE_NORM residual feed-forward block.
-        ff = self.ff2(self.dropout(F.gelu(self.ff1(self.norm2(x)))))
+        # PRE_NORM residual feed-forward block. tanh-approximate GELU is an ANE allowlist
+        # constraint (Decision 2 / apple/ml-ane-transformers) — make it explicit, not the
+        # erf default; torch F.gelu accepts approximate="tanh" (verified via Context7, torch 2.12).
+        ff = self.ff2(self.dropout(F.gelu(self.ff1(self.norm2(x)), approximate="tanh")))
         return x + self.dropout(ff)
 
 
@@ -143,3 +147,58 @@ class NDT1ANE(nn.Module):
     def count_parameters(self) -> int:
         """Total number of parameters (the SC1b guardrail introspects this)."""
         return sum(p.numel() for p in self.parameters())
+
+
+class NDT1ANEWithVelocity(nn.Module):
+    """NDT1 encoder composed with the DEC-10 velocity head: spikes -> ``(vx, vy)`` velocity.
+
+    Wraps a base :class:`NDT1ANE` encoder (spikes ``(B,96,1,S)`` -> rates ``(B,96,1,S)``) with a
+    :class:`~ndt1.velocity_head.VelocityHead` (rates -> last-bin -> 1x1 Conv2d -> ``(B,2,1,1)``), so
+    the converted Core ML ``.mlpackage`` emits a 2-vector cursor velocity instead of 96-channel
+    rates (05-RESEARCH Decision 1). The ``NDT1ANE`` signature is unchanged — Phase-4 tests still
+    import and use the bare encoder.
+
+    Args:
+        **ndt1_kwargs: forwarded verbatim to the wrapped :class:`NDT1ANE` constructor (e.g.
+            ``seq_len``, ``d_model``, ``num_layers``); every NDT1ANE parameter is ``int | float``.
+
+    forward(x: Tensor[B, C, 1, S]) -> velocity: Tensor[B, 2, 1, 1].
+    """
+
+    def __init__(self, **ndt1_kwargs: int | float) -> None:
+        super().__init__()
+        self.encoder = NDT1ANE(**ndt1_kwargs)
+        self.velocity_head = VelocityHead(num_channels=self.encoder.num_channels)
+
+    def forward(self, x: Tensor) -> Tensor:
+        rates = self.encoder(x)
+        return self.velocity_head(rates)
+
+    def fit_velocity_head(
+        self, rates_np: np.ndarray, vel_np: np.ndarray, lam: float = 1.0
+    ) -> dict[str, float]:
+        """Fit the velocity head by closed-form ridge regression and load the weights.
+
+        Per 05-RESEARCH Decision 1, ``rates_np`` should be the encoder's PREDICTED rates flattened
+        to ``(N, num_channels)`` (fitting on predicted — not ground-truth — rates avoids train/serve
+        skew). Calls :func:`~ndt1.velocity_head.ridge_fit` + :func:`~ndt1.velocity_head.load_ridge`
+        and returns the held-in velocity-decode R^2 as credibility evidence (not a hard SC).
+
+        Args:
+            rates_np: ``(N, num_channels)`` design matrix of predicted per-bin rates.
+            vel_np: ``(N, 2)`` velocity labels (vx, vy).
+            lam: ridge regularization strength λ (default 1.0).
+
+        Returns:
+            ``{"r2": float, "lambda": float, "n": int}`` — the fit's coefficient of determination.
+        """
+        weight, bias = ridge_fit(rates_np, vel_np, lam=lam)
+        load_ridge(self.velocity_head, weight, bias)
+
+        x = np.asarray(rates_np, dtype=np.float64)
+        y = np.asarray(vel_np, dtype=np.float64)
+        pred = x @ weight.T + bias  # the linear readout the loaded conv reproduces
+        ss_res = float(((y - pred) ** 2).sum())
+        ss_tot = float(((y - y.mean(axis=0)) ** 2).sum())
+        r2 = 1.0 - ss_res / ss_tot if ss_tot > 0.0 else float("nan")
+        return {"r2": r2, "lambda": float(lam), "n": int(x.shape[0])}

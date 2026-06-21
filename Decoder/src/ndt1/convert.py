@@ -70,6 +70,12 @@ def convert_to_mlpackage(model: NDT1ANE, out_path: Path, seq_len: int) -> Path:
                     dtype=np.float16,
                 )
             ],
+            # fp16 weights+activations are mandatory for the Neural Engine (Phase-5 Decision 2).
+            # mlprogram defaults to FLOAT16, but we set it EXPLICITLY so the precision contract is
+            # in the source, not implicit (verified against /apple/coremltools via Context7). This
+            # is PRECISION only, NOT hardware targeting — the converter's hardware-unit selector
+            # stays unset; engine selection stays on the Swift side (DEC-07/Plan 03), boundary kept.
+            compute_precision=ct.precision.FLOAT16,
             minimum_deployment_target=ct.target.iOS18,
         )
     except (RuntimeError, ValueError) as exc:  # explicit — never a bare/blind except
