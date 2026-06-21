@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 (NDT1 Training on Indy/Loco) planned — 5 plans in 3 waves, plan-checker VERIFICATION PASSED (11/11 dimensions); ready for /gsd-execute-phase 4
-last_updated: "2026-06-21T05:15:12.277Z"
-last_activity: 2026-06-21 -- Phase 4 planning complete
+stopped_at: Phase 4 (NDT1 Training on Indy/Loco) executing — Wave 1 (04-01 scaffold) starting; 5 plans across 3 waves
+last_updated: "2026-06-21T05:23:24.668Z"
+last_activity: 2026-06-21 -- Phase 04 execution started
 progress:
   total_phases: 10
   completed_phases: 3
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 4 (NDT1 Training on Indy/Loco) planned — 5 plans / 3 waves, plan-checker PASSED (11/11 dimensions, all 4 research findings encoded as automated traps); ready to execute (/gsd-execute-phase 4)
+**Current focus:** Phase 04 — ndt1-training-on-indy-loco-synthetic-replay
 
 ## Current Position
 
-Phase: 4 (NDT1 Training on Indy/Loco) — not started
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-21 -- Phase 4 planning complete
+Phase: 04 (ndt1-training-on-indy-loco-synthetic-replay) — EXECUTING
+Plan: 1 of 5
+Status: Executing Phase 04
+Last activity: 2026-06-21 -- Phase 04 execution started
 
 Progress: Phase 4 [░░░░░░░░░░] 0% (0/5 plans — planned, not started) · Project [███░░░░░░░] 3/10 phases
 
