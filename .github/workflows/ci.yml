@@ -213,6 +213,34 @@ jobs:
           fi
           echo "OK: no SCM_RIGHTS / cmsg — FD passing is mach_msg-only (SC#2)"
 
+      # --- Phase 5 (DEC-12): no _ANEClient private API anywhere in production source ---
+      # The Apple-private _ANEClient symbol is a guaranteed App Store rejection (PROJECT Out of
+      # Scope); Cortex pins the ANE solely via the public MLModelConfiguration.computeUnits +
+      # MLComputePlan. This tree-wide negative control fails the build if the private symbol is
+      # ever introduced into production source — extending the Phase-1/2/4 grep-gate discipline
+      # (SCM_RIGHTS above; the Decoder forbidden-token regex). The token is assembled from
+      # fragments so THIS step's own line is not a self-hit, and the Tests/tests dirs are excluded
+      # because the DEC-12 negative-control tests (VelocityOutputTests.swift, test_*_package.py)
+      # legitimately NAME the symbol in order to forbid it.
+      - name: No _ANEClient private API (DEC-12 negative control)
+        run: |
+          FORBIDDEN="_ANE""Client"
+          if grep -rn --exclude-dir=Tests --exclude-dir=tests "$FORBIDDEN" \
+               Packages Apps Decoder Tools 2>/dev/null; then
+            echo "ERROR: $FORBIDDEN found in production source — DEC-12 forbids the Apple-private ANE API (App Store rejection). Use MLModelConfiguration.computeUnits + MLComputePlan." >&2
+            exit 1
+          fi
+          echo "OK: no $FORBIDDEN in production source — ANE access is public-API-only (DEC-12)"
+
+      # --- Phase 5 (DEC-07/DEC-09/DEC-10 Swift-side + DEC-12 mirror): CortexDecoder suite ---
+      # Runs ComputeUnitsTests (config == .cpuAndNeuralEngine, build-gate != .all), ZeroCopyInputTests
+      # (MLMultiArray(pixelBuffer:) pointer identity over the shared IOSurface — no host copy), and
+      # VelocityOutputTests (the (vx,vy) model-backed decode skips cleanly when the gitignored
+      # .mlpackage is absent + the DEC-12 Swift-side scan). CORRECTNESS ONLY — NO timing/latency
+      # assertion (the <2ms p99 claim is Plan 04 in-process + iPad-M4 canonical, D-18 precedent).
+      - name: Run CortexDecoder tests (DEC-07/09/10 Swift-side, correctness only)
+        run: swift test --package-path Packages/CortexDecoder
+
       - name: Build CortexMac scheme (unsigned smoke)
         run: |
           set -o pipefail
