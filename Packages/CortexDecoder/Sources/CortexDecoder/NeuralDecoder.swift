@@ -59,7 +59,57 @@ public final class NeuralDecoder {
   /// The model's compute-units configuration (for introspection/tests).
   public var computeUnits: MLComputeUnits { model.configuration.computeUnits }
 
-  // NOTE: `decode(_:)` (taking a `SpikeInputBuffer` and returning `SIMD2<Float>`) is completed in
-  // Plan 05-03 Task 3 once `ZeroCopyInput.swift` lands. Task 1 establishes only the load path +
-  // the `productionConfiguration()` single source of truth that the DEC-07 build gate asserts on.
+  /// The spike input feature name, frozen by the Plan-01 `.mlpackage` contract:
+  /// `spikes`, fp16, shape `(1, 96, 1, S)`.
+  public static let inputFeatureName = "spikes"
+
+  /// Decodes one zero-copy spike window into a cursor velocity `(vx, vy)`.
+  ///
+  /// Feeds the shared-surface `MLMultiArray` (DEC-09) through `MLModel.prediction(from:)` and reads
+  /// the 2-element fp16 velocity output by name from the model description (the Plan-01 output
+  /// contract: fp16, shape `(1, 2, 1, 1)`). NOT timed here — DEC-11 latency is Plan 04.
+  /// - Parameter input: the shared-surface spike buffer (its lifetime must exceed this call).
+  /// - Returns: the decoded `(vx, vy)` as a `SIMD2<Float>` (fp16 output widened to `Float`).
+  public func decode(_ input: SpikeInputBuffer) throws(NeuralDecoderError) -> SIMD2<Float> {
+    let arr: MLMultiArray
+    do {
+      arr = try input.makeMultiArray()
+    } catch {
+      throw .predictionFailed(underlying: String(describing: error))
+    }
+
+    let out: any MLFeatureProvider
+    do {
+      let provider = try MLDictionaryFeatureProvider(
+        dictionary: [Self.inputFeatureName: MLFeatureValue(multiArray: arr)]
+      )
+      out = try model.prediction(from: provider)
+    } catch {
+      throw .predictionFailed(underlying: String(describing: error))
+    }
+
+    let velocity = try velocityMultiArray(from: out)
+    guard velocity.dataType == .float16, velocity.count == CortexDecoder.velocityDimension else {
+      throw .unexpectedVelocityShape(dataType: velocity.dataType, count: velocity.count)
+    }
+    return SIMD2<Float>(velocity[0].floatValue, velocity[1].floatValue)
+  }
+
+  /// Finds the velocity output `MLMultiArray` in a prediction result.
+  ///
+  /// Reads the output feature by NAME from `model.modelDescription.outputDescriptionsByName`
+  /// rather than hardcoding it (coremltools may auto-name the output): prefer the single/first
+  /// multi-array output feature. Fails closed with the available names if none is a multi-array.
+  private func velocityMultiArray(from output: any MLFeatureProvider) throws(NeuralDecoderError) -> MLMultiArray {
+    let names = model.modelDescription.outputDescriptionsByName
+      .filter { $0.value.type == .multiArray }
+      .keys
+      .sorted()
+    for name in names {
+      if let value = output.featureValue(for: name), let array = value.multiArrayValue {
+        return array
+      }
+    }
+    throw .missingVelocityOutput(available: Array(model.modelDescription.outputDescriptionsByName.keys))
+  }
 }
