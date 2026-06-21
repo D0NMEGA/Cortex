@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Completed 05-04-PLAN.md (DEC-11 latency bench). Plan 5 of 5 (iPad HUMAN-UAT) next.
+stopped_at: 'Phase 05 plans 05-01..05-04 COMPLETE + merged to main (commits f139e57/6b10b14 = 05-05 docs on HEAD); 05-05 runbook authored (05-HUMAN-UAT.md + 05-placement-evidence.md). Plan 05-05 Task 3 = OPEN blocking checkpoint:human-verify — iPad Pro M4 capture of SC#1 (100% ANE placement) + SC#4 (canonical <2ms p99) DEFERRED by user 2026-06-21. Phase NOT complete: 2/4 SC device-gated, pending hardware capture. No fabricated evidence. RESUME: run 05-HUMAN-UAT.md on iPad-M4, then provide results to record into the runbook/evidence + create 05-05-SUMMARY.md + run phase verification.'
 last_updated: "2026-06-21T22:06:04.208Z"
 last_activity: 2026-06-21
 progress:
@@ -26,8 +26,8 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 ## Current Position
 
 Phase: 05 (ndt1-coreml-deployment-with-ane-residency-verified) — EXECUTING
-Plan: 5 of 5 (4 of 5 complete — 05-01..05-04 done; 05-05 iPad HUMAN-UAT next)
-Status: Ready to execute
+Plan: 5 of 5 — 05-01..05-04 COMPLETE+verified; 05-05 runbook authored, Task 3 (iPad-M4 capture) = OPEN blocking checkpoint (deferred 2026-06-21)
+Status: ⏸ Awaiting iPad Pro M4 capture — Phase 05 paused at 05-05 human-verify checkpoint (SC#1 ANE placement + SC#4 canonical <2ms p99 pending hardware; automatable scope 4/4 CI-SC closed)
 Last activity: 2026-06-21
 
 Progress: Phase 5 [████████░░] 80% (4/5 plans complete) · Project [████░░░░░░] 4/10 phases
