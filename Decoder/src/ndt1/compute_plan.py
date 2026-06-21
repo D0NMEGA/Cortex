@@ -58,11 +58,15 @@ def _is_ane(device: object) -> bool:
 
 
 def compiled_model_path(mlpackage_path: Path) -> Path:
-    """Compile an ``.mlpackage`` and return its ``.mlmodelc`` directory path.
+    """Compile an ``.mlpackage`` and return its persistent ``.mlmodelc`` directory path.
 
     ``MLComputePlan.load_from_path`` operates on a COMPILED model, not a raw ``.mlpackage``
-    (05-RESEARCH Risk #4). Loading the package with :class:`coremltools.models.MLModel` triggers
-    a compile; ``get_compiled_path()`` then yields the on-disk ``.mlmodelc`` directory.
+    (05-RESEARCH Risk #4). The coremltools 9.0 path that produces a *persistent* ``.mlmodelc`` is
+    :func:`coremltools.models.utils.compile_model` (it writes the compiled dir to disk and returns
+    its path). We deliberately do NOT use ``MLModel(...).get_compiled_path`` /
+    ``get_compiled_model_path`` here: that path is documented to live only for the lifetime of the
+    transient ``MLModel`` Python object, so it can be reclaimed before the compute-plan scan reads
+    it. ``compile_model`` writes a stable ``.mlmodelc`` next to the package (gitignored).
 
     Args:
         mlpackage_path: the ``.mlpackage`` bundle to compile (e.g. the 4-bit palettized artifact).
@@ -73,12 +77,15 @@ def compiled_model_path(mlpackage_path: Path) -> Path:
     Raises:
         OSError: if the ``.mlpackage`` cannot be read from disk.
         RuntimeError: if compilation fails (re-raised with context).
-        ValueError: if the package is rejected by the loader.
+        ValueError: if the package is rejected by the compiler.
     """
     mlpackage_path = Path(mlpackage_path)
+    destination = mlpackage_path.with_suffix(".mlmodelc")
     try:
-        model = ct.models.MLModel(str(mlpackage_path))
-        return Path(model.get_compiled_path())
+        compiled = ct.models.utils.compile_model(
+            str(mlpackage_path), destination_path=str(destination)
+        )
+        return Path(compiled)
     except (OSError, RuntimeError, ValueError) as exc:  # explicit — never a bare/blind except
         raise RuntimeError(
             f"could not compile .mlpackage at {mlpackage_path} for MLComputePlan: {exc}"
