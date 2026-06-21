@@ -34,6 +34,14 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [x] Rust SPSC bridged to Swift via `cbindgen` header + `.xcframework`/`.binaryTarget`, `#[repr(C)] CortexFrame` consumed with no drift-prone Swift mirror, cbindgen-drift CI gate — **THREAD-06 / SC#4** (`CortexRing.Ring` safe RAII wrapper; 1000-frame round-trip verifies value + FIFO order, 7/7 swift tests green)
 - D-R8 / Phase-2 D-06 closed: AES-GCM stays off this hot path — the SPSC ring is the decoupling boundary.
 
+#### Decoder Training (Phase 4 — completed 2026-06-21)
+- [x] NDT1 (Ye & Pandarinath 2021) in ANE-conducive BC1S form — 6 layers, h=2 (∈{1,2}, NOT the miscited h=4), 128 `d_model`, 20ms bins, **1,292,544 params** (~1.3M); `nn.Conv2d` 1×1 everywhere, zero `nn.Linear` on the inference path — **DEC-01** (param guardrail + structural head-count tests)
+- [x] Masked-modeling training loop on O'Doherty Indy/Loco (Zenodo 3854034) — h5py v7.3 loader + 20ms binning → `(num_bins, 96)`, leakage-free chronological-tail split; held-out **co-bps = 0.3804** bits/spike beats the mean-rate null by ~7.6× the 0.05 margin (`04-training-evidence.md`); also closed Phase-2 **D-11** (`CORTEX_CHANNEL_COUNT == 96` reconciled vs `cortex_shm.h`/`cortex_ring.h`/`frame.rs`) — **DEC-02**
+- [x] CoreML conversion — traced encoder→rates → `ct.convert(convert_to="mlprogram")` → `.mlpackage` (coremltools 9.0, torch 2.12.1) — **DEC-03**
+- [x] BC1S `(B, C, 1, S)` activations on the inference path — 93 rank-4 activations verified by forward-hook; `(B, S, C)` negative-control test raises — **DEC-04**
+- [x] 4-bit k-means palettization via `OpPalettizerConfig(mode="kmeans", nbits=4)` — **3.471×** size reduction (2,678,038 → 771,534 B), Poisson-NLL Δ = 0.009114 ≤ 0.5 (`04-palettization-evidence.md`) — **DEC-05**
+- Pure decoder R&D in an isolated `Decoder/` uv subsystem (CPython 3.12); NO ANE residency / `computeUnits` / `<2ms` work — that is Phase 5.
+
 ### Active
 
 > Foundation IPC items (`kqueue`+`recvmsg` primitive, FlatBuffers `Sample` schema) → **moved to Validated (Phase 2)**.
@@ -41,10 +49,10 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 > Repo skeleton + App Group container scaffolding → **moved to Validated (Phase 1)**. `CortexDaemon` remains a standalone `type: tool` Phase-2 producer; the App-Store-distributable form (XPC service / launchd helper) is deferred to Phase 7/8 (system integration / distribution).
 
 #### Decoder Pipeline
-- [ ] NDT1 implementation (6 layers, h=1-2 heads, 128 hidden dim, 20ms binning, ~1.3M params)
-- [ ] Training loop on O'Doherty Indy/Loco synthetic spike replay (Zenodo 3854034)
-- [ ] PyTorch → coremltools → `.mlpackage` pipeline with BC1S `(B, C, 1, S)` tensor layout
-- [ ] 4-bit palettization via `OpPalettizerConfig(nbits=4)`
+- [x] NDT1 implementation (6 layers, h=1-2 heads, 128 hidden dim, 20ms binning, ~1.3M params) — **validated Phase 4 (DEC-01; 1,292,544 params)**
+- [x] Training loop on O'Doherty Indy/Loco synthetic spike replay (Zenodo 3854034) — **validated Phase 4 (DEC-02; held-out co-bps 0.3804)**
+- [x] PyTorch → coremltools → `.mlpackage` pipeline with BC1S `(B, C, 1, S)` tensor layout — **validated Phase 4 (DEC-03/DEC-04)**
+- [x] 4-bit palettization via `OpPalettizerConfig(nbits=4)` — **validated Phase 4 (DEC-05; 3.471× size, Δloss 0.009)**
 - [ ] CoreML deployment with `MLModelConfiguration.computeUnits = .cpuAndNeuralEngine`
 - [ ] ANE residency verification via Instruments → CoreML template
 - [ ] Decoder inference at <2ms p99 on M4 ANE
@@ -134,14 +142,14 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| CoreML on ANE (not MLX) | MLX has unbounded P99 + no ANE; CoreML is the only path meeting <2ms p99 budget | — Pending |
+| CoreML on ANE (not MLX) | MLX has unbounded P99 + no ANE; CoreML is the only path meeting <2ms p99 budget | ⏳ Partial — coremltools convert→mlprogram `.mlpackage` + 4-bit palettize proven Phase 4 (DEC-03/05, coremltools 9.0); ANE residency + <2ms p99 are Phase 5 |
 | pthread + `QOS_CLASS_USER_INTERACTIVE` (not Swift Task) | Swift cooperative scheduling cannot meet 1ms deadlines; 154 sources across Massicotte/Adamson/Napier confirm | ✓ Validated Phase 3 — `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE,0)` is the worker's first action, `import Darwin` only; SC#2 `hotpath-policy.sh` gate enforces it in CI (SC#1 `.trace` M4-gated, `03-HUMAN-UAT.md`) |
 | `kqueue`+`recvmsg` over POSIX shm (not Network.framework) | Sub-µs vs 50-200µs overhead; disqualifying difference for 1ms deadline | ✓ Validated Phase 2 — shm busy-poll round-trip p99=208ns (CF#2: doorbell is the idle wake, the ring is the measured path) |
 | `CAMetalDisplayLink` (not `CADisplayLink`) | Bundles drawable acquisition, encode deadline, on-glass timestamp into one callback for beam-raced 120Hz | — Pending |
 | AES-GCM via CryptoKit (not ChaCha20-Poly1305) | Apple Silicon FEAT_AES makes AES-GCM faster; ChaCha is faster only on x86-without-AES-NI | ✓ Validated Phase 2 — HKDF per-direction subkeys + deterministic seq-nonce; fail-closed, nonce-uniqueness tested (off the measured path per D-01) |
-| NDT1 not NDT2 | Multi-context pretraining adds session-conditioning latency unnecessary for single-user v0 | — Pending |
-| BC1S `(B, C, 1, S)` tensor layout | Only layout the ANE pins; standard `(B, S, C)` evicts to GPU/CPU | — Pending |
-| h=1-2 attention heads | Actual NDT1 design; commonly miscited as 4 heads — do not over-parameterize | — Pending |
+| NDT1 not NDT2 | Multi-context pretraining adds session-conditioning latency unnecessary for single-user v0 | ✓ Validated Phase 4 — NDT1 (Ye & Pandarinath 2021) implemented & trained, 1,292,544 params |
+| BC1S `(B, C, 1, S)` tensor layout | Only layout the ANE pins; standard `(B, S, C)` evicts to GPU/CPU | ✓ Validated Phase 4 (DEC-04) — `nn.Conv2d` 1×1 everywhere, 93 rank-4 activations forward-hook-verified, `(B,S,C)` negative control raises |
+| h=1-2 attention heads | Actual NDT1 design; commonly miscited as 4 heads — do not over-parameterize | ✓ Validated Phase 4 (DEC-01) — all attention modules h=2 (∈{1,2}); structural head-count test + [1.0M,1.6M] param guardrail block any h=4 drift |
 | 30×30 webgrid (not 6×6) | Lex Fridman / Bliss Chapman reference; Neuralink moved past 6×6 | — Pending |
 | In-house loom-verified Rust SPSC (not `rtrb` directly) for ring buffer | Rust preferred — `loom` lets you model-check memory ordering, Swift cannot; D-R3 chose in-house so the exact production atomics route through a `loom` cfg-shim | ✓ Validated Phase 3 — 128B-padded, Release/Acquire (no SeqCst); SC#3a loom exhaustive proof + SC#3b 1M strict-FIFO zero-loss green; rtrb-quality cross-checked (~4%) |
 | App Group container for shared memory | `com.apple.security.temporary-exception.shared-memory` deprecated for App Store | ✓ Validated Phase 1 — cross-process `shm_open` proven, entitlement-honored (sc2-evidence.md) |
@@ -150,7 +158,7 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 | CF#1 → single-process Keychain + key-over-`mach_msg` (Phase 2 spike) | Free/personal team (Y4A54395NZ) cannot back a team-prefixed `keychain-access-groups` entitlement on a bare tool — entitled binary AMFI-SIGKILLed; unentitled → `errSecMissingEntitlement (-34018)` | ✓ Phase 2 spike — fallback wired; cross-process access-group sharing deferred to Phase 8 (paid enrollment) |
 | CF#3 → `posix_spawnattr_setspecialport_np` rendezvous (not `bootstrap_register`) | `bootstrap_register` returns `BOOTSTRAP_NOT_PRIVILEGED` for ad-hoc names on modern macOS; special-port injection needs no launchd plist | ✓ Phase 2 spike (3/3) — ADOPT-WITH-RATIONALE vs locked D-08; `TASK_BOOTSTRAP_PORT` + reply-port handshake for fd directionality |
 | Defer photodiode rig to weeks 6-7 | v0 with software timing ships first; v1 with photonic ground truth follows | — Pending |
-| Indy/Loco (Zenodo 3854034) as training data | Canonical BCI pretraining dataset; only viable synthetic source absent real electrodes | — Pending |
+| Indy/Loco (Zenodo 3854034) as training data | Canonical BCI pretraining dataset; only viable synthetic source absent real electrodes | ✓ Validated Phase 4 (DEC-02) — h5py v7.3 loader + 20ms binning → (num_bins,96), chronological split, reproducible session manifest + checksummed downloader |
 | ReFIT-Kalman recalibration on top of NDT1 | Gilja 2012 — what gets BrainGate from 4.16 → 8.5 BPS in humans | — Pending |
 
 ## Evolution
@@ -171,4 +179,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 — Phase 3 (Real-Time Threading) complete & verified (3/4 SC on `main`; THREAD-01..07 validated). In-house SPSC ring loom-verified (SC#3a) + 1M strict-FIFO zero-loss (SC#3b), 128B-padded, Release/Acquire no-SeqCst; pthread `USER_INTERACTIVE` hot path (SC#1 code-side, `.trace` M4-gated → `03-HUMAN-UAT.md`); `hotpath-policy.sh` 3-language gate (SC#2); cbindgen Swift round-trip 7/7 (SC#4). Decisions validated: pthread+USER_INTERACTIVE, in-house loom-verified SPSC over `rtrb` (D-R3); D-R8 closed (AES-GCM off hot path). Phase 2: IPC-01..07, SC#1 p99=208ns. Follow-ups: SC#1 Instruments `.trace` on M4/M5; xcodebuild Float16 daemon-target config; `/gsd-secure-phase 03`.*
+*Last updated: 2026-06-21 — Phase 4 (NDT1 Training on Indy/Loco) complete & verified (4/4 SC on `main`; DEC-01..05 validated). 1,292,544-param NDT1 (6 layers, h=2, 128 d_model, 20ms bins) in BC1S `(B,C,1,S)` form — Conv2d-only, zero `nn.Linear` on inference path (SC1); masked-modeling training → held-out co-bps 0.3804 beats mean-rate null ~7.6× (SC2, `04-training-evidence.md`); BC1S forward-hook + `(B,S,C)` negative control (SC3); ct.convert→mlprogram + 4-bit k-means palettize 3.471× / Δloss 0.009 (SC4, `04-palettization-evidence.md`). Isolated `Decoder/` uv subsystem (CPython 3.12; torch 2.12.1, coremltools 9.0). Closed Phase-2 D-11 (CORTEX_CHANNEL_COUNT=96 across 3 native homes). Decisions validated: NDT1-not-NDT2, BC1S layout, h=1-2 heads, Indy/Loco dataset. Prior: Phase 3 THREAD-01..07 (loom-verified SPSC, pthread USER_INTERACTIVE); Phase 2 IPC-01..07 (SC#1 p99=208ns). Next: Phase 5 (NDT1→CoreML/ANE residency, <2ms p99). Follow-ups: ANE residency Instruments `.trace` on M4 (Phase 5); xcodebuild Float16 daemon-target config; `/gsd-secure-phase 04` (decoder R&D is offline/CPU — low surface, but run for completeness).*
