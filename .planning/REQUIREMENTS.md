@@ -162,11 +162,11 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | THREAD-05 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-02 (complete -- 128B pad, Release/Acquire) |
 | THREAD-06 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-01 (complete -- cbindgen header), 03-04 (complete -- Swift wrapper + integration) |
 | THREAD-07 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-02 (complete -- loom permutation test, SC#3a) |
-| DEC-01 | Phase 4: NDT1 Training on Indy/Loco | TBD |
-| DEC-02 | Phase 4: NDT1 Training on Indy/Loco | TBD |
-| DEC-03 | Phase 4: NDT1 Training on Indy/Loco | TBD |
-| DEC-04 | Phase 4: NDT1 Training on Indy/Loco | TBD |
-| DEC-05 | Phase 4: NDT1 Training on Indy/Loco | TBD |
+| DEC-01 | Phase 4: NDT1 Training on Indy/Loco | 04-03 |
+| DEC-02 | Phase 4: NDT1 Training on Indy/Loco | 04-01, 04-02, 04-04 |
+| DEC-03 | Phase 4: NDT1 Training on Indy/Loco | 04-05 |
+| DEC-04 | Phase 4: NDT1 Training on Indy/Loco | 04-03 |
+| DEC-05 | Phase 4: NDT1 Training on Indy/Loco | 04-05 |
 | DEC-06 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
 | DEC-07 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |
 | DEC-08 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | TBD |

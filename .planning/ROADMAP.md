@@ -92,7 +92,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Training loop ingests Zenodo 3854034 Indy/Loco synthetic spike replay and converges to non-trivial reconstruction loss on a held-out split
   3. Activations in the saved-for-conversion graph are reshaped to BC1S `(B, C, 1, S)` per `apple/ml-ane-transformers`; a unit test fails if any tensor on the inference path retains the vanilla `(B, S, C)` layout
   4. `coremltools.optimize.palettize_weights` with `OpPalettizerConfig(nbits=4)` produces a quantized checkpoint with documented size reduction and bounded reconstruction-loss delta
-**Plans**: TBD
+**Plans**: 5 plans (3 waves) — new isolated `Decoder/` Python subsystem (uv, pinned 3.11/3.12)
+- [ ] 04-01-PLAN.md — Wave 0/1 scaffold: `Decoder/` + `pyproject.toml`/`uv.lock` (pinned 3.11/3.12) + torch/coremltools/h5py deps + ruff (no-bare-except gate) + seeded conftest fixtures + `.gitignore` for data/checkpoints/`.mlpackage` (DEC-02) [Wave 1]
+- [ ] 04-02-PLAN.md — Dataset layer: `.mat` (h5py, v7.3) loader + 20ms binning -> `(num_bins, 96)` + chronological-tail split + Zenodo manifest/download (sha256) + **closes Phase-2 D-11** (CORTEX_CHANNEL_COUNT=96 reconciled vs cortex_shm.h/cortex_ring.h/frame.rs) (DEC-02) [Wave 2]
+- [ ] 04-03-PLAN.md — NDT1ANE in BC1S form (Conv2d, single-head-chunk attention, `bchq,bkhc->bkhq` einsum) + masked-Poisson head + **SC1** (structural `num_heads in {1,2}` on every module + param guardrail) + **SC3** (BC1S forward-hook + zero-`nn.Linear` + (B,S,C) negative control) (DEC-01, DEC-04) [Wave 2]
+- [ ] 04-04-PLAN.md — Masked-modeling training loop -> held-out **co-bps** beats mean-rate null + short-budget CI smoke + committed `04-training-evidence.md` (SC2) (DEC-02) [Wave 3]
+- [ ] 04-05-PLAN.md — `ct.convert`->`.mlpackage` (mlprogram, CPU, no ANE) then `palettize_weights(OpPalettizerConfig(kmeans,nbits=4))` + size/Δloss characterization + `04-palettization-evidence.md` (SC4) (DEC-03, DEC-05) [Wave 3]
 
 ### Phase 5: NDT1 → CoreML deployment with ANE residency verified
 **Goal**: The 4-bit palettized NDT1 checkpoint becomes a `.mlpackage` that runs entirely on the M4 Neural Engine in <2ms p99, with input arriving zero-copy from a `MTLBuffer storageModeShared` and output emitting a 2-vector cursor velocity at fp16 every 20ms. This is the load-bearing latency budget for the entire glass-to-glass claim.
@@ -173,7 +178,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 1. Foundation & 2026 Toolchain | v0 | 7/7 | ✓ Complete | 2026-06-19 |
 | 2. IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | v0 | 5/5 | ✓ Complete | 2026-06-20 |
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 0/4 | Planned | - |
-| 4. NDT1 Training on Indy/Loco | v0 | 0/TBD | Not started | - |
+| 4. NDT1 Training on Indy/Loco | v0 | 0/5 | Planned | - |
 | 5. NDT1 → CoreML deployment with ANE residency verified | v0 | 0/TBD | Not started | - |
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 0/TBD | Not started | - |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 0/TBD | Not started | - |

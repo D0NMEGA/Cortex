@@ -2,8 +2,8 @@
 phase: 4
 slug: ndt1-training-on-indy-loco-synthetic-replay
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: false  # Wave 0 (04-01) installs pytest/env; flips true at execution
 created: 2026-06-21
 ---
 
@@ -42,13 +42,13 @@ created: 2026-06-21
 
 | SC | Requirement | Secure Behavior | Test Type | Automated Command (shape) | Notes | Status |
 |----|-------------|-----------------|-----------|---------------------------|-------|--------|
-| 1a | DEC-01 | N/A (local R&D) | unit | `pytest -k test_architecture_structural` | **`num_layers==6`, `d_model==128`, every attention `num_heads ∈ {1,2}`, bin=20ms** — head-count asserted DIRECTLY (param count is invariant to heads) | ⬜ pending |
-| 1b | DEC-01 | N/A | unit | `pytest -k test_param_count` | `1.0e6 ≤ sum(p.numel()) ≤ 1.6e6` guardrail (catches layer/dim/FFN drift) | ⬜ pending |
-| 2 | DEC-02 | N/A | integration (slow) | `pytest -m slow -k test_heldout_cobps` | held-out masked Poisson NLL / co-bps beats mean-rate null by documented margin; loss curve committed | ⬜ pending |
-| 3a | DEC-04 | N/A | unit | `pytest -k test_bc1s_activations` | forward-hook all activations on `(1,96,1,S)` dummy → assert **all rank-4 with `shape[2]==1`**; **negative control** `(B,S,C)` variant must fail | ⬜ pending |
-| 3b | DEC-04 | N/A | unit | `pytest -k test_no_linear_on_inference_path` | inference module tree has **zero `nn.Linear`** (all `nn.Conv2d`); attention uses `bchq,bkhc->bkhq` einsum | ⬜ pending |
-| 4a | DEC-03, DEC-05 | N/A | integration | `pytest -k test_palettized_package` | `.mlpackage` converts (DEC-03) + palettizes (DEC-05) + exists + is smaller; record size ratio | ⬜ pending |
-| 4b | DEC-05 | N/A | integration | `pytest -k test_palettization_loss_delta` | `Δ(NLL/co-bps)` fp16 vs 4-bit ≤ documented bound (CPU prediction via coremltools) | ⬜ pending |
+| 1a | DEC-01 | N/A (local R&D) | unit | `pytest -k test_architecture_structural` | **`num_layers==6`, `d_model==128`, every attention `num_heads ∈ {1,2}`, bin=20ms** — head-count asserted DIRECTLY (param count is invariant to heads) | bound: 04-03 Task 2 |
+| 1b | DEC-01 | N/A | unit | `pytest -k test_param_count` | `1.0e6 ≤ sum(p.numel()) ≤ 1.6e6` guardrail (catches layer/dim/FFN drift) | bound: 04-03 Task 2 |
+| 2 | DEC-02 | N/A | integration (slow) | `pytest -m slow -k test_heldout_cobps` | held-out masked Poisson NLL / co-bps beats mean-rate null by documented margin; loss curve committed | bound: 04-04 Task 3 |
+| 3a | DEC-04 | N/A | unit | `pytest -k test_bc1s_activations` | forward-hook all activations on `(1,96,1,S)` dummy → assert **all rank-4 with `shape[2]==1`**; **negative control** `(B,S,C)` variant must fail | bound: 04-03 Task 3 |
+| 3b | DEC-04 | N/A | unit | `pytest -k test_no_linear_on_inference_path` | inference module tree has **zero `nn.Linear`** (all `nn.Conv2d`); attention uses `bchq,bkhc->bkhq` einsum | bound: 04-03 Task 3 |
+| 4a | DEC-03, DEC-05 | N/A | integration | `pytest -k test_palettized_package` | `.mlpackage` converts (DEC-03) + palettizes (DEC-05) + exists + is smaller; record size ratio | bound: 04-05 Task 1+2 |
+| 4b | DEC-05 | N/A | integration | `pytest -k test_palettization_loss_delta` | `Δ(NLL/co-bps)` fp16 vs 4-bit ≤ documented bound (CPU prediction via coremltools) | bound: 04-05 Task 3 |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -80,4 +80,4 @@ created: 2026-06-21
 - [ ] Feedback latency < 20 s (quick)
 - [ ] `nyquist_compliant: true` set in frontmatter (planner sets after binding task IDs)
 
-**Approval:** pending
+**Approval:** task IDs bound by planner (04-01..04-05); nyquist_compliant=true. Execution flips Wave-0 + statuses to green.
