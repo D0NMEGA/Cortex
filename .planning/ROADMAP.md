@@ -109,7 +109,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Decoder emits a 2-vector `(vx, vy)` fp16 cursor velocity every 20ms, with input tensor entering CoreML zero-copy via `MTLBuffer storageModeShared` + `MPSGraphTensorData(mtlBuffer:shape:dataType:)` (no host↔device copy on the inference path)
   4. End-to-end inference latency measures <2ms at p99 across 10,000 forward passes on M4 ANE, with the latency histogram committed alongside the Instruments trace
 **Plans**: 5 plans (4 waves)
-- [ ] 05-01-PLAN.md — Velocity readout head: Conv2d(96->2) + static last-bin slice + closed-form ridge fit; convert.py emits (vx,vy) fp16 (FLOAT16 + tanh-GELU) (DEC-10) [Wave 1]
+- [x] 05-01-PLAN.md — Velocity readout head: Conv2d(96->2) + static last-bin slice + closed-form ridge fit; convert.py emits (vx,vy) fp16 (FLOAT16 + tanh-GELU) (DEC-10) [Wave 1]
 - [ ] 05-02-PLAN.md — ANE op-eligibility gate (Python/Mac CI): MLComputePlan op scan on the compiled 4-bit package, every op ANE-eligible / zero CPU-only, einsum disposition + conditional meridian rewrite (DEC-06) [Wave 2]
 - [ ] 05-03-PLAN.md — Swift inference path: .cpuAndNeuralEngine (build-fails on .all) + zero-copy MLMultiArray(pixelBuffer:) over a shared IOSurface/MTLBuffer + (vx,vy) output + no-_ANEClient CI grep (DEC-07, DEC-09, DEC-12) [Wave 2]
 - [ ] 05-04-PLAN.md — In-process Swift latency bench: CortexDecoderBench warmup + 10k MLModel.prediction passes -> device-annotated p50/p99 histogram (Mac corroborating) (DEC-11) [Wave 3]

@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main (2e707cf), verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
-last_updated: "2026-06-21T19:47:20.817Z"
-last_activity: 2026-06-21 -- Phase 5 planning complete
+stopped_at: Completed 05-01-PLAN.md (DEC-10 velocity head). Plan 2 of 5 next.
+last_updated: "2026-06-21T21:25:27.985Z"
+last_activity: 2026-06-21
 progress:
   total_phases: 10
   completed_phases: 4
   total_plans: 26
-  completed_plans: 21
-  percent: 81
+  completed_plans: 22
+  percent: 85
 ---
 
 # Project State
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — verified 4/4 SC (1.29M-param NDT1, co-bps 0.3804 held-out, 3.471× 4-bit palettization, Δloss 0.009). Phase 5 (NDT1 → CoreML/ANE deployment) next.
+**Current focus:** Phase 05 — ndt1-coreml-deployment-with-ane-residency-verified
 
 ## Current Position
 
-Phase: 5 (NDT1 → CoreML Deployment with ANE Residency) — not started
-Plan: Not started
+Phase: 05 (ndt1-coreml-deployment-with-ane-residency-verified) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-06-21 -- Phase 5 planning complete
+Last activity: 2026-06-21
 
 Progress: Phase 4 [██████████] 100% (5/5 plans complete) · Project [████░░░░░░] 4/10 phases
 
@@ -55,6 +55,7 @@ Progress: Phase 4 [██████████] 100% (5/5 plans complete) · 
 - Trend: Phase 4 plans ran ~6-16m (heavier ML implementation — torch model, training loop, CoreML conversion) vs Phase 1's 3-6m. 04-04 (training loop + slow co-bps evidence run) was the longest. Across the phase: 7 deviations total, all auto-fixed (mostly literal-grep comment rewordings, the documented project pattern), no scope creep, no new deps beyond the planned torch/coremltools/h5py.
 
 *Updated after each plan completion*
+| Phase 05 P01 | 13 min | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -140,6 +141,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-21T06:29:02.937Z
-Stopped at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main (2e707cf), verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
-Resume file: (Phase 5 not yet planned) — run /gsd-discuss-phase 5 or /gsd-plan-phase 5
+Last session: 2026-06-21T21:25:27.983Z
+Stopped at: Completed 05-01-PLAN.md (DEC-10 velocity head). Plan 2 of 5 next.
+Resume file: None
