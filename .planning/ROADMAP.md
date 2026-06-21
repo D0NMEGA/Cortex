@@ -81,7 +81,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 03-01-PLAN.md — FFI/build spine (Spike A): Rust staticlib + cbindgen header → xcframework .binaryTarget callable from Swift under swift build AND xcodebuild; freeze the C ABI + repr(C) Frame; pre-arm all Phase-3 CI gates (THREAD-06) [Wave 1]
 - [x] 03-02-PLAN.md — In-house loom-verified SPSC ring: 128B-padded head/tail + Release/Acquire (no SeqCst), tiny loom permutation test + 1M-frame std-atomic FIFO stress test (D-R3/D-R5), real extern "C" bodies (THREAD-04, THREAD-05, THREAD-07) [Wave 2]
 - [x] 03-03-PLAN.md — Foundation-free pthread USER_INTERACTIVE acquisition worker (productionized Benchmark.swift idiom) + extended hot-path policy gate (.rs tokens + self-test) + SC#1 instruments-evidence runbook (THREAD-01, THREAD-02, THREAD-03) [Wave 2]
-- [ ] 03-04-PLAN.md — Safe Swift wrapper over the cbindgen ABI + SC#4 integration test: produce N frames C/Rust-side, pop+verify value and order (THREAD-06) [Wave 3]
+- [x] 03-04-PLAN.md — Safe Swift wrapper over the cbindgen ABI + SC#4 integration test: produce N frames C/Rust-side, pop+verify value and order (THREAD-06) [Wave 3]
 
 ### Phase 4: NDT1 Training on Indy/Loco Synthetic Replay
 **Goal**: A correctly-sized NDT1 (1.3M params, 6 layers, h=1-2 heads, 128 hidden, 20ms binning — *not* the commonly-miscited 4-head variant) trains end-to-end on the canonical O'Doherty Indy/Loco dataset and emits a 4-bit palettized PyTorch checkpoint ready for ANE conversion. No CoreML or Apple Silicon work yet — this is pure decoder R&D.
