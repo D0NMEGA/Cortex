@@ -5,7 +5,7 @@ milestone_name: milestone
 status: executing
 stopped_at: Phase 4 (NDT1 Training on Indy/Loco) COMPLETE — 5/5 plans merged to main, verification PASSED (4/4 SC). Phase 5 (NDT1→CoreML/ANE deployment) next — not yet planned.
 last_updated: "2026-06-21T06:29:02.937Z"
-last_activity: 2026-06-21 -- Quick task 260621-3y0: removed dead ShmCheck refs from CortexMac (target compiles & runs)
+last_activity: 2026-06-21 -- Quick task 260621-iyg: CortexMac scheme now launches the app window (was launching the daemon)
 progress:
   total_phases: 10
   completed_phases: 4
@@ -28,7 +28,7 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 Phase: 5 (NDT1 → CoreML Deployment with ANE Residency) — not started
 Plan: Not started
 Status: Phase 4 complete & verified — ready to plan Phase 5
-Last activity: 2026-06-21 -- Quick task 260621-3y0: removed dead ShmCheck refs from CortexMac (target compiles & runs)
+Last activity: 2026-06-21 -- Quick task 260621-iyg: CortexMac scheme now launches the app window (was launching the daemon)
 
 Progress: Phase 4 [██████████] 100% (5/5 plans complete) · Project [████░░░░░░] 4/10 phases
 
@@ -127,6 +127,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260621-32u | Set DEVELOPMENT_TEAM to 57YW6M29S7 on all three targets in project.yml and regenerate | 2026-06-21 | 921b2db | [260621-32u-set-development-team-to-y4a54395nz-on-al](./quick/260621-32u-set-development-team-to-y4a54395nz-on-al/) |
 | 260621-3y0 | Remove dead ShmCheck references from CortexMac ContentView so the target compiles | 2026-06-21 | aaf2c68 | [260621-3y0-remove-dead-shmcheck-references-from-cor](./quick/260621-3y0-remove-dead-shmcheck-references-from-cor/) |
+| 260621-iyg | Set CortexMac scheme run.executable=CortexMac so it launches the app window, not the daemon | 2026-06-21 | eab61b4 | [260621-iyg-set-cortexmac-scheme-run-executable-to-c](./quick/260621-iyg-set-cortexmac-scheme-run-executable-to-c/) |
 
 ## Deferred Items
 
