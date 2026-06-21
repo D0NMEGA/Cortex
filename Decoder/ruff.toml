@@ -1,0 +1,5 @@
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E", "F", "I", "B", "UP", "BLE"]  # BLE = flake8-blind-except → enforces the no-bare-except project rule

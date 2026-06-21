@@ -1,0 +1,28 @@
+[project]
+name = "cortex-ndt1"
+version = "0.1.0"
+description = "Cortex Phase 4 — NDT1 decoder R&D (training on O'Doherty Indy/Loco, BC1S, 4-bit palettization)"
+requires-python = ">=3.11,<3.13"
+dependencies = [
+    "torch>=2.2",
+    "coremltools>=8.0",
+    "numpy>=1.26",
+    "h5py>=3.10",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ndt1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: long-running training/conversion tests excluded from the quick CI run",
+]
+addopts = "-ra"
