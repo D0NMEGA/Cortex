@@ -12,8 +12,8 @@ Apple Neural Engine per ``apple/ml-ane-transformers`` (DEC-04):
 * learnable positional encoding broadcast over ``(B, d_model, 1, S)``.
 
 Phase boundary (Plan 04-03): this is the encoder → predicted-rates forward graph ONLY.
-There is NO velocity / ``(vx, vy)`` readout (DEC-10 / Phase 5) and NO Core ML conversion /
-ANE targeting / ``computeUnits`` (Plans 04-05 / Phase 5).
+There is NO cursor-kinematics readout head (deferred to DEC-10 / Phase 5) and NO Core ML
+conversion or Neural-Engine compute-unit targeting (deferred to Plans 04-05 / Phase 5).
 
 A ``load_state_dict`` pre-hook unsqueezes any dense-layer-shaped weights (``out, in``) to
 the 1x1-conv shape (``out, in, 1, 1``) so fp32 reference checkpoints saved with dense
