@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 2 (IPC primitive) context gathered — 6 areas decided (D-01..D-18); ready for /gsd-plan-phase 2
-last_updated: "2026-06-20T22:47:55.110Z"
-last_activity: 2026-06-20 -- Phase 03 execution started
+stopped_at: Phase 3 (Real-Time Threading) complete & verified — 4/4 plans, SC#2/3/4 verified on main, SC#1 code-side verified (.trace M4-gated, tracked in 03-HUMAN-UAT.md); ready for Phase 4 (NDT1 training)
+last_updated: "2026-06-21T04:16:23.172Z"
+last_activity: 2026-06-21
 progress:
   total_phases: 10
-  completed_phases: 2
+  completed_phases: 3
   total_plans: 16
-  completed_plans: 12
-  percent: 75
+  completed_plans: 16
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 03 — real-time-threading-pthread-user-interactive-rust-spsc-ring
+**Current focus:** Phase 3 complete & verified (✓ SC#2/3/4 on main, SC#1 code-side; .trace M4-gated) — Phase 4 (NDT1 Training on Indy/Loco) next
 
 ## Current Position
 
-Phase: 03 (real-time-threading-pthread-user-interactive-rust-spsc-ring) — EXECUTING
-Plan: 1 of 4
-Status: Executing Phase 03
-Last activity: 2026-06-20 -- Phase 03 execution started
+Phase: 4 (NDT1 Training on Indy/Loco) — not started
+Plan: Not started
+Status: Phase 3 complete & verified — ready to discuss/plan Phase 4
+Last activity: 2026-06-21 -- Phase 3 (Real-Time Threading) complete
 
-Progress: Phase 2 [██████████] 100% (5/5 plans) · Project [██░░░░░░░░] 2/10 phases
+Progress: Phase 3 [██████████] 100% (4/4 plans) · Project [███░░░░░░░] 3/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 12 (all Phase 1)
+- Total plans completed: 16 (all Phase 1)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -46,6 +46,7 @@ Progress: Phase 2 [██████████] 100% (5/5 plans) · Project [
 |-------|-------|-------|----------|
 | 01 | 7 | - | - |
 | 02 | 5 | - | - |
+| 03 | 4 | - | - |
 
 **Recent Trend:**
 

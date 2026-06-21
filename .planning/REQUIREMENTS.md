@@ -27,13 +27,13 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### Threading (THREAD)
 
-- [ ] **THREAD-01**: Acquisition/DSP hot path runs on a pthread, never on Swift `Task`
-- [ ] **THREAD-02**: Hot-path thread uses `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)`
-- [ ] **THREAD-03**: Hot path obeys audio-callback rules — no `dispatch_async`, no Obj-C runtime, no locks, no ARC retain/release
-- [ ] **THREAD-04**: Lock-free SPSC ring buffer (Rust `rtrb` or C++ `rigtorp/SPSCQueue`) bridges decoder thread to UI
-- [ ] **THREAD-05**: Ring buffer uses cache-line-padded atomics with Acquire/Release memory ordering
-- [ ] **THREAD-06**: Rust SPSC bridged to Swift via `cbindgen`-generated header (preferred over C++ for `loom` model-checking)
-- [ ] **THREAD-07**: Memory ordering verified with `loom` permutation testing (or equivalent for C++ choice)
+- [x] **THREAD-01**: Acquisition/DSP hot path runs on a pthread, never on Swift `Task`
+- [x] **THREAD-02**: Hot-path thread uses `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)` _(code-side verified as first action; SC#1 runtime `.trace` M4-gated, tracked in 03-HUMAN-UAT.md per D-18)_
+- [x] **THREAD-03**: Hot path obeys audio-callback rules — no `dispatch_async`, no Obj-C runtime, no locks, no ARC retain/release _(enforced by `hotpath-policy.sh` CI gate, SC#2)_
+- [x] **THREAD-04**: Lock-free SPSC ring buffer (in-house loom-verifiable Rust SPSC, rtrb-quality cross-checked — D-R3) bridges decoder thread to UI
+- [x] **THREAD-05**: Ring buffer uses cache-line-padded atomics (128B, Apple Silicon — D-R4) with Acquire/Release memory ordering (no SeqCst)
+- [x] **THREAD-06**: Rust SPSC bridged to Swift via `cbindgen`-generated header (preferred over C++ for `loom` model-checking)
+- [x] **THREAD-07**: Memory ordering verified with `loom` permutation testing
 
 ### Decoder Pipeline (DEC)
 
@@ -155,13 +155,13 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | IPC-05 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-03 (complete) |
 | IPC-06 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-01 (complete), 02-03 (complete) |
 | IPC-07 | Phase 2: IPC Primitive (kqueue+recvmsg + FlatBuffers + AES-GCM) | 02-04 (complete), 02-05 (complete) |
-| THREAD-01 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
-| THREAD-02 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
-| THREAD-03 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
-| THREAD-04 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
-| THREAD-05 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
-| THREAD-06 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
-| THREAD-07 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | TBD |
+| THREAD-01 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-03 (complete) |
+| THREAD-02 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-03 (complete -- code-side; SC#1 .trace tracked in 03-HUMAN-UAT.md, M4-gated per D-18) |
+| THREAD-03 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-03 (complete -- hot path + hotpath-policy.sh CI gate, SC#2) |
+| THREAD-04 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-01 (complete -- frozen C ABI), 03-02 (complete -- ring) |
+| THREAD-05 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-02 (complete -- 128B pad, Release/Acquire) |
+| THREAD-06 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-01 (complete -- cbindgen header), 03-04 (complete -- Swift wrapper + integration) |
+| THREAD-07 | Phase 3: Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | 03-02 (complete -- loom permutation test, SC#3a) |
 | DEC-01 | Phase 4: NDT1 Training on Indy/Loco | TBD |
 | DEC-02 | Phase 4: NDT1 Training on Indy/Loco | TBD |
 | DEC-03 | Phase 4: NDT1 Training on Indy/Loco | TBD |
