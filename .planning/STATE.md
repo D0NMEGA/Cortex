@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 (Real-Time Threading) complete & verified — 4/4 plans, SC#2/3/4 verified on main, SC#1 code-side verified (.trace M4-gated, tracked in 03-HUMAN-UAT.md); ready for Phase 4 (NDT1 training)
-last_updated: "2026-06-21T04:16:23.172Z"
-last_activity: 2026-06-21
+stopped_at: Phase 4 (NDT1 Training on Indy/Loco) planned — 5 plans in 3 waves, plan-checker VERIFICATION PASSED (11/11 dimensions); ready for /gsd-execute-phase 4
+last_updated: "2026-06-21T05:15:12.277Z"
+last_activity: 2026-06-21 -- Phase 4 planning complete
 progress:
   total_phases: 10
   completed_phases: 3
-  total_plans: 16
+  total_plans: 21
   completed_plans: 16
-  percent: 100
+  percent: 76
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 3 complete & verified (✓ SC#2/3/4 on main, SC#1 code-side; .trace M4-gated) — Phase 4 (NDT1 Training on Indy/Loco) next
+**Current focus:** Phase 4 (NDT1 Training on Indy/Loco) planned — 5 plans / 3 waves, plan-checker PASSED (11/11 dimensions, all 4 research findings encoded as automated traps); ready to execute (/gsd-execute-phase 4)
 
 ## Current Position
 
 Phase: 4 (NDT1 Training on Indy/Loco) — not started
 Plan: Not started
-Status: Phase 3 complete & verified — ready to discuss/plan Phase 4
-Last activity: 2026-06-21 -- Phase 3 (Real-Time Threading) complete
+Status: Ready to execute
+Last activity: 2026-06-21 -- Phase 4 planning complete
 
-Progress: Phase 3 [██████████] 100% (4/4 plans) · Project [███░░░░░░░] 3/10 phases
+Progress: Phase 4 [░░░░░░░░░░] 0% (0/5 plans — planned, not started) · Project [███░░░░░░░] 3/10 phases
 
 ## Performance Metrics
 
@@ -131,6 +131,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-20T04:19:56.273Z
-Stopped at: Phase 2 (IPC primitive) context gathered — 6 areas decided (D-01..D-18); ready for /gsd-plan-phase 2
-Resume file: .planning/phases/02-ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm/02-CONTEXT.md
+Last session: 2026-06-21T05:15:12.277Z
+Stopped at: Phase 4 (NDT1 Training on Indy/Loco) planned — 5 plans (3 waves), plan-checker VERIFICATION PASSED; ready for /gsd-execute-phase 4
+Resume file: .planning/phases/04-ndt1-training-on-indy-loco-synthetic-replay/04-01-PLAN.md
