@@ -95,6 +95,41 @@ struct ZeroCopyInputTests {
     #expect(buf.bytesPerRow >= Self.seqLen * MemoryLayout<Float16>.stride)
   }
 
+  @Test("rank-4 model-input view: (1,C,1,S) shape, same surface pointer (no host copy)")
+  func modelInputMultiArrayIsRank4AndZeroCopy() throws {
+    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+
+    let array = try buf.makeModelInputMultiArray()
+
+    // The model's `spikes` input is rank-4 BC1S `(1, channels, 1, seqLen)` (Plan-01/04 contract).
+    #expect(array.shape.map(\.intValue) == [1, Self.channels, 1, Self.seqLen])
+    #expect(array.dataType == .float16)
+    // STILL zero-copy: the rank-4 view points AT the shared surface base, not a copy (DEC-09).
+    #expect(array.dataPointer == buf.baseAddress)
+  }
+
+  @Test("rank-4 view round-trips a known fp16 pattern via its (1,C,1,S) strides")
+  func modelInputMultiArrayRoundTripsPattern() throws {
+    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+
+    let probes: [(ch: Int, bin: Int, val: Float16)] = [
+      (0, 0, 1.0), (3, 1, 4.5), (Self.channels - 1, Self.seqLen - 1, -2.5),
+    ]
+    for p in probes { try buf.write(p.val, channel: p.ch, bin: p.bin) }
+
+    // Read back through the rank-4 view's own strides: index [0, ch, 0, bin] resolves via
+    // strides[channel] (padded row) + strides[time] (contiguous). Proves the rank-4 view addresses
+    // the same surface bytes the write helper wrote (the real inference-path read).
+    let array = try buf.makeModelInputMultiArray()
+    let base = array.dataPointer.assumingMemoryBound(to: Float16.self)
+    let channelStride = array.strides[1].intValue
+    let timeStride = array.strides[3].intValue
+    for p in probes {
+      let element = base[p.ch * channelStride + p.bin * timeStride]
+      #expect(element == p.val, "mismatch at (\(p.ch), \(p.bin))")
+    }
+  }
+
   @Test("out-of-range write fails closed (no force-unwrap crash)")
   func writeOutOfRangeThrows() throws {
     guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly

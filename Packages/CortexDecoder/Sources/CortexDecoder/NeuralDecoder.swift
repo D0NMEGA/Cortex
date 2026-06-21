@@ -47,12 +47,28 @@ public final class NeuralDecoder {
   ///
   /// The URL is supplied by the caller/test/bench from an env var or a built artifact under the
   /// gitignored Decoder checkpoints — the `.mlpackage` is an R&D artifact and is never committed.
+  ///
+  /// Core ML cannot load a RAW `.mlpackage` at runtime — `MLModel(contentsOf:)` requires a COMPILED
+  /// `.mlmodelc` (05-RESEARCH Risk #4). So a `.mlpackage` URL is compiled once via the synchronous
+  /// `MLModel.compileModel(at:)` before loading; a `.mlmodelc` URL is loaded directly. This makes the
+  /// documented "may be a .mlmodelc or a .mlpackage" convention actually hold for both the Swift
+  /// bench (Plan 04) and the model-backed tests.
   /// - Parameter modelURL: a compiled `.mlmodelc` or a `.mlpackage` produced by the Decoder pytest.
   public init(modelURL: URL) throws(NeuralDecoderError) {
+    let loadURL: URL
+    if modelURL.pathExtension.lowercased() == "mlpackage" {
+      do {
+        loadURL = try MLModel.compileModel(at: modelURL)
+      } catch {
+        throw .modelLoadFailed(url: modelURL, underlying: "compileModel failed: \(String(describing: error))")
+      }
+    } else {
+      loadURL = modelURL
+    }
     do {
-      self.model = try MLModel(contentsOf: modelURL, configuration: Self.productionConfiguration())
+      self.model = try MLModel(contentsOf: loadURL, configuration: Self.productionConfiguration())
     } catch {
-      throw .modelLoadFailed(url: modelURL, underlying: String(describing: error))
+      throw .modelLoadFailed(url: loadURL, underlying: String(describing: error))
     }
   }
 
@@ -73,7 +89,10 @@ public final class NeuralDecoder {
   public func decode(_ input: SpikeInputBuffer) throws(NeuralDecoderError) -> SIMD2<Float> {
     let arr: MLMultiArray
     do {
-      arr = try input.makeMultiArray()
+      // The model's `spikes` input is rank-4 BC1S `(1, 96, 1, S)` (Plan-01/04 contract), so feed the
+      // rank-4 zero-copy view of the shared surface — the rank-2 storage view is rejected by a real
+      // prediction ("must be of rank 4"). Still no host copy (same surface, deallocator: nil).
+      arr = try input.makeModelInputMultiArray()
     } catch {
       throw .predictionFailed(underlying: String(describing: error))
     }

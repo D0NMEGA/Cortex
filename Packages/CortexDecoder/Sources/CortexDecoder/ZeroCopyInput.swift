@@ -115,18 +115,56 @@ public final class SpikeInputBuffer {
     self.metalBuffer = buffer
   }
 
-  /// Wraps the shared surface as an `MLMultiArray` with NO host copy — the documented
+  /// Wraps the shared surface as a rank-2 `MLMultiArray` with NO host copy — the documented
   /// IOSurface-backed initializer (05-RESEARCH Decision 3). Shape is `[channels, seqLen]`
   /// (`shape.last == pixelBuffer.width == seqLen`; `product(rest) == height == channels`); the
   /// data type is inferred `.float16` from the OneComponent16Half format.
   ///
   /// The returned array's `dataPointer` equals ``baseAddress`` — proven by the pointer-identity
   /// test (DEC-09). It is NOT constructed from a Swift `[Float]`/`[Float16]` value initializer.
+  /// This is the storage-shaped view; the model expects rank-4 — see ``makeModelInputMultiArray()``.
   public func makeMultiArray() throws(ZeroCopyInputError) -> MLMultiArray {
     do {
       return try MLMultiArray(
         pixelBuffer: pixelBuffer,
         shape: [channels as NSNumber, seqLen as NSNumber]
+      )
+    } catch {
+      throw .multiArrayCreateFailed(underlying: String(describing: error))
+    }
+  }
+
+  /// Wraps the SAME shared surface as the rank-4 `(1, channels, 1, seqLen)` BC1S `MLMultiArray`
+  /// the converted NDT1 `.mlpackage` requires for its `spikes` input (Plan-01/04 contract:
+  /// `ct.TensorType(shape=(1, 96, 1, S))`). The rank-2 ``makeMultiArray()`` storage view does NOT
+  /// satisfy that rank, so a real `MLModel.prediction` rejects it ("must be of rank 4") — this
+  /// method is the inference-path view.
+  ///
+  /// Still ZERO host copy: it is an `MLMultiArray(dataPointer:shape:dataType:strides:deallocator:)`
+  /// over ``baseAddress`` (the surface base) with `deallocator: nil`, so it shares the one
+  /// allocation (this buffer owns the surface lifetime). Strides are computed in fp16 elements and
+  /// honor `bytesPerRow` row padding (Risk #3): the channel axis steps a full padded row, the time
+  /// axis is contiguous, and the two singleton axes carry the outer strides.
+  ///
+  /// `dataPointer == baseAddress` still holds (same pointer-identity proof, now rank-4).
+  public func makeModelInputMultiArray() throws(ZeroCopyInputError) -> MLMultiArray {
+    let rowStrideElements = bytesPerRow / MemoryLayout<Float16>.stride  // padded row, in fp16 units
+    // shape (1, channels, 1, seqLen): strides[time]=1, strides[channel]=rowStride,
+    // strides[singleton]=rowStride (size-1 dim), strides[batch]=channels*rowStride (size-1 dim).
+    let shape: [NSNumber] = [1, channels as NSNumber, 1, seqLen as NSNumber]
+    let strides: [NSNumber] = [
+      (channels * rowStrideElements) as NSNumber,
+      rowStrideElements as NSNumber,
+      rowStrideElements as NSNumber,
+      1,
+    ]
+    do {
+      return try MLMultiArray(
+        dataPointer: baseAddress,
+        shape: shape,
+        dataType: .float16,
+        strides: strides,
+        deallocator: nil  // this SpikeInputBuffer owns the surface; do NOT free here.
       )
     } catch {
       throw .multiArrayCreateFailed(underlying: String(describing: error))

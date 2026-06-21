@@ -9,6 +9,11 @@ xcuserdata/
 Package.pins
 Packages/*/.build/
 
+# Phase 5 Plan 05-04: CortexDecoderBench output (DEC-11). The latency_histogram.{json,png} +
+# bins CSV are gitignored run artifacts; the committed evidence is the NUMBER + device annotation
+# + reproduce command in 05-latency-evidence.md (Phase-4 gitignored-artifact discipline).
+Packages/CortexDecoder/.bench/
+
 # === XcodeGen output (regenerated; never committed) ===
 Cortex.xcodeproj/
 Cortex.xcworkspace/
