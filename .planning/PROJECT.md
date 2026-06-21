@@ -27,6 +27,13 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [x] Session secret in data-protection Keychain (`kCFBooleanTrue` + `AfterFirstUnlockThisDeviceOnly`) — **IPC-06 / SC#3** (CF#1 fallback: single-process round-trip + key delivered over `mach_msg`; cross-process access-group sharing deferred to Phase 8 — free-team signing cannot back the `keychain-access-groups` entitlement)
 - [x] Sub-µs encrypted round-trip on the shm-polled path — **IPC-07 / SC#1**: p50=167ns, **p99=208ns**, σ=89.7ns, n=199k on M5 Pro (≥ M4), hardware-gated evidence (`sc1-evidence.md`), ~4.8× margin under 1µs
 
+#### Real-Time Threading (Phase 3 — completed 2026-06-21)
+- [x] Acquisition/DSP hot path on a raw `pthread` (never Swift `Task`), `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)` as its first action, Foundation-free (`import Darwin`) — **THREAD-01/02/03** (`CortexRingHotPath/Acquisition.swift`; SC#1 code-side verified, runtime `.trace` M4-gated per D-18 → `03-HUMAN-UAT.md`)
+- [x] Hot-path discipline enforced by `hotpath-policy.sh` static-analysis CI gate over Swift/C/Rust sources with a negative-control self-test — **SC#2** (bites on `dispatch_async`/`lazy var`/`pthread_mutex`/`Foundation` + Rust `Mutex`/`.lock(`/`println!(`/`panic!(`)
+- [x] In-house loom-verified lock-free SPSC ring — 128B cache-line-padded atomics (Apple Silicon), Release-publish/Acquire-observe, **no SeqCst** — **THREAD-04/05/07** (`cortex_ring` crate; SC#3a loom exhaustive proof + SC#3b 1M-frame strict-FIFO zero-loss, both green on main; D-R3 chose in-house over `rtrb` precisely for `loom` model-checking, rtrb-quality cross-checked ~4%)
+- [x] Rust SPSC bridged to Swift via `cbindgen` header + `.xcframework`/`.binaryTarget`, `#[repr(C)] CortexFrame` consumed with no drift-prone Swift mirror, cbindgen-drift CI gate — **THREAD-06 / SC#4** (`CortexRing.Ring` safe RAII wrapper; 1000-frame round-trip verifies value + FIFO order, 7/7 swift tests green)
+- D-R8 / Phase-2 D-06 closed: AES-GCM stays off this hot path — the SPSC ring is the decoupling boundary.
+
 ### Active
 
 > Foundation IPC items (`kqueue`+`recvmsg` primitive, FlatBuffers `Sample` schema) → **moved to Validated (Phase 2)**.
@@ -52,9 +59,9 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [ ] GPU frame time ≤0.4ms on M4
 
 #### Threading & IPC
-- [ ] Acquisition/DSP hot path on pthread with `QOS_CLASS_USER_INTERACTIVE` (no Swift Task)
-- [ ] Lock-free SPSC ring buffer (Rust `rtrb` or C++ `rigtorp/SPSCQueue`) with cache-line padding and Acquire/Release ordering
-- [ ] `cbindgen` Swift bridge for the Rust SPSC queue
+- [x] Acquisition/DSP hot path on pthread with `QOS_CLASS_USER_INTERACTIVE` (no Swift Task) — **validated Phase 3 (THREAD-01/02/03)**
+- [x] Lock-free SPSC ring buffer (in-house loom-verified Rust SPSC — D-R3) with 128B cache-line padding and Release/Acquire ordering — **validated Phase 3 (THREAD-04/05/07)**
+- [x] `cbindgen` Swift bridge for the Rust SPSC queue — **validated Phase 3 (THREAD-06)**
 - [x] POSIX `shm_open` shared memory inside App Group container (≤31-byte names per Darwin `PSHMNAMLEN`) — **validated Phase 2 (IPC-01)**
 - [x] `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` (via `fileport_makeport`) for cross-process FD passing — **validated Phase 2 (IPC-03, no SCM_RIGHTS)**
 - [x] AES-GCM session encryption via CryptoKit `AES.GCM` (HKDF-derived key, Keychain-stored with `kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly`) — **validated Phase 2 (IPC-05/06)**
@@ -128,7 +135,7 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | CoreML on ANE (not MLX) | MLX has unbounded P99 + no ANE; CoreML is the only path meeting <2ms p99 budget | — Pending |
-| pthread + `QOS_CLASS_USER_INTERACTIVE` (not Swift Task) | Swift cooperative scheduling cannot meet 1ms deadlines; 154 sources across Massicotte/Adamson/Napier confirm | — Pending |
+| pthread + `QOS_CLASS_USER_INTERACTIVE` (not Swift Task) | Swift cooperative scheduling cannot meet 1ms deadlines; 154 sources across Massicotte/Adamson/Napier confirm | ✓ Validated Phase 3 — `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE,0)` is the worker's first action, `import Darwin` only; SC#2 `hotpath-policy.sh` gate enforces it in CI (SC#1 `.trace` M4-gated, `03-HUMAN-UAT.md`) |
 | `kqueue`+`recvmsg` over POSIX shm (not Network.framework) | Sub-µs vs 50-200µs overhead; disqualifying difference for 1ms deadline | ✓ Validated Phase 2 — shm busy-poll round-trip p99=208ns (CF#2: doorbell is the idle wake, the ring is the measured path) |
 | `CAMetalDisplayLink` (not `CADisplayLink`) | Bundles drawable acquisition, encode deadline, on-glass timestamp into one callback for beam-raced 120Hz | — Pending |
 | AES-GCM via CryptoKit (not ChaCha20-Poly1305) | Apple Silicon FEAT_AES makes AES-GCM faster; ChaCha is faster only on x86-without-AES-NI | ✓ Validated Phase 2 — HKDF per-direction subkeys + deterministic seq-nonce; fail-closed, nonce-uniqueness tested (off the measured path per D-01) |
@@ -136,7 +143,7 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 | BC1S `(B, C, 1, S)` tensor layout | Only layout the ANE pins; standard `(B, S, C)` evicts to GPU/CPU | — Pending |
 | h=1-2 attention heads | Actual NDT1 design; commonly miscited as 4 heads — do not over-parameterize | — Pending |
 | 30×30 webgrid (not 6×6) | Lex Fridman / Bliss Chapman reference; Neuralink moved past 6×6 | — Pending |
-| Rust `rtrb` or C++ `rigtorp/SPSCQueue` for ring buffer | Rust preferred — `loom` lets you model-check memory ordering, Swift cannot | — Pending |
+| In-house loom-verified Rust SPSC (not `rtrb` directly) for ring buffer | Rust preferred — `loom` lets you model-check memory ordering, Swift cannot; D-R3 chose in-house so the exact production atomics route through a `loom` cfg-shim | ✓ Validated Phase 3 — 128B-padded, Release/Acquire (no SeqCst); SC#3a loom exhaustive proof + SC#3b 1M strict-FIFO zero-loss green; rtrb-quality cross-checked (~4%) |
 | App Group container for shared memory | `com.apple.security.temporary-exception.shared-memory` deprecated for App Store | ✓ Validated Phase 1 — cross-process `shm_open` proven, entitlement-honored (sc2-evidence.md) |
 | CortexDaemon as standalone `type: tool` (mh_execute) | A loadable `mh_bundle` can't run standalone or carry entitlements; D-03 packaging disposition resolved on Xcode 26 | ✓ Phase 2 — kept as `type: tool`, now the Phase-2 producer (generates key, encrypts, writes ring, passes fd, rings doorbell); App-Store form (XPC/launchd) deferred to Phase 7/8 |
 | `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` for FD passing | Apple-recommended path over Unix-domain `SCM_RIGHTS` | ✓ Validated Phase 2 — `fileport_makeport`/`makefd`, zero SCM_RIGHTS (CI grep-gated); cross-process fd pass proven end-to-end |
@@ -164,4 +171,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-20 — Phase 2 (IPC Primitive) complete & verified (7/7 must-haves). IPC-01..07 validated; SC#1 sub-µs round-trip measured (p50=167ns / **p99=208ns** / σ=89.7ns, n=199k on M-series ≥ M4, `sc1-evidence.md`), SC#2 no-SCM_RIGHTS (mach_msg+fileport, CI-gated), SC#3 AES-GCM+Keychain, SC#4 compile-time asserts. Spikes: CF#1 keychain → single-process + key-over-mach_msg (access-group sharing deferred to Phase 8); CF#3 rendezvous → posix_spawnattr_setspecialport_np. Follow-ups: xcodebuild Float16 daemon-target config; `/gsd-secure-phase 02`.*
+*Last updated: 2026-06-21 — Phase 3 (Real-Time Threading) complete & verified (3/4 SC on `main`; THREAD-01..07 validated). In-house SPSC ring loom-verified (SC#3a) + 1M strict-FIFO zero-loss (SC#3b), 128B-padded, Release/Acquire no-SeqCst; pthread `USER_INTERACTIVE` hot path (SC#1 code-side, `.trace` M4-gated → `03-HUMAN-UAT.md`); `hotpath-policy.sh` 3-language gate (SC#2); cbindgen Swift round-trip 7/7 (SC#4). Decisions validated: pthread+USER_INTERACTIVE, in-house loom-verified SPSC over `rtrb` (D-R3); D-R8 closed (AES-GCM off hot path). Phase 2: IPC-01..07, SC#1 p99=208ns. Follow-ups: SC#1 Instruments `.trace` on M4/M5; xcodebuild Float16 daemon-target config; `/gsd-secure-phase 03`.*
