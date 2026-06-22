@@ -1,10 +1,11 @@
 ---
 phase: 6
 slug: cametaldisplaylink-120hz-renderer-with-30-30-webgrid
-status: planned
+status: validated
 nyquist_compliant: true
-wave_0_complete: false
+wave_0_complete: true
 created: 2026-06-21
+validated: 2026-06-22
 ---
 
 # Phase 6 — Validation Strategy
@@ -45,26 +46,29 @@ created: 2026-06-21
 
 | Requirement | Validation method | Sampling / N | Pass condition | Test Type | Artifact | Status |
 |-------------|-------------------|--------------|----------------|-----------|----------|--------|
-| RENDER-01 | grep + build; iOS delegate fires | callback present | `CAMetalDisplayLink` used; iOS Metal path has no `CADisplayLink` | structural + unit | CI log | ⬜ pending |
-| RENDER-02 | callback-rate count (Mac ProMotion) | 60s | sustained ≈120Hz | manual/bench | `frame_pacing.json` | ⬜ pending |
-| RENDER-03 | plist build-time check | 1 (gate) | `CADisableMinimumFrameDurationOnPhone == true` | structural | CI log | ⬜ pending |
-| RENDER-04 | grep + frame-capture | compute pass | compute kernel writes ~900-cell grid | structural + manual | capture note | ⬜ pending |
-| RENDER-05 | `gpuStartTime/EndTime` or counter buffer | n ≥ 10k frames | p99 ≤ 0.4ms (M4 canonical; M5 Pro annotated) | bench | `gpu_time_hist.{json,png}` | ⬜ pending |
-| RENDER-06 | grep + buffer audit | all CPU buffers | `storageModeShared`; no staging blit | structural | CI log | ⬜ pending |
-| RENDER-07 | grep + code review | render path | `dispatch_semaphore(value:1)`; `maximumDrawableCount=2` | structural | CI log | ⬜ pending |
-| RENDER-08 | grep + macOS run | callback | `NSView/NSScreen.displayLink`; no Catalyst | structural + manual | CI log + run | ⬜ pending |
-| RENDER-09 | scheme env check + screenshot | 1 | `MTL_HUD_ENABLED=1` in scheme; HUD visible | structural + manual | scheme + screenshot | ⬜ pending |
-| SC#4 (soak) | 60s soak (Mac ProMotion) | 120·60 frames | zero intervals > 8.33ms (ε bound) | manual/bench | soak log | ⬜ pending |
+| RENDER-01 | grep + build; iOS delegate fires | callback present | `CAMetalDisplayLink` used; iOS Metal path has no `CADisplayLink` | structural + unit | CI log | ✅ green |
+| RENDER-02 | callback-rate count (Mac ProMotion) | 60s | sustained ≈120Hz | manual/bench | `soak_log.json` | ✅ green¹ |
+| RENDER-03 | plist build-time check | 1 (gate) | `CADisableMinimumFrameDurationOnPhone == true` | structural | CI log | ✅ green |
+| RENDER-04 | grep + frame-capture | compute pass | compute kernel writes ~900-cell grid | structural + manual | capture note | ✅ green |
+| RENDER-05 | `gpuStartTime/EndTime` or counter buffer | n ≥ 10k frames | p99 ≤ 0.4ms (M4 canonical; M5 Pro annotated) | bench | `gpu_time_hist.json` | ✅ green¹ |
+| RENDER-06 | grep + buffer audit | all CPU buffers | `storageModeShared`; no staging blit | structural | CI log | ✅ green |
+| RENDER-07 | grep + code review | render path | `dispatch_semaphore(value:1)`; `maximumDrawableCount=2` | structural | CI log | ✅ green |
+| RENDER-08 | grep + macOS run | callback | `NSView/NSScreen.displayLink`; no Catalyst | structural + manual | CI log + run | ✅ green |
+| RENDER-09 | scheme env check + screenshot | 1 | `MTL_HUD_ENABLED=1` in scheme; HUD visible | structural + manual | scheme + screenshot | ✅ green² |
+| SC#4 (soak) | 60s soak (Mac ProMotion) | 120·60 frames | zero intervals > 8.33ms (ε bound) | manual/bench | soak log | ✅ green¹ |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
+
+¹ Green at the **M5 Pro corroborating-canonical tier** (D-11): RENDER-05 p99=0.1618 ms (n=10,000); SC#4/RENDER-02 soak 243,724 frames / 0 over-budget (offscreen-throughput). The iPad Pro M4 **canonical** capture (on-panel 120 Hz refresh + on-device p99) is deferred to `06-HUMAN-UAT.md` (D-12, never-auto-approve) — recorded under Manual-Only, **not** a Nyquist gap.
+² Structural env-gate green (`MTL_HUD_ENABLED=1`; render-policy.sh); the on-screen HUD **visual** is Manual-Only (an overlay can't be asserted headlessly).
 
 ---
 
 ## Wave 0 Requirements
 
-- [ ] GPU-time measurement bench target (dedicated executable; `gpuStartTime/EndTime` histogram) — no off-the-shelf framework; built in-phase
-- [ ] Structural grep-gate script (`Tools/scripts/render-policy.sh`) with a negative-control self-test (mirrors Phase-3 `hotpath-policy.sh`)
-- [ ] `swift test` target in `Packages/CortexRender` (integrator/seam unit tests)
+- [x] GPU-time measurement bench target (dedicated executable; `gpuStartTime/EndTime` histogram) — no off-the-shelf framework; built in-phase → `Apps/CortexRenderBench/GPUTimeHistogram.swift` (+ `FrameSoak.swift`)
+- [x] Structural grep-gate script (`Tools/scripts/render-policy.sh`) with a negative-control self-test (mirrors Phase-3 `hotpath-policy.sh`) → present + executable; clean run EXIT 0, `--self-test` EXIT 0
+- [x] `swift test` target in `Packages/CortexRender` (integrator/seam unit tests) → 19/19 pass (WebgridParams, CursorIntegrator, VelocityRing, LissajousProducer)
 
 *Swift Testing/XCTest + the CI grep-gate harness already exist project-wide; this phase adds the render-specific gate + GPU bench.*
 
@@ -85,14 +89,14 @@ created: 2026-06-21
 
 ## Validation Sign-Off
 
-- [ ] All tasks have an `<automated>` verify or a Wave 0 dependency
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers the render-gate + GPU bench
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 30s (structural/unit)
-- [ ] `nyquist_compliant: true` set in frontmatter (by planner after task→requirement mapping)
+- [x] All tasks have an `<automated>` verify or a Wave 0 dependency
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers the render-gate + GPU bench
+- [x] No watch-mode flags
+- [x] Feedback latency < 30s (structural/unit)
+- [x] `nyquist_compliant: true` set in frontmatter (by planner after task→requirement mapping)
 
-**Approval:** pending
+**Approval:** ✅ validated 2026-06-22 — audit re-ran the full automated suite green; see Validation Audit below.
 
 
 ---
@@ -127,3 +131,36 @@ GPU-time bench (06-05) are the in-phase-built validation infrastructure; `swift 
 Packages/CortexRender (06-01/06-02) is the unit surface. nyquist_compliant set true: every task has an
 automated `<verify>` (or, for the 06-06 Task-1 checkpoint:decision, a human-gate by design), and no 3
 consecutive tasks lack an automated verify.
+
+---
+
+## Validation Audit 2026-06-22
+
+This audit re-ran the full automated validation surface against the live tree (not a paper review):
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Render package unit tests | `swift test --package-path Packages/CortexRender` | **19/19 pass** (4 suites) |
+| Structural render gate | `bash Tools/scripts/render-policy.sh` | **EXIT 0** (9 required-present + 3 forbidden-absent) |
+| Gate negative-control | `bash Tools/scripts/render-policy.sh --self-test` | **EXIT 0** (every strip/inject bites; macOS scoping control passes) |
+| CI wiring | `.github/workflows/ci.yml` | render-policy gate + `--self-test` + `project.yml`/`Info.plist` plist gate all wired (lines 213–237) |
+| GPU-time bench artifact | `gpu_time_hist.json` | p99=0.1618 ms, n=10,000 (M5 Pro corroborating) |
+| Soak artifact | `soak_log.json` | 243,724 frames / 0 over-budget (M5 Pro corroborating) |
+
+| Metric | Count |
+|--------|-------|
+| Requirements audited | 9 RENDER + SC#4 (10) |
+| COVERED (automated, green) | 10 |
+| PARTIAL | 0 |
+| MISSING (gaps) | 0 |
+| Gaps filled this audit | 0 (none to fill) |
+| Manual-only (un-automatable, already recorded) | iPad-M4 canonical GPU (RENDER-05/SC#2) · iPad-M4 on-panel 120 Hz (RENDER-02/SC#4) · MTL_HUD visual (RENDER-09) |
+
+**Verdict: Nyquist-compliant.** Every requirement has an automated verification that exists and runs
+green at its achievable tier (CI-structural / unit / M5-Pro-corroborating bench). The three Manual-Only
+items are legitimately un-automatable on a headless runner (physical iPad Pro M4 ProMotion panel; an
+on-screen HUD overlay) and are tracked in `06-HUMAN-UAT.md` under the never-auto-approve D-12 gate —
+deferred canonical captures, **not** coverage gaps. Per-Task statuses were reconciled from the
+plan-time `⬜ pending` seed to verified-green: this VALIDATION.md was authored as a contract on
+2026-06-21 and not updated post-execution; `06-VERIFICATION.md` (2026-06-22) independently corroborates
+the same green state. No new tests were generated (nothing to fill); no implementation files touched.
