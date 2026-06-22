@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: 'Phase 05 COMPLETE (5/5) + verified — NDT1→CoreML, ANE-eligible & sub-2ms. 05-05 checkpoint RESOLVED via on-device capture on iPad Air M2 (iPadOS 18.7.8, Xcode Performance Report): 226/226 ANE-ELIGIBLE confirmed on-device; runtime placement MEASURED {CPU:226} (1.29M-param scale trap, reproduced Mac→iPad); latency p99≈0.51ms (<2ms, ~4x margin, CPU). SC#1/DEC-08 REFRAMED (user-approved 2026-06-21) from "100% ANE placement" → measured truth: ANE-eligible + CPU-scheduled-at-scale + <2ms regardless — applied across ROADMAP/REQUIREMENTS/PROJECT/evidence/VERIFICATION. Public API cannot force ANE placement at this scale; canonical iPad-M4 capture optional/future (rare hardware). Next: Phase 6 (CAMetalDisplayLink 120Hz renderer).'
-last_updated: "2026-06-21T22:06:04.208Z"
-last_activity: 2026-06-21
+stopped_at: "Phase 06 context gathered (renderer: substrate-only, dedicated velocity seam, dark Neuralink visuals, 3-tier verify w/ M5-Pro-ProMotion corroborating-canonical + iPad-M4 deferred)"
+last_updated: "2026-06-22T00:50:13.951Z"
+last_activity: "2026-06-21 -- Phase 05 complete (iPad-M2 capture + SC#1 reframe)"
 progress:
   total_phases: 10
   completed_phases: 5
@@ -143,6 +143,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-21T22:05:53.011Z
-Stopped at: Completed 05-04-PLAN.md (DEC-11 latency bench). Plan 5 of 5 (iPad HUMAN-UAT) next.
-Resume file: None
+Last session: 2026-06-22T00:50:13.948Z
+Stopped at: Phase 06 context gathered (renderer: substrate-only, dedicated velocity seam, dark Neuralink visuals, 3-tier verify w/ M5-Pro-ProMotion corroborating-canonical + iPad-M4 deferred)
+Resume file: .planning/phases/06-cametaldisplaylink-120hz-renderer-with-30-30-webgrid/06-CONTEXT.md
