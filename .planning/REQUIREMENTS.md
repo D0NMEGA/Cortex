@@ -59,10 +59,10 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 ### Renderer (RENDER)
 
 - [ ] **RENDER-01**: `CAMetalDisplayLink` (iOS 17+, macOS 14+) drives drawable acquisition + encode deadline + present timestamp callback
-- [ ] **RENDER-02**: Renderer hits 120Hz on iPad Pro M4 ProMotion display
+- [ ] **RENDER-02**: Renderer hits 120Hz on a ProMotion display — measured on M5 Pro ProMotion (corroborating-canonical, D-11; 60s soak, 243,724 frames, 0 intervals >8.33ms, `06-render-evidence.md`); iPad Pro M4 canonical capture optional/future (`06-HUMAN-UAT.md`, D-12)
 - [ ] **RENDER-03**: `Info.plist` sets `CADisableMinimumFrameDurationOnPhone = YES` for ProMotion 120Hz
 - [ ] **RENDER-04**: 30×30 webgrid (~900 cells) drawn via Metal compute shader
-- [ ] **RENDER-05**: GPU frame time ≤0.4ms on M4
+- [ ] **RENDER-05**: GPU frame time ≤0.4ms — measured on M5 Pro ProMotion (corroborating-canonical, D-11; p99=0.1618ms, n=10k, ~2.5× margin, `06-render-evidence.md`); iPad Pro M4 (M4) canonical capture optional/future (`06-HUMAN-UAT.md`, D-12)
 - [ ] **RENDER-06**: All drawables use `MTLBuffer storageModeShared` for zero-copy unified-memory presentation
 - [ ] **RENDER-07**: Single in-flight frame with `dispatch_semaphore_t(value: 1)` for CPU/GPU sync (Apple's "Synchronizing CPU and GPU Work" pattern)
 - [ ] **RENDER-08**: macOS target uses `NSScreen.displayLink(target:selector:)` (macOS 14+) when not on Catalyst
