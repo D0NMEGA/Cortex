@@ -63,7 +63,12 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
-        # CADisableMinimumFrameDurationOnPhone arrives in Phase 6 with the renderer.
+        # RENDER-03: unlocks above-default ProMotion frame rates (the 120Hz the renderer drives).
+        # Without it the system caps the panel at the default rate REGARDLESS of the link's
+        # preferredFrameRateRange=120 (Plan 03) — 120Hz is opt-in TWO ways and this is half of it
+        # (RESEARCH Decision 7). iOS 15+; macOS needs no equivalent. XcodeGen injects this key=true
+        # into the built Apps/CortexiOS/Info.plist; the CI plist gate (Plan 04 / ci.yml) asserts it.
+        CADisableMinimumFrameDurationOnPhone: true
     entitlements:
       path: Apps/CortexiOS/Cortex.entitlements
       properties:
@@ -155,6 +160,31 @@ targets:
         DEVELOPMENT_TEAM: 57YW6M29S7
         CODE_SIGN_STYLE: Automatic
 
+  CortexRenderBench:
+    type: tool                              # Standalone macOS GPU-time measurement executable.
+                                            # Phase 6 (Plan 04) wires the target + a one-line stub so
+                                            # xcodegen/xcodebuild resolve it end-to-end; Plan 05 fills
+                                            # main.swift with the real commandBuffer.gpuStartTime/
+                                            # gpuEndTime histogram + 60s 120Hz soak drive over the
+                                            # CortexRender adapters (CONTEXT D-10 tier 2 / D-11 M5 Pro
+                                            # corroborating-canonical). Mirrors the Phase-5
+                                            # CortexDecoderBench in-process-bench precedent (STATE
+                                            # Plan 05 note): a dedicated bench executable, NOT a
+                                            # swift-test timing gate (D-18 — keeps a flaky latency
+                                            # assertion out of CI).
+    platform: macOS
+    sources:
+      - path: Apps/CortexRenderBench
+    dependencies:
+      - package: CortexRender               # the 120Hz webgrid adapters + encoder under measurement.
+      - package: CortexCore                  # mach-time wrapper (Time.machAbsoluteNanoseconds) for the bench clock.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.renderbench
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        DEVELOPMENT_TEAM: 57YW6M29S7
+        CODE_SIGN_STYLE: Automatic
+
 schemes:
   CortexiOS:
     build:
@@ -162,6 +192,12 @@ schemes:
         CortexiOS: all
     run:
       config: Debug
+      # MTL_HUD_ENABLED=1 — Metal Performance HUD (RENDER-09): P95 frame time,
+      # drawable-wait, encoder-time. Live frame-pacing diagnostics, no code.
+      environmentVariables:
+        - variable: MTL_HUD_ENABLED
+          value: "1"
+          isEnabled: true
     test:
       config: Debug
   CortexMac:
@@ -172,11 +208,24 @@ schemes:
     run:
       config: Debug
       executable: CortexMac        # Launch the .app window, not the daemon (XcodeGen defaults run to the first runnable target = CortexDaemon alphabetically). Daemon still builds as a peer above.
+      # MTL_HUD_ENABLED=1 — Metal Performance HUD (RENDER-09): P95 frame time,
+      # drawable-wait, encoder-time. Live frame-pacing diagnostics, no code.
+      # The M5 Pro MacBook Pro ProMotion panel is the D-11 corroborating-canonical surface.
+      environmentVariables:
+        - variable: MTL_HUD_ENABLED
+          value: "1"
+          isEnabled: true
     test:
       config: Debug
   CortexDaemon:
     build:
       targets:
         CortexDaemon: all
+    run:
+      config: Debug
+  CortexRenderBench:
+    build:
+      targets:
+        CortexRenderBench: all
     run:
       config: Debug
