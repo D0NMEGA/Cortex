@@ -1,0 +1,151 @@
+// WebgridView — the SwiftUI-embeddable Metal surface that hosts the `CAMetalLayer` + the platform
+// display-link adapter, so the app targets (CortexiOS / CortexMac) render the 30×30 webgrid by
+// dropping `WebgridView(ring:)` into their view tree (Plan 03).
+//
+// One representable per platform over the SAME shared core: iOS is a `UIViewRepresentable` backed by
+// a `CAMetalLayer`-`layerClass` `UIView` driving an `iOSDisplayLinkAdapter`; macOS is an
+// `NSViewRepresentable` backed by a layer-hosting `NSView` driving a `MacDisplayLinkAdapter`. Only
+// the host view + adapter differ; both feed the SAME `WebgridFrameEncoder` via the SAME
+// `CursorIntegrator`/`VelocityRing` (D-03/D-04).
+//
+// ## Producer ownership (SPSC discipline)
+// `WebgridView` is the CONSUMER side: it takes a caller-supplied `VelocityRing` and the
+// display-link callback `pop`s it. The HOST (the app's `ContentView`) owns the single PRODUCER —
+// a `LissajousProducer` push loop on one thread — so the SPSC invariant (exactly one producer
+// thread, exactly one consumer thread) holds: the producer is the host loop, the consumer is the
+// display-link callback. The view never pushes.
+
+import SwiftUI
+import Metal
+import QuartzCore
+import os
+
+#if os(iOS)
+import UIKit
+
+/// A `UIView` whose backing layer IS a `CAMetalLayer` (via `layerClass`) — the cleanest way to host
+/// a Metal layer at full size with automatic resize, no manual frame syncing.
+public final class WebgridMetalUIView: UIView {
+  public override class var layerClass: AnyClass { CAMetalLayer.self }
+  /// The backing `CAMetalLayer` (guaranteed by `layerClass`).
+  public var metalLayer: CAMetalLayer { layer as! CAMetalLayer }
+}
+
+/// SwiftUI host for the iOS webgrid surface. Drop into a view tree; pass the `VelocityRing` the
+/// host's producer pushes into.
+public struct WebgridView: UIViewRepresentable {
+  private let ring: VelocityRing
+  private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
+
+  /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
+  ///   callback (consumer) pops it each frame.
+  public init(ring: VelocityRing) {
+    self.ring = ring
+  }
+
+  public func makeCoordinator() -> Coordinator { Coordinator() }
+
+  public func makeUIView(context: Context) -> WebgridMetalUIView {
+    let view = WebgridMetalUIView()
+    guard let device = MTLCreateSystemDefaultDevice() else {
+      log.error("no Metal device; webgrid surface inert")
+      return view
+    }
+    let metalLayer = view.metalLayer
+    MetalLayerConfig.configure(metalLayer, device: device)
+    do {
+      let adapter = try iOSDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring)
+      adapter.start()
+      context.coordinator.adapter = adapter
+    } catch {
+      log.error("failed to start iOS display-link adapter: \(String(describing: error))")
+    }
+    return view
+  }
+
+  public func updateUIView(_ uiView: WebgridMetalUIView, context: Context) {
+    // The layer resizes with the view automatically (layerClass-backed). Nothing per-update.
+  }
+
+  public static func dismantleUIView(_ uiView: WebgridMetalUIView, coordinator: Coordinator) {
+    coordinator.adapter?.stop()
+    coordinator.adapter = nil
+  }
+
+  /// Retains the adapter for the view's lifetime (the representable struct itself is transient).
+  @MainActor
+  public final class Coordinator {
+    var adapter: iOSDisplayLinkAdapter?
+    public init() {}
+  }
+}
+#endif
+
+#if os(macOS)
+import AppKit
+
+/// A layer-hosting `NSView` backed by a `CAMetalLayer` — `wantsLayer = true` + a `CAMetalLayer`
+/// backing layer, the AppKit analogue of the iOS `layerClass` host.
+public final class WebgridMetalNSView: NSView {
+  public override func makeBackingLayer() -> CALayer { CAMetalLayer() }
+  /// The backing `CAMetalLayer` (guaranteed by `makeBackingLayer`).
+  public var metalLayer: CAMetalLayer { layer as! CAMetalLayer }
+
+  public override init(frame frameRect: NSRect) {
+    super.init(frame: frameRect)
+    wantsLayer = true
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+}
+
+/// SwiftUI host for the macOS webgrid surface. Drop into a view tree; pass the `VelocityRing` the
+/// host's producer pushes into.
+public struct WebgridView: NSViewRepresentable {
+  private let ring: VelocityRing
+  private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
+
+  /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
+  ///   callback (consumer) pops it each frame.
+  public init(ring: VelocityRing) {
+    self.ring = ring
+  }
+
+  public func makeCoordinator() -> Coordinator { Coordinator() }
+
+  public func makeNSView(context: Context) -> WebgridMetalNSView {
+    let view = WebgridMetalNSView(frame: .zero)
+    guard let device = MTLCreateSystemDefaultDevice() else {
+      log.error("no Metal device; webgrid surface inert")
+      return view
+    }
+    let metalLayer = view.metalLayer
+    MetalLayerConfig.configure(metalLayer, device: device)
+    do {
+      let adapter = try MacDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring)
+      adapter.start(in: view)
+      context.coordinator.adapter = adapter
+    } catch {
+      log.error("failed to start macOS display-link adapter: \(String(describing: error))")
+    }
+    return view
+  }
+
+  public func updateNSView(_ nsView: WebgridMetalNSView, context: Context) {
+    // The backing layer resizes with the view automatically. Nothing per-update.
+  }
+
+  public static func dismantleNSView(_ nsView: WebgridMetalNSView, coordinator: Coordinator) {
+    coordinator.adapter?.stop()
+    coordinator.adapter = nil
+  }
+
+  /// Retains the adapter for the view's lifetime (the representable struct itself is transient).
+  @MainActor
+  public final class Coordinator {
+    var adapter: MacDisplayLinkAdapter?
+    public init() {}
+  }
+}
+#endif

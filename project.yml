@@ -55,6 +55,7 @@ targets:
       - path: Apps/CortexiOS
     dependencies:
       - package: CortexCore
+      - package: CortexRender             # Phase 6: the 120Hz CAMetalDisplayLink webgrid renderer (RENDER-01/02/04/06/07).
     info:
       path: Apps/CortexiOS/Info.plist
       properties:
@@ -83,6 +84,7 @@ targets:
       - path: Apps/CortexMac
     dependencies:
       - package: CortexCore
+      - package: CortexRender               # Phase 6: the 120Hz NSView.displayLink webgrid renderer (RENDER-08/02/04/06/07).
       - target: CortexDaemon                # Build the daemon bundle as a peer artifact when CortexMac builds.
     info:
       path: Apps/CortexMac/Info.plist
