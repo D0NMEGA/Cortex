@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 06 context gathered (renderer: substrate-only, dedicated velocity seam, dark Neuralink visuals, 3-tier verify w/ M5-Pro-ProMotion corroborating-canonical + iPad-M4 deferred)"
-last_updated: "2026-06-22T00:50:13.951Z"
-last_activity: "2026-06-21 -- Phase 05 complete (iPad-M2 capture + SC#1 reframe)"
+stopped_at: "Phase 06 planning complete — 6 plans / 6 waves verified (PASS on first check, all 9 RENDER reqs + 12 load-bearing checks); ready to execute. Phase completes on Mac-corroborating tier; iPad-M4 capture deferred (06-06 never-auto-approve checkpoint)."
+last_updated: "2026-06-22T02:10:49.045Z"
+last_activity: 2026-06-22 -- Phase 6 planning complete
 progress:
   total_phases: 10
   completed_phases: 5
-  total_plans: 26
+  total_plans: 32
   completed_plans: 26
-  percent: 100
+  percent: 81
 ---
 
 # Project State
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-04-28)
 
 Phase: 05 (ndt1-coreml-deployment) — ✅ COMPLETE (5/5, verified; SC#1/DEC-08 reframed to ANE-eligible + measured-CPU-placement + <2ms)
 Plan: 5/5 complete — 05-05 human-verify checkpoint resolved via iPad Air M2 capture (M2-corroborating tier)
-Status: Phase 05 done. Ready to discuss/plan Phase 06 (CAMetalDisplayLink 120Hz renderer).
-Last activity: 2026-06-21 -- Phase 05 complete (iPad-M2 capture + SC#1 reframe)
+Status: Ready to execute
+Last activity: 2026-06-22 -- Phase 6 planning complete
 
 Progress: Phase 5 [██████████] 100% (5/5 plans complete) · Project [█████░░░░░] 5/10 phases
 
