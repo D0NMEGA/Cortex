@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 06 COMPLETE — 6/6 plans, verified (9/9 RENDER reqs; M5 Pro GPU p99=0.162ms ~2.5x under <=0.4ms, 60s soak 243,724 frames / 0 dropped). SC#2/SC#4 + RENDER-02/05 reframed to M5-Pro-corroborating (user-approved); iPad-M4 canonical capture deferred (06-HUMAN-UAT, never-auto-approve). Next: Phase 07 (ReFIT-Kalman)."
-last_updated: "2026-06-22T18:51:33.320Z"
-last_activity: 2026-06-22
+stopped_at: Phase 7 context gathered
+last_updated: "2026-06-22T23:14:17.309Z"
+last_activity: 2026-06-22 -- Phase 6 complete (6/6 plans; iPad-M4 capture deferred)
 progress:
   total_phases: 10
   completed_phases: 6
@@ -144,6 +144,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-22T00:50:13.948Z
-Stopped at: Phase 06 context gathered (renderer: substrate-only, dedicated velocity seam, dark Neuralink visuals, 3-tier verify w/ M5-Pro-ProMotion corroborating-canonical + iPad-M4 deferred)
-Resume file: .planning/phases/06-cametaldisplaylink-120hz-renderer-with-30-30-webgrid/06-CONTEXT.md
+Last session: 2026-06-22T23:14:17.307Z
+Stopped at: Phase 7 context gathered
+Resume file: .planning/phases/07-refit-kalman-closed-loop-recalibration/07-CONTEXT.md
