@@ -199,6 +199,43 @@ jobs:
       - name: Hot-path policy (D-15, no-op in Phase 1)
         run: ./Tools/scripts/hotpath-policy.sh
 
+      # --- Phase 6 (D-10 tier 1, RENDER-01/04/06/07/08): renderer structural gate + self-test ---
+      # The always-on structural PROXY for the load-bearing renderer commitments (value:1 /
+      # maximumDrawableCount=2 / framebufferOnly=false / zero-copy / CAMetalDisplayLink on iOS /
+      # NSView.displayLink on macOS / compute webgrid / plist 120Hz key / MTL_HUD scheme env). Mirrors
+      # the hotpath-policy.sh step above. The live 120Hz + ≤0.4ms GPU NUMBERS are the M5-Pro-ProMotion
+      # corroborating tier (Plan 05's dedicated GPU-time bench executable) and the iPad-M4 canonical
+      # capture (06-HUMAN-UAT, deferred) — NOT run here (a headless runner cannot prove a refresh rate). The
+      # --self-test runs alongside so a silently-weakened gate (a deleted check) fails CI loudly:
+      # the corresponding negative-control stops biting -> self-test exits non-zero (threat T-06-04-04).
+      - name: Render policy gate (D-10 tier 1, RENDER-01/04/06/07/08)
+        run: |
+          ./Tools/scripts/render-policy.sh
+          ./Tools/scripts/render-policy.sh --self-test
+
+      # --- Phase 6 (RENDER-03, SC#3): build-time assertion that 120Hz is unlocked in the iOS plist ---
+      # Mirrors the Phase-1 validate-privacy-manifest.sh / Verify-PrivacyInfo-in-bundle build-time
+      # discipline (RESEARCH Decision 7). Two layers, both deterministic and build-free on the runner:
+      #   (1) grep the SOURCE project.yml for the key==true (XcodeGen's single source of truth);
+      #   (2) plutil -extract on Apps/CortexiOS/Info.plist (XcodeGen merged the key into it at the
+      #       "Generate Xcode project" step above), the Phase-1 plutil idiom — proves the key landed
+      #       in the actual built plist as a real boolean <true/>, not just in the spec.
+      # Either layer absent/false fails the build (T-06-04-03). The live 120Hz refresh-rate proof is
+      # the Mac-corroborating tier (Plan 05), never asserted on a headless CI runner.
+      - name: Verify iOS 120Hz plist key (RENDER-03, SC#3)
+        run: |
+          set -euo pipefail
+          if ! grep -qE 'CADisableMinimumFrameDurationOnPhone:[[:space:]]*true' project.yml; then
+            echo "ERROR: project.yml is missing CADisableMinimumFrameDurationOnPhone: true — 120Hz on ProMotion stays capped at the default (RENDER-03/SC#3)." >&2
+            exit 1
+          fi
+          VAL=$(plutil -extract CADisableMinimumFrameDurationOnPhone raw Apps/CortexiOS/Info.plist 2>/dev/null || echo "<absent>")
+          if [[ "$VAL" != "true" ]]; then
+            echo "ERROR: Apps/CortexiOS/Info.plist CADisableMinimumFrameDurationOnPhone is '$VAL', expected 'true' (RENDER-03/SC#3)." >&2
+            exit 1
+          fi
+          echo "OK: CADisableMinimumFrameDurationOnPhone=true in project.yml AND the built iOS Info.plist (120Hz unlocked, RENDER-03)"
+
       - name: No SCM_RIGHTS / cmsg structural check (SC#2 — FD passing MUST be mach_msg, not socket control messages)
         # IPC-03/SC#2 mandate the shm fd is handed off via mach_msg + MACH_MSG_PORT_DESCRIPTOR
         # (fileport), NEVER via BSD-socket control-message FD passing. This grep scans BOTH the
