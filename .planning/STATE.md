@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: 'Phase 05 plans 05-01..05-04 COMPLETE + merged to main (commits f139e57/6b10b14 = 05-05 docs on HEAD); 05-05 runbook authored (05-HUMAN-UAT.md + 05-placement-evidence.md). Plan 05-05 Task 3 = OPEN blocking checkpoint:human-verify — iPad Pro M4 capture of SC#1 (100% ANE placement) + SC#4 (canonical <2ms p99) DEFERRED by user 2026-06-21. Phase NOT complete: 2/4 SC device-gated, pending hardware capture. No fabricated evidence. RESUME: run 05-HUMAN-UAT.md on iPad-M4, then provide results to record into the runbook/evidence + create 05-05-SUMMARY.md + run phase verification.'
+stopped_at: 'Phase 05 COMPLETE (5/5) + verified — NDT1→CoreML, ANE-eligible & sub-2ms. 05-05 checkpoint RESOLVED via on-device capture on iPad Air M2 (iPadOS 18.7.8, Xcode Performance Report): 226/226 ANE-ELIGIBLE confirmed on-device; runtime placement MEASURED {CPU:226} (1.29M-param scale trap, reproduced Mac→iPad); latency p99≈0.51ms (<2ms, ~4x margin, CPU). SC#1/DEC-08 REFRAMED (user-approved 2026-06-21) from "100% ANE placement" → measured truth: ANE-eligible + CPU-scheduled-at-scale + <2ms regardless — applied across ROADMAP/REQUIREMENTS/PROJECT/evidence/VERIFICATION. Public API cannot force ANE placement at this scale; canonical iPad-M4 capture optional/future (rare hardware). Next: Phase 6 (CAMetalDisplayLink 120Hz renderer).'
 last_updated: "2026-06-21T22:06:04.208Z"
 last_activity: 2026-06-21
 progress:
   total_phases: 10
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 26
-  completed_plans: 25
-  percent: 96
+  completed_plans: 26
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 05 — ndt1-coreml-deployment-with-ane-residency-verified
+**Current focus:** Phase 05 COMPLETE (ANE-eligible + <2ms; SC#1 reframed from ANE-placement to measured CPU placement). Next: Phase 06 — CAMetalDisplayLink 120Hz renderer (parallelizable per ROADMAP).
 
 ## Current Position
 
-Phase: 05 (ndt1-coreml-deployment-with-ane-residency-verified) — EXECUTING
-Plan: 5 of 5 — 05-01..05-04 COMPLETE+verified; 05-05 runbook authored, Task 3 (iPad-M4 capture) = OPEN blocking checkpoint (deferred 2026-06-21)
-Status: ⏸ Awaiting iPad Pro M4 capture — Phase 05 paused at 05-05 human-verify checkpoint (SC#1 ANE placement + SC#4 canonical <2ms p99 pending hardware; automatable scope 4/4 CI-SC closed)
-Last activity: 2026-06-21
+Phase: 05 (ndt1-coreml-deployment) — ✅ COMPLETE (5/5, verified; SC#1/DEC-08 reframed to ANE-eligible + measured-CPU-placement + <2ms)
+Plan: 5/5 complete — 05-05 human-verify checkpoint resolved via iPad Air M2 capture (M2-corroborating tier)
+Status: Phase 05 done. Ready to discuss/plan Phase 06 (CAMetalDisplayLink 120Hz renderer).
+Last activity: 2026-06-21 -- Phase 05 complete (iPad-M2 capture + SC#1 reframe)
 
-Progress: Phase 5 [████████░░] 80% (4/5 plans complete) · Project [████░░░░░░] 4/10 phases
+Progress: Phase 5 [██████████] 100% (5/5 plans complete) · Project [█████░░░░░] 5/10 phases
 
 ## Performance Metrics
 

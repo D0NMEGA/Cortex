@@ -1,0 +1,2065 @@
+{
+  "device": "iPad Air 11-inch (M2)",
+  "os": "iPadOS 18.7.8",
+  "tool": "Xcode Core ML Performance Report",
+  "computeUnits": "all(=2)",
+  "n_schedulable_ops": 226,
+  "preferred_tally": {
+    "cpu": 226
+  },
+  "supported_tally": {
+    "cpu": 226,
+    "gpu": 226,
+    "neuralEngine": 226
+  },
+  "all_ane_eligible": true,
+  "ane_placed_ops": 0,
+  "latency_seconds": {
+    "median": 0.00020003318786621094,
+    "p99": 0.0005099773406982422,
+    "max": 0.00893700122833252,
+    "min": 0.00018703937530517578,
+    "n": 120
+  },
+  "latency_ms": {
+    "median": 0.2,
+    "p99": 0.51,
+    "max": 8.937
+  },
+  "per_op": [
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.concat",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.gelu",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.concat",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.gelu",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.concat",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.gelu",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.concat",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.gelu",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.concat",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.gelu",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "split",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.transpose",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.mul",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.softmax",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.einsum",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.concat",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sub",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.square",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios16.reduce_mean",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.sqrt",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.real_div",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.gelu",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.add",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.slice_by_index",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    },
+    {
+      "op": "ios18.conv",
+      "preferred": "cpu",
+      "supported": [
+        "cpu",
+        "gpu",
+        "neuralEngine"
+      ]
+    }
+  ]
+}
