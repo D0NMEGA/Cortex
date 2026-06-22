@@ -7,20 +7,22 @@
 // no clock/RNG) is the property the 60s soak (SC#4) reproducibility rests on.
 
 import Testing
+import Foundation  // Thread — for the cross-thread SPSC stress test
+import Darwin       // sched_yield — cooperative spin-yield in the producer/consumer retry loops
 import CortexRender
 
 @Suite("VelocityRing")
 struct VelocityRingTests {
 
   @Test("a fresh ring pops nil (empty)")
-  func freshRingIsEmpty() {
-    let ring = VelocityRing(capacity: 8)
+  func freshRingIsEmpty() throws {
+    let ring = try #require(VelocityRing(capacity: 8))
     #expect(ring.pop() == nil)
   }
 
   @Test("push then pop returns the same frame (ts_ns/seq/vx/vy preserved)")
-  func pushPopRoundTrip() {
-    let ring = VelocityRing(capacity: 8)
+  func pushPopRoundTrip() throws {
+    let ring = try #require(VelocityRing(capacity: 8))
     let v = CursorVelocity(ts_ns: 123, seq: 1, vx: 0.5, vy: -0.25)
     #expect(ring.push(v) == true)
     let out = ring.pop()
@@ -29,8 +31,8 @@ struct VelocityRingTests {
   }
 
   @Test("FIFO order — push v1,v2,v3 pops v1,v2,v3 in order")
-  func fifoOrder() {
-    let ring = VelocityRing(capacity: 8)
+  func fifoOrder() throws {
+    let ring = try #require(VelocityRing(capacity: 8))
     let v1 = CursorVelocity(ts_ns: 1, seq: 1, vx: 0.1, vy: 0.0)
     let v2 = CursorVelocity(ts_ns: 2, seq: 2, vx: 0.2, vy: 0.0)
     let v3 = CursorVelocity(ts_ns: 3, seq: 3, vx: 0.3, vy: 0.0)
@@ -44,11 +46,11 @@ struct VelocityRingTests {
   }
 
   @Test("push beyond capacity returns false and does not corrupt earlier frames (T-06-02-02)")
-  func boundedNoCorruption() {
+  func boundedNoCorruption() throws {
     // capacity 4 — a single-slot-reserved ring holds 3 live frames (mirror CortexRing's full rule);
     // the exact usable count is an impl detail, so assert via the observable contract: once push
     // starts returning false, every previously-accepted frame still pops back intact and in order.
-    let ring = VelocityRing(capacity: 4)
+    let ring = try #require(VelocityRing(capacity: 4))
     var accepted: [CursorVelocity] = []
     for i in 0..<16 {
       let v = CursorVelocity(ts_ns: UInt64(i), seq: UInt64(i), vx: Float16(Float(i)), vy: 0.0)
@@ -69,6 +71,52 @@ struct VelocityRingTests {
     #expect(VelocityRing(capacity: 3) == nil)   // not a power of two
     #expect(VelocityRing(capacity: 6) == nil)
     #expect(VelocityRing(capacity: 8) != nil)   // power of two OK
+  }
+
+  // Cross-thread SPSC stress (Rule 2 — the core concurrency claim of the D-03 seam): one producer
+  // thread pushes a long monotonic-seq stream while one consumer thread drains it; the consumer must
+  // observe every frame in STRICT FIFO order with zero loss and zero corruption. This is the
+  // multi-threaded analogue of the Phase-3 ring's 1M-frame strict-FIFO zero-loss test and the real
+  // exercise of the Acquire/Release torn-read mitigation (T-06-02-02). A torn read would surface as
+  // a `seq` that is not exactly the previous `seq + 1`, or a `vx` that does not match its `seq`.
+  @Test("SPSC cross-thread: strict-FIFO, zero-loss, no torn read under concurrency (T-06-02-02)")
+  func spscCrossThreadStrictFIFO() throws {
+    let ring = try #require(VelocityRing(capacity: 1024))
+    let total: UInt64 = 200_000
+
+    // Producer thread: push seq 0..<total, retrying on a full ring (bounded push returns false).
+    let producer = Thread {
+      var i: UInt64 = 0
+      while i < total {
+        // vx encodes seq so the consumer can detect a torn/mismatched slot (vx must equal seq).
+        let v = CursorVelocity(ts_ns: i, seq: i, vx: Float16(Float(i & 0x3FF)), vy: 0)
+        if ring.push(v) {
+          i += 1
+        } else {
+          // Ring full — yield to let the consumer drain, then retry the SAME frame (no loss).
+          _ = sched_yield()
+        }
+      }
+    }
+    producer.stackSize = 1 << 20
+
+    // Consume on this thread: expect exactly seq 0,1,2,…,total-1 in order, vx matching seq.
+    var expected: UInt64 = 0
+    var corrupt = 0
+    producer.start()
+    while expected < total {
+      guard let v = ring.pop() else {
+        _ = sched_yield()                          // empty — let the producer get ahead, then retry
+        continue
+      }
+      if v.seq != expected { corrupt += 1 }     // out-of-order / lost ⇒ FIFO or zero-loss violated
+      if v.vx != Float16(Float(expected & 0x3FF)) { corrupt += 1 }  // torn slot ⇒ payload mismatch
+      expected += 1
+    }
+
+    #expect(corrupt == 0)                        // strict FIFO, zero loss, no torn read
+    #expect(expected == total)                   // every frame observed exactly once
+    #expect(ring.pop() == nil)                   // ring fully drained
   }
 }
 
