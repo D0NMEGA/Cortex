@@ -1,0 +1,21 @@
+{
+  "artifact": "soak_log",
+  "success_criterion": "SC#4",
+  "requirement": "RENDER-02 (corroborating)",
+  "mode": "offscreen-throughput (CI-friendly subset; on-panel 120Hz is mode b — see evidence doc)",
+  "device": "Apple M5 Pro",
+  "device_tier": "M5 Pro ProMotion — corroborating-canonical (D-11)",
+  "canonical_device_deferred": "iPad Pro M4 — 06-HUMAN-UAT.md (D-12, optional/future)",
+  "drive": "deterministic LissajousProducer (D-05) — reproducible",
+  "budget_ms": 8.3333,
+  "duration_sec": 60.000,
+  "frames": 243724,
+  "achieved_hz": 4062.06,
+  "over_budget_intervals": 0,
+  "max_interval_ms": 2.3687,
+  "mean_interval_ms": 0.2462,
+  "texture_extent": { "width": 2752, "height": 2064 },
+  "verdict": "PASS (zero over-budget intervals)",
+  "on_panel_canonical": "mode b — run the CortexMac scheme live on the M5 Pro ProMotion panel (see 06-render-evidence.md)",
+  "date": "2026-06-22T03:13:28Z"
+}

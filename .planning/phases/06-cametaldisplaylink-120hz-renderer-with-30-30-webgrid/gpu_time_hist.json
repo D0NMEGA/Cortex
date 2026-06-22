@@ -1,0 +1,23 @@
+{
+  "artifact": "gpu_time_hist",
+  "requirement": "RENDER-05",
+  "success_criterion": "SC#2",
+  "bound_ms": 0.4,
+  "device": "Apple M5 Pro",
+  "device_tier": "M5 Pro ProMotion — corroborating-canonical (D-11)",
+  "canonical_device_deferred": "iPad Pro M4 — 06-HUMAN-UAT.md (D-12, optional/future)",
+  "measurement": "commandBuffer.gpuEndTime - gpuStartTime (CFTimeInterval, post-completion)",
+  "kernel": "webgrid (real 30x30 / 900-cell compute pass via WebgridFrameEncoder)",
+  "drive": "deterministic LissajousProducer (D-05) — reproducible",
+  "texture_extent": { "width": 2752, "height": 2064, "pixelFormat": "bgra8Unorm" },
+  "samples": 10000,
+  "gpu_time_ms": {
+    "p50": 0.0798,
+    "p95": 0.0801,
+    "p99": 0.1618,
+    "min": 0.0795,
+    "max": 0.1629,
+    "mean": 0.0822
+  },
+  "date": "2026-06-22T03:13:28Z"
+}
