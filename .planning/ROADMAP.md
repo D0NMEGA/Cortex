@@ -124,7 +124,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The 30×30 (~900 cell) webgrid drawn via Metal compute shader measures ≤0.4ms GPU frame time on M4 with `MTL_HUD_ENABLED=1` reporting P95 frame time, drawable-wait, and encoder-time live in the scheme
   3. `Info.plist` `CADisableMinimumFrameDurationOnPhone = YES` is asserted by a build-time check; all drawables use `MTLBuffer storageModeShared` (zero-copy unified memory) with `dispatch_semaphore_t(value: 1)` gating one in-flight frame
   4. A synthetic cursor-velocity stream from the Phase 3 ring buffer drives the webgrid at 120Hz with no dropped frames over a 60-second sustained run on iPad Pro M4
-**Plans**: TBD
+**Plans**: 6 plans (6 waves)
+- [ ] 06-01-PLAN.md — CortexRender core: WebgridParams + 30×30 compute kernel (Webgrid.metal) + shared WebgridFrameEncoder + MetalLayerConfig (framebufferOnly=false, maximumDrawableCount=2) (RENDER-04, RENDER-06) [Wave 1]
+- [ ] 06-02-PLAN.md — Velocity seam: CursorVelocity fp16 (D-03) + SPSC VelocityRing + renderer-owned CursorIntegrator (clamp + NaN/Inf reject, D-04) + deterministic Lissajous producer (D-05) (RENDER-04, RENDER-06) [Wave 2]
+- [ ] 06-03-PLAN.md — Display-link adapters: FrameSynchronizer (value:1) + iOS CAMetalDisplayLink + macOS NSView.displayLink, shared encoder, 120Hz, plain present (RENDER-01, RENDER-02, RENDER-07, RENDER-08) [Wave 3]
+- [ ] 06-04-PLAN.md — Info.plist 120Hz key + MTL_HUD scheme env + render-policy.sh grep-gate (negative-control self-test) + CortexRenderBench wiring + CI (RENDER-03, RENDER-06, RENDER-07, RENDER-08, RENDER-09) [Wave 4]
+- [ ] 06-05-PLAN.md — Measurement: gpuEndTime-gpuStartTime histogram (n>=10k) + 60s no-drop soak on M5 Pro ProMotion + 06-render-evidence.md (RENDER-02, RENDER-05) [Wave 5]
+- [ ] 06-06-PLAN.md — SC reframe sign-off (D-11, checkpoint:decision) + 06-HUMAN-UAT.md iPad-M4 canonical capture (D-12, never-auto-approve) (RENDER-02, RENDER-05) [Wave 6]
 **UI hint**: yes
 
 ### Phase 7: ReFIT-Kalman Closed-Loop Recalibration
