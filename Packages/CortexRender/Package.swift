@@ -12,5 +12,9 @@ let package = Package(
       name: "CortexRender",
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
+    .testTarget(
+      name: "CortexRenderTests",
+      dependencies: ["CortexRender"]
+    ),
   ]
 )
