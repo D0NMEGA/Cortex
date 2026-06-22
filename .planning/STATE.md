@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 06 context gathered (renderer: substrate-only, dedicated velocity seam, dark Neuralink visuals, 3-tier verify w/ M5-Pro-ProMotion corroborating-canonical + iPad-M4 deferred)"
-last_updated: "2026-06-22T02:18:19.783Z"
-last_activity: 2026-06-22 -- Phase 06 execution started
+stopped_at: "Phase 06 COMPLETE — 6/6 plans, verified (9/9 RENDER reqs; M5 Pro GPU p99=0.162ms ~2.5x under <=0.4ms, 60s soak 243,724 frames / 0 dropped). SC#2/SC#4 + RENDER-02/05 reframed to M5-Pro-corroborating (user-approved); iPad-M4 canonical capture deferred (06-HUMAN-UAT, never-auto-approve). Next: Phase 07 (ReFIT-Kalman)."
+last_updated: "2026-06-22T18:51:33.320Z"
+last_activity: 2026-06-22
 progress:
   total_phases: 10
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 32
-  completed_plans: 26
-  percent: 81
+  completed_plans: 32
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 06 — cametaldisplaylink-120hz-renderer-with-30-30-webgrid
+**Current focus:** Phase 06 COMPLETE (120Hz beam-raced 30×30 webgrid; M5 Pro GPU p99=0.162ms ~2.5× under ≤0.4ms, 60s soak 0 dropped frames; iPad-M4 canonical capture deferred per D-11/D-12). Next: Phase 07 — ReFIT-Kalman closed-loop recalibration.
 
 ## Current Position
 
-Phase: 06 (cametaldisplaylink-120hz-renderer-with-30-30-webgrid) — EXECUTING
-Plan: 1 of 6
-Status: Executing Phase 06
-Last activity: 2026-06-22 -- Phase 06 execution started
+Phase: 7 (refit-kalman-closed-loop-recalibration) — not started
+Plan: Not started
+Status: Phase 06 complete (Mac-corroborating tier, verified); ready to discuss/plan Phase 07
+Last activity: 2026-06-22 -- Phase 6 complete (6/6 plans; iPad-M4 capture deferred)
 
-Progress: Phase 5 [██████████] 100% (5/5 plans complete) · Project [█████░░░░░] 5/10 phases
+Progress: Phase 6 [██████████] 100% (6/6 plans complete) · Project [██████░░░░] 6/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 21 (Phases 1-4)
+- Total plans completed: 27 (Phases 1-4)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -48,6 +48,7 @@ Progress: Phase 5 [██████████] 100% (5/5 plans complete) · 
 | 02 | 5 | - | - |
 | 03 | 4 | - | - |
 | 04 | 5 | - | - |
+| 06 | 6 | - | - |
 
 **Recent Trend:**
 

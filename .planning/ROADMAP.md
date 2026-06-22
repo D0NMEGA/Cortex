@@ -26,7 +26,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Real-Time Threading — pthread USER_INTERACTIVE + Rust SPSC Ring** - Audio-callback-regime hot path with loom-verified lock-free ring buffer bridged to Swift via cbindgen — completed 2026-06-20 (THREAD-01..07 validated, security 18/18 closed)
 - [x] **Phase 4: NDT1 Training on Indy/Loco Synthetic Replay** - 1.3M-param NDT1 (6 layers, h=1-2, 128 dim, 20ms bins) trained on Zenodo 3854034 with 4-bit palettization — completed 2026-06-21 (4/4 SC: 1.29M params, co-bps 0.3804 held-out, 3.471× palettization)
 - [x] **Phase 5: NDT1 → CoreML deployment — ANE-eligible, sub-2ms verified** - coremltools-converted BC1S `(B,C,1,S)` `.mlpackage`; **100% ANE-eligible** (226/226 ops, 0 CPU-only), **<2ms p99** (≈0.5ms iPad-M2). Runtime placement measured CPU at 1.29M-param scale (M5 Pro + iPad-M2 scale trap) — reported honestly, not assumed ANE
-- [ ] **Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid** - Beam-raced ProMotion presentation, ≤0.4ms GPU compute, zero-copy `storageModeShared` drawables
+- [x] **Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid** - Beam-raced ProMotion presentation, ≤0.4ms GPU compute, zero-copy `storageModeShared` drawables — completed 2026-06-22 (RENDER-01..09; M5 Pro GPU p99=0.162ms ~2.5× under ≤0.4ms, 60s soak 243,724 frames / 0 dropped; iPad-M4 canonical capture deferred per D-11/D-12)
 - [ ] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1
 - [ ] **Phase 8: Apple BCI HID Integration, Distribution & v0 Ship** - Switch Control HID provider registration, Synchron-mirror entitlements, notarized TestFlight build, software-timed latency claim — **v0 milestone**
 - [ ] **Phase 9: Photodiode Rig Hardware Build** - BPW34 + OPA381 TIA + Saleae Logic Pro 8 breadboard with GPIO intent-emission instrumentation
@@ -130,7 +130,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 06-03-PLAN.md — Display-link adapters: FrameSynchronizer (value:1) + iOS CAMetalDisplayLink + macOS NSView.displayLink, shared encoder, 120Hz, plain present (RENDER-01, RENDER-02, RENDER-07, RENDER-08) [Wave 3]
 - [x] 06-04-PLAN.md — Info.plist 120Hz key + MTL_HUD scheme env + render-policy.sh grep-gate (negative-control self-test) + CortexRenderBench wiring + CI (RENDER-03, RENDER-06, RENDER-07, RENDER-08, RENDER-09) [Wave 4]
 - [x] 06-05-PLAN.md — Measurement: gpuEndTime-gpuStartTime histogram (n>=10k) + 60s no-drop soak on M5 Pro ProMotion + 06-render-evidence.md (RENDER-02, RENDER-05) [Wave 5]
-- [ ] 06-06-PLAN.md — SC reframe sign-off (D-11, checkpoint:decision) + 06-HUMAN-UAT.md iPad-M4 canonical capture (D-12, never-auto-approve) (RENDER-02, RENDER-05) [Wave 6]
+- [x] 06-06-PLAN.md — SC reframe sign-off (D-11, checkpoint:decision) + 06-HUMAN-UAT.md iPad-M4 canonical capture (D-12, never-auto-approve) (RENDER-02, RENDER-05) [Wave 6]
 **UI hint**: yes
 
 ### Phase 7: ReFIT-Kalman Closed-Loop Recalibration
@@ -191,7 +191,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 3. Real-Time Threading (pthread USER_INTERACTIVE + Rust SPSC) | v0 | 4/4 | ✓ Complete | 2026-06-20 |
 | 4. NDT1 Training on Indy/Loco | v0 | 5/5 | ✓ Complete | 2026-06-21 |
 | 5. NDT1 → CoreML deployment — ANE-eligible, sub-2ms verified | v0 | 5/5 | Complete | 2026-06-21 |
-| 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 0/TBD | Not started | - |
+| 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 6/6 | ✓ Complete | 2026-06-22 |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 0/TBD | Not started | - |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 0/TBD | Not started | - |
 | 9. Photodiode Rig Hardware Build | v1 | 0/TBD | Not started | - |

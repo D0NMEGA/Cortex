@@ -58,15 +58,15 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### Renderer (RENDER)
 
-- [ ] **RENDER-01**: `CAMetalDisplayLink` (iOS 17+, macOS 14+) drives drawable acquisition + encode deadline + present timestamp callback
-- [ ] **RENDER-02**: Renderer hits 120Hz on a ProMotion display — measured on M5 Pro ProMotion (corroborating-canonical, D-11; 60s soak, 243,724 frames, 0 intervals >8.33ms, `06-render-evidence.md`); iPad Pro M4 canonical capture optional/future (`06-HUMAN-UAT.md`, D-12)
-- [ ] **RENDER-03**: `Info.plist` sets `CADisableMinimumFrameDurationOnPhone = YES` for ProMotion 120Hz
-- [ ] **RENDER-04**: 30×30 webgrid (~900 cells) drawn via Metal compute shader
-- [ ] **RENDER-05**: GPU frame time ≤0.4ms — measured on M5 Pro ProMotion (corroborating-canonical, D-11; p99=0.1618ms, n=10k, ~2.5× margin, `06-render-evidence.md`); iPad Pro M4 (M4) canonical capture optional/future (`06-HUMAN-UAT.md`, D-12)
-- [ ] **RENDER-06**: All drawables use `MTLBuffer storageModeShared` for zero-copy unified-memory presentation
-- [ ] **RENDER-07**: Single in-flight frame with `dispatch_semaphore_t(value: 1)` for CPU/GPU sync (Apple's "Synchronizing CPU and GPU Work" pattern)
-- [ ] **RENDER-08**: macOS target uses `NSScreen.displayLink(target:selector:)` (macOS 14+) when not on Catalyst
-- [ ] **RENDER-09**: Frame-pacing diagnostics enabled via `MTL_HUD_ENABLED=1` reporting P95 frame time, drawable-wait, encoder-time
+- [x] **RENDER-01**: `CAMetalDisplayLink` (iOS 17+, macOS 14+) drives drawable acquisition + encode deadline + present timestamp callback
+- [x] **RENDER-02**: Renderer hits 120Hz on a ProMotion display — measured on M5 Pro ProMotion (corroborating-canonical, D-11; 60s soak, 243,724 frames, 0 intervals >8.33ms, `06-render-evidence.md`); iPad Pro M4 canonical capture optional/future (`06-HUMAN-UAT.md`, D-12)
+- [x] **RENDER-03**: `Info.plist` sets `CADisableMinimumFrameDurationOnPhone = YES` for ProMotion 120Hz
+- [x] **RENDER-04**: 30×30 webgrid (~900 cells) drawn via Metal compute shader
+- [x] **RENDER-05**: GPU frame time ≤0.4ms — measured on M5 Pro ProMotion (corroborating-canonical, D-11; p99=0.1618ms, n=10k, ~2.5× margin, `06-render-evidence.md`); iPad Pro M4 (M4) canonical capture optional/future (`06-HUMAN-UAT.md`, D-12)
+- [x] **RENDER-06**: All drawables use `MTLBuffer storageModeShared` for zero-copy unified-memory presentation
+- [x] **RENDER-07**: Single in-flight frame with `dispatch_semaphore_t(value: 1)` for CPU/GPU sync (Apple's "Synchronizing CPU and GPU Work" pattern)
+- [x] **RENDER-08**: macOS target uses `NSScreen.displayLink(target:selector:)` (macOS 14+) when not on Catalyst
+- [x] **RENDER-09**: Frame-pacing diagnostics enabled via `MTL_HUD_ENABLED=1` reporting P95 frame time, drawable-wait, encoder-time
 
 ### System Integration (SYS)
 
@@ -174,15 +174,15 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | DEC-10 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-01 |
 | DEC-11 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-04 |
 | DEC-12 | Phase 5: NDT1 → CoreML deployment with ANE residency verified | 05-03 |
-| RENDER-01 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-02 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-03 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-04 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-05 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-06 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-07 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-08 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
-| RENDER-09 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | TBD |
+| RENDER-01 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-03 (complete) |
+| RENDER-02 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-03, 06-05 (complete -- M5 Pro corroborating; iPad-M4 canonical deferred, 06-HUMAN-UAT.md) |
+| RENDER-03 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-04 (complete) |
+| RENDER-04 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-01 (complete) |
+| RENDER-05 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-05 (complete -- M5 Pro p99=0.162ms corroborating; iPad-M4 canonical deferred) |
+| RENDER-06 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-01 (complete) |
+| RENDER-07 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-03 (complete) |
+| RENDER-08 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-03 (complete) |
+| RENDER-09 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-04 (complete) |
 | REFIT-01 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
 | REFIT-02 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
 | REFIT-03 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |

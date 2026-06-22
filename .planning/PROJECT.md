@@ -59,12 +59,12 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [ ] ReFIT-Kalman closed-loop recalibration filter (6-DOF state, intent-rotation per cursor update)
 
 #### Renderer
-- [ ] `CAMetalDisplayLink` integration (iOS 17+, macOS 14+) for beam-raced presentation
-- [ ] 30×30 webgrid compute shader (~900 cells) at 120Hz
-- [ ] `MTLBuffer storageModeShared` zero-copy unified-memory drawables
-- [ ] Frame pacing with `dispatch_semaphore_t(value: 1)` per Apple's "Synchronizing CPU and GPU Work" pattern
-- [ ] `Info.plist` `CADisableMinimumFrameDurationOnPhone = YES` for ProMotion 120Hz
-- [ ] GPU frame time ≤0.4ms on M4
+- [x] `CAMetalDisplayLink` (iOS) + `NSScreen.displayLink` (macOS) integration for beam-raced presentation — **validated Phase 6 (RENDER-01/08)**
+- [x] 30×30 webgrid compute shader (~900 cells) at 120Hz — **validated Phase 6 (RENDER-04; 120Hz RENDER-02, M5 Pro ProMotion corroborating)**
+- [x] `MTLBuffer storageModeShared` zero-copy unified-memory drawables — **validated Phase 6 (RENDER-06)**
+- [x] Frame pacing with `dispatch_semaphore_t(value: 1)` per Apple's "Synchronizing CPU and GPU Work" pattern — **validated Phase 6 (RENDER-07)**
+- [x] `Info.plist` `CADisableMinimumFrameDurationOnPhone = YES` for ProMotion 120Hz — **validated Phase 6 (RENDER-03)**
+- [x] GPU frame time ≤0.4ms — **validated Phase 6 (RENDER-05; M5 Pro p99=0.162ms ~2.5× margin corroborating, iPad-M4 canonical deferred D-11/D-12)**
 
 #### Threading & IPC
 - [x] Acquisition/DSP hot path on pthread with `QOS_CLASS_USER_INTERACTIVE` (no Swift Task) — **validated Phase 3 (THREAD-01/02/03)**
@@ -179,4 +179,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-06-21 — Phase 4 (NDT1 Training on Indy/Loco) complete & verified (4/4 SC on `main`; DEC-01..05 validated). 1,292,544-param NDT1 (6 layers, h=2, 128 d_model, 20ms bins) in BC1S `(B,C,1,S)` form — Conv2d-only, zero `nn.Linear` on inference path (SC1); masked-modeling training → held-out co-bps 0.3804 beats mean-rate null ~7.6× (SC2, `04-training-evidence.md`); BC1S forward-hook + `(B,S,C)` negative control (SC3); ct.convert→mlprogram + 4-bit k-means palettize 3.471× / Δloss 0.009 (SC4, `04-palettization-evidence.md`). Isolated `Decoder/` uv subsystem (CPython 3.12; torch 2.12.1, coremltools 9.0). Closed Phase-2 D-11 (CORTEX_CHANNEL_COUNT=96 across 3 native homes). Decisions validated: NDT1-not-NDT2, BC1S layout, h=1-2 heads, Indy/Loco dataset. Prior: Phase 3 THREAD-01..07 (loom-verified SPSC, pthread USER_INTERACTIVE); Phase 2 IPC-01..07 (SC#1 p99=208ns). Next: Phase 5 (NDT1→CoreML/ANE residency, <2ms p99). Follow-ups: ANE residency Instruments `.trace` on M4 (Phase 5); xcodebuild Float16 daemon-target config; `/gsd-secure-phase 04` (decoder R&D is offline/CPU — low surface, but run for completeness).*
+*Last updated: 2026-06-22 — Phase 6 (CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid) complete & verified (9/9 RENDER reqs on `main`). Beam-raced renderer in `Packages/CortexRender`: `WebgridFrameEncoder` compute shader (30×30 filled rounded cells, dark Neuralink theme, bright disc cursor, proximity-brighten, pixel-bounds guard), iOS `CAMetalDisplayLink` + macOS `NSScreen.displayLink` adapters over a `value:1` semaphore, fp16 `(vx,vy)` velocity seam + renderer-owned integrator + deterministic Lissajous drive, `render-policy.sh` CI gate (9 required + 3 forbidden tokens, negative-control self-test). Measured on M5 Pro ProMotion (corroborating-canonical, D-11): GPU p99=0.162ms (~2.5× under ≤0.4ms, n=10k) + 60s soak 243,724 frames / 0 intervals >8.33ms; SC#2/SC#4 + RENDER-02/05 reframed M5-Pro-measured (user-approved) with iPad-Pro-M4 canonical capture deferred (`06-HUMAN-UAT.md`, never-auto-approve, D-12). Prior: Phase 5 (NDT1→CoreML, 100% ANE-eligible 226/226 ops, <2ms p99 ≈0.5ms iPad-M2 / 0.14ms M5 Pro, runtime placement measured-CPU honest reframe — DEC-06..12). Next: Phase 7 (ReFIT-Kalman closed-loop recalibration). Note: PROJECT.md ### Validated still lacks per-phase subsections for Phases 5-6 (their Active items are checked in place) — a follow-up doc cleanup.*
