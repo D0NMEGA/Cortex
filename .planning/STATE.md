@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Phase 06 planning complete — 6 plans / 6 waves verified (PASS on first check, all 9 RENDER reqs + 12 load-bearing checks); ready to execute. Phase completes on Mac-corroborating tier; iPad-M4 capture deferred (06-06 never-auto-approve checkpoint)."
-last_updated: "2026-06-22T02:10:49.045Z"
-last_activity: 2026-06-22 -- Phase 6 planning complete
+stopped_at: "Phase 06 context gathered (renderer: substrate-only, dedicated velocity seam, dark Neuralink visuals, 3-tier verify w/ M5-Pro-ProMotion corroborating-canonical + iPad-M4 deferred)"
+last_updated: "2026-06-22T02:18:19.783Z"
+last_activity: 2026-06-22 -- Phase 06 execution started
 progress:
   total_phases: 10
   completed_phases: 5
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 05 COMPLETE (ANE-eligible + <2ms; SC#1 reframed from ANE-placement to measured CPU placement). Next: Phase 06 — CAMetalDisplayLink 120Hz renderer (parallelizable per ROADMAP).
+**Current focus:** Phase 06 — cametaldisplaylink-120hz-renderer-with-30-30-webgrid
 
 ## Current Position
 
-Phase: 05 (ndt1-coreml-deployment) — ✅ COMPLETE (5/5, verified; SC#1/DEC-08 reframed to ANE-eligible + measured-CPU-placement + <2ms)
-Plan: 5/5 complete — 05-05 human-verify checkpoint resolved via iPad Air M2 capture (M2-corroborating tier)
-Status: Ready to execute
-Last activity: 2026-06-22 -- Phase 6 planning complete
+Phase: 06 (cametaldisplaylink-120hz-renderer-with-30-30-webgrid) — EXECUTING
+Plan: 1 of 6
+Status: Executing Phase 06
+Last activity: 2026-06-22 -- Phase 06 execution started
 
 Progress: Phase 5 [██████████] 100% (5/5 plans complete) · Project [█████░░░░░] 5/10 phases
 
