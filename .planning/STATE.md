@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: Phase 8 context gathered
-last_updated: "2026-06-23T05:25:03.858Z"
-last_activity: 2026-06-23 -- Phase 8 planning complete
+stopped_at: Phase 8 complete (v0 milestone; automated half verified, 3 HUMAN-UAT gates deferred)
+last_updated: "2026-06-23T15:50:48.732Z"
+last_activity: 2026-06-23
 progress:
   total_phases: 10
-  completed_phases: 7
+  completed_phases: 8
   total_plans: 42
-  completed_plans: 35
-  percent: 83
+  completed_plans: 42
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 07 COMPLETE & VERIFIED (ReFIT-Kalman closed-loop — REFIT-01/02/03, verification 6/6; 3-way ablation refit_bps 0.374 ≥ raw 0.161, +133% S&M-2004 Fitts-TP uplift; SC#3 filter step ~292ns p99 over 10k inline ticks, Mac-corroborating; iPad-M4 canonical latency Manual-Only/deferred). Next: Phase 08 — Apple BCI HID Integration, Distribution & v0 Ship (the v0 milestone).
+**Current focus:** Phase 08 COMPLETE — Apple BCI HID Integration, Distribution & v0 Ship (the v0 milestone). Automated half VERIFIED (08-VERIFICATION 5/5 must-haves: 59 Swift tests across CortexBCIHID/CortexDemo/CortexReFIT + 5 structural `*-policy.sh` gates + 5 self-tests green; CortexDemoBench p99 ≈ 8.32 ms < 25 ms M5-corroborating; ReFIT 1.953 BPS with honest 6.55 gap-to-8.5; all 14 req IDs accounted for). The 3 never-auto-approve HUMAN-UAT gates — live TestFlight (DIST-01/02/03), iPad-M4 canonical latency (PERF-04), on-device HID registration (SYS-01/02) — DEFERRED 2026-06-23 (prerequisites unavailable: paid enrollment / provisioned iPad Pro M4 / managed entitlement); none fabricated; tracked in 08-HUMAN-UAT.md. Next: Phase 09 — photodiode-rig-hardware-build (the v1 canonical-claim path). Recommended before advancing: `/gsd-secure-phase 08` (7 plan threat models, no 08-SECURITY.md yet).
 
 ## Current Position
 
-Phase: 8 (apple-bci-hid-integration, distribution & v0 ship) — not started
+Phase: 9
 Plan: Not started
 Status: Ready to execute
-Last activity: 2026-06-23 -- Phase 8 planning complete
+Last activity: 2026-06-23
 
-Progress: Phase 7 [██████████] 100% (3/3 plans complete) · Project [███████░░░] 7/10 phases
+Progress: Phase 8 [██████████] 100% (7/7 plans complete) · Project [████████░░] 8/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 30 (Phases 1-4)
+- Total plans completed: 37 (Phases 1-4)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -50,6 +50,7 @@ Progress: Phase 7 [██████████] 100% (3/3 plans complete) · 
 | 04 | 5 | - | - |
 | 06 | 6 | - | - |
 | 07 | 3 | - | - |
+| 08 | 7 | - | - |
 
 **Recent Trend:**
 

@@ -186,20 +186,20 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | REFIT-01 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | 07-01, 07-02 (complete) |
 | REFIT-02 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | 07-02 (complete) |
 | REFIT-03 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | 07-03 (complete) |
-| SYS-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| SYS-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| SYS-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| SYS-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| SYS-05 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| SYS-06 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| DIST-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| DIST-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| DIST-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| DIST-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| PERF-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| PERF-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| PERF-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
-| PERF-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
+| SYS-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-01 (complete -- HID surface + declared/gated entitlement + structural CI gate); 08-07 Gate 3 (live on-device registration DEFERRED -- HUMAN-UAT) |
+| SYS-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-01 (complete -- structural surface + gated entitlement); 08-07 Gate 3 (live registration DEFERRED -- HUMAN-UAT) |
+| SYS-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-02 (complete -- Scan-Info closed-loop round trip) |
+| SYS-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-02 (complete -- Item-Selection/Pointer intent + instrumented log) |
+| SYS-05 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-01 (complete -- Switch Control/Accessibility Info.plist surface) |
+| SYS-06 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-03 (complete -- decoder+Kalman genuinely in closed loop) |
+| DIST-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-04 (complete -- notarytool+stapler pipeline + policy gate); 08-07 Gate 1 (live submit DEFERRED -- HUMAN-UAT) |
+| DIST-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-04 (complete -- fastlane match appstore + policy gate); 08-07 Gate 1 (live DEFERRED -- HUMAN-UAT) |
+| DIST-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-04 (complete -- upload_to_testflight lane); 08-07 Gate 1 (live upload DEFERRED -- HUMAN-UAT) |
+| DIST-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-06 (complete -- credibility README + ADR-0002 + readme-policy gate) |
+| PERF-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-05 (complete -- Webgrid BPS clamped formula) |
+| PERF-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-05 (complete -- BPS evidence); 08-06 (dual v0/v1 latency claim in README) |
+| PERF-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-05 (complete -- S&M-2004 Fitts-TP cross-check retained) |
+| PERF-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-03 (complete -- software-timed glass-to-glass p99 ≈ 8.32ms M5 corroborating); 08-07 Gate 2 (canonical iPad-M4 capture DEFERRED -- HUMAN-UAT) |
 | LAT-01 | Phase 9: Photodiode Rig Hardware Build | TBD |
 | LAT-02 | Phase 9: Photodiode Rig Hardware Build | TBD |
 | LAT-03 | Phase 9: Photodiode Rig Hardware Build | TBD |

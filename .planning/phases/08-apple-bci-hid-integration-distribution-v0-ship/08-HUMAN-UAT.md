@@ -4,7 +4,7 @@ phase: 08-apple-bci-hid-integration-distribution-v0-ship
 source: [08-VALIDATION.md "Manual-Only Verifications", 08-RESEARCH.md §Validation Architecture, 08-CONTEXT.md D-01/D-06/D-08]
 gates: 3
 started: 2026-06-23T00:00:00Z
-updated: 2026-06-23T00:00:00Z
+updated: 2026-06-23T06:00:00Z
 ---
 
 > ## ⚠️ CRITICAL — ALL THREE GATES ARE NEVER AUTO-APPROVED (D-01 / D-06 / D-08, T-08-07-01)
@@ -36,8 +36,11 @@ updated: 2026-06-23T00:00:00Z
 
 ## Current Test
 
-[awaiting per-gate disposition — Apple Developer Program enrollment + ASC `.p8` (Gate 1), a provisioned
-iPad Pro M4 (Gate 2), and the managed `hid.virtual.device` entitlement + Accessibility grant (Gate 3)]
+**All 3 gates DEFERRED — human disposition 2026-06-23** (prerequisites not available this session: no paid
+Apple Developer Program enrollment + ASC `.p8` for Gate 1, no provisioned iPad Pro M4 for Gate 2, no managed
+`hid.virtual.device` entitlement + Accessibility grant for Gate 3). Paused state recorded; none auto-approved;
+no live lane run, no canonical number or HID registration fabricated. v0 ships fully runnable today on the
+free Personal team — each gate flips ready → done by its procedure below the day its prerequisite lands.
 
 All three gates drive an **already-built artifact** committed in Plans 01-06 — each is the live/paid/device
 complement of a structurally-verified, CI-green piece, tied to the same code so the runbook cannot drift.
@@ -109,8 +112,11 @@ or the free Personal team can hold. This is the wire-and-gate keystone (D-01): t
 structurally CI-gated now; only the live network call to Apple is the human gate. Never auto-approve (the
 always-on proxy is the Plan-04 `notarize-policy.sh` + `match-policy.sh` structural tier).
 
-**Disposition:** `[ DEFERRED | VERIFIED: <evidence> ]` — _to be decided by the human via the resume-signal;
-not auto-approved._
+**Disposition:** **DEFERRED** (human disposition 2026-06-23) — prerequisite not available this session (see
+**Status** above for this gate's specific blocker: paid enrollment + ASC `.p8` / a provisioned iPad Pro M4 /
+the managed `hid.virtual.device` entitlement + Accessibility grant). Paused state recorded; the requirement's
+**live half stays not-done**; no live lane run, no number/registration fabricated. Flip via this gate's
+procedure above when its prerequisite lands. _Not auto-approved._
 
 ---
 
@@ -171,8 +177,11 @@ gate the canonical claim on the target device (iPad M4)" precedent already appli
 (`03-HUMAN-UAT.md`), Phase 5 SC#1/DEC-08 (`05-HUMAN-UAT.md`), and Phase 6 SC#2/SC#4 (`06-HUMAN-UAT.md`).
 Never auto-approve.
 
-**Disposition:** `[ DEFERRED | VERIFIED: <evidence> ]` — _to be decided by the human via the resume-signal;
-not auto-approved._
+**Disposition:** **DEFERRED** (human disposition 2026-06-23) — prerequisite not available this session (see
+**Status** above for this gate's specific blocker: paid enrollment + ASC `.p8` / a provisioned iPad Pro M4 /
+the managed `hid.virtual.device` entitlement + Accessibility grant). Paused state recorded; the requirement's
+**live half stays not-done**; no live lane run, no number/registration fabricated. Flip via this gate's
+procedure above when its prerequisite lands. _Not auto-approved._
 
 ---
 
@@ -233,8 +242,11 @@ provisioned device session — none of which a CI runner or the free Personal te
 binary is AMFI-SIGKILLed without the managed profile; the structural gate is the always-on proxy). This is
 the D-06 wire-and-gate disposition. Never auto-approve.
 
-**Disposition:** `[ DEFERRED | VERIFIED: <evidence> ]` — _to be decided by the human via the resume-signal;
-not auto-approved._
+**Disposition:** **DEFERRED** (human disposition 2026-06-23) — prerequisite not available this session (see
+**Status** above for this gate's specific blocker: paid enrollment + ASC `.p8` / a provisioned iPad Pro M4 /
+the managed `hid.virtual.device` entitlement + Accessibility grant). Paused state recorded; the requirement's
+**live half stays not-done**; no live lane run, no number/registration fabricated. Flip via this gate's
+procedure above when its prerequisite lands. _Not auto-approved._
 
 ---
 
@@ -242,11 +254,11 @@ not auto-approved._
 
 total: 3
 verified: 0
-deferred: 0
-pending: 3
+deferred: 3
+pending: 0
 auto_approved: 0
 
-**Status:** All three gates are **READY, GATED, awaiting per-gate human disposition** (none auto-approved).
+**Status:** All three gates **DEFERRED** by human disposition (2026-06-23) — prerequisites not available; none auto-approved (the documented v0 wire-and-gate terminal state). Each remains **READY, GATED**.
 Each drives an already-built, CI-green artifact (Plans 01-06) and flips its requirement's **live half**
 ready → done by the documented procedure the day its prerequisite (paid enrollment + ASC `.p8` / a
 provisioned iPad Pro M4 / the managed `hid.virtual.device` entitlement + Accessibility grant) lands. **v0 is
