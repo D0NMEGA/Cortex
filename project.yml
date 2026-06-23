@@ -46,6 +46,11 @@ packages:
   # xcodebuild leg of Spike A resolves the binaryTarget end-to-end (CortexMac builds transitively).
   CortexRing:
     path: Packages/CortexRing
+  # Phase 7 (REFIT-01/02): the 6-DOF steady-state ReFIT-Kalman + intent-rotation stage, post-CoreML
+  # on the Swift side. Depends on CortexRender for the CursorVelocity seam it produces into (D-14
+  # keep-not-hoist decision). Plan 07-01 ships the package scaffold + committed KalmanConstants.
+  CortexReFIT:
+    path: Packages/CortexReFIT
 
 targets:
   CortexiOS:

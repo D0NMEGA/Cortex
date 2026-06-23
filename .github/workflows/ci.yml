@@ -133,7 +133,7 @@ jobs:
 
       - name: Per-package SwiftPM build smoke
         run: |
-          for pkg in CortexCore CortexIPC CortexRender CortexDecoder; do
+          for pkg in CortexCore CortexIPC CortexRender CortexDecoder CortexReFIT; do
             echo "=== build $pkg ==="
             swift build --package-path "Packages/$pkg"
           done
@@ -277,6 +277,14 @@ jobs:
       # assertion (the <2ms p99 claim is Plan 04 in-process + iPad-M4 canonical, D-18 precedent).
       - name: Run CortexDecoder tests (DEC-07/09/10 Swift-side, correctness only)
         run: swift test --package-path Packages/CortexDecoder
+
+      # --- Phase 7 (REFIT-01/D-15): CortexReFIT committed-constants structural invariants ---
+      # KalmanConstantsTests guards the code-gen invariants of the GENERATED KalmanConstants.swift:
+      # K's position rows (0,1) are zero (the observability resolution), H = [0 I 0], and A carries
+      # the constant-acceleration dt / ½dt² coupling. A code-gen regression that breaks any of these
+      # fails CI (threat T-07-01-02). NO Wave-2 filter needed — pure constant introspection.
+      - name: Run CortexReFIT tests (REFIT-01 committed-constants invariants)
+        run: swift test --package-path Packages/CortexReFIT
 
       - name: Build CortexMac scheme (unsigned smoke)
         run: |

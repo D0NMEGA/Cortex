@@ -194,19 +194,29 @@ def _fmt_f(value: float) -> str:
     return repr(float(value))
 
 
-def _simd_rows(matrix: np.ndarray, width: int) -> str:
-    """Render an ``(n, width)`` matrix as Swift ``SIMD{width}<Float>`` row literals.
+def _simd_rows(matrix: np.ndarray, simd_width: int) -> str:
+    """Render an ``(n, k)`` matrix as Swift ``SIMD{simd_width}<Float>`` row literals (zero-padded).
+
+    Swift's ``simd`` only defines SIMD2/3/4/8/16/… — there is **no ``SIMD6``**. A 6-wide row is
+    therefore emitted as ``SIMD8<Float>`` with the trailing ``simd_width − k`` lanes zero-padded
+    (the pad lanes contribute nothing to an inlined ``simd_dot``; ``simd_width >= k`` is required).
 
     Emits swiftformat-clean output by construction (``.swiftformat``: ``--indent 2``,
     ``--commas inline`` ⇒ NO trailing comma on the last element): 4-space element indent (two
     scope levels deep: enum body + array literal), and the final row carries no trailing comma.
+
+    Raises:
+        ValueError: if any row is wider than ``simd_width``.
     """
     n = len(matrix)
     rows = []
     for i, row in enumerate(matrix):
-        elems = ", ".join(_fmt_f(v) for v in row)
+        if len(row) > simd_width:
+            raise ValueError(f"row width {len(row)} exceeds SIMD{simd_width}")
+        padded = list(row) + [0.0] * (simd_width - len(row))
+        elems = ", ".join(_fmt_f(v) for v in padded)
         comma = "," if i < n - 1 else ""
-        rows.append(f"    SIMD{width}<Float>({elems}){comma}")
+        rows.append(f"    SIMD{simd_width}<Float>({elems}){comma}")
     return "\n".join(rows)
 
 
@@ -220,11 +230,11 @@ def render_swift(
 ) -> str:
     """Render the committed ``KalmanConstants.swift`` source from the solved matrices.
 
-    The layout MUST match Task 2's ``KalmanConstants`` struct: ``A`` as 6 ``SIMD6<Float>`` rows,
-    ``H`` as 2 ``SIMD6<Float>`` rows, ``K`` as 6 ``SIMD2<Float>`` rows, ``Qobs`` as 4
-    ``SIMD4<Float>`` rows (observable block), ``R`` as 2 ``SIMD2<Float>`` rows. Foundation-free
-    (``import simd`` only) — it lands on the hot path (Plan 02), so it must pass
-    ``hotpath-policy.sh``.
+    The layout MUST match Task 2's ``KalmanConstants`` struct: ``A`` as 6 ``SIMD8<Float>`` rows and
+    ``H`` as 2 ``SIMD8<Float>`` rows (6 meaningful lanes + 2 zero-pad — Swift has no ``SIMD6``),
+    ``K`` as 6 ``SIMD2<Float>`` rows, ``Qobs`` as 4 ``SIMD4<Float>`` rows (observable block), ``R``
+    as 2 ``SIMD2<Float>`` rows. Foundation-free (``import simd`` only) — it lands on the hot path
+    (Plan 02), so it must pass ``hotpath-policy.sh``.
 
     Returns:
         The full Swift source as a string.
@@ -252,26 +262,31 @@ def render_swift(
 // externally each tick (Wave-2, Swift side) to the integrator's clamped cursor position. The
 // 6-DOF *state* is retained end-to-end; only the *gain derivation* used the observable block.
 //
-// Hot-path discipline: Foundation-free `import simd` (no `import Foundation`) — the per-tick filter
-// op (Plan 02) is fixed-dim simd mat-vecs, zero allocation (hotpath-policy.sh).
+// Hot-path discipline: Foundation-free (uses `import simd` only, never the Obj-C runtime) — the
+// per-tick filter op (Plan 02) is fixed-dim simd mat-vecs, zero allocation (hotpath-policy.sh,
+// which forbids the Foundation/ObjectiveC imports on the hot path Plan 02 adds CortexReFIT to).
 import simd
 
 /// Committed steady-state ReFIT-Kalman matrices for the 6-DOF constant-acceleration model.
 ///
-/// Row-major fixed-size simd layout chosen so the Wave-2 predict/update step
-/// (`x⁻ = A·x`; `x = x⁻ + K·(z − H·x⁻)`) is a handful of inlined simd dot products with no heap.
+/// Layout choice (CONTEXT "implementer's discretion"): Swift `simd` has no `SIMD6`, so each 6-wide row
+/// of A and H is stored as a `SIMD8<Float>` with the last 2 lanes zero-padded — the pad lanes
+/// contribute nothing to an inlined `simd_dot`, so the Wave-2 predict/update step
+/// (`x⁻ = A·x`; `x = x⁻ + K·(z − H·x⁻)`) stays a handful of fixed-size simd dot products with no
+/// heap. Only the first 6 lanes of each A/H row are meaningful.
 public enum KalmanConstants {{
   /// Filter tick in seconds (20 ms, CONTEXT D-01).
   public static let dt: Float = {_fmt_f(DT)}
 
-  /// 6x6 constant-acceleration transition A on [px,py,vx,vy,ax,ay] (row-major; 6 rows).
-  public static let A: [SIMD6<Float>] = [
-{_simd_rows(a, 6)}
+  /// 6x6 constant-acceleration transition A on [px,py,vx,vy,ax,ay] (6 rows; SIMD8 with 2 zero-pad
+  /// lanes — Swift has no SIMD6). Columns 0..5 are [px,py,vx,vy,ax,ay]; columns 6,7 are padding.
+  public static let A: [SIMD8<Float>] = [
+{_simd_rows(a, 8)}
   ]
 
-  /// 2x6 velocity-only measurement H = [0 I 0] (selects (vx,vy); 2 rows).
-  public static let H: [SIMD6<Float>] = [
-{_simd_rows(h, 6)}
+  /// 2x6 velocity-only measurement H = [0 I 0] (selects (vx,vy); 2 rows; SIMD8, 2 zero-pad lanes).
+  public static let H: [SIMD8<Float>] = [
+{_simd_rows(h, 8)}
   ]
 
   /// 6x2 steady-state Kalman gain K with ZERO position rows (rows 0,1); 6 rows of (kx,ky).
