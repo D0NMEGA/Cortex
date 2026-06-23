@@ -216,13 +216,16 @@ jobs:
           ./Tools/scripts/render-policy.sh
           ./Tools/scripts/render-policy.sh --self-test
 
-      # --- Phase 8 (SYS-01/05): CortexBCIHID — the ported Apple BCI HID surface tests ---
+      # --- Phase 8 (SYS-01/05 + SYS-03/04): CortexBCIHID — the ported Apple BCI HID surface tests ---
       # Runs BCIHIDReportTests (exact byte sizes 3/5/4/2/7 + signed-extreme + fixed-point latency
-      # round-trip), BCIHIDDescriptorTests (descriptor header + 22-case button enum), and
+      # round-trip), BCIHIDDescriptorTests (descriptor header + 22-case button enum),
       # DaemonRegistrationTests (SMAppService scaffold via the mockable status path + the
-      # VirtualDeviceGate-inert assertion). Correctness only — the live IOHIDUserDevice registration is
-      # the Plan 07 HUMAN-UAT gate (the default build links no live HID symbol).
-      - name: Run CortexBCIHID tests (SYS-01/05)
+      # VirtualDeviceGate-inert assertion), AND (Plan 08-02) ScanInfoRoundTripTests — the SYS-03/04
+      # bidirectional closed-loop round trip (Scan-Info OUTPUT report -> Item-Selection/Pointer intent +
+      # the SC#2 instrumented log). This step runs the WHOLE package (NO --filter), so the round-trip
+      # tests are gated here, not silently excluded. Correctness only — the live IOHIDUserDevice
+      # registration is the Plan 07 HUMAN-UAT gate (the default build links no live HID symbol).
+      - name: Run CortexBCIHID tests (SYS-01/05 + SYS-03/04 round trip)
         run: swift test --package-path Packages/CortexBCIHID
 
       # --- Phase 8 (SYS-01/05/06, D-06): HID surface structural gate + self-test ---
