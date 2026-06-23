@@ -281,13 +281,41 @@ jobs:
       - name: Run CortexDecoder tests (DEC-07/09/10 Swift-side, correctness only)
         run: swift test --package-path Packages/CortexDecoder
 
-      # --- Phase 7 (REFIT-01/D-15): CortexReFIT committed-constants structural invariants ---
-      # KalmanConstantsTests guards the code-gen invariants of the GENERATED KalmanConstants.swift:
-      # K's position rows (0,1) are zero (the observability resolution), H = [0 I 0], and A carries
-      # the constant-acceleration dt / ½dt² coupling. A code-gen regression that breaks any of these
-      # fails CI (threat T-07-01-02). NO Wave-2 filter needed — pure constant introspection.
-      - name: Run CortexReFIT tests (REFIT-01 committed-constants invariants)
+      # --- Phase 7 (REFIT-01/02/03): CortexReFIT full suite (constants + filter + Fitts math) ---
+      # KalmanConstantsTests guards the GENERATED KalmanConstants.swift code-gen invariants (K's
+      # position rows 0,1 are zero — the observability resolution; H = [0 I 0]; A carries the
+      # constant-acceleration dt / ½dt² coupling — threat T-07-01-02). Plan 02 added the filter +
+      # intent-rotation suites (KalmanFilterTests, IntentRotationTests). Plan 03 added the S&M-2004
+      # throughput + dwell-to-select suite (FittsThroughputTests: IDe=log2(De/We+1), We=4.133·SDx,
+      # TP=IDe/MT, mean-of-means-vs-pooled, HIT/TIMEOUT). All correctness, runner-arch-independent.
+      - name: Run CortexReFIT tests (REFIT-01/02/03 — constants + filter + S&M-2004 throughput)
         run: swift test --package-path Packages/CortexReFIT
+
+      # --- Phase 7 (REFIT-03 / D-10, SC#2): deterministic ReFIT BPS-uplift guard ---
+      # The build-failing structural invariant on the committed refit_bps.json: refit_bps >= raw_bps
+      # on the fixed seed (mirrors the Phase-4 co-bps>null gate). A filter regression that erases the
+      # intent-rotation uplift fails CI (threat T-07-03-04). The number is S&M-2004 Fitts THROUGHPUT
+      # (TP=IDe/MT, effective-width) — NOT the Webgrid bitrate; this guards the raw->ReFIT ORDERING on
+      # the identical seed-locked replay, not any 4.16/8.5 comparison (Phase 8, deferred per D-13). The
+      # runner has python3 (no extra tooling). Two layers: (1) re-run the seed-locked harness --smoke
+      # and assert it reproduces the committed JSON byte-for-byte (determinism — threat T-07-03-01/02);
+      # (2) the python guard asserts refit_bps >= raw_bps and fails the build otherwise.
+      - name: ReFIT BPS uplift + determinism guard (REFIT-03, D-10)
+        run: |
+          set -euo pipefail
+          COMMITTED=.planning/phases/07-refit-kalman-closed-loop-recalibration/refit_bps.json
+          # (1) Determinism: regenerate from the seed-locked harness and assert byte-identity.
+          swift run --package-path Packages/CortexReFIT CortexReFITBench --smoke >/dev/null
+          GENERATED=Packages/CortexReFIT/.bench/refit_bps.json
+          if ! diff -q "$GENERATED" "$COMMITTED" >/dev/null; then
+            echo "ERROR: CortexReFITBench --smoke no longer reproduces the committed refit_bps.json byte-for-byte." >&2
+            echo "       The harness output drifted from the committed evidence (threat T-07-03-02). Diff:" >&2
+            diff "$GENERATED" "$COMMITTED" >&2 || true
+            exit 1
+          fi
+          echo "OK: CortexReFITBench --smoke reproduces the committed refit_bps.json byte-for-byte (deterministic)."
+          # (2) Uplift invariant: refit_bps >= raw_bps (fails the build otherwise).
+          python3 Tools/scripts/check_refit_uplift.py "$COMMITTED"
 
       - name: Build CortexMac scheme (unsigned smoke)
         run: |

@@ -1,0 +1,11 @@
+{
+  "delta" : 0.2134964609090437,
+  "dt" : 0.02,
+  "kalman_only_bps" : 0.15545586433053596,
+  "methodology" : "headless deterministic 3-way ablation (raw\/kalman_only\/refit) on the identical seed-locked replay; We=4.133*SDx from endpoint scatter, mean-of-means across reaches; dwell=0.3s, r_acq=0.5\/30 cell, timeout=5.0s",
+  "metric" : "Soukoreff-MacKenzie-2004 ISO 9241-9 Fitts throughput (TP=IDe\/MT, effective-width); NOT the Webgrid bitrate — do not compare to 4.16\/8.5 (Phase 8, D-13)",
+  "n_trials" : 120,
+  "raw_bps" : 0.16089860247386525,
+  "refit_bps" : 0.37439506338290895,
+  "seed" : "0xC0FFEE"
+}
