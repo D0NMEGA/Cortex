@@ -46,6 +46,11 @@ Packages/CortexRing/CortexRingFFI.xcframework/
 fastlane/Matchfile.local
 fastlane/.env
 fastlane/report.xml
+# Phase 8 (DIST-02, T-08-04-01): the REAL App Store Connect API key JSON is NEVER committed --
+# only fastlane/asc_api_key.json.example (placeholders) is tracked. The .p8 itself is covered by
+# the *.p8 rule above. Negation keeps the .example committable even if a broader glob is added.
+fastlane/asc_api_key.json
+!fastlane/asc_api_key.json.example
 
 # === Coverage / profiling ===
 *.profraw

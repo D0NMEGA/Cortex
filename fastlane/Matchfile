@@ -1,16 +1,32 @@
-# fastlane/Matchfile -- Phase 1 placeholder per CONTEXT.md D-10.
+# fastlane/Matchfile -- Phase 8 (DIST-02) real appstore signing config.
+# Replaces the Phase-1 placeholder (01-04-SUMMARY.md documented these exact swap targets):
+#   the old local-disk git URL -> a PRIVATE https:// GitHub remote (the P1 placeholder pointed at
+#                                 a local-only path under ~/Library; that scheme is now forbidden)
+#   type("development") -> type("appstore")           (TestFlight uploads need appstore-signed builds)
+#   app_identifier / team_id uncommented (read from ENV, never a hardcoded real id)
 #
-# CRITICAL: git_url MUST be a local file:/// URL in Phase 1.
-# A public GitHub URL here is a Phase 1 threat-model violation -- once certificates
-# exist (Phase 8), pushing to a public URL would leak them.
-# When Phase 8 lands, swap this for a PRIVATE GitHub repo URL with MATCH_PASSWORD.
+# SECRET DISCIPLINE (load-bearing, mirrors the Phase-1 threat model T-01-04-01 + this plan's
+# T-08-04-02/03):
+#   * The certs repo is PRIVATE. The git_url here is an https:// URL -- NEVER a local-disk URL
+#     (a stale local mirror) and NEVER the git@github.com: SSH form (which would imply a
+#     key-path leak). match-policy.sh forbids the local-disk-URL scheme and requires an https://
+#     git_url; its self-test injects the literal local-disk-URL form to prove the gate bites.
+#   * MATCH_PASSWORD (the passphrase that decrypts the stored certs) is read from ENV only --
+#     it is NEVER written as a literal here. match-policy.sh forbids a `MATCH_PASSWORD = "…"`
+#     literal and requires the ENV[ form.
+#
+# WIRE-AND-GATE (CONTEXT D-01): this is a REAL appstore Matchfile NOW. The live `fastlane match`
+# run is the Plan 07 never-auto-approve HUMAN-UAT gate -- it needs paid Apple Developer Program
+# enrollment + the private cortex-fastlane-certs repo populated + MATCH_PASSWORD set in ENV.
+# The day enrollment lands, `fastlane beta` runs match for real with no further code change.
 
-git_url("file:///Users/donmega/Library/Cortex-fastlane-certs")  # TBD: replaced with private GitHub URL in Phase 8
+git_url(ENV["MATCH_GIT_URL"] || "https://github.com/donovansantine/cortex-fastlane-certs.git")  # PRIVATE repo + ENV["MATCH_PASSWORD"]
 git_branch("main")
 storage_mode("git")
-type("development")  # Phase 8 sets this to "appstore" for TestFlight uploads.
+type("appstore")  # was "development" in Phase 1 -- appstore-signed builds for TestFlight (DIST-02/03)
 
-# app_identifier and team_id intentionally commented out -- no Developer Program enrollment yet.
-# When Phase 8 enrolls, fill these in:
-# app_identifier(["com.donovansantine.cortex.mac", "com.donovansantine.cortex.ios", "com.donovansantine.cortex.daemon"])
-# team_id("REPLACE_WITH_REAL_TEAM_ID")
+app_identifier(["com.donovansantine.cortex.mac", "com.donovansantine.cortex.ios"])
+team_id(ENV["ASC_TEAM_ID"])  # read from ENV -- never a hardcoded real Developer Program team id
+
+# MATCH_PASSWORD is read from ENV by `match` itself (never declared here). Set it in your shell /
+# CI secret store after enrollment: export MATCH_PASSWORD="…". The live match run is the Plan 07 gate.

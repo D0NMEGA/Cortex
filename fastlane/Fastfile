@@ -1,22 +1,97 @@
-# fastlane/Fastfile -- Phase 1 placeholder.
-# Source: project-defined per CONTEXT.md D-10.
+# fastlane/Fastfile -- Phase 8 (DIST-02 / DIST-03) real appstore lanes.
+# Replaces the two Phase-1 placeholder lanes (which only printed a deferral UI.message and called
+# no match/gym/pilot). RESEARCH §4 (Context7 /fastlane/docs) is the authority for the action forms.
 #
-# Phase 1: this lane prints a deferral message. NO Apple Developer Portal contact.
-# Phase 8: real lanes for signing, notarization, TestFlight upload land here.
+# WIRE-AND-GATE (CONTEXT D-01 -- the keystone decision): these are REAL lanes NOW. The live run
+# (match + build_app + notarize + upload_to_testflight) is the Plan 07 never-auto-approve HUMAN-UAT
+# gate, because paid Apple Developer Program enrollment + the ASC `.p8` key are not active yet
+# (P1 D-09/D-12 deferred them here). Each lane guards on the required ENV vars and fails LOUDLY on
+# a clean clone / CI invocation rather than half-running (T-08-04-01/05). The day enrollment + the
+# `.p8` land, `fastlane beta` flips DIST from gated to live with no further code change.
+#
+# SECRET DISCIPLINE (load-bearing): ALL App Store Connect creds come from ENV --
+#   ASC_KEY_ID / ASC_ISSUER_ID / ASC_KEY_PATH  (the .p8 JWT) and MATCH_PASSWORD (match passphrase).
+# Nothing is hardcoded; `fastlane/asc_api_key.json` + `*.p8` are gitignored (only the .example is
+# committed). The notarize step shells out to Tools/scripts/notarize.sh -- `notarytool submit` +
+# `xcrun stapler staple`, ZERO references to the deprecated legacy uploader (DIST-01, RESEARCH §3).
 
 default_platform(:mac)
 
+# --- TestFlight distribution config (DIST-03) --------------------------------------------------
+# TestFlight capacity & expiry (Apple, spec §6): up to 100 INTERNAL testers (App Store Connect
+# users on the team) and up to 10,000 EXTERNAL testers (invited by email / public link); each
+# uploaded build EXPIRES 90 days after upload and must be re-uploaded to keep testing. External
+# distribution additionally requires Beta App Review and the `groups:` parameter on
+# upload_to_testflight (distribute_external: true). Internal testers skip Beta App Review.
+TESTFLIGHT_CHANGELOG = "Cortex v0 -- sub-25ms software-timed neural cursor pipeline (NDT1 CoreML decoder + ReFIT-Kalman + 120Hz Metal webgrid). Internal build."
+TESTFLIGHT_GROUPS    = ["Cortex Internal"]  # external groups (10,000-tester capacity) added when external Beta App Review is requested
+
+# require_dist_env: fail LOUDLY if the live-submission creds are unset. This is what makes the
+# lanes "real-but-gated" -- a CI / clean-clone run cannot silently half-execute (T-08-04-05).
+def require_dist_env
+  missing = %w[ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_PATH MATCH_PASSWORD].reject { |k| ENV[k] && !ENV[k].empty? }
+  unless missing.empty?
+    UI.user_error!(
+      "DIST live submission is the Plan 07 HUMAN-UAT gate -- set #{missing.join(', ')} " \
+      "(the App Store Connect .p8 key + match passphrase) after Apple Developer Program enrollment (CONTEXT D-01). " \
+      "The pipeline is fully wired; only the live run is gated."
+    )
+  end
+end
+
 platform :mac do
-  desc "Phase 1 placeholder lane -- prints a deferral message; does not contact Apple Developer Portal."
-  lane :placeholder do
-    UI.message "fastlane scaffolded. Real lanes (signing, notarize, TestFlight) land in Phase 8 with paid Apple Developer Program enrollment."
-    UI.message "If you reached this lane, you are correctly running fastlane via Bundler. Smoke check passed."
+  desc "Build, sign (match appstore), notarize (notarytool + stapler), and upload CortexMac to TestFlight."
+  desc "LIVE RUN IS GATED (Plan 07 HUMAN-UAT): needs ASC_* + MATCH_PASSWORD from enrollment (D-01)."
+  lane :beta do
+    require_dist_env  # gate: fail loudly if the ASC .p8 / match creds are not set
+
+    api_key = app_store_connect_api_key(
+      key_id:       ENV["ASC_KEY_ID"],
+      issuer_id:    ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"]
+    )
+
+    # readonly: is_ci -> CI never mints new certs; it only fetches the existing appstore certs from
+    # the private repo. MATCH_PASSWORD is read from ENV by match itself.
+    match(type: "appstore", readonly: is_ci, api_key: api_key)
+
+    app_path = build_app(scheme: "CortexMac")  # = gym; produces the signed CortexMac.app/.pkg
+
+    # DIST-01: notarytool submit + xcrun stapler staple (the deprecated legacy uploader is never
+    # used). The script reads the same
+    # ASC_* creds from ENV and staples the ticket onto the built artifact.
+    sh("APP_PATH=#{app_path.shellescape} #{File.expand_path('../Tools/scripts/notarize.sh', __dir__).shellescape}")
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,  # do not block the lane on Apple-side processing
+      changelog: TESTFLIGHT_CHANGELOG,
+      groups: TESTFLIGHT_GROUPS
+    )
   end
 end
 
 platform :ios do
-  desc "Phase 1 placeholder lane (iOS)."
-  lane :placeholder do
-    UI.message "fastlane scaffolded for iOS. Phase 8 will activate signing + TestFlight lanes."
+  desc "Build, sign (match appstore), and upload CortexiOS to TestFlight (100 internal / 10,000 external; builds expire after 90 days)."
+  desc "LIVE RUN IS GATED (Plan 07 HUMAN-UAT): needs ASC_* + MATCH_PASSWORD from enrollment (D-01)."
+  lane :beta do
+    require_dist_env  # gate: fail loudly if the ASC .p8 / match creds are not set
+
+    api_key = app_store_connect_api_key(
+      key_id:       ENV["ASC_KEY_ID"],
+      issuer_id:    ENV["ASC_ISSUER_ID"],
+      key_filepath: ENV["ASC_KEY_PATH"]
+    )
+
+    match(type: "appstore", readonly: is_ci, api_key: api_key)
+
+    build_app(scheme: "CortexiOS")  # = gym; iOS .ipa is notarized by the App Store pipeline on upload
+
+    upload_to_testflight(
+      api_key: api_key,
+      skip_waiting_for_build_processing: true,
+      changelog: TESTFLIGHT_CHANGELOG,
+      groups: TESTFLIGHT_GROUPS
+    )
   end
 end
