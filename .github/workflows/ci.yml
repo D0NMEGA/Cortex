@@ -339,6 +339,25 @@ jobs:
           # (2) Uplift invariant: refit_bps >= raw_bps (fails the build otherwise).
           python3 Tools/scripts/check_refit_uplift.py "$COMMITTED"
 
+      # --- Phase 8 (PERF-01, D-06/D-13): Webgrid BPS structural + determinism gate + self-test ---
+      # ADDITIVE to the intact Phase-7 ReFIT guard above (this guards the SEPARATE webgrid_bps.json).
+      # bps-policy.sh asserts (1) the MANDATORY Swift.max(0,…) clamp + log2 in WebgridBPS.swift
+      # (08-RESEARCH §0.4 — CONTEXT D-11 omitted the clamp; a net-negative Sc<Si must never report a
+      # negative bitrate), (2) the committed webgrid_bps.json carries the formula disclosure pin
+      # `B = max(0, log2(N)*(Sc-Si)/t)` + n_targets 900, and (3) the harness is DETERMINISTIC — it
+      # re-runs CortexReFITBench --smoke TWICE and diffs webgrid_bps.json byte-for-byte (D-13), and
+      # asserts the committed copy == the regenerated output (regenerate-from-code provenance, threat
+      # T-08-05-03). The --self-test runs alongside so a silently-weakened gate fails CI loudly: the
+      # clamp-strip + formula-strip negative controls must bite (threat T-08-05-01). The CortexReFIT
+      # test step above runs the package suite with NO --filter, so WebgridBPSTests (the REAL formula
+      # correctness guard, incl. the clamp-bites Test 2) is included. The Webgrid BPS is the
+      # leaderboard-comparable metric (PERF-01); the S&M-2004 Fitts-TP (Phase-7 guard above) is the
+      # cross-check (PERF-03). Number reported HONESTLY on synthetic replay, NOT tuned toward 4.16 (D-12).
+      - name: Webgrid BPS structural + determinism gate (PERF-01, D-06/D-13)
+        run: |
+          ./Tools/scripts/bps-policy.sh
+          ./Tools/scripts/bps-policy.sh --self-test
+
       - name: Build CortexMac scheme (unsigned smoke)
         run: |
           set -o pipefail
