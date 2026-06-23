@@ -7,6 +7,7 @@ WHY a decision was made -- the codebase shows WHAT.
 ## Index
 
 - [ADR-0001 -- Foundation and 2026 Toolchain](0001-foundation-and-2026-toolchain.md)
+- [ADR-0002 -- v0 Ship, BCI HID Integration, and the Wire-and-Gate Doctrine](0002-v0-ship-and-bci-hid-integration.md)
 
 ## When to write an ADR
 
