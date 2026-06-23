@@ -8,12 +8,14 @@
 # SECRET DISCIPLINE (load-bearing, mirrors the Phase-1 threat model T-01-04-01 + this plan's
 # T-08-04-02/03):
 #   * The certs repo is PRIVATE. The git_url here is an https:// URL -- NEVER a local-disk URL
-#     (a stale local mirror) and NEVER the git@github.com: SSH form (which would imply a
-#     key-path leak). match-policy.sh forbids the local-disk-URL scheme and requires an https://
-#     git_url; its self-test injects the literal local-disk-URL form to prove the gate bites.
-#   * MATCH_PASSWORD (the passphrase that decrypts the stored certs) is read from ENV only --
-#     it is NEVER written as a literal here. match-policy.sh forbids a `MATCH_PASSWORD = "…"`
-#     literal and requires the ENV[ form.
+#     (a stale local mirror) and NEVER the ssh remote form (a user@host:path remote, which would
+#     imply a deploy-key path leak). match-policy.sh forbids both the local-disk-URL scheme and the
+#     ssh remote form and requires an https:// git_url; its self-test injects the real literal forms
+#     to prove the gate bites.
+#   * The match passphrase (which decrypts the stored certs) is read from ENV only -- it is NEVER
+#     written as an inline string assignment here. match-policy.sh forbids any inline passphrase
+#     assignment (an = or paren-call bound to a quoted string) and requires the ENV[ lookup form;
+#     its self-test injects a real inline-assignment literal to prove the gate bites.
 #
 # WIRE-AND-GATE (CONTEXT D-01): this is a REAL appstore Matchfile NOW. The live `fastlane match`
 # run is the Plan 07 never-auto-approve HUMAN-UAT gate -- it needs paid Apple Developer Program
@@ -28,5 +30,6 @@ type("appstore")  # was "development" in Phase 1 -- appstore-signed builds for T
 app_identifier(["com.donovansantine.cortex.mac", "com.donovansantine.cortex.ios"])
 team_id(ENV["ASC_TEAM_ID"])  # read from ENV -- never a hardcoded real Developer Program team id
 
-# MATCH_PASSWORD is read from ENV by `match` itself (never declared here). Set it in your shell /
-# CI secret store after enrollment: export MATCH_PASSWORD="…". The live match run is the Plan 07 gate.
+# The match passphrase is read from ENV by `match` itself (never declared here). Set it in your
+# shell / CI secret store after enrollment via an exported MATCH_PASSWORD environment variable.
+# The live match run is the Plan 07 gate.

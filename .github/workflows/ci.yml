@@ -241,6 +241,34 @@ jobs:
           ./Tools/scripts/hid-surface-policy.sh
           ./Tools/scripts/hid-surface-policy.sh --self-test
 
+      # --- Phase 8 (DIST-01, D-06): notarization-pipeline structural gate + self-test ---
+      # The always-on structural PROXY for the DIST-01 notarization pipeline: assert
+      # `notarytool submit` + `stapler staple` are present in Tools/scripts/notarize.sh and that the
+      # deprecated legacy App Store uploader appears NOWHERE in notarize.sh or the Fastfile (zero
+      # occurrences — App Store notarization requires notarytool). Mirrors the render-policy.sh /
+      # hid-surface-policy.sh steps above. The --self-test runs alongside so a silently-weakened gate
+      # fails CI loudly: the notarytool-strip / stapler-strip / uploader-injection controls stop
+      # biting -> self-test exits non-zero (threat T-08-04-04). The LIVE `notarytool submit` is the
+      # Plan 07 never-auto-approve HUMAN-UAT gate (paid enrollment + ASC .p8) — NOT run here.
+      - name: Notarization pipeline gate (DIST-01, D-06)
+        run: |
+          ./Tools/scripts/notarize-policy.sh
+          ./Tools/scripts/notarize-policy.sh --self-test
+
+      # --- Phase 8 (DIST-02/03, D-06): match/TestFlight pipeline structural gate + self-test ---
+      # The always-on structural PROXY for the DIST-02/03 signing config: assert `type("appstore")`
+      # + a private `https://` git_url in the Matchfile + the match passphrase read from ENV; FORBID
+      # a local-disk git URL, the ssh remote form, and any inline passphrase literal (the P1
+      # threat-model grep T-01-04-01 hardened for the appstore swap, T-08-04-02/03). Mirrors the
+      # gates above. The --self-test runs alongside so a silently-weakened gate fails CI loudly: the
+      # local-disk-URL / appstore->development / broken-https / literal-password / ssh-url controls
+      # stop biting -> self-test exits non-zero. The LIVE `fastlane match` is the Plan 07
+      # never-auto-approve HUMAN-UAT gate (paid enrollment + private certs repo + MATCH_PASSWORD).
+      - name: Match/TestFlight pipeline gate (DIST-02/03, D-06)
+        run: |
+          ./Tools/scripts/match-policy.sh
+          ./Tools/scripts/match-policy.sh --self-test
+
       # --- Phase 6 (RENDER-03, SC#3): build-time assertion that 120Hz is unlocked in the iOS plist ---
       # Mirrors the Phase-1 validate-privacy-manifest.sh / Verify-PrivacyInfo-in-bundle build-time
       # discipline (RESEARCH Decision 7). Two layers, both deterministic and build-free on the runner:
@@ -437,7 +465,25 @@ jobs:
           test -n "$DAEMON" || { echo "ERROR: CortexDaemon artifact not produced" >&2; exit 1; }
           echo "OK: CortexDaemon artifact at $DAEMON"
 
-      - name: Bundler smoke (fastlane scaffolding readiness; non-blocking)
+      # --- Phase 8 (DIST-02/03, Plan 08-04): BLOCKING ruby -c parse of the real fastlane lanes ---
+      # The Fastfile/Matchfile/Appfile are REAL appstore lanes now (no longer Phase-1 placeholders),
+      # so a parse failure is a real regression -> this is a BLOCKING check (ruby -c is pure syntax,
+      # no gem load, runs on the runner's stock Ruby). The actual lane EXECUTION (bundle exec fastlane
+      # beta / match / notarytool / upload_to_testflight) is the Plan 07 never-auto-approve HUMAN-UAT
+      # gate and is deliberately NOT run in CI — CI must never contact Apple (no enrollment, no .p8;
+      # threat T-08-04-05). The structural gates above (notarize-policy / match-policy) are the
+      # always-on content checks; this step guards parseability.
+      - name: Fastlane lanes parse (ruby -c, blocking; DIST-02/03)
+        run: |
+          set -euo pipefail
+          ruby -c fastlane/Fastfile
+          ruby -c fastlane/Matchfile
+          ruby -c fastlane/Appfile
+          echo "OK: Fastfile + Matchfile + Appfile parse cleanly (real appstore lanes)."
+
+      # Bundler resolution is a non-blocking readiness smoke ONLY (Plan 01-04 scaffold). It does NOT
+      # run any lane and never contacts Apple — the live submission is the Plan 07 HUMAN-UAT gate.
+      - name: Bundler smoke (fastlane gem resolution readiness; non-blocking, no live lane)
         continue-on-error: true
         run: |
           set +e
@@ -448,7 +494,7 @@ jobs:
             if [[ $BUNDLE_EXIT -ne 0 ]]; then
               echo "WARN: bundle install failed (non-blocking -- Plan 04 fastlane scaffold soft-failure)" >&2
             else
-              echo "OK: bundle install succeeded"
+              echo "OK: bundle install succeeded (gem resolution only; NO lane executed)"
             fi
           fi
           set -e
