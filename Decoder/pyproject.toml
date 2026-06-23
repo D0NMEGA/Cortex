@@ -8,6 +8,7 @@ dependencies = [
     "coremltools>=8.0",
     "numpy>=1.26",
     "h5py>=3.10",
+    "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
