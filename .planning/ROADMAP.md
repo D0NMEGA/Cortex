@@ -142,7 +142,7 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Webgrid BPS measured under the Soukoreff & MacKenzie 2004 ISO 9241-9 Fitts methodology shows a documented uplift over raw NDT1 output on the same synthetic Indy replay (delta committed as a regression artifact)
   3. The Kalman + rotation step adds zero detectable contribution to glass-to-glass tail latency (executes well within the 20ms decoder budget on the existing pthread, not a new thread)
 **Plans**: 3 plans (3 waves)
-- [ ] 07-01-PLAN.md — Decoder/ observable-block DARE solve (Q/R fit → committed Swift constants, D-15) + CortexReFIT package scaffold w/ seam decision (D-14) (REFIT-01) [Wave 1]
+- [x] 07-01-PLAN.md — Decoder/ observable-block DARE solve (Q/R fit → committed Swift constants, D-15) + CortexReFIT package scaffold w/ seam decision (D-14) (REFIT-01) [Wave 1]
 - [ ] 07-02-PLAN.md — CortexReFIT 6-DOF steady-state constant-gain Kalman step + gated intent-rotation on the measurement + hotpath-policy coverage + unit tests (REFIT-01, REFIT-02) [Wave 2]
 - [ ] 07-03-PLAN.md — Headless deterministic 3-way-ablation BPS harness (S&M-2004 effective-width TP) + 07-bps-evidence.md/refit_bps.json + deterministic CI uplift guard + SC#3 filter-step latency (REFIT-03) [Wave 3]
 
