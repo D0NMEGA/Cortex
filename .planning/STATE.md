@@ -4,8 +4,8 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 7 context gathered
-last_updated: "2026-06-23T00:48:57.048Z"
-last_activity: 2026-06-23 -- Phase 07 planning complete
+last_updated: "2026-06-23T00:54:28.535Z"
+last_activity: 2026-06-23 -- Phase 07 execution started
 progress:
   total_phases: 10
   completed_phases: 6
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 06 COMPLETE (120Hz beam-raced 30×30 webgrid; M5 Pro GPU p99=0.162ms ~2.5× under ≤0.4ms, 60s soak 0 dropped frames; iPad-M4 canonical capture deferred per D-11/D-12). Next: Phase 07 — ReFIT-Kalman closed-loop recalibration.
+**Current focus:** Phase 07 — refit-kalman-closed-loop-recalibration
 
 ## Current Position
 
-Phase: 7 (refit-kalman-closed-loop-recalibration) — not started
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-06-23 -- Phase 07 planning complete
+Phase: 07 (refit-kalman-closed-loop-recalibration) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 07
+Last activity: 2026-06-23 -- Phase 07 execution started
 
 Progress: Phase 6 [██████████] 100% (6/6 plans complete) · Project [██████░░░░] 6/10 phases
 
