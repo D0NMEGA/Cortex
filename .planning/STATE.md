@@ -4,14 +4,14 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 7 context gathered
-last_updated: "2026-06-23T00:54:28.535Z"
-last_activity: 2026-06-23 -- Phase 07 execution started
+last_updated: "2026-06-23T02:35:36.869Z"
+last_activity: 2026-06-23
 progress:
   total_phases: 10
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 35
-  completed_plans: 32
-  percent: 91
+  completed_plans: 35
+  percent: 100
 ---
 
 # Project State
@@ -21,22 +21,22 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** Sub-25ms photodiode-instrumented glass-to-glass latency on iPad Pro M4 — the defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim is the single highest-leverage credibility artefact in the project.
-**Current focus:** Phase 07 — refit-kalman-closed-loop-recalibration
+**Current focus:** Phase 07 COMPLETE & VERIFIED (ReFIT-Kalman closed-loop — REFIT-01/02/03, verification 6/6; 3-way ablation refit_bps 0.374 ≥ raw 0.161, +133% S&M-2004 Fitts-TP uplift; SC#3 filter step ~292ns p99 over 10k inline ticks, Mac-corroborating; iPad-M4 canonical latency Manual-Only/deferred). Next: Phase 08 — Apple BCI HID Integration, Distribution & v0 Ship (the v0 milestone).
 
 ## Current Position
 
-Phase: 07 (refit-kalman-closed-loop-recalibration) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 07
-Last activity: 2026-06-23 -- Phase 07 execution started
+Phase: 8 (apple-bci-hid-integration, distribution & v0 ship) — not started
+Plan: Not started
+Status: Phase 07 complete & verified — ready to discuss/plan Phase 08
+Last activity: 2026-06-23 -- Phase 07 execution complete (3/3 plans, verification passed 6/6)
 
-Progress: Phase 6 [██████████] 100% (6/6 plans complete) · Project [██████░░░░] 6/10 phases
+Progress: Phase 7 [██████████] 100% (3/3 plans complete) · Project [███████░░░] 7/10 phases
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 27 (Phases 1-4)
+- Total plans completed: 30 (Phases 1-4)
 - Average duration: ~5.3m
 - Total execution time: ~32 minutes
 
@@ -49,6 +49,7 @@ Progress: Phase 6 [██████████] 100% (6/6 plans complete) · 
 | 03 | 4 | - | - |
 | 04 | 5 | - | - |
 | 06 | 6 | - | - |
+| 07 | 3 | - | - |
 
 **Recent Trend:**
 

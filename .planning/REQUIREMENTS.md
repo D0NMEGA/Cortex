@@ -52,9 +52,9 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### ReFIT-Kalman (REFIT)
 
-- [ ] **REFIT-01**: 6-DOF state Kalman filter on Swift side, post-CoreML
-- [ ] **REFIT-02**: Intent-rotation step executes every cursor update (Gilja 2012 closed-loop recalibration)
-- [ ] **REFIT-03**: Filter improves cursor BPS over raw NDT1 output on synthetic Indy replay
+- [x] **REFIT-01**: 6-DOF state Kalman filter on Swift side, post-CoreML
+- [x] **REFIT-02**: Intent-rotation step executes every cursor update (Gilja 2012 closed-loop recalibration)
+- [x] **REFIT-03**: Filter improves cursor BPS over raw NDT1 output on synthetic Indy replay
 
 ### Renderer (RENDER)
 
@@ -183,9 +183,9 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | RENDER-07 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-03 (complete) |
 | RENDER-08 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-03 (complete) |
 | RENDER-09 | Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | 06-04 (complete) |
-| REFIT-01 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
-| REFIT-02 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
-| REFIT-03 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | TBD |
+| REFIT-01 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | 07-01, 07-02 (complete) |
+| REFIT-02 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | 07-02 (complete) |
+| REFIT-03 | Phase 7: ReFIT-Kalman Closed-Loop Recalibration | 07-03 (complete) |
 | SYS-01 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
 | SYS-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
 | SYS-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | TBD |
