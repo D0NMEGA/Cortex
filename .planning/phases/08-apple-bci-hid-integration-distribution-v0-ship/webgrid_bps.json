@@ -1,0 +1,17 @@
+{
+  "brain_gate_6x6_bps" : 4.16,
+  "caveat" : "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference peak 8.5 BPS; honest measured number, NOT tuned toward 4.16 — D-12",
+  "correct" : 103,
+  "formula" : "B = max(0, log2(N)*(Sc-Si)/t)",
+  "incorrect" : 0,
+  "incorrect_model" : "none — single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
+  "kalman_only_webgrid_bps" : 1.183000907045892,
+  "n_targets" : 900,
+  "raw_fitts_tp" : 0.16089860247386525,
+  "raw_webgrid_bps" : 1.292123144105848,
+  "reference_peak_bps" : 8.5,
+  "refit_fitts_tp" : 0.37439506338290895,
+  "refit_webgrid_bps" : 1.953047883714651,
+  "seconds" : 517.5600000000001,
+  "seed" : "0xC0FFEE"
+}

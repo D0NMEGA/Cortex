@@ -194,12 +194,48 @@ enum Arm: String, CaseIterable {
   case refit // KalmanFilter.step with the active target + acquisition radius (rotation on)
 }
 
-/// Simulates ONE reach for one arm and returns the trial's S&M-2004 quantities (effective distance,
-/// movement time, on-axis endpoint). ALL trials are returned — acquired AND timeout — so there is NO
-/// survivorship bias: a timed-out reach (the erratic raw cursor that never holds the dwell) gets the
-/// FULL timeout as its movement time and its last (scattered) position as the endpoint, which is the
-/// honest S&M penalty for a missed target (long MT + wide endpoint scatter -> low throughput).
-func simulateReach(_ arm: Arm, reach: Reach, reachIndex: Int, seed: UInt64, filter: KalmanFilter, acquisition: WebgridAcquisition) -> FittsThroughput.Trial {
+/// What one simulated reach yields for BOTH metrics. The S&M-2004 Fitts `Trial` (effective distance /
+/// movement time / on-axis endpoint — the Phase-7 metric, unchanged) PLUS the Webgrid accounting bits
+/// for this reach: whether it was a HIT (a correct Webgrid selection, Sc) and its elapsed seconds
+/// (the trial's movement time — HIT or TIMEOUT — which sums into the arm's `t`). There is NO wrong-cell
+/// outcome (the single-target dwell-to-select model returns only HIT/TIMEOUT), so Si is STRUCTURALLY 0
+/// — disclosed downstream, never silently emitted (D-12, T-08-05-07).
+struct ReachOutcome {
+  let fittsTrial: FittsThroughput.Trial
+  let acquired: Bool // HIT == a correct Webgrid selection (Sc); a TIMEOUT is neither Sc nor Si here.
+  let elapsedSeconds: Double // the trial's movement time (HIT) or full timeout (TIMEOUT) — sums into t.
+}
+
+/// The aggregate result for one arm: the S&M-2004 Fitts throughput (mean-of-means, the Phase-7 number,
+/// unchanged) PLUS the Webgrid BPS quantities accumulated over the SAME seed-locked reaches —
+/// `correct` (Sc, HIT count), `incorrect` (Si, structurally 0 — disclosed), and `seconds` (t, summed
+/// elapsed). The Webgrid BPS itself is computed from these by ``WebgridBPS/bitsPerSecond(n:correct:incorrect:seconds:)``.
+struct ArmResult {
+  let fittsTP: Double // S&M-2004 Fitts throughput (TP=IDe/MT, effective-width) — the Phase-7 metric.
+  let correct: Int // Sc — Webgrid HIT count.
+  let incorrect: Int // Si — structurally 0 (single-target dwell-to-select has no mis-selection path).
+  let seconds: Double // t — total elapsed across the arm's reaches (sum of per-trial movement times).
+
+  /// The Webgrid information-rate bitrate for this arm: `B = max(0, log2(N)·(Sc−Si)/t)` over the
+  /// 30×30 grid (N = 900 incl. the delete key). The mandatory clamp lives in `WebgridBPS`.
+  var webgridBPS: Double {
+    WebgridBPS.bitsPerSecond(
+      n: WebgridBPS.gridTargetCount(rows: 30, cols: 30),
+      correct: correct,
+      incorrect: incorrect,
+      seconds: seconds
+    )
+  }
+}
+
+/// Simulates ONE reach for one arm and returns BOTH metrics' per-trial quantities (a ``ReachOutcome``):
+/// the S&M-2004 Fitts `Trial` (effective distance, movement time, on-axis endpoint) AND the Webgrid
+/// HIT/elapsed accounting. ALL trials are returned — acquired AND timeout — so there is NO survivorship
+/// bias: a timed-out reach (the erratic raw cursor that never holds the dwell) gets the FULL timeout as
+/// its movement time and its last (scattered) position as the endpoint, which is the honest S&M penalty
+/// for a missed target (long MT + wide endpoint scatter -> low throughput) AND is NOT counted as a
+/// Webgrid HIT (Sc). The SAME `acquisition.runTrial` result drives both metrics on the identical replay.
+func simulateReach(_ arm: Arm, reach: Reach, reachIndex: Int, seed: UInt64, filter: KalmanFilter, acquisition: WebgridAcquisition) -> ReachOutcome {
   // The integrator is per-reach (each reach starts at its own start position). The Kalman `filter` is
   // CARRIED ACROSS reaches by the caller (warm — the continuous closed loop is never reset mid-session,
   // 07-RESEARCH §2; a per-reach cold velocity reset would inject a startup-ramp artifact that unfairly
@@ -243,15 +279,22 @@ func simulateReach(_ arm: Arm, reach: Reach, reachIndex: Int, seed: UInt64, filt
   let axisUnit = axisLen > 1e-6 ? axis / axisLen : SIMD2<Float>(1, 0)
   let endpointOnAxis = Double(simd_dot(result.endpoint - reach.start, axisUnit))
   let effectiveDistance = Double(simd_length(result.endpoint - reach.start))
-  return FittsThroughput.Trial(effectiveDistance: effectiveDistance, movementTime: result.movementTime, endpointOnAxis: endpointOnAxis)
+  let trial = FittsThroughput.Trial(effectiveDistance: effectiveDistance, movementTime: result.movementTime, endpointOnAxis: endpointOnAxis)
+  // The SAME trial result feeds the Webgrid metric: a HIT is a correct selection (Sc); the trial's
+  // movement time (HIT) or full timeout (TIMEOUT) is the elapsed time `t` summed over the arm. There
+  // is NO wrong-cell outcome to count as Si (structurally 0 — disclosed downstream, D-12/T-08-05-07).
+  return ReachOutcome(fittsTrial: trial, acquired: result.acquired, elapsedSeconds: result.movementTime)
 }
 
-/// Runs ALL reaches for one arm and returns the aggregate S&M-2004 throughput: trials are binned into
-/// CONDITIONS by movement amplitude (the standard's per-amplitude grouping), each condition's TP is
-/// computed with the genuine across-trial endpoint-scatter SDx (`FittsThroughput.conditionThroughput`,
-/// We = 4.133·SDx), then aggregated MEAN-OF-MEANS across conditions (D-09). No trial is dropped, so an
-/// arm that misses targets (timeouts) or scatters widely scores a low throughput honestly.
-func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> Double {
+/// Runs ALL reaches for one arm and returns the aggregate result for BOTH metrics (an ``ArmResult``):
+/// the S&M-2004 Fitts throughput (mean-of-means — the Phase-7 number, computed EXACTLY as before) AND
+/// the Webgrid BPS quantities (Sc = HIT count, Si = 0 structurally, t = summed elapsed) over the SAME
+/// seed-locked reaches. For the Fitts-TP: trials are binned into CONDITIONS by movement amplitude (the
+/// standard's per-amplitude grouping), each condition's TP is computed with the genuine across-trial
+/// endpoint-scatter SDx (`FittsThroughput.conditionThroughput`, We = 4.133·SDx), then aggregated
+/// MEAN-OF-MEANS across conditions (D-09). No trial is dropped, so an arm that misses targets (timeouts)
+/// or scatters widely scores a low throughput honestly — and a missed target is likewise NOT a Webgrid Sc.
+func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> ArmResult {
   let acquisition = WebgridAcquisition(
     dwellSeconds: dwellSeconds,
     acquisitionRadius: acquisitionRadius,
@@ -269,11 +312,17 @@ func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> Double {
   let conditionCount = 6
   var conditions = [[FittsThroughput.Trial]](repeating: [], count: conditionCount)
 
+  // Webgrid accumulators over the SAME reaches (D-13): Sc = HIT count, t = summed elapsed seconds.
+  var webgridCorrect = 0
+  var webgridSeconds = 0.0
+
   for (reachIndex, reach) in reaches.enumerated() {
     let amplitude = Double(simd_length(reach.target - reach.start)) // [0, ~1.41]
     let bin = Swift.min(conditionCount - 1, Int(amplitude / (1.4142 / Double(conditionCount))))
-    let trial = simulateReach(arm, reach: reach, reachIndex: reachIndex, seed: seed, filter: filter, acquisition: acquisition)
-    conditions[bin].append(trial)
+    let outcome = simulateReach(arm, reach: reach, reachIndex: reachIndex, seed: seed, filter: filter, acquisition: acquisition)
+    conditions[bin].append(outcome.fittsTrial)
+    if outcome.acquired { webgridCorrect += 1 } // a HIT is a correct Webgrid selection (Sc).
+    webgridSeconds += outcome.elapsedSeconds // sum the per-trial elapsed time into the arm's t.
   }
 
   // Per-condition S&M throughput (effective-width from each condition's own endpoint scatter), then
@@ -290,7 +339,16 @@ func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> Double {
     print("  [debug \(arm.rawValue)] acq=\(acquiredCount)/\(all.count) meanMT=\(String(format: "%.3f", meanMT))s meanDe=\(String(format: "%.3f", meanDe)) perCondTP=\(perConditionTP.map { String(format: "%.2f", $0) })")
   }
 
-  return FittsThroughput.meanOfMeans(perConditionTP: perConditionTP)
+  // Si (incorrect) is STRUCTURALLY 0: WebgridAcquisition.runTrial returns only HIT or TIMEOUT — there
+  // is no wrong-cell selection outcome — so the harness CANNOT drive Si>0 (T-08-05-07). This is
+  // DISCLOSED (incorrect_model) in the JSON + evidence; the BPS is therefore an honest UPPER-BOUND, not
+  // a silent "measured zero errors" (D-12). No RNG/clock miss model (that would break D-13 determinism).
+  return ArmResult(
+    fittsTP: FittsThroughput.meanOfMeans(perConditionTP: perConditionTP),
+    correct: webgridCorrect,
+    incorrect: 0,
+    seconds: webgridSeconds
+  )
 }
 
 // MARK: - JSON output
@@ -312,6 +370,41 @@ struct RefitBPS: Codable {
 func writeJSON(_ payload: RefitBPS, to url: URL) throws {
   let encoder = JSONEncoder()
   encoder.outputFormatting = [.prettyPrinted, .sortedKeys] // deterministic byte order
+  try encoder.encode(payload).write(to: url)
+}
+
+/// The committed machine-readable Webgrid-BPS evidence shape (PERF-01/02/03, D-11/D-12/D-13). A
+/// SEPARATE artifact from `RefitBPS` (which stays byte-identical for the Phase-7 CI guard — the
+/// Webgrid BPS is ADDITIVE). Snake-case keys; encoded with `.sortedKeys` so two same-seed runs are
+/// byte-identical (D-13). Carries BOTH metrics per arm (Webgrid BPS — the leaderboard-comparable
+/// metric — AND the S&M-2004 Fitts-TP cross-check, PERF-03), the formula DISCLOSURE string, the
+/// mandatory `incorrect_model` Si disclosure (D-12/T-08-05-07), and the honest synthetic-vs-live caveat.
+struct WebgridBPSReport: Codable {
+  let raw_webgrid_bps: Double
+  let kalman_only_webgrid_bps: Double
+  let refit_webgrid_bps: Double
+  let raw_fitts_tp: Double // the S&M-2004 Fitts-TP cross-check, raw arm (PERF-03 — retained alongside).
+  let refit_fitts_tp: Double // the S&M-2004 Fitts-TP cross-check, ReFIT arm (PERF-03).
+  let n_targets: Int // N = 900 (the 30×30 grid incl. the delete/cancel key — 08-RESEARCH §6).
+  let formula: String // DISCLOSURE pin (asserted by bps-policy.sh) — NOT the executed source of truth.
+  let incorrect_model: String // the mandatory Si disclosure (single-target dwell-to-select ⇒ Si=0).
+  let correct: Int // Sc on the ReFIT arm (HIT count) — the arm whose BPS is the headline.
+  let incorrect: Int // Si — structurally 0 (disclosed by `incorrect_model`).
+  let seconds: Double // t on the ReFIT arm (summed elapsed across reaches).
+  let seed: String // hex string (UInt64 seed) — matches refit_bps.json.
+  let reference_peak_bps: Double // Neuralink P1 verified peak (8.5) — the honest gap target (D-12).
+  let brain_gate_6x6_bps: Double // BrainGate 6×6 (4.16) — the classic reference (NOT a pass bar — D-12).
+  let caveat: String // synthetic-replay (not live-human), honest gap to 8.5, NOT tuned toward 4.16.
+}
+
+func writeWebgridJSON(_ payload: WebgridBPSReport, to url: URL) throws {
+  let encoder = JSONEncoder()
+  // `.withoutEscapingSlashes` so the `formula` field reads as the documented literal
+  // `B = max(0, log2(N)*(Sc-Si)/t)` (not the JSON-default `\/`-escaped form) — it must match the
+  // 08-bps-evidence.md / 08-05-PLAN literal AND the bps-policy.sh assertion verbatim. `.sortedKeys`
+  // keeps the byte order deterministic across runs (D-13). (This is a SEPARATE writer from the
+  // Phase-7 `writeJSON`, which is left untouched so refit_bps.json stays byte-identical.)
+  encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
   try encoder.encode(payload).write(to: url)
 }
 
@@ -354,6 +447,8 @@ let outputDir = URL(fileURLWithPath: #filePath)
   .appendingPathComponent(".bench", isDirectory: true)
 try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
 let jsonURL = outputDir.appendingPathComponent("refit_bps.json")
+// The NEW Webgrid-BPS artifact (PERF-01, D-13) — separate file so refit_bps.json stays byte-identical.
+let webgridJSONURL = outputDir.appendingPathComponent("webgrid_bps.json")
 
 // MARK: - Main
 
@@ -379,9 +474,18 @@ if let replayURL, FileManager.default.fileExists(atPath: replayURL.path) {
 }
 
 let reaches = makeReaches(seed: seed, count: trialsPerCondition)
-let rawBPS = runArm(.raw, reaches: reaches, seed: seed)
-let kalmanOnlyBPS = runArm(.kalmanOnly, reaches: reaches, seed: seed)
-let refitBPS = runArm(.refit, reaches: reaches, seed: seed)
+// Each arm now returns BOTH metrics (ArmResult): the S&M-2004 Fitts-TP (.fittsTP — the Phase-7 number,
+// unchanged) AND the Webgrid BPS quantities, computed over the IDENTICAL seed-locked replay.
+let rawResult = runArm(.raw, reaches: reaches, seed: seed)
+let kalmanOnlyResult = runArm(.kalmanOnly, reaches: reaches, seed: seed)
+let refitResult = runArm(.refit, reaches: reaches, seed: seed)
+
+// The Fitts-TP values feed the EXISTING refit_bps.json payload — UNCHANGED (byte-identical to the
+// Phase-7 committed artifact so the CI guard at ci.yml ~316-340 still passes; the Webgrid BPS is
+// additive in a separate file). These are the same three Double values runArm previously returned.
+let rawBPS = rawResult.fittsTP
+let kalmanOnlyBPS = kalmanOnlyResult.fittsTP
+let refitBPS = refitResult.fittsTP
 
 let payload = RefitBPS(
   raw_bps: rawBPS,
@@ -395,10 +499,41 @@ let payload = RefitBPS(
   methodology: "headless deterministic 3-way ablation (raw/kalman_only/refit) on the identical seed-locked replay; We=4.133*SDx from endpoint scatter, mean-of-means across reaches; dwell=\(dwellSeconds)s, r_acq=0.5/30 cell, timeout=\(timeoutSeconds)s"
 )
 
+// The NEW Webgrid-BPS report (additive — PERF-01/02/03, D-11/D-12/D-13). The Webgrid BPS per arm comes
+// from ArmResult.webgridBPS (= max(0, log2(900)·(Sc−Si)/t)); the S&M-2004 Fitts-TP cross-check is
+// carried alongside (PERF-03). Si is the DISCLOSED structural 0 (single-target dwell-to-select has no
+// mis-selection path ⇒ the BPS is an honest upper-bound, NOT "measured zero errors" — D-12/T-08-05-07).
+let incorrectModelDisclosure = "none — single-target dwell-to-select; Si structurally 0; BPS is upper-bound"
+let webgridCaveat = "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference peak 8.5 BPS; honest measured number, NOT tuned toward 4.16 — D-12"
+let webgridPayload = WebgridBPSReport(
+  raw_webgrid_bps: rawResult.webgridBPS,
+  kalman_only_webgrid_bps: kalmanOnlyResult.webgridBPS,
+  refit_webgrid_bps: refitResult.webgridBPS,
+  raw_fitts_tp: rawResult.fittsTP,
+  refit_fitts_tp: refitResult.fittsTP,
+  n_targets: WebgridBPS.gridTargetCount(rows: 30, cols: 30), // 900 incl. the delete key.
+  formula: "B = max(0, log2(N)*(Sc-Si)/t)", // DISCLOSURE pin (bps-policy.sh) — executed math is WebgridBPS.
+  incorrect_model: incorrectModelDisclosure,
+  correct: refitResult.correct, // Sc on the ReFIT arm (the headline arm).
+  incorrect: refitResult.incorrect, // 0 — structurally (disclosed above).
+  seconds: refitResult.seconds, // t on the ReFIT arm.
+  seed: String(format: "0x%llX", seed),
+  reference_peak_bps: WebgridBPS.referencePeakBPS, // 8.5 — the honest gap target.
+  brain_gate_6x6_bps: WebgridBPS.brainGate6x6BPS, // 4.16 — reference, NOT a pass bar.
+  caveat: webgridCaveat
+)
+
 do {
   try writeJSON(payload, to: jsonURL)
 } catch {
   print("CortexReFITBench: warning — failed to write \(jsonURL.path): \(error)")
+}
+
+// Write the NEW Webgrid-BPS artifact (additive; refit_bps.json above is unchanged — Phase-7 guard safe).
+do {
+  try writeWebgridJSON(webgridPayload, to: webgridJSONURL)
+} catch {
+  print("CortexReFITBench: warning — failed to write \(webgridJSONURL.path): \(error)")
 }
 
 print("CortexReFITBench — 3-way ablation S&M-2004 Fitts throughput (n=\(reaches.count) reaches/arm, seed=\(payload.seed))")
@@ -415,6 +550,21 @@ if refitBPS >= rawBPS {
 } else {
   print("  WARN: refit_bps < raw_bps on this seed — the CI guard would FAIL (filter regression).")
 }
+
+// ── Webgrid information-rate BPS (PERF-01/02/03, D-11/D-12/D-13) — the leaderboard-comparable metric ──
+// B = max(0, log2(N)·(Sc−Si)/t), N=900 (30×30 incl. delete key). Reported HONESTLY on synthetic replay
+// with the explicit gap toward the 8.5 peak + the Si=0 disclosure — NOT tuned toward 4.16 (D-12).
+let refitGapTo85 = WebgridBPS.referencePeakBPS - refitResult.webgridBPS
+print("")
+print("CortexReFITBench — Webgrid information-rate BPS  (B = max(0, log2(N)*(Sc-Si)/t), N=\(webgridPayload.n_targets) incl. delete key)")
+print("  raw_webgrid_bps         = \(rawResult.webgridBPS)")
+print("  kalman_only_webgrid_bps = \(kalmanOnlyResult.webgridBPS)")
+print("  refit_webgrid_bps       = \(refitResult.webgridBPS)  (Sc=\(refitResult.correct), Si=\(refitResult.incorrect), t=\(String(format: "%.3f", refitResult.seconds))s)")
+print("  Fitts-TP cross-check (PERF-03): raw=\(rawResult.fittsTP)  refit=\(refitResult.fittsTP)")
+print("  incorrect_model: \(incorrectModelDisclosure)")
+print("  gap to Neuralink P1 peak (\(WebgridBPS.referencePeakBPS) BPS): ReFIT is \(String(format: "%.3f", refitGapTo85)) BPS short (BrainGate 6×6 ref = \(WebgridBPS.brainGate6x6BPS)).")
+print("  caveat: \(webgridCaveat)")
+print("  wrote: \(webgridJSONURL.path)")
 
 if isLatency {
   let histogram = runLatencyBench(seed: seed)
