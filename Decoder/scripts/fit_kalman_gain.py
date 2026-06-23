@@ -274,7 +274,12 @@ import simd
 /// contribute nothing to an inlined `simd_dot`, so the Wave-2 predict/update step
 /// (`x⁻ = A·x`; `x = x⁻ + K·(z − H·x⁻)`) stays a handful of fixed-size simd dot products with no
 /// heap. Only the first 6 lanes of each A/H row are meaningful.
-public enum KalmanConstants {{
+///
+/// `nonisolated`: the constants are immutable `Sendable` compile-time data, so the hot-path
+/// ``KalmanFilter`` (which is `nonisolated` — it runs on the decoder pthread, SC#3, NOT the
+/// package-default `MainActor`) can load A/H/K synchronously with no isolation hop. Mirrors how
+/// `IntentRotation` / `CursorVelocity` opt out of `.defaultIsolation(MainActor.self)`.
+public nonisolated enum KalmanConstants {{
   /// Filter tick in seconds (20 ms, CONTEXT D-01).
   public static let dt: Float = {_fmt_f(DT)}
 

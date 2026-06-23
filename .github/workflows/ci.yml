@@ -196,6 +196,9 @@ jobs:
             Apps/CortexMac/PrivacyInfo.xcprivacy \
             Apps/CortexiOS/PrivacyInfo.xcprivacy
 
+      # Phase 7 (Plan 07-02, SC#3): CortexReFIT (ReFIT-Kalman + intent-rotation) joined the hot-path
+      # scope via the DIRS_ARRAY default in hotpath-policy.sh -- this default-scope run now polices it
+      # too (no separate step needed); the filter runs on the existing decoder pthread, Foundation-free.
       - name: Hot-path policy (D-15, no-op in Phase 1)
         run: ./Tools/scripts/hotpath-policy.sh
 

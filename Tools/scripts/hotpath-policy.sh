@@ -63,12 +63,20 @@ set -euo pipefail
 # this gate. Phase 3 (Plan 03-03, D-R7) adds the pthread USER_INTERACTIVE acquisition hot path
 # Packages/CortexRing/Sources/CortexRingHotPath -- another Foundation-free target -- to the
 # Swift/C scan, and adds the Rust ring-source scan below.
+#
+# Phase 7 (Plan 07-02, SC#3): adds Packages/CortexReFIT/Sources/CortexReFIT -- the ReFIT-Kalman
+# filter + intent-rotation. It runs the per-tick predict/rotate/update step on the EXISTING decoder
+# pthread (SC#3: no new threads, inside the 20 ms budget), so it is Foundation-free `import simd`
+# only. Policing it here makes "no Foundation/lock/heap on the filter path" a build-failing CODE
+# POLICY -- a future edit that adds `import Foundation`/a lock fails CI (threat T-07-02-01). The
+# committed `KalmanConstants.swift` / `IntentRotation.swift` / `KalmanFilter.swift` are already clean.
 FORBIDDEN=("dispatch_async" "lazy var" "pthread_mutex" "import Foundation" "import ObjectiveC")
 
 if [[ -z "${DIRS:-}" ]]; then
   DIRS_ARRAY=(
     "Packages/CortexIPC/Sources/CortexIPCTransport"
     "Packages/CortexRing/Sources/CortexRingHotPath"
+    "Packages/CortexReFIT/Sources/CortexReFIT"
   )
 else
   # shellcheck disable=SC2206
