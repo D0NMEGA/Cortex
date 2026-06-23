@@ -117,6 +117,8 @@ targets:
     dependencies:
       - package: CortexCore
       - package: CortexRender               # Phase 6: the 120Hz NSView.displayLink webgrid renderer (RENDER-08/02/04/06/07).
+      - package: CortexDemo                 # Phase 8 (D-09/D-10): the ClosedLoopPipeline the GUI drives — the REAL synthetic-spike → NDT1 → ReFIT → webgrid loop (decoder genuinely in loop), replacing the oscillator drive.
+      - package: CortexBCIHID               # Phase 8 (SYS-03/04): the ScanInfoRoundTrip whose instrumented log the GUI surfaces.
       - target: CortexDaemon                # Build the daemon bundle as a peer artifact when CortexMac builds.
     info:
       path: Apps/CortexMac/Info.plist

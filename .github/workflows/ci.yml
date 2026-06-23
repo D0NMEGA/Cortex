@@ -133,7 +133,7 @@ jobs:
 
       - name: Per-package SwiftPM build smoke
         run: |
-          for pkg in CortexCore CortexIPC CortexRender CortexDecoder CortexReFIT CortexBCIHID; do
+          for pkg in CortexCore CortexIPC CortexRender CortexDecoder CortexReFIT CortexBCIHID CortexDemo; do
             echo "=== build $pkg ==="
             swift build --package-path "Packages/$pkg"
           done
@@ -388,6 +388,26 @@ jobs:
         run: |
           ./Tools/scripts/bps-policy.sh
           ./Tools/scripts/bps-policy.sh --self-test
+
+      # --- Phase 8 (SYS-06/PERF-04, Plan 08-03): CortexDemo closed-loop + glass-to-glass timer tests ---
+      # Runs the WHOLE CortexDemo package (NO --filter) so BOTH suites are gated here, not silently
+      # excluded: ClosedLoopPipelineTests (SYS-06/D-10 — the synthetic-spike → NDT1 → ReFIT → webgrid loop
+      # reaches a HIT with the decoder + Kalman GENUINELY in the loop, deterministic, NDT1 model-skip-
+      # clean) AND GlassToGlassTimerTests (PERF-04/D-07 — the software-timed sample uses
+      # targetPresentationTimestamp + embeds the verbatim methodology label). Correctness only — the
+      # canonical iPad-M4 latency capture is the Plan 07 HUMAN-UAT gate (D-08); the model-backed NDT1 path
+      # skips cleanly when CORTEX_MODEL_URL is unset (the gitignored .mlpackage is absent on CI).
+      - name: Run CortexDemo tests (SYS-06/PERF-04)
+        run: swift test --package-path Packages/CortexDemo
+
+      # --- Phase 8 (PERF-04, Plan 08-03): software-timed glass-to-glass bench SMOKE (M5 corroborating) ---
+      # Proves the bench RUNS + the PERF-04 assertion path is live (p99 < 25ms on the CI runner's
+      # software-timed pipeline) + the verbatim methodology label is printed. This is correctness/smoke
+      # ONLY: the canonical sub-25ms claim is the M5-Pro corroborating bench (Plan 08-03 --full) + the
+      # iPad-M4 HUMAN-UAT capture (D-08) against a real CAMetalDisplayLink present timestamp — NOT the
+      # headless runner. The bench exits non-zero if p99 >= 25ms, so a software-pipeline regression fails CI.
+      - name: Software-timed glass-to-glass bench smoke (PERF-04, M5 corroborating)
+        run: swift run --package-path Packages/CortexDemo CortexDemoBench --smoke
 
       - name: Build CortexMac scheme (unsigned smoke)
         run: |

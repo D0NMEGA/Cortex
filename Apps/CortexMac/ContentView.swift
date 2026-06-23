@@ -1,62 +1,143 @@
-import SwiftUI
+import CortexBCIHID
+import CortexCore
+import CortexDemo
 import CortexRender
+import SwiftUI
 
-// Phase 6 (RENDER-08/02/07): the macOS visual peer (D-02). The Phase-1 placeholder text is replaced
-// by the live 30×30 webgrid driven via NSView.displayLink → CADisplayLink at 120Hz
-// (MacDisplayLinkAdapter), reusing the SAME shared WebgridFrameEncoder + value:1 FrameSynchronizer as
-// iOS. The M5 Pro MacBook Pro built-in ProMotion panel is the corroborating-canonical SC#2/SC#4
-// surface (D-11). A deterministic LissajousProducer (D-05) pushes synthetic cursor velocity into the
-// shared VelocityRing the display-link callback pops, so the cursor moves at launch.
+// Phase 8 (SYS-06/PERF-04, D-09/D-10): the CortexMac v0 closed-loop GUI demo. This REPLACES the Phase-6
+// oscillator-velocity drive with the REAL synthetic-spike → NDT1 → ReFIT-Kalman → CursorIntegrator →
+// 30×30 webgrid closed loop (`CortexDemo.ClosedLoopPipeline`), so the decoder + Kalman are GENUINELY in
+// the live demo loop (D-10), not bypassed. The Phase-6 render path is UNCHANGED: the same
+// `WebgridView(ring:)` + `MacDisplayLinkAdapter` (NSView.displayLink) consume the same `VelocityRing`
+// at 120Hz (RENDER-08); only the PRODUCER changed (the decoder loop, not the oscillator). This is the
+// D-09 runnable v0 artifact — free-team GUI-launchable with MTL_HUD_ENABLED=1 (the iPad build is the
+// same code, gated). It VISIBLY surfaces (1) the SYS-03/04 instrumented BCI-HID round-trip log line and
+// (2) the latest SOFTWARE-TIMED glass-to-glass sample WITH the verbatim methodology label (D-07) — so
+// the demo shows the closed loop AND the honest latency framing, never an over-claimed number.
 struct ContentView: View {
-  /// The producer→renderer SPSC seam (D-03). The view's display-link callback is the single
-  /// consumer; `WebgridDriver` is the single producer — SPSC discipline upheld.
-  @State private var driver = WebgridDriver()
+  /// The producer→renderer SPSC seam (D-03). The view's display-link callback is the single consumer;
+  /// `ClosedLoopDriver`'s MainActor timer is the single producer (the decoder loop) — SPSC upheld.
+  @State private var driver = ClosedLoopDriver()
 
   var body: some View {
-    WebgridView(ring: driver.ring)
-      .frame(minWidth: 560, minHeight: 480)
-      .onAppear { driver.start() }
-      .onDisappear { driver.stop() }
+    ZStack(alignment: .bottomLeading) {
+      // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
+      WebgridView(ring: driver.ring)
+        .frame(minWidth: 560, minHeight: 480)
+
+      // The honest instrumentation overlay (D-07/D-09): the SYS-03/04 round-trip log line + the latest
+      // software-timed glass-to-glass sample WITH the methodology label (no over-claim).
+      VStack(alignment: .leading, spacing: 4) {
+        Text(driver.roundTripLine)
+          .font(.system(.caption, design: .monospaced))
+        Text(driver.latencyLine)
+          .font(.system(.caption, design: .monospaced))
+        Text(GlassToGlassTimer.methodologyLabel)
+          .font(.system(size: 9, design: .monospaced))
+          .foregroundStyle(.secondary)
+          .frame(maxWidth: 520, alignment: .leading)
+      }
+      .padding(8)
+      .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 6))
+      .foregroundStyle(.white)
+      .padding(12)
+    }
+    .onAppear { driver.start() }
+    .onDisappear { driver.stop() }
   }
 }
 
-/// Owns the SINGLE synthetic producer thread that fills the `VelocityRing` from a deterministic
-/// `LissajousProducer` (D-05) at the DEC-10 ~50Hz (20ms) cadence. One producer thread keeps the SPSC
-/// invariant crisp; this is the synthetic drive, NOT the Phase-3 acquisition hot path, so a plain
-/// `Thread` + sleep is appropriate here (no QoS/pthread ceremony needed).
+/// Drives the REAL closed loop (D-09/D-10) on the MAIN ACTOR via a 20ms repeating timer: each tick runs
+/// `ClosedLoopPipeline.tick()` (synthetic-spike → NDT1 → ReFIT → integrate) and pushes the decoded+
+/// Kalman-refined velocity into the `VelocityRing` the 120Hz display-link callback pops.
+///
+/// The pipeline + the SYS-03/04 round-trip harness are `@MainActor`-isolated (the CortexDemo package
+/// default — the demo loop is a handful of simd ops + at most one CoreML prediction per 20ms, NOT the
+/// audio-callback hot path), so the PRODUCER runs on the main actor — a timer, not a background thread
+/// (the Phase-3 acquisition pthread is a separate concern). The single CONSUMER is the renderer's
+/// display-link callback popping the ring (SPSC discipline intact: one producer = this timer, one
+/// consumer = the display link). `@Observable` so the SwiftUI overlay tracks the live round-trip +
+/// latency lines.
 @MainActor
-final class WebgridDriver {
-  /// 4096-slot ring (power-of-two; ample for a 50Hz producer vs a 120Hz consumer). `init?` only
-  /// fails for a non-power-of-two/zero capacity, so this force-unwrap is total.
+@Observable
+final class ClosedLoopDriver {
+  /// 4096-slot ring (power-of-two; ample for a 50Hz producer vs a 120Hz consumer). `init?` only fails
+  /// for a non-power-of-two/zero capacity, so this force-unwrap is total.
   let ring = VelocityRing(capacity: 4096)!
-  private let producer = LissajousProducer()
-  private var thread: Thread?
+
+  /// The latest SYS-03/04 instrumented round-trip log line (surfaced live in the overlay).
+  private(set) var roundTripLine = "round-trip log empty (no cycles recorded)"
+  /// The latest software-timed glass-to-glass sample line (surfaced live, WITH the honest framing).
+  private(set) var latencyLine = "software-timed glass-to-glass: warming up…"
+
+  /// The real closed loop (D-10): synthetic-spike → NDT1 (or synthetic fallback) → ReFIT → integrate.
+  /// Seeded deterministically so the demo trajectory is reproducible; the model-backed NDT1 path
+  /// activates when CORTEX_MODEL_URL points at a built .mlpackage, else the synthetic decode runs.
+  private let pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: ClosedLoopPipeline.modelURLFromEnvironment())
+  /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
+  private let roundTrip = ScanInfoRoundTrip()
+  /// The 120Hz present boundary (the beam-raced present) the software-timed sample snaps to.
+  private static let framePeriodNs: UInt64 = 8_333_333
+
+  private var timer: Timer?
+  private var seq: UInt64 = 0
 
   func start() {
-    guard thread == nil else { return }
-    let ring = self.ring
-    let producer = self.producer
-    let t = Thread {
-      // Deterministic time base: t advances by the fixed 20ms step each push (not a wall clock), so
-      // the synthetic path is bit-reproducible for the SC#4 soak (D-05). seq is monotonic.
-      let stepSeconds = 0.020
-      var seq: UInt64 = 0
-      var simTime = 0.0
-      while !Thread.current.isCancelled {
-        let (vx, vy) = producer.velocity(at: simTime)
-        _ = ring.push(CursorVelocity(ts_ns: UInt64(seq) &* 20_000_000, seq: seq, vx: vx, vy: vy))
-        seq &+= 1
-        simTime += stepSeconds
-        Thread.sleep(forTimeInterval: stepSeconds)
-      }
+    guard timer == nil else { return }
+    // The 20ms decode cadence on the main actor (the producer). `.common` so it keeps firing during
+    // window interaction. The display-link consumer pops the ring on its own callback at 120Hz.
+    let timer = Timer(timeInterval: ClosedLoopPipeline.dt, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated { self?.step() }
     }
-    t.name = "app.cortex.render.lissajous-producer"
-    t.start()
-    thread = t
+    RunLoop.main.add(timer, forMode: .common)
+    self.timer = timer
   }
 
   func stop() {
-    thread?.cancel()
-    thread = nil
+    timer?.invalidate()
+    timer = nil
+  }
+
+  /// One 20ms producer tick: decode → filter → integrate, push the velocity, drive the round trip,
+  /// and refresh the overlay's software-timed glass-to-glass line.
+  private func step() {
+    // Intent emission clock (the same mach clock as the BCI HID report timestamp, §1.3).
+    let intentEmissionNs = Time.machAbsoluteNanoseconds()
+
+    // ONE real decode → filter → integrate tick (decoder + Kalman GENUINELY in the loop, D-10).
+    let state = pipeline.tick()
+
+    // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
+    _ = ring.push(CursorVelocity(
+      ts_ns: intentEmissionNs,
+      seq: seq,
+      vx: Float16(state.velocity.x),
+      vy: Float16(state.velocity.y)
+    ))
+
+    // Drive one SYS-03/04 BCI-HID Scan-Info round trip (instrumented log — the SC#2 evidence).
+    let scanInfo = BCIOutputScanInfoReport(
+      selectedItem: UInt8(seq & 0x07),
+      numberOfItems: 9,
+      seed: UInt8(seq & 0xFF),
+      itemControlType: 0,
+      uiScanningLatencyInt: 0,
+      uiScanningLatencyFrac: 0
+    )
+    _ = roundTrip.respond(to: scanInfo)
+    roundTripLine = roundTrip.log.formattedLastLine()
+
+    // Software-timed glass-to-glass sample (D-07): present = next 120Hz boundary after the tick.
+    let afterTickNs = Time.machAbsoluteNanoseconds()
+    let framesElapsed = afterTickNs / Self.framePeriodNs
+    let presentNs = (framesElapsed + 1) * Self.framePeriodNs
+    let latencyNs = GlassToGlassTimer.sample(
+      intentEmissionNs: intentEmissionNs,
+      presentTimestampSeconds: Double(presentNs) / 1_000_000_000
+    )
+    let latMs = Double(latencyNs) / 1_000_000
+    latencyLine = "software-timed glass-to-glass: \(String(format: "%.2f", latMs)) ms (M5-Pro corroborating)"
+
+    seq &+= 1
   }
 }
