@@ -201,6 +201,32 @@ targets:
         DEVELOPMENT_TEAM: 57YW6M29S7
         CODE_SIGN_STYLE: Automatic
 
+  CortexDemoBench:
+    type: tool                              # Standalone macOS software-timed glass-to-glass latency bench.
+                                            # Phase 8 (PERF-04, D-07/D-08): drives ClosedLoopPipeline for
+                                            # n>=10k ticks, records intent-emission mach_absolute_time and
+                                            # a SIMULATED targetPresentationTimestamp (next 120Hz present
+                                            # boundary), builds a device-annotated LatencyHistogram, and
+                                            # ASSERTS p99 < 25ms (M5-Pro corroborating). The canonical
+                                            # iPad-M4 capture (real CAMetalDisplayLink present timestamp)
+                                            # is the Plan 07 HUMAN-UAT gate (D-08). Mirrors the
+                                            # CortexRenderBench / CortexDecoderBench bench-executable
+                                            # precedent: a dedicated bench, NOT a swift-test timing gate
+                                            # (D-18 — keeps a flaky latency assertion out of CI).
+    platform: macOS
+    sources:
+      - path: Packages/CortexDemo/Sources/CortexDemoBench
+    dependencies:
+      - package: CortexDemo                  # ClosedLoopPipeline + GlassToGlassTimer under measurement.
+      - package: CortexDecoder               # LatencyHistogram (reused percentile value type).
+      - package: CortexCore                  # Time.machAbsoluteNanoseconds — the intent-emission clock.
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.demobench
+        MACOSX_DEPLOYMENT_TARGET: "26.0"
+        DEVELOPMENT_TEAM: 57YW6M29S7
+        CODE_SIGN_STYLE: Automatic
+
   CortexRenderBench:
     type: tool                              # Standalone macOS GPU-time measurement executable.
                                             # Phase 6 (Plan 04) wires the target + a one-line stub so
@@ -268,5 +294,11 @@ schemes:
     build:
       targets:
         CortexRenderBench: all
+    run:
+      config: Debug
+  CortexDemoBench:
+    build:
+      targets:
+        CortexDemoBench: all
     run:
       config: Debug
