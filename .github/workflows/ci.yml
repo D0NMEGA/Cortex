@@ -269,6 +269,25 @@ jobs:
           ./Tools/scripts/match-policy.sh
           ./Tools/scripts/match-policy.sh --self-test
 
+      # --- Phase 8 (DIST-04/PERF-02, Plan 08-06): README credibility + no-leak gate + self-test ---
+      # The always-on structural PROXY for the credibility-grade README (the artifact handed to
+      # Bliss Chapman / Nir Even-Chen): assert the rejected-alternatives subset (MLX, _ANEClient,
+      # CocoaPods, altool), the DUAL latency claim (the verbatim `software-timed pipeline latency`
+      # phrase NEXT TO the v1 photodiode SPEC-TARGET `24.7` — D-07), every honest-gate disclosure
+      # (free/Personal-team signing, ANE-eligible, photodiode, synthetic, entitlement), and the
+      # Webgrid BPS formula `max(0`/`8.5` gap (PERF-02); AND forbid any secret/PII leak (a PEM
+      # private-key header, an inline MATCH_PASSWORD, an email, an ASC issuer UUID — T-08-06-02).
+      # Mirrors the render-policy.sh / notarize-policy.sh / match-policy.sh steps above. The
+      # --self-test runs alongside so a silently-weakened gate fails CI loudly: the disclosure-strip
+      # (photodiode/software-timed/24.7/synthetic/8.5) and the secret-injection (private-key/email/
+      # MATCH_PASSWORD/issuer-UUID) negative controls stop biting -> self-test exits non-zero
+      # (threats T-08-06-02/03). Over-claiming or leaking a credential into the README would forge
+      # the project's credibility, which is exactly what this gate prevents on every PR.
+      - name: README credibility + no-leak gate (DIST-04, D-06)
+        run: |
+          ./Tools/scripts/readme-policy.sh
+          ./Tools/scripts/readme-policy.sh --self-test
+
       # --- Phase 6 (RENDER-03, SC#3): build-time assertion that 120Hz is unlocked in the iOS plist ---
       # Mirrors the Phase-1 validate-privacy-manifest.sh / Verify-PrivacyInfo-in-bundle build-time
       # discipline (RESEARCH Decision 7). Two layers, both deterministic and build-free on the runner:
