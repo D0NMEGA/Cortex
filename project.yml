@@ -58,6 +58,13 @@ packages:
   # CortexMac for the closed-loop demo (pure value types until then, free-team-buildable today).
   CortexBCIHID:
     path: Packages/CortexBCIHID
+  # Phase 8 (SYS-06/PERF-04, D-09/D-10): the v0 closed-loop ASSEMBLY package — the synthetic-spike →
+  # NDT1 (CoreML) → ReFIT-Kalman → CursorIntegrator → 30×30 webgrid pipeline (decoder GENUINELY in the
+  # loop, D-10), the software-timed glass-to-glass timer (targetPresentationTimestamp, PERF-04/D-07),
+  # and the CortexDemoBench latency bench. Registered here so xcodebuild resolves it; Plan 08-03 Task 3
+  # wires its `ClosedLoopPipeline` into the CortexMac target so the GUI runs the real decoder loop (D-09).
+  CortexDemo:
+    path: Packages/CortexDemo
 
 targets:
   CortexiOS:
