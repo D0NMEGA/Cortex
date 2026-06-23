@@ -6,5 +6,15 @@
   <array>
     <string>group.com.donovansantine.cortex.shared</string>
   </array>
+  <!-- D-04/D-06: declared but INERT under free Personal-team signing. Live IOHIDUserDevice/HIDVirtualDevice instantiation is #if CORTEX_HID_LIVE-gated; activation needs a managed provisioning profile (paid enrollment) — the Plan 07 HUMAN-UAT gate. -->
+  <key>com.apple.developer.hid.virtual.device</key>
+  <true/>
+  <!-- D-02 / Phase-2 CF#1: declared-but-inert. The runnable demo keeps the single-process Keychain
+       fallback (AfterFirstUnlockThisDeviceOnly + key-over-mach_msg); cross-process access-group
+       sharing activates only under paid signing (free-team entitled binary is AMFI-SIGKILLed). -->
+  <key>keychain-access-groups</key>
+  <array>
+    <string>$(AppIdentifierPrefix)com.donovansantine.cortex.shared</string>
+  </array>
 </dict>
 </plist>

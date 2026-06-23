@@ -67,7 +67,7 @@ public nonisolated enum BCIHIDDescriptor {
     0x81, 0x06, //     Input (Data, Variable, Relative)
     0xC0, //   End Collection
 
-    // --- Item selection (input) + Scan info (output), Report ID 4 ---
+    // --- Item selection (input), Report ID 4 --- (verbatim Apple bytes)
     0x05, 0x60, //   Usage Page (Brain Control Interface)
     0x09, 0x04, //   Usage 4 (BCI - Item Selection)
     0x85, 0x04, //   Report ID (4)
@@ -77,11 +77,21 @@ public nonisolated enum BCIHIDDescriptor {
     0x26, 0xFF, 0x00, //     Logical Maximum (255)
     0x75, 0x08, //     Report Size (8)
     0x95, 0x01, //     Report Count (1)
-    0x81, 0x02, //     Input (Data, Variable, Absolute) — item-selection focus index
-    // Scan-info OUTPUT report (host -> device): selectedItem, numberOfItems, seed,
-    // itemControlType, uiScanningLatencyInt, uiScanningLatencyFrac (6 bytes).
+    0x81, 0x06, //     Input (Data, Variable, Relative)
+    0xC0, //   End Collection
+
+    // --- Scan info (output), Report ID 4 --- (verbatim Apple bytes; host -> device feedback)
+    //   1: selected item · 2: number of items · 3: seed (era id) · 4: item control type
+    //   5-6: UI scanning latency (int + frac, frac interpreted as x/255).
+    0x05, 0x60, //   Usage Page (Brain Control Interface)
+    0xA1, 0x02, //   Collection (Logical)
+    0x85, 0x04, //     Report ID (4)
+    0x09, 0x03, //     Usage 3 (BCI - Number of item)
+    0x15, 0x00, //     Logical Minimum (0)
+    0x26, 0xFF, 0x00, //     Logical Maximum (255)
+    0x75, 0x08, //     Report Size (8)
     0x95, 0x06, //     Report Count (6)
-    0x91, 0x02, //     Output (Data, Variable, Absolute) — scan-info feedback
+    0x91, 0x03, //     Output (Constant)
     0xC0, //   End Collection
 
     0xC0 // End Collection (Application)

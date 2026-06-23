@@ -86,6 +86,14 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.donovansantine.cortex.shared
+        # Phase 8 (D-04/D-06): the BCI HID virtual-device entitlement — DECLARED but INERT under
+        # free-team signing. Live IOHIDUserDevice/HIDVirtualDevice is #if CORTEX_HID_LIVE-gated;
+        # activation needs a managed provisioning profile (paid enrollment), the Plan 07 HUMAN-UAT gate.
+        com.apple.developer.hid.virtual.device: true
+        # Phase 8 (D-02 / Phase-2 CF#1): keychain-access-groups declared-but-inert; the demo keeps the
+        # single-process Keychain fallback. Cross-process sharing activates only under paid signing.
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.donovansantine.cortex.shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.ios
@@ -114,11 +122,17 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.donovansantine.cortex.shared
-        # NOT enabling the app sandbox entitlement in Phase 1.
-        # Per RESEARCH.md Critical Finding #1: unsandboxed Mac binaries can use the App
-        # Group container without provisioning-profile authorization. Sandbox is added
-        # in Phase 8 with paid Developer Program enrollment. Do not change this without
-        # updating ADR-0001.
+        # Phase 8 (D-04/D-06): the BCI HID virtual-device entitlement — DECLARED but INERT under
+        # free-team signing. Live IOHIDUserDevice/HIDVirtualDevice is #if CORTEX_HID_LIVE-gated;
+        # activation needs a managed provisioning profile (paid enrollment), the Plan 07 HUMAN-UAT gate.
+        com.apple.developer.hid.virtual.device: true
+        # Phase 8 (D-02 / Phase-2 CF#1): keychain-access-groups declared-but-inert; the demo keeps the
+        # single-process Keychain fallback. Cross-process sharing activates only under paid signing.
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.donovansantine.cortex.shared
+        # The macOS app sandbox stays OFF (Phase-1 Critical Finding #1): unsandboxed Mac binaries
+        # use the App Group container without provisioning-profile authorization. Enabling the
+        # sandbox is deferred to paid Developer Program enrollment. Do not change without ADR-0001.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.mac
@@ -165,6 +179,14 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.donovansantine.cortex.shared
+        # Phase 8 (D-04/D-06): the BCI HID virtual-device entitlement — DECLARED but INERT under
+        # free-team signing. Live IOHIDUserDevice/HIDVirtualDevice is #if CORTEX_HID_LIVE-gated;
+        # activation needs a managed provisioning profile (paid enrollment), the Plan 07 HUMAN-UAT gate.
+        com.apple.developer.hid.virtual.device: true
+        # Phase 8 (D-02 / Phase-2 CF#1): keychain-access-groups declared-but-inert; the demo keeps the
+        # single-process Keychain fallback. Cross-process sharing activates only under paid signing.
+        keychain-access-groups:
+          - $(AppIdentifierPrefix)com.donovansantine.cortex.shared
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.donovansantine.cortex.daemon

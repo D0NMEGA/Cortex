@@ -24,5 +24,13 @@
 	<false/>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<!-- SYS-05: mirror the publicly-documented Switch Control / Accessibility HID-provider surface
+	     (Synchron reference). The managed BCI-HID entitlement is request-gated (D-04); these keys
+	     declare the surface Cortex registers against. CortexBCIHIDProtocolVersion pins the May-2025
+	     BCI HID protocol; NSAccessibilityUsageDescription documents the Switch Control provider role. -->
+	<key>CortexBCIHIDProtocolVersion</key>
+	<string>may-2025</string>
+	<key>NSAccessibilityUsageDescription</key>
+	<string>Cortex registers as a Switch Control / Accessibility HID input provider so a neural cursor decoder can drive the system pointer and selection.</string>
 </dict>
 </plist>
