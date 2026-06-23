@@ -141,7 +141,10 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. Swift-side 6-DOF state Kalman filter consumes the post-CoreML 2-vector cursor velocity and emits a refined velocity at every 20ms tick, with intent-rotation step (Gilja 2012 Nature Neuroscience) executed every cursor update
   2. Webgrid BPS measured under the Soukoreff & MacKenzie 2004 ISO 9241-9 Fitts methodology shows a documented uplift over raw NDT1 output on the same synthetic Indy replay (delta committed as a regression artifact)
   3. The Kalman + rotation step adds zero detectable contribution to glass-to-glass tail latency (executes well within the 20ms decoder budget on the existing pthread, not a new thread)
-**Plans**: TBD
+**Plans**: 3 plans (3 waves)
+- [ ] 07-01-PLAN.md — Decoder/ observable-block DARE solve (Q/R fit → committed Swift constants, D-15) + CortexReFIT package scaffold w/ seam decision (D-14) (REFIT-01) [Wave 1]
+- [ ] 07-02-PLAN.md — CortexReFIT 6-DOF steady-state constant-gain Kalman step + gated intent-rotation on the measurement + hotpath-policy coverage + unit tests (REFIT-01, REFIT-02) [Wave 2]
+- [ ] 07-03-PLAN.md — Headless deterministic 3-way-ablation BPS harness (S&M-2004 effective-width TP) + 07-bps-evidence.md/refit_bps.json + deterministic CI uplift guard + SC#3 filter-step latency (REFIT-03) [Wave 3]
 
 ### Phase 8: Apple BCI HID Integration, Distribution & v0 Ship
 **Goal**: Cortex registers as a first-class HID provider via Apple's May 2025 BCI HID protocol with a Synchron-mirror entitlement surface, ships through `notarytool` + `fastlane match` to TestFlight, and the v0 launch artefact — closed-loop synthetic-spike → ReFIT-Kalman → 30×30 webgrid hit at 120Hz on iPad Pro M4 with a documented software-timed glass-to-glass claim — is downloadable by a TestFlight tester. This is the v0 milestone.
