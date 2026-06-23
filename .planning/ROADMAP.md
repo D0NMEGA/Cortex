@@ -27,7 +27,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 4: NDT1 Training on Indy/Loco Synthetic Replay** - 1.3M-param NDT1 (6 layers, h=1-2, 128 dim, 20ms bins) trained on Zenodo 3854034 with 4-bit palettization — completed 2026-06-21 (4/4 SC: 1.29M params, co-bps 0.3804 held-out, 3.471× palettization)
 - [x] **Phase 5: NDT1 → CoreML deployment — ANE-eligible, sub-2ms verified** - coremltools-converted BC1S `(B,C,1,S)` `.mlpackage`; **100% ANE-eligible** (226/226 ops, 0 CPU-only), **<2ms p99** (≈0.5ms iPad-M2). Runtime placement measured CPU at 1.29M-param scale (M5 Pro + iPad-M2 scale trap) — reported honestly, not assumed ANE
 - [x] **Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid** - Beam-raced ProMotion presentation, ≤0.4ms GPU compute, zero-copy `storageModeShared` drawables — completed 2026-06-22 (RENDER-01..09; M5 Pro GPU p99=0.162ms ~2.5× under ≤0.4ms, 60s soak 243,724 frames / 0 dropped; iPad-M4 canonical capture deferred per D-11/D-12)
-- [ ] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1
+- [x] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1 — completed 2026-06-23 (REFIT-01/02/03 verified 6/6; 3-way ablation refit_bps 0.374 ≥ raw 0.161, +133% S&M-2004 Fitts-TP uplift; SC#3 filter step ~292ns p99 over 10k inline ticks, Mac-corroborating; iPad-M4 canonical latency Manual-Only/deferred)
 - [ ] **Phase 8: Apple BCI HID Integration, Distribution & v0 Ship** - Switch Control HID provider registration, Synchron-mirror entitlements, notarized TestFlight build, software-timed latency claim — **v0 milestone**
 - [ ] **Phase 9: Photodiode Rig Hardware Build** - BPW34 + OPA381 TIA + Saleae Logic Pro 8 breadboard with GPIO intent-emission instrumentation
 - [ ] **Phase 10: v1 Photodiode Measurement & Launch** - 10k-trial capture, statistical reduction to "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k)" claim, launch video, README publish — **v1 milestone**
@@ -195,7 +195,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 4. NDT1 Training on Indy/Loco | v0 | 5/5 | ✓ Complete | 2026-06-21 |
 | 5. NDT1 → CoreML deployment — ANE-eligible, sub-2ms verified | v0 | 5/5 | Complete | 2026-06-21 |
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 6/6 | ✓ Complete | 2026-06-22 |
-| 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 0/TBD | Not started | - |
+| 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 0/TBD | Not started | - |
 | 9. Photodiode Rig Hardware Build | v1 | 0/TBD | Not started | - |
 | 10. v1 Photodiode Measurement & Launch | v1 | 0/TBD | Not started | - |
