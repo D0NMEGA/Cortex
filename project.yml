@@ -51,6 +51,13 @@ packages:
   # keep-not-hoist decision). Plan 07-01 ships the package scaffold + committed KalmanConstants.
   CortexReFIT:
     path: Packages/CortexReFIT
+  # Phase 8 (SYS-01/05/06, D-04/D-06): the Swift port of Apple's PUBLIC BCI HID protocol surface —
+  # the 5 report structs + descriptor byte array + button-action enum, plus the #if CORTEX_HID_LIVE-
+  # gated virtual-device instantiation seam and the SMAppService daemon-registration scaffold.
+  # Registered here so xcodebuild resolves it; NOT yet a target dependency — Plan 03 wires it into
+  # CortexMac for the closed-loop demo (pure value types until then, free-team-buildable today).
+  CortexBCIHID:
+    path: Packages/CortexBCIHID
 
 targets:
   CortexiOS:
