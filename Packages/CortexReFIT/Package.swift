@@ -17,10 +17,18 @@ import PackageDescription
 let package = Package(
   name: "CortexReFIT",
   platforms: [.macOS(.v26), .iOS(.v26)],
-  products: [.library(name: "CortexReFIT", targets: ["CortexReFIT"])],
+  products: [
+    .library(name: "CortexReFIT", targets: ["CortexReFIT"]),
+    // Plan 07-03 (D-07, SC#3): the headless deterministic 3-way ablation BPS harness + the
+    // filter-step tail-latency bench. Mirrors the CortexDecoderBench executable entry.
+    .executable(name: "CortexReFITBench", targets: ["CortexReFITBench"]),
+  ],
   dependencies: [
     // D-14: depend on CortexRender (the seam owner), do not hoist the seam to CortexCore.
     .package(path: "../CortexRender"),
+    // Plan 07-03: LatencyHistogram (the SC#3 tail-latency value type) lives in CortexDecoder; the
+    // bench reuses it (and the bench-executable pattern) rather than duplicating the histogram math.
+    .package(path: "../CortexDecoder"),
   ],
   targets: [
     .target(
@@ -30,6 +38,21 @@ let package = Package(
         .product(name: "CortexRender", package: "CortexRender"),
       ],
       swiftSettings: [.defaultIsolation(MainActor.self)]
+    ),
+    // Plan 07-03 (D-07, D-12, SC#3): the headless deterministic harness. A top-level main.swift
+    // runs on the main actor by default (fine for a sequential, single-threaded bench). It replays a
+    // seed-locked velocity+target sequence through raw / Kalman-only / Kalman+rotation, measures
+    // S&M-2004 throughput per arm, writes refit_bps.json, and (in --latency mode) times the
+    // filter step over n>=10 000 ticks INLINE (no new thread) into a device-annotated
+    // LatencyHistogram. Exits 0 with a usage/skip message when no Indy data is present (the --smoke
+    // synthetic variant produces a valid raw/kalman_only/refit triple for the committed JSON + CI).
+    .executableTarget(
+      name: "CortexReFITBench",
+      dependencies: [
+        "CortexReFIT",
+        .product(name: "CortexRender", package: "CortexRender"),
+        .product(name: "CortexDecoder", package: "CortexDecoder"),
+      ]
     ),
     .testTarget(
       name: "CortexReFITTests",
