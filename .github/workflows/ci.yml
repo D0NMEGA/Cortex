@@ -133,7 +133,7 @@ jobs:
 
       - name: Per-package SwiftPM build smoke
         run: |
-          for pkg in CortexCore CortexIPC CortexRender CortexDecoder CortexReFIT; do
+          for pkg in CortexCore CortexIPC CortexRender CortexDecoder CortexReFIT CortexBCIHID; do
             echo "=== build $pkg ==="
             swift build --package-path "Packages/$pkg"
           done
@@ -215,6 +215,28 @@ jobs:
         run: |
           ./Tools/scripts/render-policy.sh
           ./Tools/scripts/render-policy.sh --self-test
+
+      # --- Phase 8 (SYS-01/05): CortexBCIHID — the ported Apple BCI HID surface tests ---
+      # Runs BCIHIDReportTests (exact byte sizes 3/5/4/2/7 + signed-extreme + fixed-point latency
+      # round-trip), BCIHIDDescriptorTests (descriptor header + 22-case button enum), and
+      # DaemonRegistrationTests (SMAppService scaffold via the mockable status path + the
+      # VirtualDeviceGate-inert assertion). Correctness only — the live IOHIDUserDevice registration is
+      # the Plan 07 HUMAN-UAT gate (the default build links no live HID symbol).
+      - name: Run CortexBCIHID tests (SYS-01/05)
+        run: swift test --package-path Packages/CortexBCIHID
+
+      # --- Phase 8 (SYS-01/05/06, D-06): HID surface structural gate + self-test ---
+      # The always-on structural PROXY for the load-bearing HID-surface commitments (descriptor
+      # Usage-Page 0x05,0x60 / the 5 report-struct names / the virtual.device entitlement in all 3
+      # targets / the #if CORTEX_HID_LIVE gate), plus the forbidden checks (no ungated live
+      # IOHIDUserDevice symbol; no app-sandbox on Mac/Daemon). Mirrors the render-policy.sh step above.
+      # The --self-test runs alongside so a silently-weakened gate (a deleted check) fails CI loudly:
+      # the corresponding negative-control stops biting -> self-test exits non-zero (threat T-08-01-04).
+      # The live on-device Switch Control registration is NOT run here — it is the Plan 07 HUMAN-UAT gate.
+      - name: HID surface policy gate (SYS-01/05/06, D-06)
+        run: |
+          ./Tools/scripts/hid-surface-policy.sh
+          ./Tools/scripts/hid-surface-policy.sh --self-test
 
       # --- Phase 6 (RENDER-03, SC#3): build-time assertion that 120Hz is unlocked in the iOS plist ---
       # Mirrors the Phase-1 validate-privacy-manifest.sh / Verify-PrivacyInfo-in-bundle build-time
