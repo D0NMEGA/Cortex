@@ -29,7 +29,27 @@ Technology stack not yet documented. Will populate after codebase mapping or fir
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
-Conventions not yet established. Will populate as patterns emerge during development.
+**`Decoder/` requires the `dev` extra.** pytest and ruff are declared as an optional-dependency
+extra, so a bare `uv run pytest` in a fresh worktree fails with a misleading
+`No module named numpy`. Always sync first:
+
+```bash
+uv sync --project Decoder --extra dev
+uv run --project Decoder pytest            # add -m slow for the evidence runs
+```
+
+`coremltools` is pinned at 9.0. The training/eval dataset lives in the gitignored `Decoder/data/`
+and is materialized from the committed checksum manifest, never committed:
+
+```bash
+uv run --project Decoder python Decoder/scripts/download_indy.py
+```
+
+**Evidence discipline.** Any number the repo publishes is committed as a `*-evidence.md` artifact
+with the machine, pinned wheel versions, seed, and a reproducible runbook, and is labeled with the
+device and method that produced it (see `.planning/phases/04-*/04-training-evidence.md`). A number
+measured on synthetic data is labeled synthetic; a number measured on a Mac is not presented as an
+iPad-M4 number.
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
@@ -45,16 +65,16 @@ No project skills found. Add skills to any of: `.agent/skills/`, `.agents/skills
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->
-## GSD Workflow Enforcement
+## Workflow enforcement
 
-Before using Edit, Write, or other file-changing tools, start work through a GSD command so planning artifacts and execution context stay in sync.
+Before using Edit, Write, or other file-changing tools, start work through a donny command so planning artifacts and execution context stay in sync. (The `gsd-*` suite was retired 2026-07-05; `donny-*` supersedes it one-for-one.)
 
 Use these entry points:
-- `/gsd-quick` for small fixes, doc updates, and ad-hoc tasks
-- `/gsd-debug` for investigation and bug fixing
-- `/gsd-execute-phase` for planned phase work
+- `/donny-quick` for small fixes, doc updates, and ad-hoc tasks
+- `/donny-debug` for investigation and bug fixing
+- `/donny-execute-phase` for planned phase work
 
-Do not make direct repo edits outside a GSD workflow unless the user explicitly asks to bypass it.
+Do not make direct repo edits outside a donny workflow unless the user explicitly asks to bypass it.
 <!-- GSD:workflow-end -->
 
 
