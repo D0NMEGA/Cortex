@@ -2,16 +2,18 @@
 
 ## Overview
 
-Cortex.app is a 7-week sprint to ship a photodiode-instrumented sub-25ms glass-to-glass BCI input pipeline on iPad Pro M4 / Mac M-series. The roadmap derives from `cortex-spec.md` Section 10 (Sprint Timeline), decomposed at `fine` granularity into 10 phases that respect dependency order: foundation → IPC primitive → real-time threading → decoder (training, then ANE deployment) → renderer → ReFIT closed-loop → system integration & v0 distribution → photodiode rig build → v1 measurement & launch.
+Cortex.app is a sprint to ship a sub-25ms glass-to-glass BCI input pipeline on iPad Pro M4 / Mac M-series, decoding real primate M1 spikes. The roadmap derives from `cortex-spec.md` Section 10 (Sprint Timeline), decomposed at `fine` granularity into 10 phases that respect dependency order: foundation → IPC primitive → real-time threading → decoder (training, then ANE deployment) → renderer → ReFIT closed-loop → system integration & v0 distribution → real-data ingest & retrain → v1 real-data closed loop & launch.
+
+**Re-planned 2026-08-28.** Phases 9-10 originally built a BPW34 + OPA381 TIA + Saleae photodiode rig and ran a 10k-trial glass-to-glass campaign. That path is **retired to [Future work](#future-work-retired-from-v1)** — it is gated on hardware the project does not have (the BOM, plus the provisioned iPad Pro M4 that already forced three Phase-8 HUMAN-UAT deferrals), and it was never the project's largest credibility hole. The larger hole is that **every decoder number in the repo was produced on a synthetic Poisson fallback, not real neural data** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"). Phases 9-10 now close that hole instead.
 
 Two milestones anchor the roadmap:
 - **v0 (end of Phase 8):** software-timed glass-to-glass claim, BCI HID integration live, TestFlight build available.
-- **v1 (end of Phase 10):** photodiode-instrumented "Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim, launch video published.
+- **v1 (end of Phase 10):** real-neural-data decoding claim — NDT1 trained and evaluated on the four curated O'Doherty/Makin Indy M1 sessions (Zenodo 3854034) rather than synthetic Poisson replay — driving the closed loop end to end, with every synthetic-derived number re-derived or explicitly labeled, and the photodiode latency claim retired to Future work.
 
 ## Milestones
 
-- 📋 **v0 Software-Timed (Week 5)** — Phases 1-8 (planned). Closed-loop synthetic-spike → cursor → 30×30 webgrid hit at 120Hz, software-side `mach_absolute_time` latency claim, TestFlight-ready notarized build.
-- 📋 **v1 Photodiode-Instrumented (Week 7)** — Phases 9-10 (planned). Defensible "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" claim, launch video, README publish.
+- ✅ **v0 Software-Timed** — Phases 1-8, shipped 2026-06-23 (3 HUMAN-UAT gates deferred). Closed-loop synthetic-spike → cursor → 30×30 webgrid hit at 120Hz, software-side `mach_absolute_time` latency claim, TestFlight-ready notarized build.
+- 🚧 **v1.0 Real-Data Decoding** — Phases 9-10 (in progress). Four real Indy M1 sessions checksum-pinned and ingested, NDT1 retrained and re-converted on real spikes, ReFIT ablation and closed loop re-run on a real session, README republished with the photodiode claim retired and the software-timed latency caveat intact.
 
 ## Phases
 
@@ -29,8 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid** - Beam-raced ProMotion presentation, ≤0.4ms GPU compute, zero-copy `storageModeShared` drawables — completed 2026-06-22 (RENDER-01..09; M5 Pro GPU p99=0.162ms ~2.5× under ≤0.4ms, 60s soak 243,724 frames / 0 dropped; iPad-M4 canonical capture deferred per D-11/D-12)
 - [x] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1 — completed 2026-06-23 (REFIT-01/02/03 verified 6/6; 3-way ablation refit_bps 0.374 ≥ raw 0.161, +133% S&M-2004 Fitts-TP uplift; SC#3 filter step ~292ns p99 over 10k inline ticks, Mac-corroborating; iPad-M4 canonical latency Manual-Only/deferred)
 - [x] **Phase 8: Apple BCI HID Integration, Distribution & v0 Ship** - Switch Control HID provider registration, Synchron-mirror entitlements, notarized TestFlight build, software-timed latency claim — **v0 milestone** — completed 2026-06-23 (automated half verified 5/5: 59 Swift tests + 5 `*-policy.sh` gates + benches; software-timed glass-to-glass p99 ≈ 8.32ms M5-corroborating; ReFIT 1.953 BPS honest gap-to-8.5; 3 never-auto-approve HUMAN-UAT gates — live TestFlight / iPad-M4 canonical latency / on-device HID registration — DEFERRED, tracked in 08-HUMAN-UAT.md)
-- [ ] **Phase 9: Photodiode Rig Hardware Build** - BPW34 + OPA381 TIA + Saleae Logic Pro 8 breadboard with GPIO intent-emission instrumentation
-- [ ] **Phase 10: v1 Photodiode Measurement & Launch** - 10k-trial capture, statistical reduction to "24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k)" claim, launch video, README publish — **v1 milestone**
+- [ ] **Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034)** - Materialize and checksum-pin the four Indy M1 sessions, retrain NDT1 on real spikes, re-derive co-bps / palettization / ANE eligibility on the real-data checkpoint
+- [ ] **Phase 10: v1 Real-Data Closed Loop & Launch** - ReFIT re-fit and ablation on real data, end-to-end real-session replay, synthetic-number sweep with a CI gate, README republish retiring the photodiode claim — **v1 milestone**
 
 ## Phase Details
 
@@ -165,32 +167,35 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 08-06-PLAN.md — Credibility README: architectural-commitments + rejected-alternatives tables + dual v0-software-timed/v1-photodiode claim + every gate disclosure + ADR-0002 + `readme-policy.sh` (DIST-04/PERF-02) [Wave 6]
 - [x] 08-07-PLAN.md — The 3 never-auto-approve HUMAN-UAT gates: live TestFlight submit, iPad-M4 canonical latency capture, on-device HID registration (`autonomous: false`; D-01/D-06/D-08) [Wave 7]
 
-### Phase 9: Photodiode Rig Hardware Build
-**Goal**: The ~$110 BPW34 + OPA381 TIA + Saleae Logic Pro 8 photodiode rig physically exists, is aimed at the iPad Pro M4 pixel where the cursor lands, and a GPIO pulse from the acquisition daemon at intent-emission timestamp is captured cleanly on the Saleae alongside the photodiode rising edge — the instrument is ready for the 10k-trial campaign in Phase 10.
-**Depends on**: Phase 8 (v0 software-timed claim must be defended before instrumented run starts)
-**Requirements**: LAT-01, LAT-02, LAT-03, LAT-04
+### Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034)
+**Goal**: The four curated Indy M1-only sessions physically exist under `Decoder/data/`, are SHA-256-pinned in the committed manifest, and every decoder number the repo publishes is re-derived on **real primate M1 spikes** instead of the synthetic Poisson fallback — up to and including the `.mlpackage` that ships. The decoder stops being a model that was only ever shown structured noise.
+**Depends on**: Phase 8 (v0 software-timed claim defended; the decoder, converter and evidence discipline all exist and are green on synthetic)
+**Requirements**: RD-01, RD-02, RD-03, RD-04, RD-05, RD-06
 **Success Criteria** (what must be TRUE):
-  1. BOM is ordered and received: BPW34 photodiode (Vishay), OPA381 transimpedance amp (TI), Saleae Logic Pro 8, breadboard + passives — total receipts ≤$110 excluding logic analyzer
-  2. Breadboard with TIA stage is assembled, BPW34 is mounted aimed at the iPad Pro M4 pixel where the cursor lands, and a single test capture shows a clean photodiode rising edge response to a known pixel transition
-  3. Acquisition daemon emits a GPIO pulse at intent-emission timestamp; Saleae captures both the GPIO edge and the photodiode rising edge on the same timeline at ≥100 MS/s with sub-µs alignment uncertainty
-  4. A trial-run of ~100 captures shows the Δt distribution is unimodal and centered in the expected ~24-26ms range — no methodology bugs left to chase before the 10k campaign
+  1. `scripts/download_indy.py` fetches all four manifested sessions (~1.5 GB total); `manifests/indy_sessions.json` contains **zero `"PENDING"` sha256 entries**, and a re-run verifies the bytes against those committed checksums — with the integrity gate proven to bite on a deliberately corrupted file (the same negative-control discipline as `validate-privacy-manifest.sh`)
+  2. `ndt1.data.load_session` ingests all four real MATLAB 7.3 (HDF5) sessions end-to-end: the 96-channel `CORTEX_CHANNEL_COUNT` gate passes on each, the MATLAB cell-array spike-timestamp dereference is correct, and the 20 ms binned per-channel firing rates land in a documented plausible band (a regression test pins the band, so a silently-misparsed session fails CI rather than training quietly)
+  3. NDT1 retrained on the real multi-session data reports **held-out chronological-tail co-bps on real spikes**, committed with the same evidence discipline as `04-training-evidence.md` (deterministic seed, pinned wheel versions, reproducible runbook, committed metric) and beating the per-channel mean-firing-rate null by a documented margin. This number **replaces** the synthetic 0.3804 everywhere it is cited
+  4. Multi-session generalization is reported, not assumed: per-session held-out co-bps plus a leave-one-session-out number, so the claim is "generalizes across four sessions", not "fit one session"
+  5. 4-bit palettization delta and CoreML ANE eligibility (226/226 ops, zero CPU-only) are **re-measured on the real-data checkpoint** — no number inherited from the synthetic run — and decoder p99 stays under the 2 ms bar with the real weights
 **Plans**: TBD
 
-### Phase 10: v1 Photodiode Measurement & Launch
-**Goal**: 10,000 photodiode-instrumented trials produce the defensible single-line claim — *"Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)"* — backed by a launch video showing the rig capturing the iPad Pro M4 cursor, and a README that publishes the methodology, statistics, and raw capture archive. This is the v1 milestone and the credibility artefact for Bliss Chapman / Nir Even-Chen review.
+### Phase 10: v1 Real-Data Closed Loop & Launch
+**Goal**: The full pipeline runs on a real recorded session — real M1 spikes replayed through daemon → IPC → decoder → ReFIT-Kalman → 120Hz renderer → BCI HID — and the repo republishes itself honestly: every synthetic-derived number is re-derived or labeled, the photodiode claim is retired to Future work with its reason recorded, and a CI gate makes the retired claim structurally impossible to resurrect as an achieved result. This is the v1 milestone and the artefact for Bliss Chapman / Nir Even-Chen review.
 **Depends on**: Phase 9
-**Requirements**: LAT-05, LAT-06, LAT-07, LAT-08
+**Requirements**: RD-07, RD-08, RD-09, RD-10
 **Success Criteria** (what must be TRUE):
-  1. Capture script automates a 10,000-trial run end-to-end (no human intervention per trial) and produces a structured archive of (intent_pulse_ts, photodiode_rising_edge_ts, Δt) tuples
-  2. Statistical analysis on the n=10,000 distribution reports p50, σ, and a defensible single-line claim — the README publishes "Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)" verbatim with the underlying histogram and methodology disclosed (NVIDIA LDAT / Meta Reality Labs precedent cited)
-  3. Launch video shows the BPW34 rig physically capturing photons from an iPad Pro M4 ProMotion display while Cortex drives the 30×30 webgrid, with the photodiode trace and cursor frame side-by-side
-  4. README, launch video, and raw 10k capture archive are published; the artefact is in a state suitable for hand-off to Bliss Chapman and Nir Even-Chen for review
-**Plans**: TBD
+  1. ReFIT-Kalman gains are re-fit on real data and the 3-way ablation is re-run on real Indy sessions: raw NDT1 vs ReFIT BPS, reported with the honest remaining gap to BrainGate's 4.16 BPS and Neuralink P1's 8.5 BPS. If ReFIT's uplift does not survive contact with real spikes, that is the finding and it gets published as such
+  2. The closed loop replays a real session end-to-end at 120Hz with a 30×30 webgrid hit demonstrated, and the software-timed glass-to-glass p99 is re-derived **on the real-data path** (the Phase-8 number was measured on the synthetic path)
+  3. A repo-wide sweep leaves no synthetic-derived number presented as a real-data result: README, ADRs, and every `*-evidence.md` either carry the re-derived real-data number or explicitly label the number synthetic
+  4. `readme-policy.sh` is **rewritten, not deleted**: its required-disclosure set drops `photodiode`/`24.7` (which it currently mandates) and gains a real-data provenance disclosure plus a forbidden-token check that fails the build if the retired 24.7 ms photodiode figure reappears as an achieved measurement. Its negative-control `--self-test` is updated in lockstep and still proves every gate bites
+  5. The photodiode path is documented as Future work with LAT-01..LAT-08 preserved verbatim, an ADR records why it was retired (hardware-gated, and not the project's largest credibility hole), and the README's honest-gates table reflects the new boundary: software-timed latency, real-data decoding
 
 ## Progress
 
 **Execution Order:**
 Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 (v0) → 9 → 10 (v1)
+
+Phase 9 is strictly sequential internally (data must land before the retrain, the retrain before the re-conversion). Phase 10 depends on Phase 9 having produced a real-data checkpoint.
 
 Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — both depend only on Phase 1 (toolchain) and Phase 3 (threading for renderer's input ring). Phase 7 (ReFIT) requires both halves to converge.
 
@@ -203,6 +208,32 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 5. NDT1 → CoreML deployment — ANE-eligible, sub-2ms verified | v0 | 5/5 | Complete | 2026-06-21 |
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 6/6 | ✓ Complete | 2026-06-22 |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
-| 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 0/7 | Planned | - |
-| 9. Photodiode Rig Hardware Build | v1 | 0/TBD | Not started | - |
-| 10. v1 Photodiode Measurement & Launch | v1 | 0/TBD | Not started | - |
+| 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
+| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 0/TBD | Not started | - |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 0/TBD | Not started | - |
+
+---
+
+## Future work (retired from v1)
+
+Retired 2026-08-28 when the v1 milestone was re-pointed from photodiode-instrumented latency to
+real-neural-data decoding. These requirements are **preserved, not deleted** — the work is still the
+right way to earn a true glass-to-glass number, it is simply gated on hardware this project does not
+have, and on the provisioned iPad Pro M4 that already forced three Phase-8 HUMAN-UAT deferrals.
+
+### Photodiode Rig Hardware Build (was Phase 9)
+BPW34 (Vishay) + OPA381 TIA (TI) + Saleae Logic Pro 8 breadboard, ~$110 BOM excluding the logic
+analyzer, aimed at the iPad Pro M4 pixel where the cursor lands, with the acquisition daemon emitting
+a GPIO pulse at intent-emission timestamp captured on the same timeline at >=100 MS/s.
+**Requirements**: LAT-01, LAT-02, LAT-03, LAT-04
+
+### v1 Photodiode Measurement & Launch (was Phase 10)
+10,000-trial automated capture producing `(intent_pulse_ts, photodiode_rising_edge_ts, dt)` tuples,
+statistical reduction to a p50/sigma claim, and a launch video showing the rig capturing photons off a
+ProMotion display. The spec's canonical target line was *"Glass-to-glass latency 24.7 +/- 1.3 ms
+(p50, sigma=0.8 ms, n=10k, photodiode-instrumented)"*.
+**Requirements**: LAT-05, LAT-06, LAT-07, LAT-08
+
+**Standing honesty constraint:** 24.7 ms was always a **spec target, never a measurement**. Nothing in
+v1 may present it as achieved. Phase 10's rewritten `readme-policy.sh` enforces this structurally
+(SC#4) — the number is only ever citable as a retired target.

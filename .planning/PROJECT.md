@@ -6,7 +6,9 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 ## Core Value
 
-**Glass-to-glass latency under 25ms, photodiode-instrumented and reproducible.** Every architectural choice serves this — the spec's defining claim is "Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)." Without that defensible number, this is a tech demo. With it, it's a credibility artifact suitable for review by Bliss Chapman / Nir Even-Chen.
+**A real-neural-data decoder running end-to-end under 25ms, reproducibly.** Every architectural choice serves a claim that survives review: NDT1 decoding **real primate M1 spikes** (O'Doherty/Makin Indy, Zenodo 3854034) through a sub-25ms software-timed pipeline on Apple Silicon, with every number labeled by the device and method that produced it.
+
+*Re-pointed 2026-08-28.* The original core value was the photodiode-instrumented "Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k)" claim. That claim is **retired to Future work** — it needs a BOM and a provisioned iPad Pro M4 the project does not have, and it was never the largest credibility hole. The larger hole was that Phases 1-8 shipped a decoder that had only ever seen a **synthetic Poisson fallback**. v1 closes that instead. 24.7 ms remains a spec target, never a measurement, and may not be cited as achieved.
 
 ## Requirements
 
@@ -91,8 +93,10 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [ ] Photodiode rig BOM ordered (BPW34 + OPA381 TIA + Saleae Logic Pro 8)
 - [ ] Breadboard assembly with transimpedance amp
 - [ ] GPIO pulse from acquisition daemon at intent-emission timestamp
-- [ ] 10,000-trial photodiode capture script (Saleae at 100+ MS/s)
-- [ ] Statistical analysis producing the defensible "24.7 ± 1.3ms (p50, σ=0.8ms, n=10k)" claim
+- [ ] ~~10,000-trial photodiode capture script (Saleae at 100+ MS/s)~~ RETIRED to Future work 2026-08-28
+- [ ] ~~Statistical analysis producing the defensible "24.7 ± 1.3ms (p50, σ=0.8ms, n=10k)" claim~~ RETIRED to Future work 2026-08-28
+- [ ] Four Indy M1 sessions materialized + SHA-256-pinned; NDT1 retrained on real spikes (RD-01..RD-06)
+- [ ] ReFIT re-fit + closed loop replayed on a real session; synthetic-number sweep + gate rewrite (RD-07..RD-10)
 - [ ] Launch video and README documenting methodology
 
 #### Performance Targets
@@ -119,12 +123,12 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 ## Context
 
-- **Solo sprint, 6-7 weeks.** v0 (software-only timing) ships end of week 5; v1 (photodiode-instrumented) ships end of week 7.
+- **Solo sprint.** v0 (software-only timing) shipped 2026-06-23. v1 re-pointed 2026-08-28 to real-neural-data decoding (Phases 9-10); the photodiode path is Future work, not scheduled.
 - **Audience:** Bliss Chapman (ex-Neuralink, currently recruitable per his "last day" tweet) and Nir Even-Chen (Neuralink, Stanford NPTL alum). Cortex.app is the artifact you hand them.
 - **Apple May 2025 BCI HID is the integration moat.** It makes BCI a first-class input modality across iOS/iPadOS/visionOS. Synchron is the public reference integration with Vision Pro.
 - **Research provenance:** 935-source web research run synthesized into 8 evidence clusters. Per-finding source counts: 119/120/91/139/103/94/154/115. All eight findings independently support each other; no contradictions.
 - **OS versioning is current as of 2026.** macOS 26 Tahoe, Xcode 26, Swift 6.2 ("Approachable Concurrency"). Do not regress to "Xcode 17" / "macOS 16" — both wrong.
-- **Bliss Chapman's instrumentation philosophy:** "Anyone can write fast-looking code; only people who have actually instrumented glass-to-glass have shipped fast code." This is why the photodiode rig is the highest-leverage credibility artifact in the project.
+- **Bliss Chapman's instrumentation philosophy:** "Anyone can write fast-looking code; only people who have actually instrumented glass-to-glass have shipped fast code." The photodiode rig was the intended answer; without the hardware, the honest answer is to keep the software-timed number **labeled as software-timed** (it excludes compositor scanout) and to spend the credibility budget where it can actually be earned — on real neural data.
 
 ## Constraints
 
@@ -157,7 +161,8 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 | `mach_msg` + `MACH_MSG_PORT_DESCRIPTOR` for FD passing | Apple-recommended path over Unix-domain `SCM_RIGHTS` | ✓ Validated Phase 2 — `fileport_makeport`/`makefd`, zero SCM_RIGHTS (CI grep-gated); cross-process fd pass proven end-to-end |
 | CF#1 → single-process Keychain + key-over-`mach_msg` (Phase 2 spike) | Free/personal team (Y4A54395NZ) cannot back a team-prefixed `keychain-access-groups` entitlement on a bare tool — entitled binary AMFI-SIGKILLed; unentitled → `errSecMissingEntitlement (-34018)` | ✓ Phase 2 spike — fallback wired; cross-process access-group sharing deferred to Phase 8 (paid enrollment) |
 | CF#3 → `posix_spawnattr_setspecialport_np` rendezvous (not `bootstrap_register`) | `bootstrap_register` returns `BOOTSTRAP_NOT_PRIVILEGED` for ad-hoc names on modern macOS; special-port injection needs no launchd plist | ✓ Phase 2 spike (3/3) — ADOPT-WITH-RATIONALE vs locked D-08; `TASK_BOOTSTRAP_PORT` + reply-port handshake for fd directionality |
-| Defer photodiode rig to weeks 6-7 | v0 with software timing ships first; v1 with photonic ground truth follows | — Pending |
+| Defer photodiode rig to weeks 6-7 | v0 with software timing ships first; v1 with photonic ground truth follows | — Superseded 2026-08-28 |
+| Retire the photodiode rig; re-point v1 at real-data decoding | Hardware-gated (BOM + provisioned iPad Pro M4, the same gap behind 3 deferred Phase-8 gates). The decoder had only ever seen synthetic Poisson data, so real data is the higher-value claim per unit of risk. LAT-01..08 preserved in ROADMAP "Future work"; 24.7 ms stays a target, never a result | — Accepted (user, 2026-08-28) |
 | Indy/Loco (Zenodo 3854034) as training data | Canonical BCI pretraining dataset; only viable synthetic source absent real electrodes | ✓ Validated Phase 4 (DEC-02) — h5py v7.3 loader + 20ms binning → (num_bins,96), chronological split, reproducible session manifest + checksummed downloader |
 | ReFIT-Kalman recalibration on top of NDT1 | Gilja 2012 — what gets BrainGate from 4.16 → 8.5 BPS in humans | ✓ Validated Phase 7 (REFIT-01/02/03; +133% S&M Fitts-TP ablation uplift, ReFIT-inspired online assist on synthetic replay) |
 

@@ -1,7 +1,9 @@
 # Cortex.app — v1 Requirements
 
 Source: `cortex-spec.md` (935-source research synthesis, 8 evidence clusters).
-All requirements are hypotheses until shipped and validated against the v1 release criteria (defensible photodiode-instrumented latency claim).
+All requirements are hypotheses until shipped and validated against the v1 release criteria.
+
+**v1 re-pointed 2026-08-28** from a photodiode-instrumented latency claim to a **real-neural-data decoding** claim. The LAT block below is retired to Future work (preserved, not deleted); the new bar is the **Real-Data Validation (RD)** block.
 
 ---
 
@@ -84,7 +86,29 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 - [ ] **DIST-03**: TestFlight distribution configured for 100 internal / 10,000 external testers (90-day build expiry)
 - [ ] **DIST-04**: README documents the architectural commitments and rejected-alternatives table
 
-### Latency Measurement Rig (LAT) — v1, Weeks 6-7
+### Real-Data Validation (RD) — v1
+
+The v1 bar. Phases 1-8 shipped a pipeline whose decoder was only ever shown a **synthetic Poisson
+fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"). RD closes
+that: real O'Doherty/Makin Indy M1 spikes, end to end, with every inherited number re-derived.
+
+- [ ] **RD-01**: All four manifested Indy M1-only sessions (Zenodo 3854034) downloaded and SHA-256-pinned — zero `"PENDING"` entries left in `manifests/indy_sessions.json`, integrity gate negative-control proven
+- [ ] **RD-02**: `ndt1.data.load_session` ingests each real v7.3 HDF5 session — 96-channel gate passes, cell-array spike deref correct, 20 ms binned firing rates inside a test-pinned plausible band
+- [ ] **RD-03**: NDT1 retrained on real multi-session spikes; held-out chronological-tail co-bps on **real data** committed as evidence, beating the mean-firing-rate null by a documented margin, replacing the synthetic 0.3804
+- [ ] **RD-04**: Multi-session generalization reported — per-session held-out co-bps plus a leave-one-session-out number
+- [ ] **RD-05**: 4-bit palettization delta re-measured on the real-data checkpoint (not inherited from the synthetic run)
+- [ ] **RD-06**: Real-data checkpoint re-converted to `.mlpackage`; ANE eligibility (226/226, zero CPU-only) and <2 ms p99 re-verified with real weights
+- [ ] **RD-07**: ReFIT-Kalman gains re-fit on real data; raw-vs-ReFIT BPS ablation re-run on real Indy sessions with the honest remaining gap to 4.16 / 8.5 BPS stated
+- [ ] **RD-08**: Closed loop replays a real session end-to-end at 120Hz with a webgrid hit; software-timed glass-to-glass p99 re-derived on the real-data path
+- [ ] **RD-09**: Repo-wide sweep — no synthetic-derived number is presented as a real-data result; README, ADRs and every `*-evidence.md` carry the re-derived number or an explicit synthetic label
+- [ ] **RD-10**: `readme-policy.sh` rewritten (required set drops `photodiode`/`24.7`, gains real-data provenance + a forbidden-token check on the retired figure), `--self-test` updated in lockstep; photodiode retired in an ADR with LAT-01..08 preserved
+
+### Latency Measurement Rig (LAT) — RETIRED to Future work 2026-08-28
+
+Preserved for traceability and for a future v2. **Not scheduled.** Gated on the ~$110 BOM plus a
+provisioned iPad Pro M4 (the same device gap that deferred three Phase-8 HUMAN-UAT gates). LAT-07's
+24.7 ms figure was always a **spec target, never a measurement**, and RD-10 makes presenting it as
+achieved a build failure.
 
 - [ ] **LAT-01**: BOM ordered — BPW34 photodiode + OPA381 transimpedance amp + Saleae Logic Pro 8 (~$110)
 - [ ] **LAT-02**: Breadboard assembled with TIA stage and BPW34 aimed at iPad pixel where cursor lands
@@ -200,11 +224,21 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | PERF-02 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-05 (complete -- BPS evidence); 08-06 (dual v0/v1 latency claim in README) |
 | PERF-03 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-05 (complete -- S&M-2004 Fitts-TP cross-check retained) |
 | PERF-04 | Phase 8: Apple BCI HID Integration, Distribution & v0 Ship | 08-03 (complete -- software-timed glass-to-glass p99 ≈ 8.32ms M5 corroborating); 08-07 Gate 2 (canonical iPad-M4 capture DEFERRED -- HUMAN-UAT) |
-| LAT-01 | Phase 9: Photodiode Rig Hardware Build | TBD |
-| LAT-02 | Phase 9: Photodiode Rig Hardware Build | TBD |
-| LAT-03 | Phase 9: Photodiode Rig Hardware Build | TBD |
-| LAT-04 | Phase 9: Photodiode Rig Hardware Build | TBD |
-| LAT-05 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
-| LAT-06 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
-| LAT-07 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
-| LAT-08 | Phase 10: v1 Photodiode Measurement & Launch | TBD |
+| LAT-01 | RETIRED to Future work (was Phase 9) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-02 | RETIRED to Future work (was Phase 9) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-03 | RETIRED to Future work (was Phase 9) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-04 | RETIRED to Future work (was Phase 9) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-05 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-06 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-07 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
+| LAT-08 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
+| RD-01 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-02 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-03 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-04 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-05 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-06 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-07 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |
+| RD-08 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |
+| RD-09 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |
+| RD-10 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |
