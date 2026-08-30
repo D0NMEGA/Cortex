@@ -1100,9 +1100,18 @@ fixtures and gate scaffolding, not framework installation.
 
 ---
 
-## Open questions
+## Open questions (ALL RESOLVED)
 
-### OQ1. Which four sessions? (blocks Wave 1; planner must decide)
+> Resolution chain, added 2026-08-30 after planning: OQ1/OQ2/OQ3 are resolved by the
+> `<post_research_corrections>` block (C-01..C-06) in `09-CONTEXT.md`; OQ4 and OQ5 are resolved by the
+> planner adopting the recommended defaults below verbatim into plans 09-06 and 09-09. Nothing here is
+> still open.
+
+### OQ1. Which four sessions? (RESOLVED -> C-01, plan 09-01)
+
+**RESOLVED 2026-08-30 (user decision): Option B** - `indy_20160624_03`, `indy_20160627_01`,
+`indy_20160630_01`, `indy_20160915_01`. Recorded as C-01 in `09-CONTEXT.md`; the manifest rewrite is
+plan 09-01 Task 1.
 
 Two of the four manifested sessions fail the 96-channel gate, so under D-03 the substitution branch
 fires. Three viable sets, all confirmed M1-only:
@@ -1119,7 +1128,10 @@ lands nearest the roadmap's stated size, gives D-15 a span worth making a claim 
 manifest note must record why `indy_20160407_02` and `indy_20160411_01` were dropped (192-channel
 M1+S1, `chan_names` `M1 001` .. `S1 096`) as D-03 requires.
 
-### OQ2. Does D-15's assumption paragraph need rewriting?
+### OQ2. Does D-15's assumption paragraph need rewriting? (RESOLVED -> C-04, plan 09-06)
+
+**RESOLVED: yes.** Span corrected to 2016-06-24 to 2016-09-15; D-15's substance unchanged. Plan 09-06
+Task 3 writes the corrected span and asserts the old "April to June 2016" text is absent.
 
 D-15 says "sessions spanning April to June 2016". Under any option in OQ1 that is now wrong: the
 April sessions are all 192-channel. Under Option B the span is 2016-06-24 to 2016-09-15.
@@ -1129,7 +1141,11 @@ substance (raw channel pooling assumes stable channel-to-neuron identity; NDT2's
 conditioning is what relaxes it; a pooled number below the per-session numbers is expected). This is
 a factual correction inside a locked decision's rationale, not a change of decision.
 
-### OQ3. How should D-06's and D-23's factual errors be corrected?
+### OQ3. How should D-06's and D-23's factual errors be corrected? (RESOLVED -> C-02/C-03, plans 09-01, 09-02)
+
+**RESOLVED: recommended default adopted.** `finger_pos[1:3]` pinned by a fixture test (C-02, plan
+09-02); the mc_rtt session-identity claim removed everywhere including the manifest `note`, with a
+dedicated test (C-03, plan 09-01).
 
 Two claims in CONTEXT.md are false: `finger_pos`'s "first two axes (x, y)" (they are `(z, -x)`), and
 "`indy_20160630_01` is the mc_rtt benchmark session" (it is `indy_20170202_02`, not in this record).
@@ -1143,7 +1159,10 @@ artifact, and fixes the same false claim in `Decoder/manifests/indy_sessions.jso
 mc_rtt identity, because `decoder-policy.sh` will then be enforcing a manifest that contains a false
 statement.
 
-### OQ4. Where does the metrics JSON live, and does it carry both nulls?
+### OQ4. Where does the metrics JSON live, and does it carry both nulls? (RESOLVED -> plans 09-06, 09-09)
+
+**RESOLVED: recommended default adopted verbatim** - `09-decoder-metrics.json` in the phase directory,
+carrying both the train-split and test-mean nulls. Written by plan 09-06, schema-tested by 09-09.
 
 Implementer's Discretion covers the schema and location. Two things worth deciding once:
 
@@ -1152,7 +1171,10 @@ Implementer's Discretion covers the schema and location. Two things worth decidi
 its artifact. Carry both the train-split null co-bps (the D-22 gate) and the test-mean null co-bps
 (the NLB-convention drift-robust floor, Section 4), each explicitly labeled.
 
-### OQ5. Separate CI job or a step in `build-and-lint`?
+### OQ5. Separate CI job or a step in `build-and-lint`? (RESOLVED -> plan 09-09)
+
+**RESOLVED: recommended default adopted verbatim** - a separate `decoder-python` job carrying both the
+quick suite and the `decoder-policy.sh` gate step. Plan 09-09.
 
 **Recommended default:** a separate `decoder-python` job (Section 11). `build-and-lint` is already at
 a 30-minute timeout with the Rust toolchain, SwiftPM, DerivedData and seven policy gates, and the
