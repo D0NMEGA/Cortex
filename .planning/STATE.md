@@ -1,10 +1,10 @@
 ---
-gsd_state_version: 1.0
+donny_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
+milestone_name: Real-Data Decoding
 status: executing
-stopped_at: Phase 8 complete (v0 milestone; automated half verified, 3 HUMAN-UAT gates deferred)
-last_updated: "2026-06-23T15:50:48.732Z"
+stopped_at: Phase 9 context gathered
+last_updated: "2026-08-30T18:22:50.802Z"
 last_activity: 2026-06-23
 progress:
   total_phases: 10
@@ -148,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-06-23T04:19:51.028Z
-Stopped at: Phase 8 context gathered
-Resume file: .planning/phases/08-apple-bci-hid-integration-distribution-v0-ship/08-CONTEXT.md
+Last session: 2026-08-30T18:22:50.799Z
+Stopped at: Phase 9 context gathered
+Resume file: .planning/phases/09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-CONTEXT.md
