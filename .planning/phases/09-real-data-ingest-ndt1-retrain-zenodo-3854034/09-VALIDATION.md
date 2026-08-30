@@ -1,8 +1,8 @@
 ---
 phase: 9
 slug: real-data-ingest-ndt1-retrain-zenodo-3854034
-status: draft
-nyquist_compliant: false
+status: planned
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-08-30
 ---
@@ -119,4 +119,14 @@ fixtures and gate scaffolding, not framework installation.
 - [ ] Feedback latency < 30s
 - [ ] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** planner sign-off 2026-08-30 (11 plans, 7 waves).
+
+- [x] All tasks have `<automated>` verify; no MISSING references (the `tiny_v73.mat` fixture and the
+      `decoder-policy.sh` gate are created inside Plans 09-02 / 09-09 before anything asserts on them)
+- [x] Sampling continuity: every plan's tasks end in a runnable command; no 3 consecutive tasks
+      without an automated verify
+- [x] The six Wave 0 gaps map to plans: manifest -> 09-01, fixture -> 09-02, metrics schema -> 09-06
+      (writer) + 09-09 (test), `decoder-policy.sh` -> 09-09, `decoder-python` CI job -> 09-09,
+      multi-session test fallback (P5) -> 09-04
+- [x] No watch-mode flags; quick-suite feedback latency ~2 s measured
+- [x] Every CI-blocking command runs green on a checkout with an empty `Decoder/data/`

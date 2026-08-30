@@ -177,7 +177,18 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. NDT1 retrained on the real multi-session data reports **held-out chronological-tail co-bps on real spikes**, committed with the same evidence discipline as `04-training-evidence.md` (deterministic seed, pinned wheel versions, reproducible runbook, committed metric) and beating the per-channel mean-firing-rate null by a documented margin. This number **replaces** the synthetic 0.3804 everywhere it is cited
   4. Multi-session generalization is reported, not assumed: per-session held-out co-bps plus a leave-one-session-out number, so the claim is "generalizes across four sessions", not "fit one session"
   5. 4-bit palettization delta and CoreML ANE eligibility (226/226 ops, zero CPU-only) are **re-measured on the real-data checkpoint** — no number inherited from the synthetic run — and decoder p99 stays under the 2 ms bar with the real weights
-**Plans**: TBD
+**Plans**: 11 plans (7 waves) — strictly sequential spine after Wave 2; every CI-blocking test runs green on a checkout with an empty `Decoder/data/` (tier split D-21)
+- [ ] 09-01-PLAN.md — Manifest corrected to the four confirmed M1-only sessions (Option B, 1.77 GB) + `download_indy.py` magic/size/md5 pre-checks + hermetic integrity tests (RD-01) [Wave 1]
+- [ ] 09-02-PLAN.md — Committed `tiny_v73.mat` fixture (D-20) + `load_session` fixes: `MATLAB_empty` guard, `chan_names` width message, `finger_pos[1:3]` planar pair (RD-02) [Wave 1]
+- [ ] 09-03-PLAN.md — `ndt1.kinematics`: 250 Hz finite-difference velocity, 20 ms aggregation, whole-bin lag, held-out R2 vs a TRAIN-mean null (RD-02) [Wave 2]
+- [ ] 09-04-PLAN.md — `ndt1.qc` population firing-rate band + `ndt1.sessions` multi-session layer/LOSO folds + the P5 repair of the two crashing test modules (RD-02) [Wave 2]
+- [ ] 09-05-PLAN.md — Materialize + SHA-256-pin the four sessions; four integrity negative controls on a real fetched file; `09-ingest-evidence.md` (RD-01) [Wave 2]
+- [ ] 09-06-PLAN.md — Ingest report + pooled real-data retrain + per-session co-bps (both nulls) + four-fold LOSO + `09-decoder-metrics.json` + `09-training-evidence.md` + re-derived `CO_BPS_MARGIN` (RD-02, RD-03, RD-04) [Wave 3]
+- [ ] 09-07-PLAN.md — Velocity head on real `finger_pos`: lag sweep, lambda sweep, held-out R2, with-velocity checkpoint, `09-velocity-evidence.md` (RD-02, RD-06) [Wave 4]
+- [ ] 09-08-PLAN.md — CoreML re-derivation on the real checkpoint: palettization delta on BOTH models, ANE op scan, device-labeled p99, `09-coreml-evidence.md` (RD-05, RD-06) [Wave 5]
+- [ ] 09-09-PLAN.md — `decoder-policy.sh` + `check_decoder_provenance.py` + `test_metrics_schema.py` + the blocking `decoder-python` CI job (RD-01, RD-03, RD-04, RD-05, RD-06) [Wave 6]
+- [ ] 09-10-PLAN.md — D-24 citation sweep: superseded banners on the Phase-4/5 evidence + PROJECT/ROADMAP/REQUIREMENTS labels (RD-03, RD-05) [Wave 6]
+- [ ] 09-11-PLAN.md — `09-HUMAN-UAT.md` + the never-auto-approve iPad-Pro-M4 canonical p99 gate (RD-06; `autonomous: false`) [Wave 7]
 
 ### Phase 10: v1 Real-Data Closed Loop & Launch
 **Goal**: The full pipeline runs on a real recorded session — real M1 spikes replayed through daemon → IPC → decoder → ReFIT-Kalman → 120Hz renderer → BCI HID — and the repo republishes itself honestly: every synthetic-derived number is re-derived or labeled, the photodiode claim is retired to Future work with its reason recorded, and a CI gate makes the retired claim structurally impossible to resurrect as an achieved result. This is the v1 milestone and the artefact for Bliss Chapman / Nir Even-Chen review.
@@ -209,7 +220,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 6/6 | ✓ Complete | 2026-06-22 |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
-| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 0/TBD | Not started | - |
+| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 0/11 | Planned | - |
 | 10. v1 Real-Data Closed Loop & Launch | v1 | 0/TBD | Not started | - |
 
 ---
