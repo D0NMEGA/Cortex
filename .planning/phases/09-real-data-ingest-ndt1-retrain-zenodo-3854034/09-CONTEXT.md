@@ -311,5 +311,95 @@ None. `todo match-phase 9` returned zero matches.
 
 ---
 
+<post_research_corrections>
+## Post-research corrections (added 2026-08-30, after 09-RESEARCH.md)
+
+The decisions above are preserved verbatim as the historical record of the discussion. Research
+falsified four factual premises inside them. The DECISIONS still stand; their RATIONALES and one
+literal spec are corrected here. Where this block and the text above disagree, **this block wins.**
+
+Source: `09-RESEARCH.md` (commit `12c9058`), all four verified by direct measurement of the real
+dataset, not by documentation.
+
+### C-01 supersedes D-03's contingency framing - substitution is CERTAIN, and the set is chosen
+
+`indy_20160407_02` and `indy_20160411_01` are 192-channel M1+S1 recordings (`chan_names` run
+`M1 001` .. `S1 096`). The loader is correct to reject them. Only 2 of 4 manifested sessions survive,
+which is fewer than three, so D-03's substitution branch fires as written.
+
+**The four sessions for this phase are (user decision, 2026-08-30, Option B):**
+
+| Session id | Size | `finger_pos` cols | 20 ms bins |
+|---|---|---|---|
+| `indy_20160624_03` | 144.0 MB | 6 | 24,999 |
+| `indy_20160627_01` | 1135.1 MB | 6 | 168,147 |
+| `indy_20160630_01` | 382.2 MB | 6 | 73,161 |
+| `indy_20160915_01` | 106.6 MB | **3** | 19,052 |
+
+Total 1.77 GB, 285,359 bins, span 2016-06-24 to 2016-09-15 (83 days). Chosen over a tight 9-day June
+cluster (which would make the LOSO claim weak) and over a cheaper 4-session set (which would drop the
+168k-bin `indy_20160627_01`). Both `finger_pos` widths are present, so the k x 3 / k x 6 branch is
+exercised rather than assumed.
+
+The manifest's dropped-session note must record WHY the two were dropped (192-channel M1+S1), per D-03.
+
+### C-02 corrects D-06's axis spec - the planar pair is rows 1-2, NOT rows 0-1
+
+`finger_pos` is ordered `(z, -x, -y[, azimuth, elevation, roll])` in cm. D-06's "first two axes (x, y)"
+would select depth and negated-x. Verified empirically: `corr(cursor_pos[0], finger_pos[1]) = -1.0000`,
+while `corr(cursor_pos[0], finger_pos[0]) = +0.285` on an axis whose standard deviation is 0.24 cm.
+
+**Use `finger_pos[1:3]`.** Note the axes are negated; handle the sign explicitly rather than inheriting
+it silently. This is a correctness fix, not a change of decision - D-06 wanted the planar kinematics,
+and rows 1-2 are the planar kinematics. Taking rows 0-1 raises no exception; it would just quietly
+halve R2. Pinned by the RD-02c fixture test.
+
+### C-03 voids the session-identity rationale in D-06 and D-23
+
+The NLB'21 `mc_rtt` session is `indy_20170202_02` (per DANDI 000129 asset metadata). It is not
+`indy_20160630_01` and is not in Zenodo record 3854034 at all.
+
+D-06's label-source decision still stands on its own merits: `nlb_tools` does use `finger_vel` for
+`mc_rtt`, so `finger_pos` remains the right source. D-23's "cite as context, never as comparison"
+framing becomes MORE correct once the session-identity claim is dropped. Drop the claim from the
+plans, the evidence artifact, and `Decoder/manifests/indy_sessions.json`'s `note` field (a
+decoder-owned surface, in scope under D-24) - do not leave `decoder-policy.sh` enforcing a manifest
+that asserts something false. The same false claim in this file's `<specifics>` section is superseded
+by this block.
+
+### C-04 corrects D-15's span
+
+D-15 says "sessions spanning April to June 2016". Under the chosen set the span is **2016-06-24 to
+2016-09-15**. The substance of D-15 is unchanged and still stands: pooling raw 96-channel spikes
+across sessions assumes stable channel-to-neuron identity across electrode drift; that assumption is
+what NDT2's session conditioning would relax; a pooled number below the per-session numbers is an
+expected and reportable outcome, not a defect.
+
+### C-05 new: a live silent-corruption defect in `ndt1.data.load_session`
+
+Not a correction to a decision - a defect found in the code this phase touches. MATLAB writes empty
+cells as *truthy* HDF5 references to a `(2,) uint64` dataset carrying a `MATLAB_empty` attribute, so
+`data.py`'s `if not ref: continue` guard never fires. On `indy_20160630_01` it injects 498 spurious
+timestamps (values 0.0 and 1.0) across 92 of 96 channels. They are discarded today only by luck: that
+session's behavior clock starts at t = 148.984 s, so they fall outside `[t_start, t_end)`. A session
+whose clock starts near zero would silently corrupt every firing rate.
+
+Correct discriminator: `if "MATLAB_empty" in f[ref].attrs`. The channel-axis transpose heuristic, by
+contrast, was verified correct. Pinned by the RD-02a fixture test, whose `t` vector must start at 0.0
+so the negative control can actually bite.
+
+### C-06 factual corrections to sizes and scope
+
+- Manifest total is **2.599 GB** as currently committed, not the roadmap's "~1.5 GB". The corrected
+  Option B set is 1.77 GB.
+- `weight_threshold=2048` means the shipped velocity head is **never palettized**. D-16's two-model
+  delta measurement must account for this rather than assume the head is quantized.
+- Measured training cost on this Mac's CPU: ~11-15 min pooled, ~45-60 min for the LOSO rotation.
+  `load_session` parses a real 382 MB session in 0.2 s.
+
+</post_research_corrections>
+
+---
+
 *Phase: 09-real-data-ingest-ndt1-retrain-zenodo-3854034*
 *Context gathered: 2026-08-30*
