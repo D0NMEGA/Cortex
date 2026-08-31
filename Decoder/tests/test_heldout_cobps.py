@@ -24,10 +24,11 @@ import pytest
 import torch
 from torch.utils.data import DataLoader
 
-from ndt1.data import IndySpikeDataset, chronological_split, load_session
+from ndt1.data import IndySpikeDataset, chronological_split
 from ndt1.loss import random_mask
 from ndt1.metrics import co_bps, mean_firing_rate
 from ndt1.model_ane import NDT1ANE
+from ndt1.sessions import available_sessions
 from ndt1.train import reshape_to_bc1s, train_ndt1
 
 # --- Training config (committed in the evidence artifact; fixed for reproducibility) ----------
@@ -67,13 +68,18 @@ def _make_synthetic(num_bins: int = 4000, num_channels: int = 96, seed: int = SE
 
 
 def _load_binned() -> tuple[np.ndarray, str]:
-    """Prefer a real session ``.mat`` if present; else fall back to the synthetic dataset."""
-    if _DATA_DIR.is_dir():
-        for mat in sorted(_DATA_DIR.glob("*.mat")):
-            session = load_session(mat)
-            binned = session["binned"]
-            if isinstance(binned, np.ndarray) and binned.shape[0] > 10 * SEQ_LEN:
-                return binned, f"real session {mat.name}"
+    """Prefer real sessions when present; excluded sessions are skipped, never raised (P5).
+
+    The naive concatenation here is only the smoke path for this single test. The D-12-correct
+    per-session chronological split used for the committed numbers is
+    ``ndt1.sessions.pooled_splits``, driven by the Plan 09-06 evidence runner.
+    """
+    loaded, excluded = available_sessions(_DATA_DIR, min_bins=10 * SEQ_LEN)
+    if loaded:
+        pooled = np.concatenate([s.binned for s in loaded], axis=0)
+        ids = ", ".join(s.session_id for s in loaded)
+        note = f" (excluded: {len(excluded)})" if excluded else ""
+        return pooled, f"real sessions [{ids}]{note}"
     return _make_synthetic(), "synthetic Poisson fallback (no .mat present)"
 
 
