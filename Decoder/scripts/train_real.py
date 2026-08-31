@@ -121,6 +121,9 @@ _PHASE_DIR = (
 _DEFAULT_OUT_JSON = _PHASE_DIR / "09-decoder-metrics.json"
 _DEFAULT_CHECKPOINT_DIR = _REPO_ROOT / "Decoder" / "checkpoints"
 _POOLED_CHECKPOINT_NAME = "ndt1_real_pooled.pt"
+#: A wiring check must never be able to clobber the checkpoint whose sha256 is published in
+#: 09-decoder-metrics.json, so --smoke writes somewhere else.
+_SMOKE_CHECKPOINT_NAME = "ndt1_real_pooled.smoke.pt"
 #: D-03's floor: fewer than three loadable sessions means the dataset is not what this phase says
 #: it is, and the substitution branch fires rather than training on a reshaped pool.
 MIN_SESSIONS: int = 3
@@ -665,7 +668,9 @@ def main(argv: list[str] | None = None) -> int:
         _log("WARNING: the POOLED training loss went non-finite; the headline number is not usable")
     mask_ratio = float(model.mask_ratio)
 
-    checkpoint_path = Path(args.checkpoint_dir) / _POOLED_CHECKPOINT_NAME
+    checkpoint_path = Path(args.checkpoint_dir) / (
+        _SMOKE_CHECKPOINT_NAME if args.smoke else _POOLED_CHECKPOINT_NAME
+    )
     save_checkpoint(model, checkpoint_path)
     param_count = int(sum(p.numel() for p in model.parameters()))
     _log(f"checkpoint saved to {checkpoint_path} ({param_count} params)")
