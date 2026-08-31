@@ -19,12 +19,19 @@ Hard rules enforced here:
     object references dereferenced through the file object (`f[ref][()]`).
   * Width is pinned to `CORTEX_CHANNEL_COUNT` (96). A session yielding a different count raises
     `ValueError` rather than silently diverging from the IPC frame width (Pitfall #11, T-04-02-03).
+    The width named in that error comes from `chan_names`, which is authoritative, so a 192-channel
+    M1+S1 file is announced as 192 rather than as its unit count.
+  * An EMPTY MATLAB cell is discriminated by its `MATLAB_empty` attribute, never by `bool(ref)`:
+    MATLAB writes empty cells as TRUTHY references (09-RESEARCH C-05, T-09-02-01).
   * The held-out split is the chronological tail — never a shuffle-split across time (Pitfall #10).
-  * Only `spikes` and `t` are read; the large `wf` waveform array is never touched (T-04-02-02).
+  * Only `spikes`, `t`, `finger_pos` and `chan_names` are read; the `wf` array is never touched.
   * No bare/blind `except`: only `OSError`/`KeyError`/`ValueError` are caught explicitly.
 
-Behavior arrays (cursor/finger/target position) are intentionally NOT used in Phase 4 — the
-velocity head is DEC-10/Phase 5. Phase 4 trains on binned spike counts alone.
+Behavior arrays: as of Phase 9 (D-05) `finger_pos` IS read, because the shipped `.mlpackage` must
+carry a velocity readout fit on real kinematics rather than a fabricated one. Only `finger_pos` is
+read; `cursor_pos` and `target_pos` are not, and the large `wf` array is still never touched
+(T-04-02-02). `finger_pos` rows are `(z, -x, -y[, azimuth, elevation, roll])` in cm, so the planar
+pair is rows 1 and 2 and the negation is undone once, here.
 """
 from __future__ import annotations
 
@@ -163,10 +170,10 @@ class IndySpikeDataset(Dataset):
 def load_session(path: Path) -> dict[str, object]:
     """Load one O'Doherty Indy/Loco session ``.mat`` (v7.3 = HDF5) into binned spike counts.
 
-    Reads ONLY the ``spikes`` cell array (per-(channel,unit) timestamp vectors) and the time
-    vector ``t``; the large ``wf`` waveform array is never read (memory-DoS guard, T-04-02-02).
-    Spike units (unsorted hash + sorted) are aggregated per channel into a multiunit train, then
-    binned at 20 ms. Width is enforced == ``CORTEX_CHANNEL_COUNT`` (96).
+    Reads ONLY the ``spikes`` cell array (per-(channel,unit) timestamp vectors), the time vector
+    ``t``, ``finger_pos`` (D-05) and ``chan_names``; the ``wf`` array is never read (memory-DoS
+    guard, T-04-02-02). Spike units (unsorted hash + sorted) are aggregated per channel into a
+    multiunit train, then binned at 20 ms. Width is enforced == ``CORTEX_CHANNEL_COUNT`` (96).
 
     Args:
         path: path to a session ``.mat`` (MATLAB v7.3 = HDF5, loaded with h5py — the legacy
@@ -174,13 +181,14 @@ def load_session(path: Path) -> dict[str, object]:
 
     Returns:
         A dict with ``"binned"`` (the ``(num_bins, 96)`` float32 matrix), ``"t_start"``,
-        ``"t_end"``, and ``"num_channels"``.
+        ``"t_end"``, ``"num_channels"``, ``"t"`` (the raw time vector, seconds) and
+        ``"planar_cm"`` (the ``(n_samples, 2)`` sign-corrected ``(x, y)`` kinematics in cm).
 
     Raises:
         ValueError: if the session does not yield exactly ``CORTEX_CHANNEL_COUNT`` channels, or
             required datasets are malformed.
         OSError: if the file cannot be opened/read as HDF5.
-        KeyError: if the expected ``spikes``/``t`` datasets are absent.
+        KeyError: if the expected ``spikes``/``t``/``finger_pos`` datasets are absent.
     """
     path = Path(path)
     try:
@@ -189,6 +197,13 @@ def load_session(path: Path) -> dict[str, object]:
                 raise KeyError(f"session {path.name} has no 'spikes' dataset")
             if "t" not in f:
                 raise KeyError(f"session {path.name} has no 't' (time) dataset")
+
+            # `chan_names` is the AUTHORITATIVE width (96 for M1-only, 192 for M1+S1). The
+            # transpose heuristic below cannot recover it when neither spikes axis is 96, so
+            # capture it here and name it in the width error (T-04-02-03, T-09-02-02).
+            declared_width: int | None = None
+            if "chan_names" in f:
+                declared_width = int(np.asarray(f["chan_names"]).size)
 
             spikes_refs = f["spikes"]  # n_channels × n_units array of HDF5 object references
             # MATLAB stores cell arrays column-major; the channel axis is the larger dimension.
@@ -205,9 +220,19 @@ def load_session(path: Path) -> dict[str, object]:
             for ch in range(num_channels):
                 unit_trains: list[np.ndarray] = []
                 for ref in ref_array[ch]:
-                    if not ref:  # zero-filled reference = empty cell
+                    if not ref:  # a genuinely null HDF5 reference
                         continue
-                    vec = np.asarray(f[ref][()], dtype=np.float64).ravel()
+                    dataset = f[ref]
+                    # MATLAB writes an EMPTY cell as a TRUTHY reference to a (2,) uint64 dataset
+                    # whose payload is the array dimensions and which carries a MATLAB_empty
+                    # attribute — `if not ref` never fires on it. On indy_20160630_01 the old
+                    # guard injected 498 spurious timestamps (values 0.0 and 1.0) across 92 of 96
+                    # channels; they were discarded only because that session's clock starts at
+                    # t = 148.984 s. A session whose clock starts near zero would silently corrupt
+                    # every rate (09-RESEARCH C-05, T-09-02-01).
+                    if "MATLAB_empty" in dataset.attrs:
+                        continue
+                    vec = np.asarray(dataset[()], dtype=np.float64).ravel()
                     if vec.size:
                         unit_trains.append(vec)
                 merged = (
@@ -220,13 +245,41 @@ def load_session(path: Path) -> dict[str, object]:
                 raise ValueError(f"session {path.name} has an empty time vector 't'")
             t_start = float(t[0])
             t_end = float(t[-1])
+
+            if "finger_pos" not in f:
+                raise KeyError(f"session {path.name} has no 'finger_pos' dataset")
+            finger = np.asarray(f["finger_pos"][()], dtype=np.float64)
+            if finger.ndim != 2 or finger.shape[0] not in (3, 6):
+                raise ValueError(
+                    f"session {path.name} finger_pos has shape {finger.shape}; expected (3, k) "
+                    f"or (6, k) as h5py sees it (MATLAB k x 3 or k x 6)"
+                )
+            if finger.shape[1] != t.size:
+                raise ValueError(
+                    f"session {path.name} finger_pos has {finger.shape[1]} samples but t has "
+                    f"{t.size}"
+                )
+            # finger_pos rows are (z, -x, -y[, azimuth, elevation, roll]) in cm — the PLANAR pair
+            # is rows 1 and 2, NOT rows 0 and 1. Row 0 is depth (std ~0.24 cm on
+            # indy_20160630_01); taking rows 0-1 raises no exception and would silently halve the
+            # decode R2 (09-RESEARCH C-02 / P4). Verified: corr(cursor_pos[0], finger_pos[1]) ==
+            # -1.0000. Negate once here so downstream code and the Phase-10 R fit see true (x, y)
+            # in cm rather than inheriting the sign implicitly.
+            planar_cm = (-finger[1:3, :]).T  # (n_samples, 2) == (x, y) in cm
     except OSError as exc:
         raise OSError(f"could not read session .mat at {path}: {exc}") from exc
 
     if num_channels != CORTEX_CHANNEL_COUNT:
+        detail = (
+            f"chan_names declares {declared_width} channels"
+            if declared_width is not None
+            else "chan_names is absent, so the width could not be confirmed"
+        )
         raise ValueError(
             f"session {path.name} yielded {num_channels} channels, expected "
-            f"{CORTEX_CHANNEL_COUNT} (use M1-only 96-channel sessions — Pitfall #11)"
+            f"{CORTEX_CHANNEL_COUNT} ({detail}). A 192-channel value means this is an M1+S1 "
+            f"recording, not an M1-only session — use an M1-only session (Pitfall #11, "
+            f"T-04-02-03)."
         )
 
     binned = bin_spikes(
@@ -237,4 +290,6 @@ def load_session(path: Path) -> dict[str, object]:
         "t_start": t_start,
         "t_end": t_end,
         "num_channels": CORTEX_CHANNEL_COUNT,
+        "t": t,
+        "planar_cm": planar_cm,
     }

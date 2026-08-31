@@ -89,6 +89,8 @@ __pycache__/
 Decoder/.venv/
 Decoder/data/
 Decoder/**/*.mat
+# D-20: the committed synthetic v7.3 CI fixture is the ONE tracked .mat (no dataset redistribution).
+!Decoder/tests/fixtures/tiny_v73.mat
 Decoder/checkpoints/
 Decoder/**/*.pt
 Decoder/**/*.ckpt

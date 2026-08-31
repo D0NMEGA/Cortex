@@ -1,0 +1,28 @@
+{
+  "variant": "clean",
+  "seed": 0,
+  "n_channels": 96,
+  "n_units": 5,
+  "n_live_channels": 90,
+  "n_samples": 2501,
+  "finger_rows": 3,
+  "t_start": 0.0,
+  "t_end": 10.0,
+  "bin_s": 0.02,
+  "num_bins": 500,
+  "total_real_timestamps": 12185,
+  "bin0_real_timestamps": 20,
+  "empty_cells": 300,
+  "channels_with_empty_cells": 96,
+  "empty_payload_shapes": [
+    [
+      0,
+      0
+    ],
+    [
+      0,
+      1
+    ]
+  ],
+  "matlab_empty_attribute_written": true
+}
