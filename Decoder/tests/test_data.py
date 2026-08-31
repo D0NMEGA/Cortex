@@ -21,6 +21,7 @@ from ndt1.data import (
     chronological_split,
     load_session,
 )
+from ndt1.sessions import available_sessions
 from tests.conftest import SEQ_LEN
 
 # ----------------------------------------------------------------------------- bin_spikes
@@ -141,16 +142,23 @@ def test_dataset_drops_incomplete_tail_window() -> None:
 # ------------------------------------------------------------------------------ load_session
 
 _DATA_DIR = Path(__file__).resolve().parents[1] / "data"
-_HAS_MAT = _DATA_DIR.is_dir() and any(_DATA_DIR.glob("*.mat"))
 
 
-@pytest.mark.skipif(not _HAS_MAT, reason="no real .mat present (dataset is gitignored)")
 def test_load_session_real_mat() -> None:
-    """When a real session .mat exists, load_session returns 96-channel binned counts."""
-    mat_path = next(_DATA_DIR.glob("*.mat"))
-    session = load_session(mat_path)
-    assert "binned" in session
-    assert session["binned"].shape[1] == CORTEX_CHANNEL_COUNT
+    """When a loadable real session .mat exists, it yields 96-channel binned counts.
+
+    Routed through `available_sessions` so a session that fails a gate is EXCLUDED rather than
+    raised. Taking the alphabetically-first `.mat` and calling `load_session` on it directly turns
+    one rejected file -- a 192-channel M1+S1 recording, say -- into a suite-wide ERROR instead of a
+    skip (09-RESEARCH pitfall P5).
+    """
+    loaded, _excluded = available_sessions(_DATA_DIR)
+    if not loaded:
+        pytest.skip("no loadable real .mat present (dataset is gitignored)")
+    session = loaded[0]
+    assert session.binned.shape[1] == CORTEX_CHANNEL_COUNT
+    assert session.binned.shape[0] > 0
+    assert session.planar_cm.shape[1] == 2
 
 
 def test_load_session_is_importable_and_typed() -> None:
