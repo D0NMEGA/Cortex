@@ -1,0 +1,280 @@
+{
+  "checkpoint": {
+    "param_count": 1292544,
+    "path": "Decoder/checkpoints/ndt1_real_pooled.pt",
+    "sha256": "0e5c174dd1d3112ca1d7fbfb9da8d14962b3a2f66ac9bffb8c2c789b87c72841"
+  },
+  "co_bps": {
+    "input_visibility_diagnostic": {
+      "checkpoint_sha256": "0e5c174dd1d3112ca1d7fbfb9da8d14962b3a2f66ac9bffb8c2c789b87c72841",
+      "note": "train_ndt1 feeds the encoder the UNMASKED counts and uses the mask only to select which positions the Poisson NLL is summed over, so a scored position is visible to the model that predicts it. visible_* reproduces the committed numbers on the same seeded mask; hidden_* re-scores the same checkpoint with the scored positions zeroed in the encoder input. The checkpoint was never trained with hidden inputs, so hidden_* is a floor and visible_* is a ceiling, not a corrected value.",
+      "per_session": {
+        "indy_20160624_03": {
+          "hidden_test_mean_null": -5.648974692112911,
+          "hidden_train_null": -5.432466628569923,
+          "visible_test_mean_null": 1.812866735472169,
+          "visible_train_null": 2.029374799015157
+        },
+        "indy_20160627_01": {
+          "hidden_test_mean_null": -5.5577684069161934,
+          "hidden_train_null": -5.472562414078376,
+          "visible_test_mean_null": 1.6724947809118007,
+          "visible_train_null": 1.757700773749618
+        },
+        "indy_20160630_01": {
+          "hidden_test_mean_null": -6.35546507617882,
+          "hidden_train_null": -5.781224109412941,
+          "visible_test_mean_null": 1.6499519663913211,
+          "visible_train_null": 2.224192807761635
+        },
+        "indy_20160915_01": {
+          "hidden_test_mean_null": -5.595131601587535,
+          "hidden_train_null": -5.156432118026067,
+          "visible_test_mean_null": 1.9540390458631578,
+          "visible_train_null": 2.3927386657922267
+        }
+      },
+      "pooled": {
+        "hidden_test_mean_null": -5.554775235625627,
+        "hidden_train_null": -5.5266395105465245,
+        "visible_test_mean_null": 1.8834470653325304,
+        "visible_train_null": 1.9115827904116325
+      }
+    },
+    "margin": null,
+    "margin_rationale": null,
+    "per_session": {
+      "indy_20160624_03": {
+        "session_train_null": 1.8283269415664996,
+        "test_mean_null": 1.812866735472169,
+        "train_null": 2.029374799015157
+      },
+      "indy_20160627_01": {
+        "session_train_null": 1.7240507912817407,
+        "test_mean_null": 1.6724947809118007,
+        "train_null": 1.757700773749618
+      },
+      "indy_20160630_01": {
+        "session_train_null": 1.6610008204562485,
+        "test_mean_null": 1.6499519663913211,
+        "train_null": 2.224192807761635
+      },
+      "indy_20160915_01": {
+        "session_train_null": 1.9617678160510976,
+        "test_mean_null": 1.9540390458631578,
+        "train_null": 2.3927386657922267
+      }
+    },
+    "pooled": {
+      "test_mean_null": 1.8834470653325304,
+      "train_null": 1.9115827904116325
+    }
+  },
+  "config": {
+    "batch_size": 16,
+    "bin_ms": 20.0,
+    "device": "cpu",
+    "epochs": 12,
+    "log_input": true,
+    "lr": 0.002,
+    "mask_ratio": 0.25,
+    "seed": 0,
+    "seq_len": 32,
+    "test_frac": 0.2,
+    "weight_decay": 0.01
+  },
+  "data_source": "real",
+  "env": {
+    "coremltools": "9.0",
+    "h5py": "3.16.0",
+    "machine": "arm64",
+    "numpy": "2.4.6",
+    "platform": "macOS-26.5-arm64-arm-64bit",
+    "python": "3.12.13",
+    "torch": "2.12.1"
+  },
+  "excluded_sessions": [],
+  "loso": [
+    {
+      "diverged": true,
+      "eval_windows": 781,
+      "final_loss": null,
+      "held_out_session": "indy_20160624_03",
+      "losses": [
+        0.4156867470729556,
+        0.33045432938111796,
+        0.29417105066688404,
+        0.2747745324997117,
+        0.2631098409103234,
+        0.2573309566377129,
+        0.2528707872005294,
+        0.24850342483133883,
+        0.2467053117418172,
+        0.2454586086899994,
+        0.2436509550130338,
+        null
+      ],
+      "test_mean_null": null,
+      "train_null": null,
+      "train_sessions": [
+        "indy_20160627_01",
+        "indy_20160630_01",
+        "indy_20160915_01"
+      ],
+      "train_windows": 6508
+    },
+    {
+      "diverged": false,
+      "eval_windows": 5254,
+      "final_loss": 0.22127013556335284,
+      "held_out_session": "indy_20160627_01",
+      "losses": [
+        0.4410430112772662,
+        0.3333673925017533,
+        0.3012591853089955,
+        0.28275690252042335,
+        0.2651147762232501,
+        0.2549697309732437,
+        0.24392494559288025,
+        0.23665676395530286,
+        0.23220176371219364,
+        0.22734218673861545,
+        0.2233263075189746,
+        0.22127013556335284
+      ],
+      "test_mean_null": 1.2990760167012436,
+      "train_null": 1.7686846348610228,
+      "train_sessions": [
+        "indy_20160624_03",
+        "indy_20160630_01",
+        "indy_20160915_01"
+      ],
+      "train_windows": 2929
+    },
+    {
+      "diverged": false,
+      "eval_windows": 2286,
+      "final_loss": 0.26494234400879907,
+      "held_out_session": "indy_20160630_01",
+      "losses": [
+        0.46909392283982543,
+        0.3548362528434001,
+        0.3145657468991107,
+        0.29357023285814077,
+        0.2830935074353074,
+        0.27383692243910696,
+        0.2717886302305991,
+        0.26780808945915785,
+        0.2650773287358054,
+        0.26202269360782154,
+        0.26701725408973465,
+        0.26494234400879907
+      ],
+      "test_mean_null": 1.3203337363950043,
+      "train_null": 2.496554071795644,
+      "train_sessions": [
+        "indy_20160624_03",
+        "indy_20160627_01",
+        "indy_20160915_01"
+      ],
+      "train_windows": 5303
+    },
+    {
+      "diverged": false,
+      "eval_windows": 595,
+      "final_loss": 0.24454685297006598,
+      "held_out_session": "indy_20160915_01",
+      "losses": [
+        0.43608443929742163,
+        0.33745887091096777,
+        0.29910983342247516,
+        0.2762132240459323,
+        0.2646439625308491,
+        0.25826779136864036,
+        0.2540829898431324,
+        0.25052879614612233,
+        0.24823396584878749,
+        0.24642352781330162,
+        0.245921280199232,
+        0.24454685297006598
+      ],
+      "test_mean_null": 1.9137093950243744,
+      "train_null": 2.41620919508741,
+      "train_sessions": [
+        "indy_20160624_03",
+        "indy_20160627_01",
+        "indy_20160630_01"
+      ],
+      "train_windows": 6656
+    }
+  ],
+  "loso_summary": {
+    "diverged_folds": 1,
+    "finite_folds": 3,
+    "folds": 4,
+    "max": 2.496554071795644,
+    "mean": 2.227149300581359,
+    "min": 1.7686846348610228,
+    "null": "train_null",
+    "std": 0.39906918208358305,
+    "test_mean_null": {
+      "diverged_folds": 1,
+      "finite_folds": 3,
+      "folds": 4,
+      "max": 1.9137093950243744,
+      "mean": 1.5110397160402076,
+      "min": 1.2990760167012436,
+      "std": 0.3488841146305657
+    }
+  },
+  "losses": [
+    0.43086014076599627,
+    0.33114284266939076,
+    0.2923769355488465,
+    0.2716618558483808,
+    0.2612119929806534,
+    0.2569072341103725,
+    0.2517729699611664,
+    0.24784160485583037,
+    0.24507025235036028,
+    0.24348551318918107,
+    0.24533826877851658,
+    0.24393977976567008
+  ],
+  "manifest_path": "Decoder/manifests/indy_sessions.json",
+  "schema_version": 1,
+  "sessions": [
+    {
+      "bins": 24999,
+      "id": "indy_20160624_03",
+      "sha256": "65937e0cea184b3307a19f84b4d9b44530c95e756e6b42bfad6cc8d55c3bf93f",
+      "test_windows": 156,
+      "train_windows": 624
+    },
+    {
+      "bins": 168147,
+      "id": "indy_20160627_01",
+      "sha256": "b1a2404f2510475f244077bfc30efbd80148e784ea9263b88f348a8bb15c71e8",
+      "test_windows": 1050,
+      "train_windows": 4203
+    },
+    {
+      "bins": 73161,
+      "id": "indy_20160630_01",
+      "sha256": "2ca8f6b7fcfc5837bfbedd5aae16ee599872337fed099d300487d183003ef6a8",
+      "test_windows": 457,
+      "train_windows": 1829
+    },
+    {
+      "bins": 19052,
+      "id": "indy_20160915_01",
+      "sha256": "76175e5bf851c123af29178fa7c483588e911a000615438bff97d6f2f2591408",
+      "test_windows": 119,
+      "train_windows": 476
+    }
+  ],
+  "smoke": false,
+  "test_windows": 1782,
+  "train_windows": 7132,
+  "wall_clock_s": 3302.2
+}
