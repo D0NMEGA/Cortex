@@ -4,8 +4,9 @@
 Produces, in one run:
 
   1. **One pooled checkpoint** (D-11) trained on the four sessions' TRAIN halves with the Phase-4
-     config verbatim (D-14), so the real number is directly comparable to the synthetic 0.3804 it
-     replaces.
+     hyperparameters verbatim (D-14) but NOT the Phase-4 objective, which Plan 09-06b corrected.
+     See the masking note below: D-14 comparability with the synthetic 0.3804 is deliberately
+     broken, because 0.3804 was produced by the defect.
   2. **Per-session held-out co-bps** (RD-04a) on each session's own chronological tail (D-12),
      scored against BOTH nulls (see below).
   3. **A full four-fold leave-one-session-out rotation** (RD-04b, D-13): retrain from scratch on
@@ -98,10 +99,12 @@ from ndt1.sessions import (
 from ndt1.train import load_checkpoint, reshape_to_bc1s, save_checkpoint, train_ndt1
 
 # --- Phase-4 config, copied VERBATIM (D-14) ---------------------------------------------------
-# These are the exact constants in tests/test_heldout_cobps.py that produced the synthetic
-# co-bps 0.3804. Reusing them unchanged is what makes the real number directly comparable to the
-# synthetic one it replaces. D-14 permits RAISING the epoch budget if the curve has clearly not
-# converged, and forbids lowering it.
+# These are the exact constants in tests/test_heldout_cobps.py that produced the synthetic co-bps
+# 0.3804, and they are unchanged: not for comparability with 0.3804, which Plan 09-06b gave up
+# (that number came out of the same defective objective, so comparing to it was never meaningful),
+# but so that the OBJECTIVE is the only variable between the superseded numbers in this file and
+# the current ones. D-14 permits RAISING the epoch budget if the curve has clearly not converged,
+# and forbids lowering it. D-25 forbids moving any of these to improve the result.
 SEED: int = 0
 SEQ_LEN: int = 32
 EPOCHS: int = 12
@@ -140,6 +143,9 @@ _SUPERSEDED_KEY: str = "superseded_visible_input_objective"
 # null to mean something, far enough below the observation that run-to-run variation cannot flake
 # the gate. `--derive-margin` applies that SAME fraction to the observed REAL value, so the margin
 # is computed from the measurement by code rather than chosen by a human who has seen the number.
+# The RULE is unchanged across the 09-06b objective correction; only the observation it reads
+# moved. Re-deriving under a rule chosen after seeing the corrected number would be the exact
+# tuning D-22 exists to prevent.
 PHASE4_OBSERVED_CO_BPS: float = 0.3804
 PHASE4_MARGIN: float = 0.05
 MARGIN_SIGNIFICANT_DIGITS: int = 2
@@ -458,14 +464,24 @@ def _run_derive_margin(args: argparse.Namespace) -> int:
         )
     else:
         margin = _round_significant(observed * fraction)
+        # The rationale states what the derivation did and what the gate therefore asserts. It
+        # deliberately does NOT claim the margin is comfortably clear of the null or robust to
+        # run-to-run variation: that is true only when the observation is comfortably positive,
+        # and asserting it unconditionally would have the artifact vouch for a gate the number
+        # does not support. Whether the margin is large enough to mean anything is left to the
+        # reader, with the observation it came from printed beside it.
         rationale = (
             f"Observed pooled held-out co-bps on real primate M1 spikes is {observed:.4f} "
             f"bits/spike against the train-split mean-rate null. The margin {margin} is "
-            f"{100.0 * fraction:.1f}% of it, the same fraction Phase 4 used when it set "
-            f"{PHASE4_MARGIN} against an observed {PHASE4_OBSERVED_CO_BPS} -- high enough above "
-            f"the 0.0 null to mean something, low enough below the observation that run-to-run "
-            f"variation cannot flake the gate. Phase 4's {PHASE4_MARGIN} was calibrated on a "
-            f"purpose-built learnable synthetic sinusoid and does not transfer to real spikes."
+            f"{100.0 * fraction:.1f}% of it: the fraction Phase 4 used when it set "
+            f"{PHASE4_MARGIN} against an observed {PHASE4_OBSERVED_CO_BPS}, applied unchanged so "
+            f"that the observation is the only input to this derivation. Phase 4's "
+            f"{PHASE4_MARGIN} was calibrated on a purpose-built learnable synthetic sinusoid and "
+            f"does not transfer to real spikes. What the gate asserts is exactly 'better than the "
+            f"constant per-channel mean-rate null by more than {margin} bits/spike' and nothing "
+            f"more; whether that is a meaningful demonstration of non-trivial reconstruction "
+            f"depends on the size of the observation it was derived from, which is recorded "
+            f"beside it at co_bps.pooled.train_null."
         )
     payload["co_bps"]["margin"] = margin
     payload["co_bps"]["margin_rationale"] = rationale
