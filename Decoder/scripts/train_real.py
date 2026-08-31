@@ -33,15 +33,18 @@ afterwards and written by the evidence step. Re-running this script therefore CL
 derived margin, which is deliberate: a margin must never outlive the measurement it was derived
 from, and `tests/test_cobps_margin.py` fails loudly when it has.
 
-**The scored positions are VISIBLE to the encoder.** `ndt1.train.train_ndt1` calls
-`model(targets)` on the unmasked counts and uses the mask only to select which positions the
-Poisson NLL is summed over; `NDT1ANE.forward` does no input masking either. So this is a
-reconstruction score over a random subset of positions, NOT BERT-style masked prediction, and
-the co-bps it produces is inflated by self-visibility. That is Phase-4 behavior, kept unchanged
-here because D-14 requires the config verbatim for comparability -- but it is measured rather
-than assumed: `--diagnostic` re-scores the committed checkpoint with the scored positions zeroed
-in the encoder input and records both values, so the evidence can state the size of the effect
-instead of hand-waving at it.
+**The scored positions are HIDDEN from the encoder (Plan 09-06b).** They were not when this
+script first ran: `train_ndt1` called `model(targets)` on the unmasked counts and used the mask
+only to select which positions the Poisson NLL was summed over, so the pooled 1.9116 it published
+measured self-reconstruction plus context rather than context alone. `ndt1.train.masked_forward`
+now corrupts the input at every scored position and `_score` does the same, so training and
+scoring share one objective. Every number this script produced before that correction is
+superseded and is preserved in the metrics JSON under `superseded_visible_input_objective`.
+
+This breaks D-14 comparability with the Phase-4 config-verbatim run, deliberately: Phase 4's
+0.3804 came out of the same defective objective, so comparability to it was never meaningful.
+Everything else in the config is unchanged, so the objective is the only variable between the
+superseded numbers and the current ones.
 
 **Do not tune.** D-25: a low honest number completes the phase. A pooled value below the
 per-session values is the expected D-15 outcome. A LOSO fold near zero or negative means channel
@@ -81,7 +84,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from ndt1.data import BIN_MS, IndySpikeDataset
-from ndt1.loss import random_mask
+from ndt1.loss import hide_scored_positions, random_mask
 from ndt1.metrics import co_bps, mean_firing_rate
 from ndt1.model_ane import NDT1ANE
 from ndt1.sessions import (
@@ -127,6 +130,9 @@ _SMOKE_CHECKPOINT_NAME = "ndt1_real_pooled.smoke.pt"
 #: D-03's floor: fewer than three loadable sessions means the dataset is not what this phase says
 #: it is, and the substitution branch fires rather than training on a reshaped pool.
 MIN_SESSIONS: int = 3
+#: Where the numbers measured under the pre-09-06b objective live. Preserved, never deleted, and
+#: carried across re-runs, because documents outside this repository may already quote them.
+_SUPERSEDED_KEY: str = "superseded_visible_input_objective"
 
 # --- D-22 margin re-derivation ----------------------------------------------------------------
 # Phase 4 committed `CO_BPS_MARGIN = 0.05` against an observed synthetic co-bps of 0.3804
@@ -205,11 +211,17 @@ def _score(
 
     One forward pass and one mask serve every null, so the values differ only in the baseline they
     are scored against -- which is the whole point of reporting more than one.
+
+    The mask does BOTH of its jobs here (Plan 09-06b): it selects the positions co-bps is scored
+    on, and `hide_scored_positions` removes those positions from the encoder input, exactly as
+    `ndt1.train.masked_forward` does during training. Scoring with the input visible while training
+    with it hidden would report a number measured under a different objective than the one that
+    produced the weights.
     """
     generator = torch.Generator()
     generator.manual_seed(SEED)
     mask = random_mask(eval_bc1s.shape, mask_ratio, generator=generator)
-    rates = _forward_in_chunks(model, eval_bc1s)
+    rates = _forward_in_chunks(model, hide_scored_positions(eval_bc1s, mask))
     return {
         name: co_bps(rates, eval_bc1s, mask, null_rate, log_input=LOG_INPUT)
         for name, null_rate in nulls.items()
@@ -373,21 +385,22 @@ def _run_loso(
 def _visibility_pair(
     model: nn.Module, eval_bc1s: Tensor, nulls: dict[str, Tensor], *, mask_ratio: float
 ) -> dict[str, float]:
-    """Score one eval set twice on the SAME seeded mask: input visible, then input hidden.
+    """Score one eval set twice on the SAME seeded mask: input hidden, then input visible.
 
-    ``visible_*`` reproduces exactly what the committed run measured, because the mask, the model
-    and the null are identical -- so it doubles as a determinism check (T-09-06-01).
-    ``hidden_*`` zeroes the scored positions in the encoder input, which is what BERT-style masked
-    modeling requires and what `train_ndt1` does not do.
+    The two labels swapped roles when Plan 09-06b corrected the objective. ``hidden_*`` is now the
+    published path: it is what `_score` computes and what the model was trained under, so it
+    doubles as a determinism check (T-09-06-01). ``visible_*`` is the probe -- it leaks the scored
+    counts back into the encoder, which is what the old objective did on every forward pass.
 
-    The gap between the two is the size of the self-visibility effect. It is a bound, not a
-    correction: the checkpoint was never trained with hidden inputs, so ``hidden_*`` understates
-    what a properly masked model would reach, while ``visible_*`` overstates it.
+    Under the OLD objective the gap measured how much self-reconstruction was inflating the
+    published number. Under the corrected one it measures something different and weaker: how a
+    model trained on hidden inputs responds to an input distribution it never saw. ``visible_*``
+    is out of distribution here and is not a corrected, better, or alternative result.
     """
     generator = torch.Generator()
     generator.manual_seed(SEED)
     mask = random_mask(eval_bc1s.shape, mask_ratio, generator=generator)
-    hidden_input = eval_bc1s * (~mask).to(eval_bc1s.dtype)
+    hidden_input = hide_scored_positions(eval_bc1s, mask)
     rates_visible = _forward_in_chunks(model, eval_bc1s)
     rates_hidden = _forward_in_chunks(model, hidden_input)
     scores: dict[str, float] = {}
@@ -517,12 +530,13 @@ def _run_diagnostic(args: argparse.Namespace, loaded: list[SessionLoad]) -> int:
     payload = json.loads(out_json.read_text(encoding="utf-8"))
     payload["co_bps"]["input_visibility_diagnostic"] = {
         "note": (
-            "train_ndt1 feeds the encoder the UNMASKED counts and uses the mask only to select "
-            "which positions the Poisson NLL is summed over, so a scored position is visible to "
-            "the model that predicts it. visible_* reproduces the committed numbers on the same "
-            "seeded mask; hidden_* re-scores the same checkpoint with the scored positions zeroed "
-            "in the encoder input. The checkpoint was never trained with hidden inputs, so "
-            "hidden_* is a floor and visible_* is a ceiling, not a corrected value."
+            "Plan 09-06b corrected the objective: train_ndt1 and every scoring path now hide the "
+            "scored positions from the encoder, so hidden_* is the published number and "
+            "reproduces co_bps.per_session / co_bps.pooled on the same seeded mask. visible_* "
+            "leaks the scored counts back into the encoder, which is what the superseded "
+            "objective did on every forward pass. visible_* is an out-of-distribution probe for a "
+            "model trained on hidden inputs; it is not a corrected, better or alternative result "
+            "and must not be quoted as one."
         ),
         "checkpoint_sha256": _sha256_of(checkpoint_path),
         "pooled": pooled,
@@ -531,6 +545,19 @@ def _run_diagnostic(args: argparse.Namespace, loaded: list[SessionLoad]) -> int:
     out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _log(f"merged the input-visibility diagnostic into {out_json}")
     return 0
+
+
+def _carry_superseded(out_json: Path) -> dict[str, object] | None:
+    """Return the superseded-objective record already in ``out_json``, if any.
+
+    Raises:
+        ValueError: the existing file is not valid JSON, which would silently drop the record.
+    """
+    if not out_json.is_file():
+        return None
+    existing = json.loads(out_json.read_text(encoding="utf-8"))
+    carried = existing.get(_SUPERSEDED_KEY)
+    return carried if isinstance(carried, dict) else None
 
 
 def _summarize(values: list[float]) -> dict[str, object]:
@@ -776,6 +803,13 @@ def main(argv: list[str] | None = None) -> int:
         out_json = (
             Path(args.checkpoint_dir) / "smoke-metrics.json" if args.smoke else _DEFAULT_OUT_JSON
         )
+    # The superseded record outlives every re-run. It is the only key carried forward from the
+    # file being overwritten: a reader who finds 1.9116 quoted somewhere in the repository needs
+    # to be able to look it up here and see why it must not be used, and that would be lost the
+    # first time anyone re-ran this script if the block were merged in by hand once.
+    carried = _carry_superseded(out_json)
+    if carried is not None:
+        payload[_SUPERSEDED_KEY] = carried
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _log(f"wrote {out_json}")

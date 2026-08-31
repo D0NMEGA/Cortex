@@ -29,7 +29,7 @@ from ndt1.loss import random_mask
 from ndt1.metrics import co_bps, mean_firing_rate
 from ndt1.model_ane import NDT1ANE
 from ndt1.sessions import available_sessions
-from ndt1.train import reshape_to_bc1s, train_ndt1
+from ndt1.train import masked_forward, reshape_to_bc1s, train_ndt1
 
 # --- Training config (committed in the evidence artifact; fixed for reproducibility) ----------
 SEED: int = 0
@@ -116,9 +116,12 @@ def test_heldout_cobps_beats_mean_rate_null() -> None:
     gen.manual_seed(SEED)
     mask = random_mask(test_bc1s.shape, model.mask_ratio, generator=gen)
 
+    # masked_forward, not model(test_bc1s): the scored positions must be hidden from the encoder
+    # here exactly as they are during training (Plan 09-06b). Scoring with the input visible while
+    # training with it hidden measures a different objective than the one that produced the weights.
     model.eval()
     with torch.no_grad():
-        rates = model(test_bc1s)
+        rates = masked_forward(model, test_bc1s, mask)
     heldout_co_bps = co_bps(rates, test_bc1s, mask, null_rate, log_input=True)
 
     # Persist the SC2 metrics to a gitignored JSON for the evidence artifact (not a CI gate).
