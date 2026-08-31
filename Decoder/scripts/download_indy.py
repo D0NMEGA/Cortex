@@ -3,8 +3,17 @@
 
 Reads ``Decoder/manifests/indy_sessions.json`` and fetches each session's ``.mat`` to
 ``Decoder/data/`` (gitignored) via its **direct file URL** (``urllib.request``, streamed) —
-NOT Zenodo's ``/api/records`` endpoint, which is bot-gated (04-RESEARCH DEC-02). For each file
-it computes a SHA-256 and either:
+NOT Zenodo's ``/api/records`` endpoint, which is bot-gated (04-RESEARCH DEC-02).
+
+Each payload clears three cheap pre-checks, in this order, BEFORE a SHA-256 is computed, so a
+Zenodo maintenance page, a rate-limit HTML body or a truncated transfer can never be recorded as
+a session's canonical checksum (09-RESEARCH P2/P11, threat T-09-01-01):
+
+  1. magic bytes - the first 16 bytes must equal ``MATLAB 7.3 MAT-f``
+  2. size - ``st_size`` must equal the manifest's ``size_bytes``
+  3. md5 - the streamed md5 must equal the manifest's publisher-supplied ``zenodo_md5``
+
+Only then is the SHA-256 taken, and it either:
 
   * fills the manifest's ``sha256`` when it is ``"PENDING"`` (first verified fetch), or
   * verifies the download against the committed ``sha256`` and raises ``ValueError`` on a
@@ -27,9 +36,13 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from typing import Any
 
 _PENDING = "PENDING"
 _CHUNK = 1 << 20  # 1 MiB streaming chunks — never load a whole .mat into memory
+# The MATLAB v7.3 (HDF5) file signature every real session .mat opens with. An HTML error page
+# or a truncated transfer fails this before it can be checksummed as canonical (09-RESEARCH P2).
+_MAT73_MAGIC = b"MATLAB 7.3 MAT-f"
 # Zenodo bot-gates default urllib; a real browser UA is required to fetch the file bytes.
 _HEADERS = {
     "User-Agent": (
@@ -53,6 +66,28 @@ def _sha256_of(path: Path) -> str:
     return h.hexdigest()
 
 
+def _md5_of(path: Path) -> str:
+    """Stream a file through MD5 (constant memory) and return the hex digest.
+
+    md5 is a publisher-side TRANSPORT cross-check only, never a security control: it has no
+    collision resistance, so it cannot detect a deliberately crafted substitute (ASVS V6). Its
+    value is independence — it comes from Zenodo rather than from our own first fetch, so it
+    catches a corrupted mirror that our own SHA-256 would happily canonicalise. The committed
+    SHA-256 remains the integrity control. Hence ``usedforsecurity=False``.
+    """
+    h = hashlib.md5(usedforsecurity=False)
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(_CHUNK), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _first_bytes(path: Path, n: int) -> bytes:
+    """Read the first `n` bytes of `path` in binary (for the magic-byte pre-check)."""
+    with path.open("rb") as fh:
+        return fh.read(n)
+
+
 def _download(url: str, dest: Path) -> None:
     """Stream `url` to `dest` (1 MiB chunks). Raises on a non-direct (/api/) URL."""
     if "/api/" in url:
@@ -70,12 +105,54 @@ def _download(url: str, dest: Path) -> None:
             out.write(chunk)
 
 
+def _check_payload(session: dict[str, Any], session_id: str, dest: Path) -> None:
+    """Refuse a payload that is not the published file, BEFORE any SHA-256 is taken.
+
+    Magic bytes, then size, then md5. Each raises ``ValueError``; a missing ``size_bytes`` or
+    ``zenodo_md5`` is itself an error, because the manifest contract requires both.
+    """
+    observed = _first_bytes(dest, len(_MAT73_MAGIC))
+    if observed != _MAT73_MAGIC:
+        raise ValueError(
+            f"{session_id}: payload is not a MATLAB v7.3 .mat - first bytes were "
+            f"{observed!r}, expected {_MAT73_MAGIC!r} (a Zenodo error page or truncated "
+            "transfer must never be checksummed as canonical)"
+        )
+
+    expected_size = session.get("size_bytes")
+    if expected_size is None:
+        raise ValueError(
+            f"{session_id}: manifest entry declares no size_bytes - the transport cross-check "
+            "cannot run, so the payload will not be trusted"
+        )
+    actual_size = dest.stat().st_size
+    if actual_size != expected_size:
+        raise ValueError(
+            f"{session_id}: size mismatch - expected {expected_size} bytes, got {actual_size} "
+            "(truncated or partially-written transfer)"
+        )
+
+    expected_md5 = session.get("zenodo_md5")
+    if expected_md5 is None:
+        raise ValueError(
+            f"{session_id}: manifest entry declares no zenodo_md5 - the publisher-side "
+            "cross-check cannot run, so the payload will not be trusted"
+        )
+    actual_md5 = _md5_of(dest)
+    if actual_md5 != expected_md5:
+        raise ValueError(
+            f"{session_id}: md5 mismatch vs the Zenodo-published checksum - expected "
+            f"{expected_md5}, got {actual_md5}"
+        )
+
+
 def _process_session(
-    session: dict[str, str], out_dir: Path
+    session: dict[str, Any], out_dir: Path
 ) -> tuple[bool, str]:
     """Fetch + checksum one session. Returns (manifest_changed, one_line_summary).
 
-    Fills a ``PENDING`` checksum, or verifies an existing one (raising on mismatch).
+    Fills a ``PENDING`` checksum, or verifies an existing one (raising on mismatch). The
+    payload must clear the magic-byte / size / md5 pre-checks first.
     """
     session_id = session["id"]
     url = session["url"]
@@ -84,6 +161,8 @@ def _process_session(
 
     if not dest.exists():
         _download(url, dest)
+
+    _check_payload(session, session_id, dest)
 
     digest = _sha256_of(dest)
 
