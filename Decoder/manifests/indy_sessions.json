@@ -9,14 +9,14 @@
     {
       "id": "indy_20160624_03",
       "url": "https://zenodo.org/records/3854034/files/indy_20160624_03.mat",
-      "sha256": "PENDING",
+      "sha256": "65937e0cea184b3307a19f84b4d9b44530c95e756e6b42bfad6cc8d55c3bf93f",
       "size_bytes": 143970619,
       "zenodo_md5": "9aa921f0788f6ccd32a1b8808c18eabd"
     },
     {
       "id": "indy_20160627_01",
       "url": "https://zenodo.org/records/3854034/files/indy_20160627_01.mat",
-      "sha256": "PENDING",
+      "sha256": "b1a2404f2510475f244077bfc30efbd80148e784ea9263b88f348a8bb15c71e8",
       "size_bytes": 1135050817,
       "zenodo_md5": "de58797d649bdf2bec589c074ee991d2"
     },
@@ -30,7 +30,7 @@
     {
       "id": "indy_20160915_01",
       "url": "https://zenodo.org/records/3854034/files/indy_20160915_01.mat",
-      "sha256": "PENDING",
+      "sha256": "76175e5bf851c123af29178fa7c483588e911a000615438bff97d6f2f2591408",
       "size_bytes": 106555127,
       "zenodo_md5": "ef6a95c5a1a8d2126b90f5be0505e398"
     }
