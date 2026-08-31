@@ -38,10 +38,14 @@ EPOCHS: int = 12
 LR: float = 2e-3
 TEST_FRAC: float = 0.2
 BATCH_SIZE: int = 16
-# Documented margin: a short-budget synthetic run scores ~0.38 bits/spike held-out (see the probe
-# in 04-training-evidence.md). We assert a generous lower bound (> 0.05) well above the 0.0 null but
-# far below the observed value, so run-to-run noise cannot flake while still proving "non-trivial".
-CO_BPS_MARGIN: float = 0.05
+# Documented margin, RE-DERIVED from the real-data observation (Plan 09-06, D-22). The pooled
+# held-out co-bps measured on the four real Indy M1 sessions is 1.9116 bits/spike against the
+# train-split mean-rate null (09-training-evidence.md, machine-derived by
+# `train_real.py --derive-margin`). 0.25 is 13.1% of that -- the same fraction Phase 4 used when it
+# set 0.05 against an observed 0.3804 -- so run-to-run variation cannot flake the gate while it
+# still provenly demonstrates "non-trivial". The Phase-4 0.05 was calibrated against a purpose-built
+# learnable synthetic sinusoid and does NOT transfer to real primate M1 spikes; it is superseded.
+CO_BPS_MARGIN: float = 0.25
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 _CHECKPOINT_DIR = Path(__file__).resolve().parent.parent / "checkpoints"

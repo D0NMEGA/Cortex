@@ -41,8 +41,8 @@
         "visible_train_null": 1.9115827904116325
       }
     },
-    "margin": null,
-    "margin_rationale": null,
+    "margin": 0.25,
+    "margin_rationale": "Observed pooled held-out co-bps on real primate M1 spikes is 1.9116 bits/spike against the train-split mean-rate null. The margin 0.25 is 13.1% of it, the same fraction Phase 4 used when it set 0.05 against an observed 0.3804 -- high enough above the 0.0 null to mean something, low enough below the observation that run-to-run variation cannot flake the gate. Phase 4's 0.05 was calibrated on a purpose-built learnable synthetic sinusoid and does not transfer to real spikes.",
     "per_session": {
       "indy_20160624_03": {
         "session_train_null": 1.8283269415664996,
