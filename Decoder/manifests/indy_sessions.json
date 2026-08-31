@@ -2,29 +2,47 @@
   "record": "3854034",
   "source": "https://zenodo.org/records/3854034",
   "array": "M1-only (96 channels)",
-  "note": "Curated subset of early/mid-2016 Indy M1-only sessions from O'Doherty/Cardoso/Makin/Sabes 2020 (Zenodo 3854034). Per the record: 'in most sessions M1 recordings were made alone (96 channels)'. indy_20160630_01 is the NLB'21 mc_rtt benchmark session. The loader (ndt1.data.load_session) enforces width == CORTEX_CHANNEL_COUNT (96) at load time and raises ValueError on any session that is actually 192-channel (M1+S1) — that is the runtime gate; this manifest is the reproducibility record. sha256 is PENDING until the first verified fetch by scripts/download_indy.py, which computes and writes it back.",
+  "note": "Four confirmed 96-channel M1-only Indy sessions from O'Doherty/Cardoso/Makin/Sabes 2020 (Zenodo 3854034), selected 2026-08-30: 1.77 GB, 285,359 bins at 20 ms, calendar span 2016-06-24 to 2016-09-15. Per the record: 'in most sessions M1 recordings were made alone (96 channels)'. Two previously-listed April 2016 sessions were dropped as 192-channel M1+S1 (see dropped_sessions). sha256 is the reproducibility pin, computed and written back by scripts/download_indy.py on the first verified fetch; size_bytes and zenodo_md5 are the publisher-side transport cross-checks used BEFORE the sha256 is trusted, and zenodo_md5 is NOT a security control (md5 has no collision resistance). The loader (ndt1.data.load_session) enforces width == CORTEX_CHANNEL_COUNT (96) at load time and raises ValueError on a 192-channel file - that is the runtime gate; this manifest is the reproducibility record.",
   "channel_count": 96,
   "bin_ms": 20.0,
   "sessions": [
     {
-      "id": "indy_20160407_02",
-      "url": "https://zenodo.org/records/3854034/files/indy_20160407_02.mat",
-      "sha256": "PENDING"
-    },
-    {
-      "id": "indy_20160411_01",
-      "url": "https://zenodo.org/records/3854034/files/indy_20160411_01.mat",
-      "sha256": "PENDING"
+      "id": "indy_20160624_03",
+      "url": "https://zenodo.org/records/3854034/files/indy_20160624_03.mat",
+      "sha256": "PENDING",
+      "size_bytes": 143970619,
+      "zenodo_md5": "9aa921f0788f6ccd32a1b8808c18eabd"
     },
     {
       "id": "indy_20160627_01",
       "url": "https://zenodo.org/records/3854034/files/indy_20160627_01.mat",
-      "sha256": "PENDING"
+      "sha256": "PENDING",
+      "size_bytes": 1135050817,
+      "zenodo_md5": "de58797d649bdf2bec589c074ee991d2"
     },
     {
       "id": "indy_20160630_01",
       "url": "https://zenodo.org/records/3854034/files/indy_20160630_01.mat",
-      "sha256": "PENDING"
+      "sha256": "2ca8f6b7fcfc5837bfbedd5aae16ee599872337fed099d300487d183003ef6a8",
+      "size_bytes": 382243800,
+      "zenodo_md5": "197413a5339630ea926cbd22b8b43338"
+    },
+    {
+      "id": "indy_20160915_01",
+      "url": "https://zenodo.org/records/3854034/files/indy_20160915_01.mat",
+      "sha256": "PENDING",
+      "size_bytes": 106555127,
+      "zenodo_md5": "ef6a95c5a1a8d2126b90f5be0505e398"
+    }
+  ],
+  "dropped_sessions": [
+    {
+      "id": "indy_20160407_02",
+      "reason": "192-channel M1+S1 recording (chan_names run 'M1 001' .. 'S1 096'); ndt1.data.load_session correctly rejects it against CORTEX_CHANNEL_COUNT=96"
+    },
+    {
+      "id": "indy_20160411_01",
+      "reason": "192-channel M1+S1 recording (chan_names run 'M1 001' .. 'S1 096'); ndt1.data.load_session correctly rejects it against CORTEX_CHANNEL_COUNT=96"
     }
   ]
 }
