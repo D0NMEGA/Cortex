@@ -21,6 +21,8 @@ from ndt1.kinematics import (
     LAG_BINS_SWEEP,
     apply_lag,
     bin_velocity,
+    heldout_r2,
+    lag_sweep_r2,
     planar_velocity_250hz,
 )
 
@@ -182,3 +184,148 @@ def test_apply_lag_rejects_negative_and_oversized() -> None:
         apply_lag(rates, vel, -1)
     with pytest.raises(ValueError):
         apply_lag(rates, vel, 10)
+
+
+# -------------------------------------------------------------------------------- heldout_r2
+
+
+def test_perfect_prediction_is_one() -> None:
+    """A prediction equal to the truth scores 1.0 on both axes and pooled."""
+    rng = np.random.default_rng(0)
+    y = rng.normal(size=(500, 2)) * np.array([1.0, 10.0])
+    scores = heldout_r2(y, y, y.mean(axis=0))
+    assert scores["vx"] == pytest.approx(1.0)
+    assert scores["vy"] == pytest.approx(1.0)
+    assert scores["pooled"] == pytest.approx(1.0)
+    assert scores["n"] == 500
+
+
+def test_null_prediction_is_zero() -> None:
+    """Predicting the constant train mean scores exactly 0.0 -- the definition of the null."""
+    rng = np.random.default_rng(2)
+    y = rng.normal(size=(400, 2))
+    train_mean = y.mean(axis=0)
+    scores = heldout_r2(y, np.broadcast_to(train_mean, y.shape), train_mean)
+    assert scores["vx"] == pytest.approx(0.0, abs=1e-12)
+    assert scores["vy"] == pytest.approx(0.0, abs=1e-12)
+    assert scores["pooled"] == pytest.approx(0.0, abs=1e-12)
+
+
+def test_worse_than_null_is_negative_and_unclamped() -> None:
+    """A readout worse than the null reports a NEGATIVE R2 at full magnitude (D-25, T-09-03-05).
+
+    Clamping to 0 would turn "this readout is worse than predicting the average" into "this
+    readout explains none of the variance", which reads as a much smaller failure than it is.
+    """
+    rng = np.random.default_rng(3)
+    y = rng.normal(size=(400, 2))
+    train_mean = y.mean(axis=0)
+    pred = np.broadcast_to(train_mean, y.shape) + 100.0
+    scores = heldout_r2(y, pred, train_mean)
+    assert scores["vx"] < 0.0
+    assert scores["vy"] < 0.0
+    # Unclamped: a 100 cm/s constant offset against unit-variance truth lands near -10,000, not
+    # at 0.0 and not at -1.0.
+    assert scores["pooled"] < -1000.0
+
+
+def test_pooled_is_not_the_mean_of_axes() -> None:
+    """Pooled R2 is 1 - sum SS_res / sum SS_tot, NOT the average of the two per-axis values.
+
+    Built so the two definitions cannot agree: vy carries 100x the variance of vx, and the
+    prediction is perfect on vx and exactly the null on vy. Averaging the axes would report 0.5;
+    the honest variance-weighted figure is near 0.01, because the axis that was not decoded is
+    the axis that carries the signal.
+    """
+    rng = np.random.default_rng(4)
+    n = 400
+    y = np.stack([rng.normal(0.0, 1.0, n), rng.normal(0.0, 10.0, n)], axis=1)
+    train_mean = y.mean(axis=0)
+    pred = np.empty_like(y)
+    pred[:, 0] = y[:, 0]
+    pred[:, 1] = train_mean[1]
+
+    scores = heldout_r2(y, pred, train_mean)
+    assert scores["vx"] == pytest.approx(1.0)
+    assert scores["vy"] == pytest.approx(0.0, abs=1e-12)
+    mean_of_axes = (scores["vx"] + scores["vy"]) / 2.0
+    assert abs(scores["pooled"] - mean_of_axes) > 1e-6
+    assert scores["pooled"] < 0.1
+
+
+def test_train_mean_null_differs_from_test_mean_null() -> None:
+    """The P8 / D-10 control: the test set's own mean is a DIFFERENT, easier claim.
+
+    Within-session drift is real here -- measured at -8.1% in mean rate from the train head to
+    the test tail on indy_20160630_01 -- and it is the direction that inflates a train-null
+    score. If heldout_r2 ever silently recomputed the null from y_true, the two calls below would
+    return the same number and this assertion would stop biting.
+    """
+    rng = np.random.default_rng(5)
+    n = 300
+    train = rng.normal(0.0, 1.0, size=(n, 2))
+    test = rng.normal(0.0, 1.0, size=(n, 2)) + np.array([4.0, -3.0])  # the tail has drifted
+    pred = test + rng.normal(0.0, 0.5, size=(n, 2))
+
+    against_train_null = heldout_r2(test, pred, train.mean(axis=0))["pooled"]
+    against_test_null = heldout_r2(test, pred, test.mean(axis=0))["pooled"]
+
+    assert abs(against_train_null - against_test_null) > 1e-6
+    # The drift inflates SS_tot under the train null, so that is the FLATTERING of the two.
+    assert against_train_null > against_test_null
+
+
+def test_constant_axis_raises() -> None:
+    """A constant held-out axis makes SS_tot zero; R2 against a mean null is then undefined."""
+    y = np.stack([np.linspace(0.0, 1.0, 50), np.full(50, 2.5)], axis=1)
+    with pytest.raises(ValueError, match="constant"):
+        heldout_r2(y, y, np.array([0.5, 2.5]))
+
+
+def test_heldout_r2_rejects_bad_shapes() -> None:
+    """Mismatched row counts, a wrong axis width and a wrong train_mean shape all raise."""
+    y = np.zeros((10, 2))
+    with pytest.raises(ValueError):
+        heldout_r2(y, np.zeros((9, 2)), np.zeros(2))
+    with pytest.raises(ValueError):
+        heldout_r2(y, y, np.zeros(3))
+    with pytest.raises(ValueError):
+        heldout_r2(np.zeros((10, 3)), np.zeros((10, 3)), np.zeros(3))
+
+
+# ------------------------------------------------------------------------------ lag_sweep_r2
+
+
+def test_lag_sweep_returns_full_curve() -> None:
+    """The FULL curve is returned, not only the argmax -- D-08 publishes the whole sweep."""
+    rng = np.random.default_rng(7)
+    rates = rng.normal(size=(300, 96))
+    vel = rng.normal(size=(300, 2))
+    curve = lag_sweep_r2(rates, vel)
+    assert len(curve) == len(LAG_BINS_SWEEP)
+    for entry, lag in zip(curve, LAG_BINS_SWEEP, strict=True):
+        assert set(entry) == {"lag_bins", "lag_ms", "train_r2", "lambda"}
+        assert entry["lag_bins"] == lag
+        assert entry["lag_ms"] == lag * 20.0
+        assert entry["lambda"] == 1.0
+
+
+def test_lag_sweep_recovers_a_planted_lag() -> None:
+    """A velocity that is a linear function of the rates shifted by 5 bins peaks at lag 5.
+
+    This is what proves the pairing convention matches VelocityHead's `rates[..., -1:]` geometry:
+    an off-by-one or a reversed slice in `apply_lag` moves the argmax off the planted value.
+    """
+    rng = np.random.default_rng(11)
+    n, planted = 900, 5
+    rates = rng.normal(size=(n, 96))
+    w_true = rng.normal(size=(2, 96)) / np.sqrt(96.0)
+    latent = rates @ w_true.T
+    vel = np.empty((n, 2))
+    vel[planted:] = latent[: n - planted]  # vel[i + planted] is a linear function of rates[i]
+    vel[:planted] = rng.normal(size=(planted, 2))  # the unpaired head, deliberately unrelated
+
+    curve = lag_sweep_r2(rates, vel)
+    best = max(curve, key=lambda entry: entry["train_r2"])
+    assert best["lag_bins"] == planted
+    assert best["train_r2"] > 0.99
