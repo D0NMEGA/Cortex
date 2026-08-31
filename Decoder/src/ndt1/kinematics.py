@@ -39,6 +39,7 @@ from __future__ import annotations
 import numpy as np
 
 from ndt1.data import BIN_MS
+from ndt1.velocity_head import ridge_fit
 
 #: Native behavior sample rate of the O'Doherty Indy/Loco recordings. Verified on
 #: `indy_20160630_01`: the median `diff(t)` is 0.004 s.
@@ -49,6 +50,10 @@ BEHAVIOR_HZ: float = 250.0
 #: 120-180 ms (PNAS 10.1073/pnas.2212227120). A selected lag far outside 5-8 bins is a signal
 #: that the alignment or the sign is wrong, not a discovery.
 LAG_BINS_SWEEP: tuple[int, ...] = (0, 1, 2, 3, 4, 5, 6, 7, 8)
+
+#: The two planar velocity axes, in the column order every array in this module uses. Its length
+#: is the axis width the shape checks enforce.
+_AXIS_NAMES: tuple[str, str] = ("vx", "vy")
 
 _MS_PER_S: float = 1000.0
 
@@ -207,3 +212,121 @@ def apply_lag(
         )
     kept = n - lag_bins
     return rates[:kept], vel[lag_bins : lag_bins + kept]
+
+
+def heldout_r2(
+    y_true: np.ndarray, y_pred: np.ndarray, train_mean: np.ndarray
+) -> dict[str, float]:
+    """Held-out R2 of a velocity readout against a CONSTANT TRAIN-MEAN null (D-10).
+
+    `R2_axis = 1 - SS_res / SS_tot` where
+
+        SS_res = sum over TEST bins (y_true - y_pred)^2
+        SS_tot = sum over TEST bins (y_true - train_mean)^2
+
+    The null mean MUST come from the TRAIN split, mirroring `ndt1.metrics.co_bps`'s train-split
+    mean-rate null. Using the test set's own mean turns `SS_tot` into the test variance and
+    silently converts this into the easier textbook R2 -- a different claim. The two are not
+    interchangeable on this dataset: measured within-session drift on `indy_20160630_01` is -8.1%
+    in mean rate from the train head to the test tail (09-RESEARCH P8), in the direction that
+    inflates the train-null score. This is what replaces `velocity_r2.json`'s 0.9998, which
+    regressed rates onto labels generated from those same rates and is a self-consistency check
+    rather than a decode result.
+
+    A value below zero is returned as measured and is NEVER clamped: a readout worse than
+    predicting the average is a real, reportable finding under D-25 (T-09-03-05).
+
+    Args:
+        y_true: `(n, 2)` held-out velocity labels.
+        y_pred: `(n, 2)` readout predictions on the same held-out bins.
+        train_mean: `(2,)` per-axis mean velocity of the TRAIN split -- the null's constant
+            prediction. Required, and positional, so it cannot quietly default to the test mean.
+
+    Returns:
+        `{"vx": float, "vy": float, "pooled": float, "n": int}`, where `"pooled"` is
+        `1 - sum_axes SS_res / sum_axes SS_tot` and NOT the mean of the per-axis values: the two
+        axes can carry different variance, and averaging them would over-weight the quiet axis.
+
+    Raises:
+        ValueError: if the shapes disagree, or if a held-out axis is constant at the train mean
+            so its `SS_tot` is zero and R2 against a mean null is undefined.
+    """
+    n_axes = len(_AXIS_NAMES)
+    truth = np.asarray(y_true, dtype=np.float64)
+    pred = np.asarray(y_pred, dtype=np.float64)
+    null = np.asarray(train_mean, dtype=np.float64)
+    if truth.ndim != 2 or truth.shape[1] != n_axes:
+        raise ValueError(f"y_true must be 2-D (n, {n_axes}), got shape {truth.shape}")
+    if pred.shape != truth.shape:
+        raise ValueError(f"y_pred shape {pred.shape} does not match y_true shape {truth.shape}")
+    if null.shape != (n_axes,):
+        raise ValueError(f"train_mean must have shape ({n_axes},), got {null.shape}")
+
+    ss_res = ((truth - pred) ** 2).sum(axis=0)
+    ss_tot = ((truth - null) ** 2).sum(axis=0)
+    constant = np.flatnonzero(ss_tot == 0.0)
+    if constant.size:
+        axis = int(constant[0])
+        raise ValueError(
+            f"the held-out signal on axis {axis} ({_AXIS_NAMES[axis]}) is constant at the train "
+            f"mean, so its SS_tot is zero and R2 against a mean null is undefined"
+        )
+
+    per_axis = 1.0 - ss_res / ss_tot
+    scores: dict[str, float] = {
+        name: float(per_axis[axis]) for axis, name in enumerate(_AXIS_NAMES)
+    }
+    scores["pooled"] = float(1.0 - ss_res.sum() / ss_tot.sum())
+    scores["n"] = int(truth.shape[0])
+    return scores
+
+
+def lag_sweep_r2(
+    rates_train: np.ndarray,
+    vel_train: np.ndarray,
+    *,
+    lags: tuple[int, ...] = LAG_BINS_SWEEP,
+    lam: float = 1.0,
+) -> list[dict[str, float]]:
+    """Fit ridge at each whole-bin lag on the TRAIN split ONLY and score in-sample R2 there.
+
+    D-08: the selection never touches the held-out tail, so there is no leak, and the FULL curve
+    is published rather than only the argmax -- the sweep documents how sensitive R2 is to the
+    choice instead of leaving it assumed. Both arguments MUST already be the train split; handing
+    this a whole session would select the lag on the same rows the reported number is scored on.
+
+    The returned `train_r2` is in-sample, against the mean of the same TRAIN rows the fit used.
+    It is a selection criterion, not a result: the reportable number is :func:`heldout_r2` on the
+    held-out tail.
+
+    Args:
+        rates_train: `(n_bins, num_channels)` TRAIN-split per-bin rates.
+        vel_train: `(n_bins, 2)` TRAIN-split per-bin velocity labels, on the same bin edges.
+        lags: whole-bin offsets to sweep (default :data:`LAG_BINS_SWEEP`, 0-160 ms).
+        lam: ridge regularization strength, passed to :func:`ndt1.velocity_head.ridge_fit`. D-09
+            keeps the closed-form ridge, so a lambda sweep is a caller-side loop over this
+            argument rather than selection logic in here.
+
+    Returns:
+        One `{"lag_bins": int, "lag_ms": float, "train_r2": float, "lambda": float}` entry per
+        swept lag, in `lags` order.
+
+    Raises:
+        ValueError: if a lag consumes every available row, or a train axis is constant.
+    """
+    curve: list[dict[str, float]] = []
+    for lag in lags:
+        rates_lagged, vel_lagged = apply_lag(rates_train, vel_train, lag)
+        weight, bias = ridge_fit(rates_lagged, vel_lagged, lam=lam)
+        # The linear readout the loaded 1x1 conv reproduces exactly.
+        predicted = rates_lagged @ weight.T + bias
+        scored = heldout_r2(vel_lagged, predicted, vel_lagged.mean(axis=0))
+        curve.append(
+            {
+                "lag_bins": lag,
+                "lag_ms": float(lag) * BIN_MS,
+                "train_r2": scored["pooled"],
+                "lambda": float(lam),
+            }
+        )
+    return curve
