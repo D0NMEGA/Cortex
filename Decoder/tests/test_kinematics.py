@@ -12,10 +12,12 @@ What the discriminating tests protect:
 """
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
-from ndt1.data import bin_spikes
+from ndt1.data import bin_spikes, load_session
 from ndt1.kinematics import (
     BEHAVIOR_HZ,
     LAG_BINS_SWEEP,
@@ -27,6 +29,19 @@ from ndt1.kinematics import (
 )
 
 _BIN_S: float = 0.020
+
+#: The committed synthetic-value, real-structure MATLAB v7.3 fixture from Plan 09-02 (D-20).
+_FIXTURE = Path(__file__).resolve().parent / "fixtures" / "tiny_v73.mat"
+
+
+def _array(session: dict[str, object], key: str) -> np.ndarray:
+    """Pull one array out of `load_session`'s `dict[str, object]` return with a concrete type."""
+    return np.asarray(session[key], dtype=np.float64)
+
+
+def _scalar(session: dict[str, object], key: str) -> float:
+    """Pull one float out of `load_session`'s `dict[str, object]` return."""
+    return float(np.asarray(session[key], dtype=np.float64))
 
 
 def _clock(n: int, *, t_start: float = 0.0) -> np.ndarray:
@@ -329,3 +344,33 @@ def test_lag_sweep_recovers_a_planted_lag() -> None:
     best = max(curve, key=lambda entry: entry["train_r2"])
     assert best["lag_bins"] == planted
     assert best["train_r2"] > 0.99
+
+
+# ------------------------------------------------------------------- end to end on the fixture
+
+
+def test_fixture_end_to_end() -> None:
+    """load_session -> planar_velocity_250hz -> bin_velocity on the committed v7.3 fixture.
+
+    Exercises the whole label path against a real MATLAB v7.3 container (D-20) with
+    `Decoder/data/` absent, and pins the property Plan 09-07's runner depends on: the velocity
+    matrix has exactly as many rows as the binned spike matrix, so the two pair by index with no
+    offset arithmetic at the call site.
+    """
+    session = load_session(_FIXTURE)
+    t = _array(session, "t")
+    planar = _array(session, "planar_cm")
+    num_bins = int(np.asarray(session["binned"]).shape[0])
+
+    vel = planar_velocity_250hz(planar, t)
+    assert vel.shape == (t.size, 2)
+    assert np.all(np.isfinite(vel))
+
+    binned_vel = bin_velocity(
+        vel,
+        t,
+        t_start=_scalar(session, "t_start"),
+        t_end=_scalar(session, "t_end"),
+    )
+    assert binned_vel.shape == (num_bins, 2)
+    assert np.all(np.isfinite(binned_vel))
