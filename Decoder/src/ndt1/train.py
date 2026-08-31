@@ -45,6 +45,19 @@ def reshape_to_bc1s(window: Tensor) -> Tensor:
     return window.permute(0, 2, 1).unsqueeze(2).contiguous()
 
 
+def masked_forward(model: nn.Module, targets: Tensor, mask: Tensor) -> Tensor:
+    """The one place the encoder input is built, for training and for evaluation alike.
+
+    CURRENT BEHAVIOUR IS THE DEFECT (Plan 09-06 deferred item 1): ``targets`` reaches the encoder
+    untouched, so every position the masked Poisson NLL scores is also an input to the prediction
+    of that same position. ``tests/test_masked_input_isolation.py`` is RED against this body and
+    the next commit closes it. The extraction comes first so there is exactly ONE input path to
+    fix: train/eval consistency is mandatory, and a fix applied to one call site and not the other
+    would report a number produced under one objective and scored under another.
+    """
+    return model(targets)
+
+
 def _unwrap_batch(batch: object) -> Tensor:
     """Accept a raw ``(B, S, C)`` tensor or a 1-tuple/list from a ``TensorDataset`` loader."""
     if isinstance(batch, (list, tuple)):
@@ -108,7 +121,7 @@ def train_ndt1(
             targets = reshape_to_bc1s(window)
             mask = random_mask(targets.shape, mask_ratio, generator=mask_gen).to(dev)
 
-            rates = model(targets)
+            rates = masked_forward(model, targets, mask)
             loss = masked_poisson_nll(rates, targets, mask, log_input=log_input)
 
             optimizer.zero_grad(set_to_none=True)
@@ -155,7 +168,7 @@ def evaluate_co_bps(
     """
     model.eval()
     with torch.no_grad():
-        rates = model(eval_targets)
+        rates = masked_forward(model, eval_targets, eval_mask)
     null_rate = mean_firing_rate(eval_targets)
     return co_bps(rates, eval_targets, eval_mask, null_rate, log_input=log_input)
 
