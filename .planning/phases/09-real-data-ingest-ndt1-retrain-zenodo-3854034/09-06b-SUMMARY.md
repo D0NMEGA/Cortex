@@ -84,7 +84,7 @@ which means this NDT1 does not beat a constant per-channel mean firing rate.**
   re-run, and two 15-minute slow-gate executions
 - **Tasks:** 4 of 4 (fix, regression test, retrain, re-derive)
 - **Files:** 3 created, 9 modified
-- **Commits:** 6
+- **Commits:** 6 task commits (listed below), plus metadata corrections to this summary
 
 ## Accomplishments
 
