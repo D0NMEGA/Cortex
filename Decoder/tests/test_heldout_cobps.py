@@ -17,6 +17,7 @@ both achievable and meaningful. A fixed seed keeps the held-out number reproduci
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 
 import numpy as np
@@ -147,9 +148,24 @@ def test_heldout_cobps_beats_mean_rate_null() -> None:
         )
     )
 
+    # Order matters. The "did it train" checks come FIRST so that a diverged run reports the
+    # divergence instead of reporting a meaningless co-bps as if it were a model-quality verdict.
+    # Both assertions already existed; only their position changed (Plan 09-06b). The
+    # log_input=True Poisson NLL has model term exp(rate) - target*rate, so a predicted log-rate
+    # excursion overflows and there is no gradient clipping at lr=2e-3 to arrest it. That failure
+    # mode is live on this data: see 09-training-evidence.md and deferred-items-09-06b.md item 1.
+    losses = history["losses"]
+    assert all(math.isfinite(x) for x in losses), (
+        f"training did not stay finite, so the co-bps below is a divergence artifact and not a "
+        f"measure of anything: per-epoch loss {losses}"
+    )
+    assert losses[-1] < losses[0], (
+        f"the loop did not train: final loss {losses[-1]:.6g} is not below the first epoch's "
+        f"{losses[0]:.6g}. Per-epoch loss {losses}. A co-bps computed from these weights "
+        f"(observed: {heldout_co_bps:.5f}) describes the divergence, not the model."
+    )
+
     assert heldout_co_bps > CO_BPS_MARGIN, (
         f"held-out co_bps {heldout_co_bps:.5f} did not beat the mean-rate null by the documented "
         f"margin {CO_BPS_MARGIN} (source: {source})"
     )
-    # The loop must also have actually trained (final loss below the first epoch).
-    assert history["losses"][-1] < history["losses"][0]

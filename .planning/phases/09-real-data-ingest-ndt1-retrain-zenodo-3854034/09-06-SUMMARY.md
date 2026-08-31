@@ -68,6 +68,12 @@ completed: 2026-08-31
 
 # Phase 9 Plan 06: NDT1 retrained on real Indy M1 spikes Summary
 
+> **SUPERSEDED, 2026-08-31.** Every co-bps in this document was produced by a training objective in
+> which the encoder could read the positions it was scored on, the defect this summary itself logged
+> as deferred item 1. The corrected pooled value is **0.0062** (train-split null) and **-0.0219**
+> (test-mean null), not 1.9116 and 1.8834. See the CORRECTION section at the end of this file, and
+> `09-training-evidence.md`. This document is retained as the record of what Plan 09-06 measured.
+
 **The decoder has now seen real primate M1 spikes: pooled held-out co-bps is 1.9116 bits/spike against the train-split mean-rate null and 1.8834 against the drift-robust test-mean null, reproduced bit-for-bit across two full executions, with the two caveats that constrain how it may be quoted measured and published beside it rather than left for a reader to discover.**
 
 ## Performance
@@ -386,3 +392,77 @@ untracked throughout; no `.mat` entered git.
 ---
 *Phase: 09-real-data-ingest-ndt1-retrain-zenodo-3854034*
 *Completed: 2026-08-31*
+
+---
+
+# CORRECTION (Plan 09-06b, 2026-08-31): every co-bps in this summary is superseded
+
+**Do not quote 1.9116, 1.8834, the per-session range 1.6500 to 1.9540, the LOSO mean 1.5110, or the
+margin 0.25 from this document.** They were all produced by the defect this summary itself recorded
+as deferred item 1, and they have been re-measured. The corrected numbers and the full account are
+in `09-training-evidence.md` and `09-decoder-metrics.json`; the superseded ones are preserved in the
+JSON under `superseded_visible_input_objective`.
+
+## What was wrong
+
+`ndt1.train.train_ndt1` ran the encoder on the UNMASKED counts and used the mask only to select
+which positions the Poisson NLL was summed over, so every position the objective scored was also an
+input to the prediction of that same position. `evaluate_co_bps` and `train_real.py`'s scoring path
+did the same. This summary measured the caveat (see "Two caveats, measured rather than asserted"
+above) and published it beside the number rather than closing it, because closing it meant changing
+the objective. The user authorized that change as a corrective task.
+
+## What changed
+
+`ndt1.train.masked_forward` is now the single place the encoder input is built, in training and in
+every scoring path, and it runs the model on `ndt1.loss.hide_scored_positions(targets, mask)`, which
+zeroes the scored positions while leaving `targets` intact for the loss. The masking choice was
+zeroing rather than a learned mask embedding, so that `NDT1ANE.forward` stays a single tensor in and
+single tensor out and the Core ML conversion path and the guarded 1,292,544 parameter count are both
+untouched. `Decoder/tests/test_masked_input_isolation.py`, written RED against the defective code
+first, makes the defect impossible to reintroduce silently.
+
+## The corrected numbers
+
+| Quantity | This summary (visible input) | Corrected (hidden input) |
+|---|---|---|
+| Pooled held-out co-bps, `train_null` | 1.9116 | **0.0062** |
+| Pooled held-out co-bps, `test_mean_null` | 1.8834 | **-0.0219** |
+| Per-session range, `test_mean_null` | 1.6500 to 1.9540 | -0.3820 to 0.2084 |
+| LOSO mean, finite folds, `test_mean_null` | 1.5110 | **-0.4852** |
+| Final training loss | 0.2439 (43% reduction) | 0.5584 (6% reduction) |
+| `CO_BPS_MARGIN` | 0.25 | **0.00082** |
+
+With the scored positions hidden, this NDT1 does not beat a constant per-channel mean firing rate.
+Nothing was tuned toward or away from that; the hyperparameters are byte-for-byte the ones this plan
+used, so the objective is the only variable.
+
+## What else this changes in the text above
+
+- **"Every session beats every null. The lowest value anywhere in the table is 1.6500."** Withdrawn.
+  Three of four sessions are negative under the drift-robust null.
+- **"RD-04's generalization answer: the model transfers to an unseen session at a measurable cost of
+  about 15%."** Withdrawn. Every finite LOSO fold is negative under the drift-robust null; the
+  D-15 prior's "channel identity did not transfer" branch is the one that fired.
+- **The three-null decomposition survives unchanged.** The `train_null` to `session_train_null` gaps
+  are 0.2010, 0.0336, 0.5632, 0.4310 under the corrected objective against 0.2011, 0.0336, 0.5632,
+  0.4309 here. A difference between two co-bps values on the same mask cancels the model term
+  exactly, so those gaps are a property of the data. The conclusion that the gap is cross-session
+  heterogeneity rather than within-session drift stands.
+- **The diverged LOSO fold moved.** It was the fold holding out `indy_20160624_03`, failing silently
+  at epoch 12. It is now the fold holding out `indy_20160627_01`, blowing up visibly at epoch 7
+  (268623.80) and reaching NaN by epoch 12. Still one fold of four, still reported and not repaired.
+- **The D-14 comparability rationale is void.** Phase 4's 0.3804 was produced by the same defective
+  objective, so comparability with it was never meaningful. The hyperparameters were kept anyway, for
+  a different reason: so the objective is the only variable.
+- **The reproducibility evidence is unaffected as a claim about the pipeline** (two bit-identical
+  executions, identical checkpoint SHA-256) but the numbers it reproduced are superseded.
+
+## What is unchanged
+
+The ingest report, the per-session bin counts and split boundaries, the manifest sha256 pins, the
+per-session windowing decision, the three-null design, the D-12 split discipline, the D-23 protocol
+disclaimer and the C-03 mc_rtt correction all stand. So does this summary's status as the record of
+what Plan 09-06 measured and when; per D-24 it is annotated rather than rewritten.
+
+*Correction executed 2026-08-31. See `09-06b-SUMMARY.md`.*
