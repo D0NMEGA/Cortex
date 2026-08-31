@@ -563,6 +563,22 @@ def _run_diagnostic(args: argparse.Namespace, loaded: list[SessionLoad]) -> int:
     return 0
 
 
+def _repo_relative(path: Path) -> str:
+    """``path`` relative to the repository root when it is inside it, else its absolute path.
+
+    ``Path.relative_to`` raises on a RELATIVE ``--checkpoint-dir`` (it compares the literal string
+    against an absolute root), which used to abort the run at the JSON write -- after the training
+    was already done and its only record was the log. Resolving first makes the documented
+    `--checkpoint-dir Decoder/checkpoints/repro` invocation work, and a directory genuinely outside
+    the repository records an absolute path rather than losing the run.
+    """
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(_REPO_ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def _carry_superseded(out_json: Path) -> dict[str, object] | None:
     """Return the superseded-objective record already in ``out_json``, if any.
 
@@ -774,7 +790,7 @@ def main(argv: list[str] | None = None) -> int:
             {"id": e.session_id, "reason": e.reason} for e in excluded
         ],
         "checkpoint": {
-            "path": str(checkpoint_path.relative_to(_REPO_ROOT)),
+            "path": _repo_relative(checkpoint_path),
             "sha256": _sha256_of(checkpoint_path),
             "param_count": param_count,
         },
