@@ -118,3 +118,25 @@ def test_matching_sha256_verifies_without_rewrite(tmp_path: Path) -> None:
     assert changed is False
     assert session["sha256"] == real_sha256
     assert _SESSION_ID in summary
+
+
+def test_missing_size_bytes_is_an_error(tmp_path: Path) -> None:
+    """A manifest entry without size_bytes cannot be cross-checked, so it is not trusted."""
+    session = _write_session(tmp_path, _VALID_PAYLOAD)
+    del session["size_bytes"]
+
+    with pytest.raises(ValueError, match="size_bytes"):
+        download_indy._process_session(session, tmp_path)
+
+    assert session["sha256"] == "PENDING"
+
+
+def test_missing_zenodo_md5_is_an_error(tmp_path: Path) -> None:
+    """A manifest entry without zenodo_md5 loses the publisher-independent cross-check."""
+    session = _write_session(tmp_path, _VALID_PAYLOAD)
+    del session["zenodo_md5"]
+
+    with pytest.raises(ValueError, match="zenodo_md5"):
+        download_indy._process_session(session, tmp_path)
+
+    assert session["sha256"] == "PENDING"

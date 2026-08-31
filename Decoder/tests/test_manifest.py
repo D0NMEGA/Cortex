@@ -4,6 +4,13 @@ Asserts the committed manifest's reproducibility contract: it parses, pins Zenod
 3854034, and every session carries an ``id``/``url``/``sha256`` and a DIRECT file URL (not the
 bot-gated ``/api/`` endpoint — 04-RESEARCH DEC-02). The actual download + checksum-fill is done
 by ``scripts/download_indy.py`` and is intentionally NOT exercised here (tests stay hermetic).
+
+Phase 9 adds the ``size_bytes`` / ``zenodo_md5`` transport cross-checks, pins the identity of the
+four confirmed 96-channel M1-only sessions, and pins the two facts the manifest must NOT assert:
+that the dropped April sessions were 192-channel M1+S1 (C-01), and that nothing here is the NLB'21
+``mc_rtt`` benchmark session (C-03 - ``mc_rtt`` is ``indy_20170202_02``, absent from record
+3854034). Zero-``PENDING`` is asserted later by ``decoder-policy.sh``, not here: this plan
+legitimately leaves three sessions ``PENDING`` until the verified fetch.
 """
 from __future__ import annotations
 
@@ -12,6 +19,18 @@ from pathlib import Path
 from typing import Any
 
 _MANIFEST_PATH = Path(__file__).resolve().parents[1] / "manifests" / "indy_sessions.json"
+_HEX = set("0123456789abcdef")
+
+#: The four confirmed 96-channel M1-only sessions (Option B, user decision 2026-08-30), in order.
+_SELECTED_IDS = [
+    "indy_20160624_03",
+    "indy_20160627_01",
+    "indy_20160630_01",
+    "indy_20160915_01",
+]
+
+#: Dropped because they are 192-channel M1+S1 recordings the loader is right to reject (C-01).
+_DROPPED_IDS = ["indy_20160407_02", "indy_20160411_01"]
 
 
 def _load_manifest() -> dict[str, Any]:
@@ -60,3 +79,44 @@ def test_sessions_are_indy_m1() -> None:
     for session in _sessions(_load_manifest()):
         assert session["id"].startswith("indy_"), f"expected an Indy session, got {session['id']}"
         assert session["url"].endswith(f"{session['id']}.mat")
+
+
+def test_every_session_declares_size_and_md5() -> None:
+    """Every session carries the publisher-side transport cross-checks download_indy.py needs."""
+    for session in _sessions(_load_manifest()):
+        size = session["size_bytes"]
+        assert isinstance(size, int), f"{session['id']}: size_bytes must be an int, got {size!r}"
+        assert size > 0, f"{session['id']}: size_bytes must be positive, got {size}"
+
+        md5 = session["zenodo_md5"]
+        assert isinstance(md5, str), f"{session['id']}: zenodo_md5 must be a string"
+        assert len(md5) == 32, f"{session['id']}: zenodo_md5 must be 32 hex chars, got {md5!r}"
+        assert set(md5) <= _HEX, f"{session['id']}: zenodo_md5 must be lowercase hex, got {md5!r}"
+
+
+def test_session_ids_are_the_four_selected() -> None:
+    """The manifest names exactly the four confirmed 96-channel M1-only sessions, in order."""
+    assert [s["id"] for s in _sessions(_load_manifest())] == _SELECTED_IDS
+
+
+def test_manifest_records_dropped_sessions() -> None:
+    """The two 192-channel M1+S1 exclusions are recorded with their reason (C-01, D-03)."""
+    dropped = _load_manifest()["dropped_sessions"]
+    assert [d["id"] for d in dropped] == _DROPPED_IDS
+    for entry in dropped:
+        assert "192-channel" in entry["reason"], f"{entry['id']}: reason must state the width"
+
+
+def test_manifest_note_makes_no_mc_rtt_claim() -> None:
+    """C-03: mc_rtt is indy_20170202_02 and is absent from record 3854034 - claim nothing."""
+    assert "mc_rtt" not in _load_manifest()["note"]
+
+
+def test_sha256_is_pending_or_64_hex() -> None:
+    """Each sha256 is either still PENDING or a full 64-char lowercase hex digest."""
+    for session in _sessions(_load_manifest()):
+        sha256 = session["sha256"]
+        if sha256 == "PENDING":
+            continue
+        assert len(sha256) == 64, f"{session['id']}: sha256 must be 64 chars, got {sha256!r}"
+        assert set(sha256) <= _HEX, f"{session['id']}: sha256 must be lowercase hex, got {sha256!r}"
