@@ -3,13 +3,23 @@
 Composes the Wave-2 pieces into the BERT-style masked spike-RECONSTRUCTION objective
 (04-RESEARCH §0.4 — predict spike rates, NOT downstream kinematics, which is DEC-10 / Phase 5):
 
-    (B, S, C) window  ──reshape──▶  BC1S (B, C, 1, S)
+    (B, S, C) window  ──reshape──▶  BC1S targets (B, C, 1, S)
+        │                               │
+        │                               ▼
+        │                    hide_scored_positions(targets, mask)
         │                               │
         │                               ▼
         │                         NDT1ANE.forward  ──▶  predicted log-rates (B, C, 1, S)
         │                               │
         ▼                               ▼
     random_mask(...) ─▶ masked_poisson_nll(rates, targets, mask) ─▶ backward ─▶ AdamW.step
+
+The mask does two jobs and both are load-bearing: it selects the positions the Poisson NLL is
+summed over, AND it corrupts those same positions in the encoder input (``masked_forward``), so
+the model predicts a scored bin from its context and never from its own observed count. Plan 09-06
+shipped only the first half; Plan 09-06b added the second and
+``tests/test_masked_input_isolation.py`` holds it in place. Every co-bps measured before that
+correction is superseded (``09-training-evidence.md``).
 
 ``train_ndt1`` returns a history dict (per-epoch mean loss, and — if an eval set is supplied —
 the held-out co-bps against the train-split mean-rate null). Checkpoints are saved as a plain
@@ -29,7 +39,7 @@ import torch
 from torch import Tensor, nn
 from torch.utils.data import DataLoader
 
-from ndt1.loss import masked_poisson_nll, random_mask
+from ndt1.loss import hide_scored_positions, masked_poisson_nll, random_mask
 from ndt1.metrics import co_bps, mean_firing_rate
 
 
@@ -46,16 +56,28 @@ def reshape_to_bc1s(window: Tensor) -> Tensor:
 
 
 def masked_forward(model: nn.Module, targets: Tensor, mask: Tensor) -> Tensor:
-    """The one place the encoder input is built, for training and for evaluation alike.
+    """Encode ``targets`` with the scored positions hidden, and return the predicted log-rates.
 
-    CURRENT BEHAVIOUR IS THE DEFECT (Plan 09-06 deferred item 1): ``targets`` reaches the encoder
-    untouched, so every position the masked Poisson NLL scores is also an input to the prediction
-    of that same position. ``tests/test_masked_input_isolation.py`` is RED against this body and
-    the next commit closes it. The extraction comes first so there is exactly ONE input path to
-    fix: train/eval consistency is mandatory, and a fix applied to one call site and not the other
-    would report a number produced under one objective and scored under another.
+    The one place the encoder input is built, for training and for evaluation alike. Both paths
+    call this, because train/eval consistency is not optional: a fix applied to one call site and
+    not the other would report a number produced under one objective and scored under another, and
+    the mismatch would be invisible in the result.
+
+    Until Plan 09-06b this function did not exist and both call sites ran ``model(targets)`` on the
+    unmasked counts, so a scored position was an input to its own prediction and every co-bps the
+    repository published measured self-reconstruction plus context.
+    ``tests/test_masked_input_isolation.py`` now makes that impossible to reintroduce silently.
+
+    Args:
+        model: maps BC1S ``(B, C, 1, S)`` spike counts to log-rates of the same shape.
+        targets: observed spike counts; passed through untouched to the caller's loss term.
+        mask: boolean tensor; ``True`` marks the positions the loss will score.
+
+    Returns:
+        Predicted rates for every position, computed from an input in which the scored positions
+        carry no information (see :func:`ndt1.loss.hide_scored_positions` for the masking choice).
     """
-    return model(targets)
+    return model(hide_scored_positions(targets, mask))
 
 
 def _unwrap_batch(batch: object) -> Tensor:

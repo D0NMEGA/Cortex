@@ -79,7 +79,10 @@ class NDT1ANE(nn.Module):
         dim_feedforward: FFN width — the knob tuned to ~1.3M params (default 560 → ~1.30M).
         seq_len: sequence length the learnable positional encoding is sized for.
         dropout: dropout probability.
-        mask_ratio: BERT-style mask fraction kept on the module for the trainer (Plan 04-04).
+        mask_ratio: BERT-style mask fraction kept on the module for the TRAINER to read
+            (Plan 04-04). ``forward`` never applies it: the input corruption belongs to the
+            objective, not the graph, so the converted Core ML model stays a single tensor in,
+            single tensor out. ``ndt1.train.masked_forward`` is what hides the scored positions.
         bin_ms: temporal bin width in milliseconds (NDT1 spec: 20 ms).
 
     forward(x: Tensor[B, C, 1, S]) -> rates: Tensor[B, C, 1, S].
