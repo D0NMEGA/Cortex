@@ -178,11 +178,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   4. Multi-session generalization is reported, not assumed: per-session held-out co-bps plus a leave-one-session-out number, so the claim is "generalizes across four sessions", not "fit one session"
   5. 4-bit palettization delta and CoreML ANE eligibility (226/226 ops, zero CPU-only) are **re-measured on the real-data checkpoint** — no number inherited from the synthetic run — and decoder p99 stays under the 2 ms bar with the real weights
 **Plans**: 11 plans (7 waves) — strictly sequential spine after Wave 2; every CI-blocking test runs green on a checkout with an empty `Decoder/data/` (tier split D-21)
-- [ ] 09-01-PLAN.md — Manifest corrected to the four confirmed M1-only sessions (Option B, 1.77 GB) + `download_indy.py` magic/size/md5 pre-checks + hermetic integrity tests (RD-01) [Wave 1]
-- [ ] 09-02-PLAN.md — Committed `tiny_v73.mat` fixture (D-20) + `load_session` fixes: `MATLAB_empty` guard, `chan_names` width message, `finger_pos[1:3]` planar pair (RD-02) [Wave 1]
-- [ ] 09-03-PLAN.md — `ndt1.kinematics`: 250 Hz finite-difference velocity, 20 ms aggregation, whole-bin lag, held-out R2 vs a TRAIN-mean null (RD-02) [Wave 2]
-- [ ] 09-04-PLAN.md — `ndt1.qc` population firing-rate band + `ndt1.sessions` multi-session layer/LOSO folds + the P5 repair of the two crashing test modules (RD-02) [Wave 2]
-- [ ] 09-05-PLAN.md — Materialize + SHA-256-pin the four sessions; four integrity negative controls on a real fetched file; `09-ingest-evidence.md` (RD-01) [Wave 2]
+- [x] 09-01-PLAN.md — Manifest corrected to the four confirmed M1-only sessions (Option B, 1.77 GB) + `download_indy.py` magic/size/md5 pre-checks + hermetic integrity tests (RD-01) [Wave 1]
+- [x] 09-02-PLAN.md — Committed `tiny_v73.mat` fixture (D-20) + `load_session` fixes: `MATLAB_empty` guard, `chan_names` width message, `finger_pos[1:3]` planar pair (RD-02) [Wave 1]
+- [x] 09-03-PLAN.md — `ndt1.kinematics`: 250 Hz finite-difference velocity, 20 ms aggregation, whole-bin lag, held-out R2 vs a TRAIN-mean null (RD-02) [Wave 2]
+- [x] 09-04-PLAN.md — `ndt1.qc` population firing-rate band + `ndt1.sessions` multi-session layer/LOSO folds + the P5 repair of the two crashing test modules (RD-02) [Wave 2]
+- [x] 09-05-PLAN.md — Materialize + SHA-256-pin the four sessions; four integrity negative controls on a real fetched file; `09-ingest-evidence.md` (RD-01) [Wave 2]
 - [ ] 09-06-PLAN.md — Ingest report + pooled real-data retrain + per-session co-bps (both nulls) + four-fold LOSO + `09-decoder-metrics.json` + `09-training-evidence.md` + re-derived `CO_BPS_MARGIN` (RD-02, RD-03, RD-04) [Wave 3]
 - [ ] 09-07-PLAN.md — Velocity head on real `finger_pos`: lag sweep, lambda sweep, held-out R2, with-velocity checkpoint, `09-velocity-evidence.md` (RD-02, RD-06) [Wave 4]
 - [ ] 09-08-PLAN.md — CoreML re-derivation on the real checkpoint: palettization delta on BOTH models, ANE op scan, device-labeled p99, `09-coreml-evidence.md` (RD-05, RD-06) [Wave 5]

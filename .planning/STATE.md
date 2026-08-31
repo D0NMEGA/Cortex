@@ -3,9 +3,9 @@ donny_state_version: 1.0
 milestone: v1.0
 milestone_name: Real-Data Decoding
 status: executing
-stopped_at: Phase 9 planned (11 plans, 7 waves) — ready to execute
-last_updated: "2026-08-30T22:42:51.898Z"
-last_activity: 2026-08-30 -- Phase 9 planning complete
+stopped_at: Phase 9 context gathered
+last_updated: "2026-08-31T04:59:04.555Z"
+last_activity: 2026-08-31 -- Phase 09 execution started
 progress:
   total_phases: 10
   completed_phases: 8
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** A real-neural-data decoder running end-to-end under 25ms, reproducibly — NDT1 decoding real primate M1 spikes (O'Doherty/Makin Indy, Zenodo 3854034) through the sub-25ms software-timed pipeline. *Re-pointed 2026-08-28: the photodiode-instrumented "24.7 ± 1.3 ms" claim is RETIRED to Future work (hardware-gated); it stays a spec target and may not be cited as achieved.*
-**Current focus:** Phase 08 COMPLETE — Apple BCI HID Integration, Distribution & v0 Ship (the v0 milestone). Automated half VERIFIED (08-VERIFICATION 5/5 must-haves: 59 Swift tests across CortexBCIHID/CortexDemo/CortexReFIT + 5 structural `*-policy.sh` gates + 5 self-tests green; CortexDemoBench p99 ≈ 8.32 ms < 25 ms M5-corroborating; ReFIT 1.953 BPS with honest 6.55 gap-to-8.5; all 14 req IDs accounted for). The 3 never-auto-approve HUMAN-UAT gates — live TestFlight (DIST-01/02/03), iPad-M4 canonical latency (PERF-04), on-device HID registration (SYS-01/02) — DEFERRED 2026-06-23 (prerequisites unavailable: paid enrollment / provisioned iPad Pro M4 / managed entitlement); none fabricated; tracked in 08-HUMAN-UAT.md. Next: **Phase 09 — Real-Data Ingest & NDT1 Retrain (Zenodo 3854034)**, the re-pointed v1 path.
+**Current focus:** Phase 09 — real-data-ingest-ndt1-retrain-zenodo-3854034
 
 **Re-plan 2026-08-28 (user-directed).** Phases 9-10 were the photodiode rig build + 10k-trial campaign. Both are retired to ROADMAP "Future work" (LAT-01..08 preserved, not deleted) — hardware-gated on the ~$110 BOM plus the provisioned iPad Pro M4 that already deferred three Phase-8 HUMAN-UAT gates. Replaced by real-data work, because the repo's largest credibility hole is that **every decoder number was produced on a synthetic Poisson fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"), so co-bps 0.3804, ReFIT 0.374-vs-0.161 and 1.953 BPS are all synthetic-data numbers. New requirements RD-01..RD-10. Infrastructure is already in place and unused: `download_indy.py` works, `data.py` is a real h5py v7.3 loader, the manifest lists 4 sessions with `sha256: "PENDING"`, and Zenodo is live (verified 2026-08-28: HTTP 200, ~1.5 GB total). Known blocker for Phase 10: `Tools/scripts/readme-policy.sh` **requires** the tokens `photodiode` and `24.7` in the README and its `--self-test` proves the gate bites when they are stripped — retiring the claim means rewriting the gate and its negative controls in lockstep (RD-10).
 
 ## Current Position
 
-Phase: 9
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-08-30 -- Phase 9 planning complete
+Phase: 09 (real-data-ingest-ndt1-retrain-zenodo-3854034) — EXECUTING
+Plan: 1 of 11
+Status: Executing Phase 09
+Last activity: 2026-08-31 -- Phase 09 execution started
 
 Progress: Phase 8 [██████████] 100% (7/7 plans complete) · Project [████████░░] 8/10 phases
 
