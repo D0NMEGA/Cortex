@@ -66,7 +66,7 @@ patterns-established:
 requirements-completed: []
 
 # Metrics
-duration: 2h 15m
+duration: 2h 20m
 completed: 2026-08-31
 ---
 
@@ -79,7 +79,9 @@ which means this NDT1 does not beat a constant per-channel mean firing rate.**
 
 ## Performance
 
-- **Duration:** 2h 15m (2026-08-31T09:57Z to 2026-08-31T12:12Z), of which about 1h 45m was CPU
+- **Duration:** about 2h 20m (2026-08-31, 09:50 to 12:10 local CDT; first commit 10:04:39, last
+  12:07:50), of which roughly 1h 50m was CPU: a 61-minute full run, a 14-minute reproducibility
+  re-run, and two 15-minute slow-gate executions
 - **Tasks:** 4 of 4 (fix, regression test, retrain, re-derive)
 - **Files:** 3 created, 9 modified
 - **Commits:** 6
@@ -174,7 +176,7 @@ replication here; that is stated in the evidence rather than glossed.
 3. **The scoring paths that produce the published numbers** - `94fcdbd` (fix)
 4. **The retrain and every re-derived number** - `6fc194f` (feat)
 5. **A relative --checkpoint-dir aborting the run at the JSON write** - `29a415c` (fix)
-6. **The artifacts** - see the final docs commit
+6. **The corrected artifacts, and the red slow gate reported** - `4d3f6b1` (docs)
 
 ## Files Created/Modified
 
@@ -233,7 +235,10 @@ replication here; that is stated in the evidence rather than glossed.
 - **Fix:** the two "did it train" checks (a finiteness check, and the `losses[-1] < losses[0]`
   assertion that was already in the test) now run first. **The co-bps assertion and the margin are
   unchanged and the test still fails.** Only the reported first cause changed.
-- **Committed in:** the final docs commit
+- **Verification:** the gate was re-executed after the change rather than having its new output
+  predicted. It reproduced the divergence to full precision and now reports "the loop did not
+  train: final loss 4.67701e+22 is not below the first epoch's 0.603385".
+- **Committed in:** `4d3f6b1`
 
 ### Deliberate departures
 
