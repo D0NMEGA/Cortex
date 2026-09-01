@@ -274,6 +274,251 @@
     }
   ],
   "smoke": false,
+  "superseded_truncated_budget": {
+    "checkpoint": {
+      "param_count": 1292544,
+      "path": "Decoder/checkpoints/ndt1_real_pooled.pt",
+      "sha256": "0496a72cc0878bc01e77968b28a9dfeee68f0ac4fd09c8d0537a95b801b4b209"
+    },
+    "co_bps": {
+      "input_visibility_diagnostic": {
+        "checkpoint_sha256": "0496a72cc0878bc01e77968b28a9dfeee68f0ac4fd09c8d0537a95b801b4b209",
+        "note": "Plan 09-06b corrected the objective: train_ndt1 and every scoring path now hide the scored positions from the encoder, so hidden_* is the published number and reproduces co_bps.per_session / co_bps.pooled on the same seeded mask. visible_* leaks the scored counts back into the encoder, which is what the superseded objective did on every forward pass. visible_* is an out-of-distribution probe for a model trained on hidden inputs; it is not a corrected, better or alternative result and must not be quoted as one.",
+        "per_session": {
+          "indy_20160624_03": {
+            "hidden_test_mean_null": -0.23381168721422116,
+            "hidden_train_null": -0.017303623671233205,
+            "visible_test_mean_null": -0.20860102380318585,
+            "visible_train_null": 0.00790703973980209
+          },
+          "indy_20160627_01": {
+            "hidden_test_mean_null": -0.19463056830511102,
+            "hidden_train_null": -0.10942474522807702,
+            "visible_test_mean_null": -0.15000928593341964,
+            "visible_train_null": -0.06480346285638562
+          },
+          "indy_20160630_01": {
+            "hidden_test_mean_null": -0.3820356471739022,
+            "hidden_train_null": 0.19220531959197723,
+            "visible_test_mean_null": -0.22612231214102368,
+            "visible_train_null": 0.34811865462485575
+          },
+          "indy_20160915_01": {
+            "hidden_test_mean_null": 0.20837733182127946,
+            "hidden_train_null": 0.6470768153827469,
+            "visible_test_mean_null": 0.17021376757439347,
+            "visible_train_null": 0.6089132511358609
+          }
+        },
+        "pooled": {
+          "hidden_test_mean_null": -0.02192109754839735,
+          "hidden_train_null": 0.006214627530704778,
+          "visible_test_mean_null": 0.04201380787855744,
+          "visible_train_null": 0.07014953295765956
+        }
+      },
+      "margin": 0.00082,
+      "margin_rationale": "Observed pooled held-out co-bps on real primate M1 spikes is 0.0062 bits/spike against the train-split mean-rate null. The margin 0.00082 is 13.1% of it: the fraction Phase 4 used when it set 0.05 against an observed 0.3804, applied unchanged so that the observation is the only input to this derivation. Phase 4's 0.05 was calibrated on a purpose-built learnable synthetic sinusoid and does not transfer to real spikes. What the gate asserts is exactly 'better than the constant per-channel mean-rate null by more than 0.00082 bits/spike' and nothing more; whether that is a meaningful demonstration of non-trivial reconstruction depends on the size of the observation it was derived from, which is recorded beside it at co_bps.pooled.train_null.",
+      "per_session": {
+        "indy_20160624_03": {
+          "session_train_null": -0.21835148111989058,
+          "test_mean_null": -0.23381168721422116,
+          "train_null": -0.017303623671233205
+        },
+        "indy_20160627_01": {
+          "session_train_null": -0.14307472769595456,
+          "test_mean_null": -0.19463056830511102,
+          "train_null": -0.10942474522807702
+        },
+        "indy_20160630_01": {
+          "session_train_null": -0.37098679310897476,
+          "test_mean_null": -0.3820356471739022,
+          "train_null": 0.19220531959197723
+        },
+        "indy_20160915_01": {
+          "session_train_null": 0.21610610200921948,
+          "test_mean_null": 0.20837733182127946,
+          "train_null": 0.6470768153827469
+        }
+      },
+      "pooled": {
+        "test_mean_null": -0.02192109754839735,
+        "train_null": 0.006214627530704778
+      }
+    },
+    "config": {
+      "batch_size": 16,
+      "bin_ms": 20.0,
+      "device": "cpu",
+      "epochs": 12,
+      "log_input": true,
+      "lr": 0.002,
+      "mask_ratio": 0.25,
+      "seed": 0,
+      "seq_len": 32,
+      "test_frac": 0.2,
+      "weight_decay": 0.01
+    },
+    "env": {
+      "coremltools": "9.0",
+      "h5py": "3.16.0",
+      "machine": "arm64",
+      "numpy": "2.4.6",
+      "platform": "macOS-26.5-arm64-arm-64bit",
+      "python": "3.12.13",
+      "torch": "2.12.1"
+    },
+    "loso": [
+      {
+        "diverged": false,
+        "eval_windows": 781,
+        "final_loss": 0.557742402360246,
+        "held_out_session": "indy_20160624_03",
+        "losses": [
+          0.5947214850483128,
+          0.5700561317823443,
+          0.5673449325034308,
+          0.5659673446812267,
+          0.5642426210920114,
+          0.5651632976473403,
+          0.5626368546075844,
+          0.5623277936872159,
+          0.5610908104395105,
+          0.5596245976132901,
+          0.5590329750896379,
+          0.557742402360246
+        ],
+        "test_mean_null": -0.23813648211544441,
+        "train_null": -0.008949334903144002,
+        "train_sessions": [
+          "indy_20160627_01",
+          "indy_20160630_01",
+          "indy_20160915_01"
+        ],
+        "train_windows": 6508
+      },
+      {
+        "diverged": true,
+        "eval_windows": 5254,
+        "final_loss": null,
+        "held_out_session": "indy_20160627_01",
+        "losses": [
+          0.5304743841938351,
+          0.5100481636498285,
+          0.5015566216214843,
+          0.4989299642974916,
+          0.4970237960957963,
+          0.49528394331750664,
+          268623.8026133138,
+          99.93373531362285,
+          24.370385434316553,
+          26.392119278078493,
+          30.670758257741515,
+          null
+        ],
+        "test_mean_null": null,
+        "train_null": null,
+        "train_sessions": [
+          "indy_20160624_03",
+          "indy_20160630_01",
+          "indy_20160915_01"
+        ],
+        "train_windows": 2929
+      },
+      {
+        "diverged": false,
+        "eval_windows": 2286,
+        "final_loss": 0.5874933797013329,
+        "held_out_session": "indy_20160630_01",
+        "losses": [
+          0.6139335888157408,
+          0.5980411234749369,
+          0.594626049769212,
+          0.5933243214006884,
+          0.5915817883179848,
+          0.5897602695657547,
+          0.5895838990628001,
+          0.5884116497564028,
+          0.5880847266280508,
+          0.5875064204615282,
+          0.5875588741647192,
+          0.5874933797013329
+        ],
+        "test_mean_null": -0.7288919446385548,
+        "train_null": 0.44732829764403736,
+        "train_sessions": [
+          "indy_20160624_03",
+          "indy_20160627_01",
+          "indy_20160915_01"
+        ],
+        "train_windows": 5303
+      },
+      {
+        "diverged": false,
+        "eval_windows": 595,
+        "final_loss": 0.565364250769982,
+        "held_out_session": "indy_20160915_01",
+        "losses": [
+          0.5999532399269251,
+          0.5927412323653698,
+          0.5780146801127837,
+          0.5740538144197601,
+          0.5721194225435073,
+          0.570542192659699,
+          0.5702255884042153,
+          0.5693307316933687,
+          0.5681604998042951,
+          0.5677180866925762,
+          0.5665917554153845,
+          0.565364250769982
+        ],
+        "test_mean_null": -0.48855555130452966,
+        "train_null": 0.013944248758505685,
+        "train_sessions": [
+          "indy_20160624_03",
+          "indy_20160627_01",
+          "indy_20160630_01"
+        ],
+        "train_windows": 6656
+      }
+    ],
+    "loso_summary": {
+      "diverged_folds": 1,
+      "finite_folds": 3,
+      "folds": 4,
+      "max": 0.44732829764403736,
+      "mean": 0.15077440383313304,
+      "min": -0.008949334903144002,
+      "null": "train_null",
+      "std": 0.2570781748690952,
+      "test_mean_null": {
+        "diverged_folds": 1,
+        "finite_folds": 3,
+        "folds": 4,
+        "max": -0.23813648211544441,
+        "mean": -0.48519465935284295,
+        "min": -0.7288919446385548,
+        "std": 0.24539499321522676
+      }
+    },
+    "losses": [
+      0.5938522267769271,
+      0.5707693522954735,
+      0.5673177176125915,
+      0.5656595600292822,
+      0.5643723148000614,
+      0.5637182033382724,
+      0.5631866854669801,
+      0.5615427678476,
+      0.560322089112393,
+      0.5598884057838286,
+      0.5592454715293619,
+      0.5584250109211746
+    ],
+    "note": "Every number in this block was measured under the CORRECTED input-masking objective (Plan 09-06b hid the scored positions from the encoder, and tests/test_masked_input_isolation.py holds that in place), so unlike superseded_visible_input_objective it is not measuring self-reconstruction. What supersedes it is the budget and the numerics, not the objective. It was produced at a fixed 12-epoch budget inherited from Phase 4, where that budget had been calibrated against the DEFECTIVE objective and reached a 43 percent loss reduction; under the corrected objective it reached 6 percent and the loss was still descending monotonically at about 0.0007 per epoch when the budget ran out, so the pooled 0.006214627530704778 is a floor at that budget and not an asymptote. The run also had no gradient clipping: one of the four LOSO folds diverged and the committed slow gate diverged outright. Plan 09-06c added torch.nn.utils.clip_grad_norm_ at max_norm 1.0 and replaced the fixed budget with a stopping rule pre-registered on the TRAINING LOSS before the run, then re-derived every dependent number. These values MAY be quoted as what a 12-epoch unclipped run under the corrected objective produced, and MUST NOT be quoted as this repository's converged co-bps.",
+    "superseded_by": "Plan 09-06c, same file, top-level co_bps / losses / loso / loso_summary / checkpoint",
+    "wall_clock_s": 3672.7
+  },
   "superseded_visible_input_objective": {
     "checkpoint": {
       "param_count": 1292544,
