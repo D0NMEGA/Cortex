@@ -65,6 +65,125 @@ deleted. Correcting a published number means labeling the old one.
 with the pinned wheels. There is no Neural Engine, Core ML, palettization or latency number in this
 file; those are Plans 09-07 and 09-08.
 
+> **Superseded while you are reading it.** Every number above and in the Result section below is
+> the Plan 09-06c run: 12 epochs, stopped by a rule that fired at its own floor. Plan 09-06d is
+> re-running it with no stopping rule at all, to a 200-epoch cap, publishing the whole co-bps
+> trajectory. The pre-registration for that run is the next section and was committed before the
+> run started. When the run lands, the numbers here move into the supersession chain; nothing is
+> deleted.
+
+## Plan 09-06d: pre-registration, written before the run
+
+**This section was written and committed BEFORE the run it describes was started.** Its commit
+precedes the commit that carries the numbers, and `git log` is the check. That is the third time in
+this chain, and the reason is unchanged: a budget or a rule chosen after seeing the curve is a
+tuned result with extra steps.
+
+### The problem this run exists to remove
+
+09-06c's stopping rule was defined on the training loss, could not see a co-bps, was committed
+before the run, and was applied without modification. It still produced a bad number, and the
+subordinate probe measured exactly how bad: **the rule fired at its 12-epoch floor, and between
+epoch 12 and epoch 60 the training loss falls 1.3% while pooled co-bps rises 4.2x.** A plateau
+criterion on a masked Poisson NLL that is 71 to 80% empty bins goes quiet long before the model
+stops improving on the normalized comparison co-bps measures.
+
+The tempting move is a better stopping rule. That move is refused here. Any rule that stops
+somewhere inside the curve is a selection, and a selection made after seeing that longer is better
+is a tuned budget however it is dressed up. **This run removes the selection instead of replacing
+it:** train to a large cap, record co-bps along the way, and publish the whole trajectory. The
+headline is the value AT THE CAP. A reader sees where it plateaus and judges convergence without
+taking anyone's word for it.
+
+### What is being changed, and only this
+
+Everything else is byte-for-byte identical to 09-06c: `lr = 2e-3`, `batch_size = 16`,
+`seq_len = 32`, `mask_ratio = 0.25`, `seed = 0`, `test_frac = 0.2`, `weight_decay = 0.01`,
+`log_input = true`, `grad_clip_norm = 1.0`, the architecture, and the corrected input-masking
+objective.
+
+**1. The forward-pass overflow is fixed, in the loss.** 09-06c diagnosed it and deliberately did
+not fix it, because that task already had two variables. `ndt1.loss.masked_poisson_nll` now
+computes `stable_exp(x) - target * x`, where `stable_exp` is `exp` below a threshold `C` and the
+tangent line to `exp` at `C` above it.
+
+| | |
+|---|---|
+| `C` | `LOG_RATE_LINEARIZE_ABOVE = 20.0` |
+| Healthy regime | real 20 ms bins carry 0 to 5 spikes; the per-channel mean rate is about 0.3 spikes/bin, so a healthy log-rate sits near `log(0.3) = -1.2`. The largest `\|log-rate\|` ever observed over a clean epoch of this training path is **13.3** (09-06c's committed replay). |
+| Why 20 is above it | `exp(20)` is 4.85e8 spikes per 20 ms bin: eight orders of magnitude beyond the largest count in the corpus, and 812x further out in rate space than that observed maximum. |
+| Why 20 is below the ceiling | float32 `exp` overflows above about **88.7**. At `C = 20` the constant gradient `exp(C)` is 4.85e8, so the linear branch is still finite at a log-rate of 1e20 and the sum of squares inside `clip_grad_norm_` cannot itself overflow. A larger `C` buys nothing (the loss at the threshold is already astronomical) and costs both margins. |
+| Not `torch.clamp` | above a clamp bound the derivative of the clamped `exp` is zero, so all that survives is the `- target * x` term and the total gradient is `-target`: NEGATIVE, so a descent step drives an already-escaped rate further up. That wrong sign is asserted in `tests/test_loss_stability.py`, not argued for. |
+
+**Why this is not a third variable, and how that claim is checked rather than asserted.**
+`tests/test_loss_stability.py` asserts with `torch.equal` that below `C` the stabilized loss is
+bit-identical to the unmodified `nn.PoissonNLLLoss` formulation **in value and in gradient**, over
+a 2,054-point grid from -40 up to one thousandth below the threshold. So the guard can only change
+a run that would otherwise have produced `nan`. On top of that proof, the run itself records
+`max_log_rate_per_epoch` for every epoch of every model it trains, and this evidence will publish
+the maximum over the whole run: **if that maximum stays below 20, the stabilizer provably never
+activated and the epoch budget is the only variable between this run and 09-06c's.** If it does
+activate, that is reported, with the epoch it happened at.
+
+**2. The stopping rule is removed and the cap is raised from 60 to 200.** `--plateau-stop` keeps
+the 09-06c rule available for reproduction; it is off. The run goes to the cap, `stop_reason` is
+`epoch_cap` by design, and the headline is the last row of the trajectory.
+
+### The run plan
+
+Registered before anything was launched. There is no stopping rule to register this time, so what
+is registered is the cap, the sampling interval, and the rotation's budget.
+
+| Parameter | Value | Why this value |
+|---|---|---|
+| `EPOCH_CAP` (pooled) | **200** | A compute bound, not a result-shaped choice. The 09-06c probe measured 4137.8 s for 60 pooled epochs, i.e. 69 s/epoch on 7,132 windows, so 200 epochs is about 3.8 h of CPU. It is 3.3x the largest budget this phase has run and 16.7x the budget of the number it supersedes. |
+| `COBPS_SAMPLE_EVERY` | **10** | Held-out pooled co-bps against BOTH nulls at epoch 1, then every 10th epoch, then at the cap: 21 points. Dense enough to see a plateau, cheap enough not to distort the run (about 5 s per scoring pass against a 69 s epoch). |
+| `LOSO_EPOCH_CAP` | **60** | A COST decision, declared as one. See below. |
+| Stopping rule | **none** | The run ends at the cap and nowhere else. |
+| Checkpoint | **the model at the cap** | Not the model at whichever epoch scored best. There is no epoch selection anywhere in this run, including in what gets saved. |
+
+**The rotation's budget is a cost decision, and it is labeled as one rather than presented as a
+result.** Ideally the four folds would run at the same 200-epoch cap as the pooled run. They will
+not: the folds are 21,396 training windows against the pooled 7,132, so a full-cap rotation is
+about 11.5 h of CPU ON TOP of the 3.8 h headline run. 60 epochs per fold is about 3.5 h and is
+**not a new number** -- it is the epoch cap 09-06c had already committed, so the reduced budget is
+an inherited constant rather than one chosen for this run. All four folds get the same budget, all
+four run to it, each fold's budget is recorded beside its number, and the consequence is stated
+wherever the rotation is quoted: **the folds are less trained than the headline model, so a
+cross-session number from them is a floor for that budget and is not comparable to the pooled
+figure as though both had been trained equally.** A full rotation is still run: four folds, each
+session held out exactly once, and any divergence is recorded rather than dropped.
+
+### What will be reported, whichever way it comes out
+
+- **The full co-bps-versus-epoch trajectory**, in `09-decoder-metrics.json` as an explicit array
+  and in this file as a table, against BOTH nulls. The headline is the row at the cap.
+- **Whether the trajectory had flattened by the cap**, by a descriptive rule fixed here so the
+  wording is not chosen after seeing the shape: the evidence will report the change over the last
+  50 epochs (the value at 200 minus the value at 150, as a fraction of the value at 200) and will
+  **label the headline a floor unless that change is under 1% of the headline.** This governs the
+  CAVEAT only. The reported number is the value at the cap either way; nothing is selected.
+- **The maximum predicted log-rate over the run**, so the loss stabilizer's inertness is a
+  measurement on the published run and not only a property of a unit test.
+- Per-session co-bps against both nulls, and the count of sessions that lose to their own test
+  mean. **A pooled number that is positive while most sessions are individually negative is
+  reported as exactly that**, because it is a materially weaker claim than "the model beats the
+  null" and must not be rounded up to it.
+- The four-fold rotation with mean and spread, each fold's budget beside its number, and any
+  divergence recorded rather than dropped.
+- `CO_BPS_MARGIN` re-derived by the unchanged `--derive-margin` rule from whatever the new headline
+  is. Fourth re-derivation, same multiplication.
+- The full supersession chain, four links, none deleted: 1.9116 defective, 0.0062
+  corrected-truncated, 0.0713 clipped-truncated, and this run.
+
+**A negative result is still a result.** A converged NDT1 at 1.29M parameters on about 95 minutes
+of real primate M1 spikes may still fail to beat a constant per-channel mean firing rate, and the
+drift-robust `test_mean_null` is reported beside the gate null every time -- the more flattering of
+the two is never promoted to headline. Nothing about the learning rate, the mask ratio, the
+architecture, the seed, the batch size or the choice of null will be moved to change the answer. If
+the run diverges despite the stabilization, the failure and its diagnosis are published and no
+estimated number is substituted for the missing one.
+
 ## Plan 09-06c: pre-registration, written before the run
 
 **This section was written and committed BEFORE the run it describes was started.** Its commit
