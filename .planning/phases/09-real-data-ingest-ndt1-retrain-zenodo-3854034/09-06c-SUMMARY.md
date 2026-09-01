@@ -278,9 +278,9 @@ replaced it.
 - **Fix:** a read-only `on_epoch_end(epoch, loss)` hook in `train_ndt1`, logged by `train_real.py`.
   Read-only by contract: it touches neither the RNG nor the optimizer, so the log cannot become a
   variable.
-- **Verification:** the run was restarted one minute in, and the budget probe later reproduced the
-  restarted run's first six epoch losses to full precision, including the 460088591144.742004
-  transient, so the hook changed nothing.
+- **Verification:** the run was restarted one minute in, and the budget probe later reproduced all
+  12 of the restarted run's epoch losses to full double precision, including the
+  460088591144.742004 transient, so the hook changed nothing.
 - **Committed in:** `d6644b0`
 
 **2. [Rule 2 - Missing critical] `stop_reason` could not distinguish a real plateau from a floor**
@@ -338,11 +338,14 @@ replacement must preserve.
 **The model was not trained to convergence, and neither was the probe.** Both `stop_reason` values
 are committed. This is why the status below is `PARTIAL`.
 
-**Reproducibility is weaker than 09-06b's.** That run trained the pooled configuration twice and
-compared checkpoint SHA-256 byte for byte. This one did not: the second invocation is the budget
-probe, which deliberately runs a different number of epochs, so it corroborates the training path's
-determinism over its first epochs rather than proving an identical final checkpoint. The rotation
-was executed once.
+**Reproducibility is slightly weaker than 09-06b's, but stronger than expected.** That run trained
+the pooled configuration twice and compared checkpoint SHA-256 byte for byte. This one did not
+compare a final hash, because the second invocation is the budget probe which continues past epoch
+12. What it did establish: the probe reproduces **all 12** of the published run's per-epoch losses
+to full double precision from a separate process an hour later, including the 16.56512170355149 and
+460088591144.742004 transients. Reproducing a transient of that magnitude bit for bit means the
+optimizer visited the same states in the same order over the whole span the committed checkpoint
+was trained for. The rotation was executed once.
 
 **A session rate limit interrupted the task** between the completion of the training run and the
 write-up. No compute was lost: the run had already written `09-decoder-metrics.json`, and on

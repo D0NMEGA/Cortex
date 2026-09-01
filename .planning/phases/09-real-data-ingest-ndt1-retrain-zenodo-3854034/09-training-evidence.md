@@ -812,16 +812,17 @@ Three things.
 
 | Check | Result |
 |---|---|
-| Training path, first epoch | The supplementary budget probe is an independent invocation of the same pooled configuration from the same seed. Its epoch-1 loss is **16.565122**, identical to the headline run's, and epochs 2 and 3 match at 0.569300 and 0.565959. |
+| Training path | The supplementary budget probe is an independent invocation of the same pooled configuration from the same seed, in a separate process an hour later. **All 12 of the published run's per-epoch losses are reproduced to full double precision**, including the 16.56512170355149 first-epoch transient and the 460088591144.742004 sixth-epoch one. Reproducing a transient of that magnitude bit for bit means the optimizer visited the same states in the same order. |
 | Evaluation path | `--diagnostic` reloads the committed checkpoint from disk, builds a fresh `seed = 0` mask, and reproduces every per-session and pooled figure to full double precision. |
 | Null-to-null gaps | 0.2010, 0.0336, 0.5632, 0.4310, identical to four decimal places across two checkpoints trained under different numerics. These cancel the model term algebraically, so their invariance is a property of the data and a check on the measurement code. |
 | Checkpoint SHA-256 | `af704a93848d2ea6efb69f356e52485693d0ab7da0b9acc94d7390654f316a2d` |
 
-**Weaker than the previous version's claim, and stated as such.** Plan 09-06b executed the full
-pooled run twice and compared checkpoint SHA-256 byte for byte. This task did not: the second
-invocation here is the budget probe, which deliberately runs a different number of epochs, so it
-corroborates the training path's determinism over its first epochs rather than proving an identical
-final checkpoint. The LOSO rotation was executed once and has no replication at all.
+**Slightly weaker than the previous version's claim, and stated as such.** Plan 09-06b executed the
+full pooled run twice and compared checkpoint SHA-256 byte for byte. This task did not compare a
+final hash: the second invocation is the budget probe, which deliberately continues past epoch 12,
+so what is established is that the two runs are numerically identical over the whole span the
+published checkpoint was trained for, not that a second file hashed the same. The LOSO rotation was
+executed once and has no replication at all.
 
 Scope of the claim: this machine, these pinned wheel versions, CPU, this thread count.
 Cross-platform determinism was not tested.
