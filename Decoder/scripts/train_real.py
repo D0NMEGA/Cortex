@@ -52,8 +52,16 @@ per-session values is the expected D-15 outcome. A LOSO fold near zero or negati
 identity did not transfer across sessions -- a publishable finding, not a defect to reshape the
 pool over.
 
-Runtime on this machine's CPU is roughly 15 minutes pooled plus 40-60 minutes for the rotation
-(09-RESEARCH section 9: 148.9 ms per training step). CI never runs this (D-21).
+**The epoch budget is decided by a PRE-REGISTERED rule, not by a constant (Plan 09-06c).** The
+09-06b run used a fixed 12 epochs inherited from Phase 4 and stopped on a curve still descending
+monotonically, so its 0.0062 was a floor rather than an asymptote. The rule that replaces it is
+defined on the TRAINING LOSS alone and is committed before the run reads it; see the
+PLATEAU_REL_TOL block below. Gradients are also norm-clipped now (`ndt1.train`), which is the
+numerical-stability fix for the divergences 09-06b reported and deferred.
+
+Runtime on this machine's CPU is roughly 70 s per pooled epoch and about 211 s per epoch across
+the four rotation folds, so a run that goes to the 60-epoch cap is about 4.7 h. CI never runs this
+(D-21).
 
 Checkpoints are state-dict `.pt` files under the gitignored `Decoder/checkpoints/`; any load goes
 through `ndt1.train.load_checkpoint`, which uses `torch.load(..., weights_only=True)` (T-04-04-01).
@@ -96,7 +104,13 @@ from ndt1.sessions import (
     loso_folds,
     pooled_splits,
 )
-from ndt1.train import load_checkpoint, reshape_to_bc1s, save_checkpoint, train_ndt1
+from ndt1.train import (
+    DEFAULT_GRAD_CLIP_NORM,
+    load_checkpoint,
+    reshape_to_bc1s,
+    save_checkpoint,
+    train_ndt1,
+)
 
 # --- Phase-4 config, copied VERBATIM (D-14) ---------------------------------------------------
 # These are the exact constants in tests/test_heldout_cobps.py that produced the synthetic co-bps
@@ -107,7 +121,6 @@ from ndt1.train import load_checkpoint, reshape_to_bc1s, save_checkpoint, train_
 # and forbids lowering it. D-25 forbids moving any of these to improve the result.
 SEED: int = 0
 SEQ_LEN: int = 32
-EPOCHS: int = 12
 LR: float = 2e-3
 TEST_FRAC: float = 0.2
 BATCH_SIZE: int = 16
@@ -118,6 +131,43 @@ DEVICE: str = "cpu"
 #: Evaluation forward passes are chunked so a 5,254-window session does not materialize every
 #: encoder activation at once. Purely a memory bound; it does not change any number.
 EVAL_CHUNK: int = 512
+
+# --- The PRE-REGISTERED convergence rule (Plan 09-06c) -----------------------------------------
+# Written into 09-training-evidence.md and committed BEFORE the run that reads it, because a
+# stopping rule chosen after seeing the curve is a tuned budget with extra steps.
+#
+# The rule is defined on the TRAINING LOSS and nothing else: `ndt1.train.loss_plateaued` cannot see
+# a co-bps. Stopping at the epoch where the headline metric happens to peak is exactly the tuning
+# D-22 and D-25 exist to prevent, and it is the failure this task was set up to avoid.
+#
+# Stop at the first epoch where |(L[i-1] - L[i]) / L[i-1]| < PLATEAU_REL_TOL held for each of the
+# last PLATEAU_PATIENCE epochs, provided at least MIN_EPOCHS have run; otherwise stop at EPOCH_CAP
+# and report that the curve had NOT converged.
+#
+#   PLATEAU_REL_TOL = 1e-3. A tenth of a percent per epoch. For scale, the 09-06b run's first-epoch
+#     relative improvement was 3.9% and its last three were 0.071%, 0.125% and 0.143%, so this
+#     tolerance sits just below where that truncated run stopped and the rule agrees it had not
+#     converged (pinned in tests/test_plateau_stop.py). Twenty further epochs inside the band move
+#     the loss by under 2%, against the 6% that run achieved in twelve.
+#   PLATEAU_PATIENCE = 3. One quiet epoch cannot end a run that is still learning. Three is also
+#     the window 09-06 used when it judged convergence by eye ("epochs 10 to 12 oscillating inside
+#     0.0018"), so the criterion is continuous with the one this repository already applied.
+#   MIN_EPOCHS = 12. The converged run is never SHORTER than the truncated run it replaces, so the
+#     new number can never be "we stopped earlier and got a different answer".
+#   EPOCH_CAP = 60. A compute bound, not a result-shaped choice: 09-06b measured 844 s for 12
+#     pooled epochs (70 s/epoch) and the four LOSO folds together are 21,396 training windows to
+#     the pooled 7,132, so a full run costs about 281 s per epoch. Sixty epochs is about 4.7 h of
+#     CPU worst case, which is the largest single run this artifact can afford. Hitting it is a
+#     reportable outcome, not a silent one: the run records stop_reason="epoch_cap" and the
+#     evidence says the curve had not converged.
+#
+# Every run in the rotation gets the SAME rule and stops independently under it. A fold that
+# plateaus sooner stops sooner; the per-fold stopping epoch is committed in the metrics JSON.
+EPOCH_CAP: int = 60
+PLATEAU_REL_TOL: float = 1e-3
+PLATEAU_PATIENCE: int = 3
+MIN_EPOCHS: int = 12
+
 
 _PENDING = "PENDING"
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -136,6 +186,21 @@ MIN_SESSIONS: int = 3
 #: Where the numbers measured under the pre-09-06b objective live. Preserved, never deleted, and
 #: carried across re-runs, because documents outside this repository may already quote them.
 _SUPERSEDED_KEY: str = "superseded_visible_input_objective"
+#: Every superseded record shares this prefix, and `_carry_superseded` carries all of them across
+#: a re-run. The chain has to stay readable end to end: defective objective -> corrected but
+#: truncated at 12 epochs -> corrected and trained to the pre-registered convergence rule.
+_SUPERSEDED_PREFIX: str = "superseded_"
+#: The blocks that describe one measurement, and therefore the ones a supersession snapshots.
+_MEASURED_KEYS: tuple[str, ...] = (
+    "checkpoint",
+    "co_bps",
+    "config",
+    "env",
+    "losses",
+    "loso",
+    "loso_summary",
+    "wall_clock_s",
+)
 
 # --- D-22 margin re-derivation ----------------------------------------------------------------
 # Phase 4 committed `CO_BPS_MARGIN = 0.05` against an observed synthetic co-bps of 0.3804
@@ -234,13 +299,19 @@ def _score(
     }
 
 
-def _train_pool(train_windows: list[Tensor], *, epochs: int) -> tuple[nn.Module, dict[str, object]]:
+def _train_pool(
+    train_windows: list[Tensor], *, epochs: int, plateau_rel_tol: float | None
+) -> tuple[nn.Module, dict[str, object]]:
     """Train a fresh NDT1ANE on the concatenated per-session train windows (BC1S list -> (B,S,C)).
 
     ``train_ndt1`` consumes ``(B, S, C)`` windows, so the BC1S tensors are inverted back here.
     Seeding mirrors ``tests/test_heldout_cobps.py`` exactly: ``torch.manual_seed(SEED)`` before the
     model is constructed (init order), and ``train_ndt1`` re-seeds the global RNG and its own mask
     generator (T-04-04-03).
+
+    ``epochs`` is the HARD CAP. Where the run actually stops is decided by the pre-registered
+    convergence rule above, on the training loss alone; the pooled run and every LOSO fold get the
+    same rule and stop independently under it.
     """
     # (N, C, 1, S) -> (N, S, C)
     pooled = torch.cat([w.squeeze(2).permute(0, 2, 1).contiguous() for w in train_windows], dim=0)
@@ -248,7 +319,7 @@ def _train_pool(train_windows: list[Tensor], *, epochs: int) -> tuple[nn.Module,
     torch.manual_seed(SEED)
     model = NDT1ANE(seq_len=SEQ_LEN)
     steps = (pooled.shape[0] + BATCH_SIZE - 1) // BATCH_SIZE * epochs
-    _log(f"  training on {pooled.shape[0]} windows, {epochs} epochs, ~{steps} steps")
+    _log(f"  training on {pooled.shape[0]} windows, cap {epochs} epochs, <={steps} steps")
     started = time.monotonic()
     history = train_ndt1(
         model,
@@ -259,10 +330,16 @@ def _train_pool(train_windows: list[Tensor], *, epochs: int) -> tuple[nn.Module,
         device=DEVICE,
         seed=SEED,
         weight_decay=WEIGHT_DECAY,
+        plateau_rel_tol=plateau_rel_tol,
+        plateau_patience=PLATEAU_PATIENCE,
+        min_epochs=MIN_EPOCHS,
     )
     losses = cast(list[float], history["losses"])
     curve = " ".join(f"{x:.4f}" for x in losses)
-    _log(f"  done in {time.monotonic() - started:.0f}s; per-epoch loss: {curve}")
+    _log(
+        f"  done in {time.monotonic() - started:.0f}s after {history['epochs_run']} epochs "
+        f"(stop_reason={history['stop_reason']}); per-epoch loss: {curve}"
+    )
     return model, history
 
 
@@ -335,6 +412,7 @@ def _run_loso(
     *,
     epochs: int,
     mask_ratio: float,
+    plateau_rel_tol: float | None,
 ) -> list[dict[str, object]]:
     """Full leave-one-session-out rotation (D-13).
 
@@ -349,7 +427,9 @@ def _run_loso(
         train_ids = [str(sid) for sid in cast(list[str], fold["train_ids"])]
         _log(f"LOSO fold: hold out {held_out}, train on {', '.join(train_ids)}")
         fold_windows = [train_bc1s[sid] for sid in train_ids]
-        model, history = _train_pool(fold_windows, epochs=epochs)
+        model, history = _train_pool(
+            fold_windows, epochs=epochs, plateau_rel_tol=plateau_rel_tol
+        )
         losses = cast(list[float], history["losses"])
 
         eval_bc1s = _windows_bc1s(by_id[held_out].binned)
@@ -382,6 +462,8 @@ def _run_loso(
                 "eval_windows": int(eval_bc1s.shape[0]),
                 "losses": [_json_float(x) for x in losses],
                 "final_loss": _json_float(losses[-1]),
+                "epochs_run": int(cast(int, history["epochs_run"])),
+                "stop_reason": str(history["stop_reason"]),
                 "diverged": diverged,
             }
         )
@@ -579,17 +661,58 @@ def _repo_relative(path: Path) -> str:
         return str(resolved)
 
 
-def _carry_superseded(out_json: Path) -> dict[str, object] | None:
-    """Return the superseded-objective record already in ``out_json``, if any.
+def _carry_superseded(out_json: Path) -> dict[str, dict[str, object]]:
+    """Return EVERY ``superseded_*`` record already in ``out_json``.
+
+    There is more than one now, and there will be more later: a supersession chain that loses its
+    middle link is not a record of what happened. Carrying by prefix rather than by name means a
+    future correction only has to write its own block, not remember to add it here.
 
     Raises:
-        ValueError: the existing file is not valid JSON, which would silently drop the record.
+        ValueError: the existing file is not valid JSON, which would silently drop the records.
     """
     if not out_json.is_file():
-        return None
+        return {}
     existing = json.loads(out_json.read_text(encoding="utf-8"))
-    carried = existing.get(_SUPERSEDED_KEY)
-    return carried if isinstance(carried, dict) else None
+    return {
+        key: value
+        for key, value in existing.items()
+        if key.startswith(_SUPERSEDED_PREFIX) and isinstance(value, dict)
+    }
+
+
+def _run_supersede_current(args: argparse.Namespace) -> int:
+    """Snapshot the CURRENT measured blocks under a new ``superseded_*`` key, then exit.
+
+    Trains nothing and measures nothing. It moves a copy of what is currently published into the
+    supersession chain BEFORE a re-run overwrites it, so the correction is a labeling operation
+    performed by code rather than a block a human retypes from a summary. The top-level blocks are
+    left in place; the next training run replaces them.
+    """
+    out_json = args.out_json if args.out_json is not None else _DEFAULT_OUT_JSON
+    if not out_json.is_file():
+        print(f"error: {out_json} does not exist; nothing to supersede", file=sys.stderr)
+        return 1
+    key = str(args.supersede_current)
+    if not key.startswith(_SUPERSEDED_PREFIX):
+        print(f"error: --supersede-current key must start with {_SUPERSEDED_PREFIX!r}",
+              file=sys.stderr)
+        return 1
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    if key in payload:
+        print(f"error: {key} already exists in {out_json}; refusing to overwrite a record",
+              file=sys.stderr)
+        return 1
+    if args.supersede_note is None:
+        print("error: --supersede-current requires --supersede-note", file=sys.stderr)
+        return 1
+    snapshot: dict[str, object] = {k: payload[k] for k in _MEASURED_KEYS if k in payload}
+    snapshot["note"] = str(args.supersede_note)
+    snapshot["superseded_by"] = str(args.supersede_by or "a later plan, same file, top level")
+    payload[key] = snapshot
+    out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _log(f"snapshotted {len(snapshot) - 2} measured blocks into {key} in {out_json}")
+    return 0
 
 
 def _summarize(values: list[float]) -> dict[str, object]:
@@ -643,6 +766,17 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--supersede-current",
+        default=None,
+        metavar="superseded_KEY",
+        help=(
+            "train nothing: snapshot the currently published measured blocks in --out-json under "
+            "the given superseded_* key so a re-run cannot lose them"
+        ),
+    )
+    parser.add_argument("--supersede-note", default=None)
+    parser.add_argument("--supersede-by", default=None)
+    parser.add_argument(
         "--smoke",
         action="store_true",
         help="1 epoch on the two smallest sessions - a wiring check, NEVER a committed number",
@@ -657,6 +791,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.derive_margin:
         return _run_derive_margin(args)
+
+    if args.supersede_current is not None:
+        return _run_supersede_current(args)
 
     try:
         manifest_index = _read_manifest(args.manifest)
@@ -681,7 +818,10 @@ def main(argv: list[str] | None = None) -> int:
     if args.diagnostic:
         return _run_diagnostic(args, loaded)
 
-    epochs = 1 if args.smoke else EPOCHS
+    # A wiring check runs one epoch and is never subject to the convergence rule; the real run
+    # gets the cap and the pre-registered rule that decides where inside it to stop.
+    epochs = 1 if args.smoke else EPOCH_CAP
+    plateau_rel_tol = None if args.smoke else PLATEAU_REL_TOL
     if args.smoke:
         loaded = sorted(loaded, key=lambda s: int(s.stats["num_bins"]))[:2]
         _log(
@@ -721,7 +861,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- Pooled training (D-11, D-14) ----------------------------------------------------------
     _log(f"pooled training on {len(loaded)} sessions")
-    model, history = _train_pool([train_bc1s[sid] for sid in ordered_ids], epochs=epochs)
+    model, history = _train_pool(
+        [train_bc1s[sid] for sid in ordered_ids], epochs=epochs, plateau_rel_tol=plateau_rel_tol
+    )
     losses = [float(x) for x in cast(list[float], history["losses"])]
     if not all(np.isfinite(x) for x in losses):
         _log("WARNING: the POOLED training loss went non-finite; the headline number is not usable")
@@ -771,7 +913,13 @@ def main(argv: list[str] | None = None) -> int:
     if args.skip_loso:
         _log("skipping the LOSO rotation (--skip-loso)")
     else:
-        loso = _run_loso(loaded, train_bc1s, epochs=epochs, mask_ratio=mask_ratio)
+        loso = _run_loso(
+            loaded,
+            train_bc1s,
+            epochs=epochs,
+            mask_ratio=mask_ratio,
+            plateau_rel_tol=plateau_rel_tol,
+        )
         # The flat mean/std/min/max/folds keys summarize the D-22 gate null, which is what the
         # published LOSO headline quotes; the drift-robust null's spread is nested beside it.
         loso_summary = {
@@ -796,6 +944,13 @@ def main(argv: list[str] | None = None) -> int:
         },
         "config": {
             "epochs": epochs,
+            "epoch_cap": epochs,
+            "epochs_run": int(cast(int, history["epochs_run"])),
+            "stop_reason": str(history["stop_reason"]),
+            "plateau_rel_tol": plateau_rel_tol,
+            "plateau_patience": PLATEAU_PATIENCE,
+            "min_epochs": MIN_EPOCHS,
+            "grad_clip_norm": DEFAULT_GRAD_CLIP_NORM,
             "lr": LR,
             "batch_size": BATCH_SIZE,
             "seq_len": SEQ_LEN,
@@ -839,9 +994,7 @@ def main(argv: list[str] | None = None) -> int:
     # file being overwritten: a reader who finds 1.9116 quoted somewhere in the repository needs
     # to be able to look it up here and see why it must not be used, and that would be lost the
     # first time anyone re-ran this script if the block were merged in by hand once.
-    carried = _carry_superseded(out_json)
-    if carried is not None:
-        payload[_SUPERSEDED_KEY] = carried
+    payload.update(_carry_superseded(out_json))
     out_json.parent.mkdir(parents=True, exist_ok=True)
     out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     _log(f"wrote {out_json}")

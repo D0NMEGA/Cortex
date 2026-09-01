@@ -26,6 +26,81 @@ defective objective.
 with the pinned wheels. There is no Neural Engine, Core ML, palettization or latency number in this
 file; those are Plans 09-07 and 09-08.
 
+## Plan 09-06c: pre-registration, written before the run
+
+**This section was written and committed BEFORE the run it describes was started.** Its commit
+precedes the commit that carries the numbers, and `git log` is the check. It exists because a
+stopping rule chosen after seeing the curve is a tuned budget with extra steps, and the whole point
+of this correction chain is that the number is not shaped by the person reporting it.
+
+### What is being changed, and only this
+
+Two deliberate changes from the 09-06b run. Everything else is byte-for-byte identical:
+`lr = 2e-3`, `batch_size = 16`, `seq_len = 32`, `mask_ratio = 0.25`, `seed = 0`, `test_frac = 0.2`,
+`weight_decay = 0.01`, `log_input = true`, the architecture, and the corrected input-masking
+objective.
+
+1. **Gradient-norm clipping**, `torch.nn.utils.clip_grad_norm_` at `max_norm = 1.0`, applied on
+   every optimizer step. This is a numerical-stability fix, not tuning: 09-06b observed three
+   divergences under this objective (two LOSO folds and the committed slow gate, which is red on
+   main) and deferred the remedy. 1.0 is the a-priori convention (the HuggingFace `Trainer`
+   default, and what BERT and GPT-2 style loops use); it was not swept.
+2. **The fixed 12-epoch budget is replaced by the stopping rule below.** The 12 came from Phase 4,
+   where it was calibrated against the DEFECTIVE objective that let the model copy its input and
+   reached a 43% loss reduction. Under the corrected objective the same budget yields 6% and the
+   curve was still descending at 0.0007 per epoch when it ran out. D-14 permits raising the budget
+   when the curve has clearly not converged; 09-06b declined on purpose, and this task takes it.
+
+### The stopping rule
+
+**Defined on the TRAINING LOSS and nothing else.** `ndt1.train.loss_plateaued` takes the loss curve
+and no other argument; it cannot see a co-bps. Stopping at the epoch where the reported metric
+happens to peak is precisely the tuning D-22 and D-25 exist to prevent.
+
+Let `r_i = (L[i-1] - L[i]) / |L[i-1]|` be the relative change in mean training loss at epoch `i`.
+
+> **Stop at the first epoch at which `|r_i| < 0.001` has held for each of the last 3 epochs, and at
+> least 12 epochs have run. Otherwise stop at 60 epochs and report that the curve had not
+> converged.**
+
+| Parameter | Value | Why this value |
+|---|---|---|
+| `PLATEAU_REL_TOL` | 0.001 | A tenth of a percent per epoch. The 09-06b run's first-epoch relative improvement was 3.9% and its last three were 0.071%, 0.125% and 0.143%, so the tolerance sits just below where that run stopped; the rule agrees it had not converged, which is pinned by a test. Twenty further epochs inside the band move the loss by under 2%, against the 6% that run achieved in twelve. |
+| `PLATEAU_PATIENCE` | 3 | One quiet epoch cannot end a run that is still learning. Three is also the window 09-06 used when it judged convergence by eye ("epochs 10 to 12 oscillating inside 0.0018"), so the criterion is continuous with the one this repository already applied. |
+| `MIN_EPOCHS` | 12 | The converged run is never SHORTER than the truncated run it replaces, so the new number can never be "we stopped earlier and got a different answer". |
+| `EPOCH_CAP` | 60 | A compute bound, not a result-shaped choice. 09-06b measured 844 s for 12 pooled epochs (70 s/epoch), and the four rotation folds together are 21,396 training windows to the pooled 7,132, so a full run costs about 281 s per epoch. Sixty epochs is about 4.7 h of CPU worst case, the largest single run this artifact can afford. |
+
+Three properties of the arithmetic, each fixed by a test in `Decoder/tests/test_plateau_stop.py`:
+
+- **Every epoch in the window must be flat, not their mean.** A window averaging one large
+  improvement against two equal regressions has a mean near zero while the run is visibly bouncing.
+- **The comparison is on `|r_i|`.** A run that is getting worse has a negative relative change,
+  which is trivially "below" a positive tolerance, so a signed comparison would report a
+  destabilizing run as converged and a diverging one most of all.
+- **The change is relative, not absolute**, so the rule means the same thing at any loss scale.
+
+The pooled run and each of the four LOSO folds get the same rule and stop independently under it.
+Every stopping epoch and its reason is committed per run in `09-decoder-metrics.json`.
+
+### What will be reported, whichever way it comes out
+
+- The epoch at which the run actually stopped, and the loss curve that triggered the rule.
+- **If the run hits the 60-epoch cap without meeting the plateau criterion, that is stated
+  explicitly and the number is still labeled a floor**, exactly as the 12-epoch number was.
+- Per-session co-bps against BOTH nulls, and the pooled value against both. The drift-robust
+  `test_mean_null` is reported beside the gate null every time; the more flattering of the two is
+  not promoted to headline.
+- The full four-fold LOSO rotation with mean and spread.
+- `CO_BPS_MARGIN` recomputed by the same unchanged derivation rule, from whatever the new
+  observation is.
+
+**A negative result is a result.** A converged NDT1 at 1.29M parameters on about 95 minutes of
+real primate M1 spikes may still fail to beat a constant per-channel mean firing rate. If that is
+what the run produces, it is reported without hedging. Nothing about the learning rate, the mask
+ratio, the architecture, the seed or the choice of null will be changed to move it, and the run
+will not be stopped at an epoch where the co-bps happens to look better: the rule above cannot see
+the co-bps at all.
+
 ## The correction (Plan 09-06b)
 
 ### What was wrong
