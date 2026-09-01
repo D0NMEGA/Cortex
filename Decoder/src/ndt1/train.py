@@ -37,6 +37,8 @@ Phase 5). The loop's only objective is the masked Poisson NLL on the predicted r
 """
 from __future__ import annotations
 
+import math
+from collections.abc import Sequence
 from pathlib import Path
 
 import torch
@@ -105,6 +107,66 @@ def masked_forward(model: nn.Module, targets: Tensor, mask: Tensor) -> Tensor:
     return model(hide_scored_positions(targets, mask))
 
 
+def loss_plateaued(
+    losses: Sequence[float],
+    *,
+    rel_tol: float,
+    patience: int,
+    min_epochs: int,
+) -> bool:
+    """Has the training loss stopped moving? The convergence rule, on the LOSS and nothing else.
+
+    Plan 09-06b's number came from a fixed 12-epoch budget inherited from Phase 4, on a curve that
+    was still descending monotonically when the budget ran out, so it was a floor rather than an
+    asymptote. Replacing that budget needs a stopping rule, and the rule must be defined on the
+    training loss: stopping when the reported metric happens to look good is the tuning D-22 and
+    D-25 exist to prevent. This function therefore cannot see a co-bps. Its only input is the loss
+    curve.
+
+    The rule: let ``r_i = (L_{i-1} - L_i) / |L_{i-1}|`` be the relative change at epoch ``i``. The
+    curve has plateaued when ``|r_i| < rel_tol`` for each of the last ``patience`` epochs, and at
+    least ``min_epochs`` epochs have run.
+
+    Three properties of that formulation, each chosen for a reason:
+
+    * **Every epoch in the window must be flat, not their mean.** A window averaging one large
+      improvement against two equal regressions has a mean near zero while the run is visibly
+      bouncing; the per-epoch form cannot be satisfied that way.
+    * **The comparison is on the absolute value.** A run that is getting WORSE has a negative
+      relative change, which is trivially "below" a positive tolerance, so a signed comparison
+      would report a destabilizing run as converged. A diverging one would satisfy it most of all.
+    * **The change is relative.** The same fractional curve gives the same verdict at any loss
+      scale, so the rule does not silently mean something different on a different objective.
+
+    Args:
+        losses: per-epoch mean training loss, in order, for the epochs run so far.
+        rel_tol: the flatness band, as a fraction of the previous epoch's loss. Must be positive.
+        patience: how many consecutive epochs must be inside the band. Must be at least 1.
+        min_epochs: a floor below which the rule never fires, whatever the curve looks like.
+
+    Returns:
+        ``True`` when the curve satisfies the rule; ``False`` otherwise, including whenever any
+        loss in the window is non-finite, so a diverged run can never be reported as converged.
+
+    Raises:
+        ValueError: ``rel_tol`` is not positive, or ``patience`` is below 1. Both would make the
+            rule a silent no-op, which is worse than a loud failure.
+    """
+    if rel_tol <= 0.0:
+        raise ValueError(f"rel_tol must be positive, got {rel_tol}")
+    if patience < 1:
+        raise ValueError(f"patience must be at least 1, got {patience}")
+    if len(losses) < max(min_epochs, patience + 1):
+        return False
+    window = losses[-(patience + 1) :]
+    for previous, current in zip(window[:-1], window[1:], strict=True):
+        if not (math.isfinite(previous) and math.isfinite(current)) or previous == 0.0:
+            return False
+        if abs((previous - current) / abs(previous)) >= rel_tol:
+            return False
+    return True
+
+
 def _unwrap_batch(batch: object) -> Tensor:
     """Accept a raw ``(B, S, C)`` tensor or a 1-tuple/list from a ``TensorDataset`` loader."""
     if isinstance(batch, (list, tuple)):
@@ -128,13 +190,17 @@ def train_ndt1(
     weight_decay: float = 0.01,
     eval_set: tuple[Tensor, Tensor] | None = None,
     grad_clip_norm: float | None = DEFAULT_GRAD_CLIP_NORM,
+    plateau_rel_tol: float | None = None,
+    plateau_patience: int = 3,
+    min_epochs: int = 0,
 ) -> dict[str, object]:
     """Run masked-modeling training: mask → forward → clip → masked Poisson NLL → AdamW step.
 
     Args:
         model: an ``NDT1ANE`` (carries ``.mask_ratio``); maps BC1S ``(B, C, 1, S)`` → log-rates.
         train_loader: yields ``(B, S, C)`` spike-count windows (or 1-tuples thereof).
-        epochs: number of passes over ``train_loader``.
+        epochs: HARD CAP on passes over ``train_loader``. With ``plateau_rel_tol`` unset this is
+            simply the budget; with it set the loop may stop earlier, never later.
         lr: AdamW learning rate.
         log_input: passed to ``masked_poisson_nll`` / ``co_bps``. ``True`` ⇒ the model emits
             log-rates (the natural choice for the linear readout — see 04-03 hand-forward).
@@ -147,10 +213,16 @@ def train_ndt1(
             ``optimizer.step()``. On by default, because a numerical-stability guard every caller
             has to remember to switch on is one the next caller will forget. ``None`` disables it,
             which is what every run before Plan 09-06c did; see :data:`DEFAULT_GRAD_CLIP_NORM`.
+        plateau_rel_tol: when set, stop early once :func:`loss_plateaued` says the TRAINING LOSS
+            has flattened. ``None`` keeps the pre-09-06c fixed-budget behaviour, so no caller
+            that does not opt in changes.
+        plateau_patience: consecutive flat epochs the rule requires. Ignored when
+            ``plateau_rel_tol`` is ``None``.
+        min_epochs: floor below which the rule never fires. Ignored likewise.
 
     Returns:
-        ``{"losses": [per-epoch mean loss, ...], "eval_co_bps": float | None,
-           "config": {...}}``.
+        ``{"losses": [per-epoch mean loss, ...], "epochs_run": int, "stop_reason":
+           "plateau" | "epoch_cap", "eval_co_bps": float | None, "config": {...}}``.
     """
     if epochs <= 0:
         raise ValueError(f"epochs must be positive, got {epochs}")
@@ -166,6 +238,7 @@ def train_ndt1(
     mask_ratio = float(getattr(model, "mask_ratio", 0.25))
 
     losses: list[float] = []
+    stop_reason = "epoch_cap"
     for _epoch in range(epochs):
         batch_losses: list[float] = []
         for batch in train_loader:
@@ -183,6 +256,14 @@ def train_ndt1(
             optimizer.step()
             batch_losses.append(float(loss.detach().item()))
         losses.append(sum(batch_losses) / max(len(batch_losses), 1))
+        if plateau_rel_tol is not None and loss_plateaued(
+            losses,
+            rel_tol=plateau_rel_tol,
+            patience=plateau_patience,
+            min_epochs=min_epochs,
+        ):
+            stop_reason = "plateau"
+            break
 
     eval_co_bps: float | None = None
     if eval_set is not None:
@@ -193,6 +274,8 @@ def train_ndt1(
 
     return {
         "losses": losses,
+        "epochs_run": len(losses),
+        "stop_reason": stop_reason,
         "eval_co_bps": eval_co_bps,
         "config": {
             "epochs": epochs,
@@ -202,6 +285,9 @@ def train_ndt1(
             "weight_decay": weight_decay,
             "mask_ratio": mask_ratio,
             "grad_clip_norm": grad_clip_norm,
+            "plateau_rel_tol": plateau_rel_tol,
+            "plateau_patience": plateau_patience,
+            "min_epochs": min_epochs,
         },
     }
 
