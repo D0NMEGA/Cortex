@@ -38,7 +38,7 @@ Phase 5). The loop's only objective is the masked Poisson NLL on the predicted r
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import torch
@@ -193,6 +193,7 @@ def train_ndt1(
     plateau_rel_tol: float | None = None,
     plateau_patience: int = 3,
     min_epochs: int = 0,
+    on_epoch_end: Callable[[int, float], None] | None = None,
 ) -> dict[str, object]:
     """Run masked-modeling training: mask → forward → clip → masked Poisson NLL → AdamW step.
 
@@ -219,6 +220,9 @@ def train_ndt1(
         plateau_patience: consecutive flat epochs the rule requires. Ignored when
             ``plateau_rel_tol`` is ``None``.
         min_epochs: floor below which the rule never fires. Ignored likewise.
+        on_epoch_end: optional ``(epoch_number, mean_loss) -> None`` progress hook. Read-only
+            by contract: a run that takes hours needs to be observable while it runs, and a
+            hook that could touch the RNG or the optimizer would make the log a variable.
 
     Returns:
         ``{"losses": [per-epoch mean loss, ...], "epochs_run": int, "stop_reason":
@@ -256,6 +260,8 @@ def train_ndt1(
             optimizer.step()
             batch_losses.append(float(loss.detach().item()))
         losses.append(sum(batch_losses) / max(len(batch_losses), 1))
+        if on_epoch_end is not None:
+            on_epoch_end(len(losses), losses[-1])
         if plateau_rel_tol is not None and loss_plateaued(
             losses,
             rel_tol=plateau_rel_tol,

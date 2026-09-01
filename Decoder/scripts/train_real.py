@@ -321,6 +321,11 @@ def _train_pool(
     steps = (pooled.shape[0] + BATCH_SIZE - 1) // BATCH_SIZE * epochs
     _log(f"  training on {pooled.shape[0]} windows, cap {epochs} epochs, <={steps} steps")
     started = time.monotonic()
+
+    def _progress(epoch: int, loss: float) -> None:
+        # A run that can take hours has to be observable while it runs, not only afterwards.
+        _log(f"    epoch {epoch:>2}/{epochs}: loss {loss:.6f}  ({time.monotonic() - started:.0f}s)")
+
     history = train_ndt1(
         model,
         loader,
@@ -333,6 +338,7 @@ def _train_pool(
         plateau_rel_tol=plateau_rel_tol,
         plateau_patience=PLATEAU_PATIENCE,
         min_epochs=MIN_EPOCHS,
+        on_epoch_end=_progress,
     )
     losses = cast(list[float], history["losses"])
     curve = " ".join(f"{x:.4f}" for x in losses)
