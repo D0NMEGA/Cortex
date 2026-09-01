@@ -13,7 +13,19 @@ that observation was a self-reconstruction score (see ``test_masked_input_isolat
 09-06b corrected the objective, re-measured, and re-derived the margin from the corrected value with
 the derivation rule unchanged.
 
-These five quick tests hold the re-derivation in place:
+Plan 09-06b's own ``0.00082`` is superseded in turn. It came from a 12-epoch unclipped run whose
+loss was still descending when the budget ran out, and the budget itself had been calibrated
+against the DEFECTIVE objective. Plan 09-06c added gradient clipping, replaced the fixed budget
+with a rule pre-registered on the training loss, and re-derived once more. The derivation RULE has
+never changed across any of these; only the observation it reads has.
+
+The chain is three links long now and none of them may be deleted:
+
+  1.9116  defective objective                      superseded_visible_input_objective
+  0.0062  corrected objective, 12 unclipped epochs  superseded_truncated_budget
+  (top)   corrected objective, clipped, stopped by the pre-registered rule
+
+These quick tests hold the re-derivation in place:
 
   * the constant is neither the Phase-4 synthetic value nor the superseded 09-06 value,
   * the committed metrics JSON records the margin AND the rationale that produced it,
@@ -44,8 +56,17 @@ PHASE4_SYNTHETIC_MARGIN: float = 0.05
 #: What Plan 09-06 committed, against a REAL observation produced by a defective objective.
 VISIBLE_INPUT_MARGIN: float = 0.25
 
-#: The JSON key under which the pre-09-06b numbers are preserved.
+#: What Plan 09-06b committed, against a REAL observation under the corrected objective but from a
+#: 12-epoch unclipped run on a curve that had not flattened.
+TRUNCATED_BUDGET_MARGIN: float = 0.00082
+
+#: The JSON keys under which each superseded measurement is preserved.
 SUPERSEDED_KEY: str = "superseded_visible_input_objective"
+TRUNCATED_BUDGET_KEY: str = "superseded_truncated_budget"
+
+#: The pooled train-null co-bps each superseded run published, to full double precision.
+VISIBLE_INPUT_CO_BPS: float = 1.9115827904116325
+TRUNCATED_BUDGET_CO_BPS: float = 0.006214627530704778
 
 _METRICS_PATH = (
     Path(__file__).resolve().parents[2]
@@ -123,8 +144,49 @@ def test_the_superseded_numbers_are_preserved_and_labeled() -> None:
         f"published are retained, labeled, and never deleted; train_real.py carries this key "
         f"across re-runs for exactly that reason."
     )
-    assert superseded["co_bps"]["pooled"]["train_null"] == 1.9115827904116325
+    assert superseded["co_bps"]["pooled"]["train_null"] == VISIBLE_INPUT_CO_BPS
     note = superseded["note"]
     assert isinstance(note, str) and "MUST NOT BE QUOTED" in note, (
         "the superseded record must carry the warning that says how it may be used"
     )
+
+
+def test_margin_is_not_the_superseded_truncated_budget_constant() -> None:
+    """The margin is not the one derived from a run that stopped before its loss flattened."""
+    assert CO_BPS_MARGIN != TRUNCATED_BUDGET_MARGIN, (
+        f"CO_BPS_MARGIN is still {TRUNCATED_BUDGET_MARGIN}, the Plan 09-06b constant derived from "
+        f"an observed {TRUNCATED_BUDGET_CO_BPS:.4f} measured at a fixed 12-epoch budget with no "
+        f"gradient clipping. Plan 09-06c clipped, stopped by a pre-registered rule on the training "
+        f"loss, and re-measured; the margin must follow the new observation."
+    )
+
+
+def test_the_truncated_budget_numbers_are_preserved_and_labeled() -> None:
+    """The middle link of the chain. A supersession that loses it is not a record of what happened.
+
+    Unlike the 1.9116, this block was NOT measuring self-reconstruction: its objective was already
+    correct. What supersedes it is the budget and the numerics, and the note has to say so, because
+    a reader who finds 0.0062 quoted elsewhere needs to know which of the two problems applied.
+    """
+    record = _metrics().get(TRUNCATED_BUDGET_KEY)
+    assert isinstance(record, dict), (
+        f"{TRUNCATED_BUDGET_KEY} is missing from the committed metrics JSON. train_real.py carries "
+        f"every superseded_* record across a re-run so a chain cannot lose its middle link."
+    )
+    assert record["co_bps"]["pooled"]["train_null"] == TRUNCATED_BUDGET_CO_BPS
+    assert record["config"]["epochs"] == 12
+    note = record["note"]
+    assert isinstance(note, str) and "must not be quoted" in note.lower(), (
+        "the superseded record must carry the warning that says how it may be used"
+    )
+
+
+def test_every_superseded_record_says_what_replaced_it() -> None:
+    """A labeled dead end is only useful if it points at the live number."""
+    for key, record in _metrics().items():
+        if not key.startswith("superseded_"):
+            continue
+        pointer = record.get("superseded_by")
+        assert isinstance(pointer, str) and pointer, (
+            f"{key} records numbers but does not say what supersedes them"
+        )

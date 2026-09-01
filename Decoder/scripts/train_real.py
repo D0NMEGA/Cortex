@@ -349,6 +349,92 @@ def _train_pool(
     return model, history
 
 
+
+def _convergence_record(
+    losses: list[float], *, epochs_run: int, stop_reason: str, epoch_cap: int
+) -> dict[str, object]:
+    """The stopping decision, made auditable: the rule, the epoch, and the numbers that fired it.
+
+    `stop_reason` alone says WHETHER the rule fired; it does not let a reader check that it should
+    have. This records the per-epoch relative changes the rule actually inspected, so the decision
+    can be recomputed from the committed curve without re-running anything.
+
+    ``fired_at_floor`` is called out on purpose. The rule cannot fire before ``MIN_EPOCHS``, so a
+    run that stops exactly there stopped at the earliest epoch available to it, which is a much
+    weaker statement than a curve that went flat on its own and must not be read as the stronger
+    one.
+    """
+    changes = [
+        abs((previous - current) / abs(previous)) if previous else float("nan")
+        for previous, current in zip(losses[:-1], losses[1:], strict=True)
+    ]
+    inspected = changes[-PLATEAU_PATIENCE:] if len(changes) >= PLATEAU_PATIENCE else changes
+    return {
+        "rule": (
+            f"stop at the first epoch at which |(L[i-1] - L[i]) / L[i-1]| < {PLATEAU_REL_TOL} has "
+            f"held for each of the last {PLATEAU_PATIENCE} epochs and at least {MIN_EPOCHS} epochs "
+            f"have run; otherwise stop at {epoch_cap} and report that the curve had NOT converged"
+        ),
+        "pre_registered_in": (
+            ".planning/phases/09-real-data-ingest-ndt1-retrain-zenodo-3854034/"
+            "09-training-evidence.md, committed before the run"
+        ),
+        "rel_tol": PLATEAU_REL_TOL,
+        "patience": PLATEAU_PATIENCE,
+        "min_epochs": MIN_EPOCHS,
+        "epoch_cap": epoch_cap,
+        "epochs_run": epochs_run,
+        "stop_reason": stop_reason,
+        "converged": stop_reason == "plateau",
+        "fired_at_floor": stop_reason == "plateau" and epochs_run == MIN_EPOCHS,
+        "relative_change_per_epoch": [_json_float(x) for x in changes],
+        "inspected_by_the_rule": [_json_float(x) for x in inspected],
+    }
+
+
+def _run_annotate_convergence(args: argparse.Namespace) -> int:
+    """Recompute the convergence record from the committed curve and merge it into --out-json.
+
+    Trains nothing and measures nothing. It exists because the run that produced the committed
+    numbers predates this record, and recomputing it from the curve already on disk is auditable
+    in a way that retyping the three numbers into a markdown table is not.
+    """
+    out_json = args.out_json if args.out_json is not None else _DEFAULT_OUT_JSON
+    if not out_json.is_file():
+        print(f"error: {out_json} does not exist", file=sys.stderr)
+        return 1
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    config = payload["config"]
+    losses = [x for x in payload["losses"] if x is not None]
+    if len(losses) != len(payload["losses"]):
+        print("error: the committed curve has a null epoch; the run diverged", file=sys.stderr)
+        return 1
+    payload["convergence"] = _convergence_record(
+        losses,
+        epochs_run=int(config["epochs_run"]),
+        stop_reason=str(config["stop_reason"]),
+        epoch_cap=int(config["epoch_cap"]),
+    )
+    for fold in payload.get("loso", []):
+        fold_losses = [x for x in fold["losses"] if x is not None]
+        if len(fold_losses) != len(fold["losses"]):
+            continue  # a diverged fold has no rule decision to explain
+        fold["convergence"] = _convergence_record(
+            fold_losses,
+            epochs_run=int(fold["epochs_run"]),
+            stop_reason=str(fold["stop_reason"]),
+            epoch_cap=int(config["epoch_cap"]),
+        )
+    out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    record = payload["convergence"]
+    _log(
+        f"pooled: stopped at epoch {record['epochs_run']} ({record['stop_reason']}), "
+        f"fired_at_floor={record['fired_at_floor']}, inspected "
+        + ", ".join(f"{x:.6f}" for x in record["inspected_by_the_rule"])
+    )
+    return 0
+
+
 def _read_manifest(path: Path) -> dict[str, dict[str, object]]:
     """Return ``{session_id: manifest entry}``.
 
@@ -772,6 +858,22 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--annotate-convergence",
+        action="store_true",
+        help=(
+            "train nothing: recompute the convergence record from the committed loss curves in "
+            "--out-json and merge it in"
+        ),
+    )
+    parser.add_argument(
+        "--no-plateau-stop",
+        action="store_true",
+        help=(
+            "disable the pre-registered convergence rule and run the full epoch cap; the "
+            "supplementary budget probe, never the published run"
+        ),
+    )
+    parser.add_argument(
         "--supersede-current",
         default=None,
         metavar="superseded_KEY",
@@ -801,6 +903,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.supersede_current is not None:
         return _run_supersede_current(args)
 
+    if args.annotate_convergence:
+        return _run_annotate_convergence(args)
+
     try:
         manifest_index = _read_manifest(args.manifest)
     except OSError as exc:
@@ -827,7 +932,13 @@ def main(argv: list[str] | None = None) -> int:
     # A wiring check runs one epoch and is never subject to the convergence rule; the real run
     # gets the cap and the pre-registered rule that decides where inside it to stop.
     epochs = 1 if args.smoke else EPOCH_CAP
-    plateau_rel_tol = None if args.smoke else PLATEAU_REL_TOL
+    plateau_rel_tol = None if (args.smoke or args.no_plateau_stop) else PLATEAU_REL_TOL
+    if args.no_plateau_stop:
+        _log(
+            f"BUDGET PROBE: the convergence rule is disabled and every run goes to the full "
+            f"{epochs}-epoch cap. This is the supplementary probe pre-registered in "
+            f"09-training-evidence.md, not the published run."
+        )
     if args.smoke:
         loaded = sorted(loaded, key=lambda s: int(s.stats["num_bins"]))[:2]
         _log(
@@ -986,6 +1097,12 @@ def main(argv: list[str] | None = None) -> int:
             "margin": None,
             "margin_rationale": None,
         },
+        "convergence": _convergence_record(
+            losses,
+            epochs_run=int(cast(int, history["epochs_run"])),
+            stop_reason=str(history["stop_reason"]),
+            epoch_cap=epochs,
+        ),
         "loso": loso,
         "loso_summary": loso_summary,
         "wall_clock_s": round(time.time() - started_at, 1),
