@@ -13,10 +13,74 @@ empty mask so the loss is always finite).
 """
 from __future__ import annotations
 
+import math
+
 import torch
 from torch import Tensor, nn
 
 DEFAULT_MASK_RATIO: float = 0.25
+
+#: Predicted log-rates above this are scored on a LINEARIZATION of ``exp`` rather than on ``exp``
+#: itself (Plan 09-06d). Below it nothing changes, to the bit.
+#:
+#: **Why a threshold is needed.** With ``log_input=True`` the Poisson NLL model term is
+#: ``exp(x) - target * x``. Plan 09-06c instrumented the one reproducible real-data divergence this
+#: repository has, step by step (``scripts/diagnose_divergence.py``), and found the ordering to be:
+#: the model emits a log-rate of 43.7 on a batch it had already seen three times without incident;
+#: eight steps later the log-rate reaches 97.33; ``exp`` overflows float32 above about 88.7; the
+#: loss becomes ``nan``; the gradient goes non-finite one step LATER. Gradient clipping therefore
+#: acts on the symptom after the cause, which is why 09-06c measured it NOT fixing this failure.
+#:
+#: **Why 20.** It has to be far outside every regime healthy training occupies, and far inside
+#: float32's exp range:
+#:
+#: * Real 20 ms bins in this corpus carry 0 to 5 spikes and the per-channel mean rate is about 0.3
+#:   spikes/bin, so a healthy log-rate sits near ``log(0.3) = -1.2``. The largest ``|log-rate|``
+#:   ever observed over a clean epoch of this training path is 13.3 (09-06c's replay).
+#: * ``exp(20)`` is 4.85e8 spikes per 20 ms bin: eight orders of magnitude beyond the largest count
+#:   in the data, and 812x further out in rate space than that observed healthy maximum.
+#: * Going higher buys nothing -- the loss at the threshold is already astronomically large -- and
+#:   costs headroom twice over: ``exp(C)`` is the constant gradient above the threshold, and both
+#:   the linear extension and the sum of squares inside ``clip_grad_norm_`` have to stay inside
+#:   float32. At ``C = 20`` the linear branch is still finite at a log-rate of 1e20.
+#:
+#: Nothing here was chosen by looking at a co-bps: the value is fixed by the data range and by
+#: float32, and ``tests/test_loss_stability.py`` proves the loss is bit-identical below it in value
+#: AND in gradient, so the guard cannot move a number produced by a healthy run.
+LOG_RATE_LINEARIZE_ABOVE: float = 20.0
+
+
+def stable_exp(x: Tensor, threshold: float = LOG_RATE_LINEARIZE_ABOVE) -> Tensor:
+    """``exp(x)`` below ``threshold``; its tangent line at ``threshold`` above it.
+
+    ``f(x) = exp(C) * (1 + (x - C))`` for ``x > C`` is the first-order Taylor expansion of ``exp``
+    at ``C``, so ``f`` and ``f'`` both agree with ``exp`` at the join and the result is C1
+    continuous. Above the threshold the value grows linearly instead of exponentially (finite for
+    any finite input) and the derivative is the finite positive constant ``exp(C)``.
+
+    **Not ``torch.clamp``.** Clamping the exponent gives a derivative of exactly zero above the
+    bound, so the ``- target * x`` term of the Poisson NLL is all that survives and the total
+    gradient is ``-target``: negative, so a descent step drives an already-escaped log-rate further
+    up. ``tests/test_loss_stability.py`` asserts that wrong sign explicitly, because the difference
+    between "no signal" and "a signal pointing the wrong way" is the reason this function exists.
+
+    The exponent fed to ``torch.exp`` is itself replaced by ``threshold`` on the linearized branch,
+    so ``exp`` never evaluates an overflowing argument even on the discarded side of the
+    ``torch.where``; otherwise the ``0 * inf`` in its backward pass would reintroduce the ``nan``
+    this function exists to remove.
+
+    Args:
+        x: input tensor (predicted log-rates).
+        threshold: the value ``C`` above which ``exp`` is replaced by its tangent line.
+
+    Returns:
+        A tensor of the same shape, finite for every finite input.
+    """
+    over = x > threshold
+    safe = torch.where(over, torch.full_like(x, threshold), x)
+    exponential = torch.exp(safe)
+    linear = math.exp(threshold) * (1.0 + (x - threshold))
+    return torch.where(over, linear, exponential)
 
 
 def masked_poisson_nll(
