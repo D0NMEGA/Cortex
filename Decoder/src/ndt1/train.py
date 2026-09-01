@@ -37,10 +37,29 @@ from pathlib import Path
 
 import torch
 from torch import Tensor, nn
+from torch.nn.utils import clip_grad_norm_
 from torch.utils.data import DataLoader
 
 from ndt1.loss import hide_scored_positions, masked_poisson_nll, random_mask
 from ndt1.metrics import co_bps, mean_firing_rate
+
+#: Max total gradient norm for :func:`torch.nn.utils.clip_grad_norm_` (Plan 09-06c).
+#:
+#: 1.0 is the a-priori convention, not a value swept for a better number: it is the default in
+#: HuggingFace ``Trainer`` (``max_grad_norm=1.0``) and the value BERT and GPT-2 style training
+#: loops use. Nothing here was chosen by looking at a co-bps.
+#:
+#: Why the guard is needed at all: with ``log_input=True`` the Poisson NLL model term is
+#: ``exp(rate) - target * rate``, so one predicted log-rate excursion overflows and the
+#: gradients go non-finite. AdamW has nothing to arrest that. The failure fired three times on
+#: real Indy spikes under the Plan 09-06b objective (two LOSO folds and the committed slow
+#: gate); see ``deferred-items-09-06b.md`` item 1.
+#:
+#: Why a norm cap is close to free for the numbers it does not rescue: AdamW normalizes each
+#: coordinate by its own second-moment estimate, so scaling the whole gradient vector by a
+#: constant leaves the update almost unchanged to first order. The clip therefore bites hard on
+#: the rare exploding step and barely at all on ordinary ones.
+DEFAULT_GRAD_CLIP_NORM: float = 1.0
 
 
 def reshape_to_bc1s(window: Tensor) -> Tensor:
@@ -102,8 +121,9 @@ def train_ndt1(
     seed: int = 0,
     weight_decay: float = 0.01,
     eval_set: tuple[Tensor, Tensor] | None = None,
+    grad_clip_norm: float | None = None,
 ) -> dict[str, object]:
-    """Run masked-modeling training: mask → forward → masked Poisson NLL → AdamW step.
+    """Run masked-modeling training: mask → forward → clip → masked Poisson NLL → AdamW step.
 
     Args:
         model: an ``NDT1ANE`` (carries ``.mask_ratio``); maps BC1S ``(B, C, 1, S)`` → log-rates.
@@ -117,6 +137,9 @@ def train_ndt1(
         weight_decay: AdamW decoupled weight decay.
         eval_set: optional ``(eval_targets_bc1s, eval_mask)`` for a held-out co-bps reported in
             the history under ``"eval_co_bps"`` (train-split mean rate is the null).
+        grad_clip_norm: max total gradient norm applied between ``backward()`` and
+            ``optimizer.step()``. ``None`` disables the guard, which is what every run before
+            Plan 09-06c did; see :data:`DEFAULT_GRAD_CLIP_NORM` for why it exists.
 
     Returns:
         ``{"losses": [per-epoch mean loss, ...], "eval_co_bps": float | None,
@@ -148,6 +171,8 @@ def train_ndt1(
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
+            if grad_clip_norm is not None:
+                clip_grad_norm_(model.parameters(), grad_clip_norm)
             optimizer.step()
             batch_losses.append(float(loss.detach().item()))
         losses.append(sum(batch_losses) / max(len(batch_losses), 1))
@@ -169,6 +194,7 @@ def train_ndt1(
             "seed": seed,
             "weight_decay": weight_decay,
             "mask_ratio": mask_ratio,
+            "grad_clip_norm": grad_clip_norm,
         },
     }
 
