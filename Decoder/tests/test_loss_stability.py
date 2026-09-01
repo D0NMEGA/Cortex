@@ -225,19 +225,26 @@ def test_a_clamped_exp_would_push_an_escaped_rate_further_up() -> None:
 def test_gradient_descent_returns_an_escaped_rate_to_the_data_regime() -> None:
     """End to end: from the observed 97.33, plain SGD on the stabilized loss walks back below ``C``.
 
-    ``lr`` is set from the constant gradient ``exp(C)`` so each step moves the log-rate by about
-    half a unit; nothing here is tuned against a result, and the assertion is only that the descent
-    goes in the right direction and stays finite the whole way.
+    ``lr`` is COMPUTED from the constant gradient above the threshold so that one step moves the
+    log-rate by exactly one unit, rather than being swept until the test passed: the loss is a mean
+    over ``n`` masked positions, so the per-element gradient is ``(exp(C) - target) / n``. Nothing
+    here is tuned against a result; the assertion is only that the descent goes in the right
+    direction and stays finite the whole way.
     """
-    rates = torch.full((8,), OBSERVED_EXCURSION, dtype=torch.float32).requires_grad_(True)
-    targets = torch.ones(8, dtype=torch.float32)
-    mask = torch.ones(8, dtype=torch.bool)
-    optimizer = torch.optim.SGD([rates], lr=1e-9)
-    for _ in range(300):
+    n_masked = 8
+    target_value = 1.0
+    rates = torch.full((n_masked,), OBSERVED_EXCURSION, dtype=torch.float32).requires_grad_(True)
+    targets = torch.full((n_masked,), target_value, dtype=torch.float32)
+    mask = torch.ones(n_masked, dtype=torch.bool)
+    one_unit_step = n_masked / (math.exp(LOG_RATE_LINEARIZE_ABOVE) - target_value)
+    steps = 2 * math.ceil(OBSERVED_EXCURSION - LOG_RATE_LINEARIZE_ABOVE)
+    optimizer = torch.optim.SGD([rates], lr=one_unit_step)
+    for _ in range(steps):
         optimizer.zero_grad(set_to_none=True)
         loss = masked_poisson_nll(rates, targets, mask, log_input=True)
         assert torch.isfinite(loss).all()
         loss.backward()
         optimizer.step()
-    assert torch.isfinite(rates).all()
-    assert float(rates.max()) < LOG_RATE_LINEARIZE_ABOVE
+    final = rates.detach()
+    assert torch.isfinite(final).all()
+    assert float(final.max()) < LOG_RATE_LINEARIZE_ABOVE

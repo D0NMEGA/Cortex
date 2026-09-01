@@ -92,20 +92,31 @@ def masked_poisson_nll(
 ) -> Tensor:
     """Poisson NLL averaged over masked positions only.
 
+    **The ``log_input=True`` branch uses :func:`stable_exp` rather than ``exp`` (Plan 09-06d).**
+    It is the same expression, ``exp(x) - target * x``, with ``exp`` replaced above
+    :data:`LOG_RATE_LINEARIZE_ABOVE` by its tangent line at that point, so a log-rate excursion
+    produces a large FINITE loss with a finite, correctly-signed gradient instead of the ``nan``
+    that ended one LOSO fold and the committed slow gate in Plan 09-06c. Below the threshold the
+    value and the gradient are bit-identical to ``nn.PoissonNLLLoss``, which
+    ``tests/test_loss_stability.py`` asserts, so the guard cannot move a number that a healthy run
+    produced. The ``log_input=False`` branch is untouched; it has no ``exp`` to overflow.
+
     Args:
         rates: predicted rates (``log_input=False``) or log-rates (``log_input=True``).
         targets: observed spike counts (same shape as ``rates``).
         mask: boolean tensor; ``True`` marks positions the loss is computed on.
-        log_input: passed to ``nn.PoissonNLLLoss``. If ``True`` the loss is
-            ``exp(rates) - targets*rates``; if ``False`` it is
-            ``rates - targets*log(rates + eps)``.
+        log_input: if ``True`` the loss is ``stable_exp(rates) - targets*rates``; if ``False`` it
+            is ``nn.PoissonNLLLoss``'s ``rates - targets*log(rates + eps)``.
         eps: numerical-stability epsilon used when ``log_input=False``.
 
     Returns:
         Scalar mean loss over masked positions; ``0.0`` when the mask is empty.
     """
-    criterion = nn.PoissonNLLLoss(reduction="none", log_input=log_input, eps=eps)
-    per_element = criterion(rates, targets)
+    if log_input:
+        per_element = stable_exp(rates) - targets * rates
+    else:
+        criterion = nn.PoissonNLLLoss(reduction="none", log_input=log_input, eps=eps)
+        per_element = criterion(rates, targets)
     mask_f = mask.to(per_element.dtype)
     total = (per_element * mask_f).sum()
     count = mask_f.sum().clamp(min=1.0)
