@@ -110,9 +110,43 @@ from epoch 1 onward.
 That is expected with AdamW, whose per-coordinate normalization makes a uniform rescale close to a
 no-op in the update, but "close to" is not "exactly", and it means gradient clipping is a second
 variable in this task rather than a pure guard. Both changes are named as deliberate in
-`09-training-evidence.md` and neither is presented as free. Quantifying how much of the change from
-0.0062 is the budget and how much is the clip would need a third run (clipped at the old 12-epoch
-budget), which was not done.
+`09-training-evidence.md` and neither is presented as free.
+
+**The attribution turned out not to need a third run.** Because the convergence rule stopped the
+published run at 12 epochs, that run and the one it supersedes have the same budget, so the
+movement from 0.0062 to 0.0713 is the clip alone. The budget probe then separates the other
+direction: 12 to 60 epochs is worth +0.229 on the pooled gate null against the clip's +0.065, so
+the budget is worth roughly three and a half times what the clip is worth. That was luck rather
+than design; had the rule fired at epoch 40 the two would have been inseparable.
+
+## 4. The pre-registered stopping rule is too lax for co-bps, and it was measured
+
+The rule (`|(L[i-1] - L[i]) / L[i-1]| < 0.001` for 3 consecutive epochs, floor 12, cap 60) fired at
+its floor on the pooled run. The supplementary budget probe, the identical configuration with the
+rule disabled and run to 60 epochs, shows what that cost:
+
+| | 12 epochs (rule fired) | 60 epochs (probe) |
+|---|---|---|
+| training loss | 0.5571 | 0.5500 (a further 1.3%) |
+| pooled co-bps, `train_null` | 0.0713 | 0.3002 (4.2x) |
+| sessions below their own test mean | 3 of 4 | 1 of 4 |
+
+**A plateau criterion on the masked Poisson NLL is a poor proxy for convergence of co-bps in this
+regime.** The corpus is 71 to 80% empty bins, so the loss is dominated by the easy bulk and goes
+quiet long before the model stops improving on the normalized comparison against a null that co-bps
+measures. Tiny loss changes map to large co-bps changes.
+
+**Not repaired here, deliberately.** The rule was pre-registered and applied without modification.
+Moving its tolerance or floor now, having seen which setting gives the better number, is exactly
+the tuning the pre-registration exists to prevent, and it would make every number in this task
+suspect.
+
+**What closing it looks like.** Define convergence on a held-out quantity rather than on the
+training loss, keeping the discipline that made the current rule safe: the rule must not be able to
+stop where the reported value is highest. A rule on the STABILITY of the held-out co-bps ("stop
+when it has changed by less than X for K epochs") preserves that property, because it fires on a
+flat trajectory regardless of level, while a rule on its LEVEL would not. Whatever replaces it must
+be committed before the run that reads it, as this one was.
 
 ## Note on pre-existing items
 

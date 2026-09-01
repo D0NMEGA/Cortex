@@ -7,37 +7,48 @@ mean-firing-rate null and **0.0432** against the pooled test-mean null, measured
 O'Doherty/Makin Indy M1 spikes (Zenodo record 3854034)**, four sessions, CPU only, with the scored
 positions hidden from the encoder and gradients norm-clipped.
 
-**The one-line answer to "does this NDT1 beat a per-channel mean firing rate", stated plainly:
-pooled, yes, by a small margin; per session, no, on three of the four; across sessions, no, on
-every fold that finished.** Those are not in conflict and the difference is not a matter of
-emphasis, it is arithmetic:
+**The answer to "does this NDT1 beat a per-channel mean firing rate" depends on how long it is
+trained, and that dependence is the main result of this work.**
 
-| Comparison | Value | Verdict |
+| Comparison | Published run, 12 epochs | Budget probe, 60 epochs |
 |---|---|---|
-| Pooled, `train_null` (the D-22 gate) | **+0.0713** | above the null |
-| Pooled, `test_mean_null` | **+0.0432** | above the null |
-| Per session, against each session's OWN test mean | -0.2146, -0.1565, -0.2076, **+0.2156** | below on 3 of 4 |
-| Per session, window-weighted mean of the same column | **-0.1499** | below the null |
-| Leave-one-session-out, `test_mean_null`, 3 finite folds | **-0.4427** (-0.7580 to -0.2250) | below on every fold |
+| Pooled, `train_null` (the D-22 gate) | **+0.0713** | **+0.3002** |
+| Pooled, `test_mean_null` | **+0.0432** | **+0.2721** |
+| Per session, against each session's OWN test mean | -0.2146, -0.1565, -0.2076, +0.2156 | -0.0777, +0.0590, +0.1375, +0.2361 |
+| Sessions below their own test mean | **3 of 4** | **1 of 4** |
+| Per session, window-weighted, own test mean | **-0.1499** | **+0.0790** |
+| Leave-one-session-out, `test_mean_null`, 3 finite folds | **-0.4427** (-0.7580 to -0.2250) | not measured |
 
-The pooled figures are the highest of these because pooling computes the null across four
-recordings spanning 83 days, which makes it a WORSE constant predictor for any individual session
-than that session's own mean. The strongest constant per-channel predictor available is a session's
-own test mean, and against it the model loses on three sessions of four. **A reader who quotes only
-+0.0713 is quoting the weakest null in the table.**
+**At the published 12-epoch budget: pooled yes, per session no on three of four, across sessions no
+on every fold that finished. At 60 epochs: pooled yes by 4x more, and per session yes on three of
+four.** Both were measured; neither is an estimate.
 
-What did change, and it is real: every one of those numbers moved up from the previous version of
-this artifact. Pooled went 0.0062 to 0.0713 and -0.0219 to +0.0432; the window-weighted per-session
-mean went -0.2192 to -0.1499; the LOSO mean went -0.4852 to -0.4427. The attribution is
-unambiguous and is NOT the one this work set out to test: **the pre-registered convergence rule
-stopped the pooled run at 12 epochs, the same budget the previous run used, so the budget did not
-change and the entire movement is attributable to gradient clipping.**
+**Which is the headline, and why.** The 12-epoch run is this artifact's published measurement,
+because it is what the committed checkpoint, the derived margin and the LOSO rotation correspond to,
+and because a pre-registration committed before the run said the pre-registered run stays the
+headline whichever number is larger. The 60-epoch figure is a supplementary probe, also
+pre-registered before it was run, with no rotation and no margin. **A reader asking what this model
+can do should weigh the 60-epoch numbers; a reader asking what this repository has fully measured
+and gated should use the 12-epoch ones.**
 
-**The model was not trained to convergence, and this artifact does not claim it was.** The rule
-fired at `MIN_EPOCHS`, its floor, on three epochs whose relative changes (0.000794, 0.000827,
-0.000309) sit just inside a 0.001 band. Three LOSO folds under the identical rule ran 16, 26 and 30
-epochs. `09-decoder-metrics.json` records `convergence.fired_at_floor = true` for the pooled run so
-this cannot be lost. A supplementary budget probe is reported below.
+**The published run stopped far too early, and this artifact says so rather than presenting it as
+converged.** The pre-registered rule fired at `MIN_EPOCHS = 12`, its floor, on three relative
+changes (0.000794, 0.000827, 0.000309) sitting just inside a 0.001 band; three LOSO folds under the
+identical rule ran 16, 26 and 30 epochs; and the probe shows the loss falls only a further 1.3% from
+epoch 12 to 60 while pooled co-bps rises 4.2x. **A plateau criterion on a masked Poisson NLL that is
+dominated by near-zero bins is a poor proxy for convergence of co-bps**, which is a methodological
+finding this run demonstrated rather than assumed. `convergence.fired_at_floor = true` is committed
+in `09-decoder-metrics.json`. The rule was NOT retuned after the fact; retuning it having seen which
+setting gives a better number is the exact tuning the pre-registration exists to prevent.
+
+**Neither number is converged.** The probe's own `stop_reason` is `epoch_cap` and its
+`convergence.converged` is `false`; its loss was still falling at epoch 60. Both figures are floors.
+
+**Attribution, at the published budget.** Because the rule stopped the run at 12 epochs, the
+published run and the run it supersedes have the SAME budget, so the movement from 0.0062 to 0.0713
+is attributable to gradient clipping alone and no third run is needed to separate them. The probe
+then shows the budget is worth considerably more than the clip: 12 to 60 epochs is worth +0.229 on
+the pooled gate null against the clip's +0.065.
 
 ### The three numbers this file supersedes
 
@@ -292,6 +303,7 @@ scope and are untouched.
 | Leave-one-session-out, 3 of 4 folds | **-0.4427** mean, -0.7580 to -0.2250 | test mean |
 | Leave-one-session-out, 4th fold | diverged; non-finite from epoch 8, ran to the 60-epoch cap | not applicable |
 | Pooled stopping epoch | **12 of a 60 cap**, `stop_reason=plateau`, **fired at the rule's floor** | not applicable |
+| Supplementary budget probe, 60 epochs, pooled | **0.3002** / **0.2721**, 1 of 4 sessions negative | train null / pooled test mean |
 | LOSO stopping epochs | 26, 30, 16, and 60 (the diverged fold) | not applicable |
 | Re-derived assertion margin | 0.0094 bits/spike | 13.1% of the observation (D-22) |
 | Committed slow gate | **RED**: its own training path diverges, now at epoch 4 rather than 8 | not applicable |
@@ -618,7 +630,57 @@ run reaches a LOWER final loss from a worse start.
 
 ### Supplementary budget probe (pre-registered above, subordinate to the run reported here)
 
-BUDGET_PROBE_PLACEHOLDER
+**The probe answers the budget question decisively, and the answer is that the pre-registered run
+stopped far too early.** Identical pooled configuration, identical seed, gradient clipping on, the
+convergence rule DISABLED, run to the full 60-epoch cap, `--skip-loso`, into a scratch directory.
+69 minutes of CPU. Committed as `09-budget-probe.json`.
+
+| Quantity | Pre-registered run, 12 epochs | Budget probe, 60 epochs |
+|---|---|---|
+| Pooled, `train_null` | 0.0713 | **0.3002** |
+| Pooled, `test_mean_null` | 0.0432 | **0.2721** |
+| indy_20160624_03, own test mean | -0.2146 | -0.0777 |
+| indy_20160627_01, own test mean | -0.1565 | **+0.0590** |
+| indy_20160630_01, own test mean | -0.2076 | **+0.1375** |
+| indy_20160915_01, own test mean | 0.2156 | **+0.2361** |
+| Per-session, window-weighted, own test mean | -0.1499 | **+0.0790** |
+| Sessions negative against their own test mean | 3 of 4 | **1 of 4** |
+| Final training loss | 0.5571 | 0.5500 |
+
+**At 60 epochs the model beats each session's own per-channel mean firing rate on three sessions of
+four, and the window-weighted per-session mean crosses zero.** That is a different answer to this
+artifact's central question than the 12-epoch run gives, and it is the one a reader should weigh
+most heavily when asking what this model can do.
+
+### What the probe says about the stopping rule, which is the methodological finding
+
+The probe's first twelve epochs are byte-identical to the headline run's, so the rule would have
+fired at epoch 12 on it too. From there the loss falls only from 0.5571 to 0.5500, a further **1.3%**
+over 48 epochs, while pooled co-bps rises from 0.0713 to 0.3002, a factor of **4.2**.
+
+**A 0.001-relative plateau criterion on the training loss is a poor proxy for convergence of the
+metric being reported, in this regime, and the run demonstrated it rather than assumed it.** The
+masked Poisson NLL is dominated by the bulk of easy near-zero bins (the corpus is 71 to 80% empty
+bins), so it goes quiet long before the model stops improving on the normalized comparison against
+a null that co-bps measures. Tiny loss changes map to large co-bps changes.
+
+The rule was pre-registered honestly and applied without modification, and it was too lax. That is
+recorded here rather than repaired after the fact: **moving the tolerance or the floor now, having
+seen which setting gives a better number, is exactly the tuning the pre-registration exists to
+prevent.** What the rule should become is logged in `deferred-items-09-06c.md` item 4.
+
+### What the probe does NOT establish
+
+- **0.3002 is not converged either.** Its `stop_reason` is `epoch_cap` and
+  `convergence.converged = false` is committed in its JSON. The loss was still falling at epoch 60.
+  It is a floor, exactly as 0.0713 is.
+- **It has no rotation.** `--skip-loso`, so it says nothing about cross-session generalization. The
+  only LOSO evidence in this artifact is the 12-to-30-epoch rotation, which is negative on every
+  finite fold.
+- **It is not the committed checkpoint** and it did not re-derive the margin. Both remain those of
+  the pre-registered run, per the pre-registration.
+- **It is one seeded run with no error bars**, like everything else here.
+
 
 ### Re-derived assertion margin (D-22)
 
@@ -884,19 +946,24 @@ evidence this artifact can offer that the number was not shaped after the fact.
 
 ## What this number is NOT (D-23)
 
-### It is not a converged number
+### It is not a converged number, and the probe proves it rather than suggesting it
 
 The pooled run stopped at 12 epochs because the pre-registered rule fired at its floor, on three
 relative changes sitting just inside a 0.001 band, while three LOSO folds under the identical rule
-ran 16 to 30 epochs. `convergence.fired_at_floor = true` is committed in the metrics JSON for
-exactly this reason. **0.0713 is a 12-epoch number, and the budget question 09-06b raised is
-narrowed by the probe below but not closed.**
+ran 16 to 30 epochs. **The budget probe then measured what was left on the table: a further 1.3%
+of training loss between epochs 12 and 60, worth a 4.2x increase in pooled co-bps.**
+`convergence.fired_at_floor = true` is committed in the metrics JSON for exactly this reason.
+0.0713 is a 12-epoch number and 0.3002 is a 60-epoch number that also hit its cap without
+converging. Both are floors.
 
-### It is not a statement that NDT1 beats a mean-rate null on this data
+### It is not a statement that NDT1 beats a mean-rate null on this data, without a budget attached
 
-It beats the POOLED null. Against each session's own test mean it loses on three sessions of four,
-and against a held-out session's own mean it loses on every fold that finished. Any one-line
-quotation of +0.0713 without that qualifier misrepresents what was measured.
+At 12 epochs it beats the POOLED null and loses to each session's own test mean on three sessions
+of four, and to a held-out session's own mean on every fold that finished. At 60 epochs it beats
+each session's own test mean on three of four. **Any one-line quotation of either number without
+the epoch count and the null attached misrepresents what was measured.** The cross-session result
+is the one that did not get a longer-budget measurement at all: the only rotation in this artifact
+is negative on every finite fold.
 
 ### It does not establish that NDT1 cannot do better
 
@@ -1021,45 +1088,58 @@ These are the gaps, recorded as backlog and not as scheduled scope.
    `deferred-items-09-06c.md` item 1. **This is the most actionable item in the phase**, and it
    also blocks gap 2, because a run that cannot survive more epochs cannot answer a budget question.
 
-2. **NARROWED, NOT CLOSED: the budget.** The rule fired at its 12-epoch floor, so the headline
-   number was produced at the same budget as the one it supersedes. The supplementary probe above
-   measures what 60 epochs give, on the pooled path only. The rotation was not re-run at a longer
-   budget and neither was anything else.
+2. **MEASURED, NOT CLOSED: the budget, and it is worth more than anything else changed here.** The
+   rule fired at its 12-epoch floor, so the published number was produced at the same budget as the
+   one it supersedes. The supplementary probe measures 60 epochs on the pooled path: pooled co-bps
+   0.0713 to 0.3002, and sessions below their own mean 3 of 4 down to 1 of 4. **Closing it:** re-run
+   the full rotation and the margin derivation at a budget the probe justifies, under a stopping
+   rule that is not the one this task pre-registered (see gap 3). Not done here, because a rule
+   retuned after seeing which setting gives a better number is the tuning the pre-registration
+   exists to prevent, and because the probe itself hit its cap without converging.
 
-3. **Budget and clipping are two changes, but the attribution happens to be clean.** Because the
+3. **NEW: the pre-registered stopping rule is too lax for this metric, demonstrated rather than
+   suspected.** Between epochs 12 and 60 the training loss falls 1.3% while pooled co-bps rises 4.2x.
+   The masked Poisson NLL is dominated by the 71 to 80% of bins that are empty, so it goes quiet long
+   before the model stops improving on a normalized comparison against a null. **Closing it:** define
+   convergence on a held-out quantity rather than the training loss, or on the reported metric's own
+   stability with the same "cannot see the value" discipline (for example, stop when the held-out
+   co-bps has changed by less than X for K epochs, which is a rule on stability rather than on
+   level). `deferred-items-09-06c.md` item 4.
+
+4. **Budget and clipping are two changes, but the attribution happens to be clean.** Because the
    rule stopped the run at 12 epochs, the headline run and the run it supersedes have the SAME
    budget, so the movement from 0.0062 to 0.0713 is attributable to the clip alone. That was luck,
    not design: had the rule fired at epoch 40 the two changes would have been inseparable without a
    third run.
 
-4. **The zero-masking ambiguity is unquantified.** Zeroing a masked bin is indistinguishable from a
+5. **The zero-masking ambiguity is unquantified.** Zeroing a masked bin is indistinguishable from a
    genuinely silent bin, which biases predictions at scored positions downward by an amount this
    work did not measure. The reported values are therefore a lower bound. **Closing it:** train a
    variant with a learned mask embedding and compare. That needs either a 97th input channel or a
    new `nn.Parameter`, both of which touch the Core ML conversion path or the guarded parameter
    count, so it is its own plan.
 
-5. **Four sessions, one dominant.** 59% of the corpus is one recording, and the one session with a
+6. **Four sessions, one dominant.** 59% of the corpus is one recording, and the one session with a
    positive co-bps is the smallest (119 held-out windows). More sessions of comparable length would
    make both the pooled number and the rotation more even.
 
-6. **No error bars anywhere.** Every number here is a single seeded run. The per-session values,
+7. **No error bars anywhere.** Every number here is a single seeded run. The per-session values,
    resting on 119 to 1,050 windows, have sampling variability that was not quantified. **Closing
    it:** multiple seeds, or a bootstrap over held-out windows. This matters most for
    `indy_20160915_01`, the only positive session and the smallest.
 
-7. **Reproducibility is weaker than the previous version's.** That run trained the pooled
+8. **Reproducibility is weaker than the previous version's.** That run trained the pooled
    configuration twice and compared checkpoint SHA-256 byte for byte. This one did not; its
    corroboration is a first-epochs match from the budget probe plus a full evaluation-path replay.
 
-8. **No session conditioning.** See the D-15 statement in the generalization section. It is the
+9. **No session conditioning.** See the D-15 statement in the generalization section. It is the
    modeling change most directly aimed at the negative LOSO result.
 
-9. **No velocity readout in this artifact.** The kinematic decode number is Plan 09-07; this file is
+10. **No velocity readout in this artifact.** The kinematic decode number is Plan 09-07; this file is
    reconstruction only, and a poor reconstruction co-bps does not by itself predict a poor velocity
    decode.
 
-10. **Determinism is verified for this machine and these wheel versions**, not across platforms.
+11. **Determinism is verified for this machine and these wheel versions**, not across platforms.
     The config and the pinned versions are committed so a divergence elsewhere is diagnosable.
 
 ## Reproduce
