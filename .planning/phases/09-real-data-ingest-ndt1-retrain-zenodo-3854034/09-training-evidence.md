@@ -101,6 +101,33 @@ ratio, the architecture, the seed or the choice of null will be changed to move 
 will not be stopped at an epoch where the co-bps happens to look better: the rule above cannot see
 the co-bps at all.
 
+### Addendum, pre-registered while the main run was still executing
+
+The pooled run stopped at **epoch 12 with `stop_reason=plateau`**, which is the earliest epoch the
+rule can fire, because `MIN_EPOCHS = 12` is its floor. So the converged run is exactly as long as
+the truncated run it replaces, and the rule terminated at its floor rather than at a visibly flat
+asymptote. **That means the budget question 09-06b raised is not answered by the main run.**
+
+Rather than move the floor, which after seeing the result would be exactly the tuning this
+pre-registration exists to prevent, a second and clearly subordinate run is registered here:
+
+> **Supplementary budget probe.** The identical pooled configuration with the plateau rule
+> DISABLED, run to a fixed 60 epochs, `--skip-loso`, writing to a scratch checkpoint directory and
+> a scratch JSON so it cannot touch the published artifact. Its purpose is the one
+> `09-training-evidence.md` named as the way to close gap 1: "re-run at a longer budget with
+> everything else fixed, and publish the 12-epoch and the longer-budget numbers side by side so the
+> effect of the budget is visible rather than substituted."
+
+Committed before that run was started. Three constraints on how it may be used:
+
+- **The pre-registered run stays the headline**, whichever of the two numbers is larger. The
+  supplementary run answers "what does a longer budget give", not "what does this repository
+  report".
+- Its result is published whichever direction it goes, including if the loss rises or the co-bps
+  falls with more epochs.
+- It does not re-derive the margin, does not replace the checkpoint, and does not enter
+  `09-decoder-metrics.json` as a measurement; it is reported as a probe.
+
 ## The correction (Plan 09-06b)
 
 ### What was wrong
