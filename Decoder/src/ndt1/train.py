@@ -21,9 +21,14 @@ shipped only the first half; Plan 09-06b added the second and
 ``tests/test_masked_input_isolation.py`` holds it in place. Every co-bps measured before that
 correction is superseded (``09-training-evidence.md``).
 
-Gradients are norm-clipped between ``backward()`` and ``optimizer.step()`` (Plan 09-06c,
-:data:`DEFAULT_GRAD_CLIP_NORM`), because the ``log_input=True`` Poisson NLL overflows on a single
-predicted log-rate excursion and AdamW cannot arrest it on its own.
+Numerical stability is handled in two places, and the order they were added in is the order the
+failure happens in. The FORWARD pass is guarded by :data:`ndt1.loss.LOG_RATE_LINEARIZE_ABOVE`
+(Plan 09-06d), which linearizes ``exp`` above a log-rate no healthy run reaches, so an excursion
+gives a finite loss and a gradient that pulls the rate back down instead of a ``nan``. Gradients
+are then norm-clipped between ``backward()`` and ``optimizer.step()`` (Plan 09-06c,
+:data:`DEFAULT_GRAD_CLIP_NORM`), which stops an outlier gradient from poisoning AdamW's moment
+estimates. 09-06c measured that the clip alone does NOT fix the overflow, because it acts one step
+after the cause; the forward-pass guard is what reaches it.
 
 ``train_ndt1`` returns a history dict (per-epoch mean loss, and — if an eval set is supplied —
 the held-out co-bps against the train-split mean-rate null). Checkpoints are saved as a plain
@@ -225,8 +230,13 @@ def train_ndt1(
             hook that could touch the RNG or the optimizer would make the log a variable.
 
     Returns:
-        ``{"losses": [per-epoch mean loss, ...], "epochs_run": int, "stop_reason":
-           "plateau" | "epoch_cap", "eval_co_bps": float | None, "config": {...}}``.
+        ``{"losses": [per-epoch mean loss, ...], "max_log_rate_per_epoch": [...], "epochs_run":
+           int, "stop_reason": "plateau" | "epoch_cap", "eval_co_bps": float | None, "config":
+           {...}}``. ``max_log_rate_per_epoch`` is the largest raw model output seen during the
+        epoch (a LOG-rate whenever ``log_input`` is ``True``, which is the only configuration this
+        repository trains in). It exists so a reader can check, against the run that was actually
+        published, whether the loss ever entered the linearized branch above
+        :data:`ndt1.loss.LOG_RATE_LINEARIZE_ABOVE`.
     """
     if epochs <= 0:
         raise ValueError(f"epochs must be positive, got {epochs}")
@@ -242,9 +252,11 @@ def train_ndt1(
     mask_ratio = float(getattr(model, "mask_ratio", 0.25))
 
     losses: list[float] = []
+    max_log_rates: list[float] = []
     stop_reason = "epoch_cap"
     for _epoch in range(epochs):
         batch_losses: list[float] = []
+        epoch_max_rate = -math.inf
         for batch in train_loader:
             window = _unwrap_batch(batch).to(dev)
             targets = reshape_to_bc1s(window)
@@ -252,6 +264,11 @@ def train_ndt1(
 
             rates = masked_forward(model, targets, mask)
             loss = masked_poisson_nll(rates, targets, mask, log_input=log_input)
+            # Read-only, and the reason it is here: `ndt1.loss.LOG_RATE_LINEARIZE_ABOVE` only
+            # changes the objective for outputs above it, so recording the largest output each
+            # epoch is what turns "the guard is inert in the healthy regime" from an argument into
+            # a measurement on the run that was actually published.
+            epoch_max_rate = max(epoch_max_rate, float(rates.detach().max()))
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -260,6 +277,7 @@ def train_ndt1(
             optimizer.step()
             batch_losses.append(float(loss.detach().item()))
         losses.append(sum(batch_losses) / max(len(batch_losses), 1))
+        max_log_rates.append(epoch_max_rate)
         if on_epoch_end is not None:
             on_epoch_end(len(losses), losses[-1])
         if plateau_rel_tol is not None and loss_plateaued(
@@ -280,6 +298,7 @@ def train_ndt1(
 
     return {
         "losses": losses,
+        "max_log_rate_per_epoch": max_log_rates,
         "epochs_run": len(losses),
         "stop_reason": stop_reason,
         "eval_co_bps": eval_co_bps,

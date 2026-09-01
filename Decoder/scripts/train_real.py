@@ -52,26 +52,38 @@ per-session values is the expected D-15 outcome. A LOSO fold near zero or negati
 identity did not transfer across sessions -- a publishable finding, not a defect to reshape the
 pool over.
 
-**The epoch budget is decided by a PRE-REGISTERED rule, not by a constant (Plan 09-06c).** The
-09-06b run used a fixed 12 epochs inherited from Phase 4 and stopped on a curve still descending
-monotonically, so its 0.0062 was a floor rather than an asymptote. The rule that replaces it is
-defined on the TRAINING LOSS alone and is committed before the run reads it; see the
-PLATEAU_REL_TOL block below. Gradients are also norm-clipped now (`ndt1.train`), which is the
-numerical-stability fix for the divergences 09-06b reported and deferred.
+**There is no stopping rule, and that is the point (Plan 09-06d).** 09-06b used a fixed 12-epoch
+budget inherited from Phase 4. 09-06c replaced it with a rule pre-registered on the training loss,
+which fired at its 12-epoch floor; a probe then showed the curve had 48 more useful epochs in it,
+because a plateau criterion on a Poisson NLL dominated by empty bins goes quiet long before co-bps
+stops improving. Rather than invent a better rule after seeing which budget gives which number,
+09-06d removes the selection: train to a large cap, sample held-out co-bps along the way, publish
+the WHOLE trajectory, and report the value at the cap. The reader sees where it flattens and judges
+convergence directly. See the EPOCH_CAP block below.
 
-Runtime on this machine's CPU is roughly 70 s per pooled epoch and about 211 s per epoch across
-the four rotation folds, so a run that goes to the 60-epoch cap is about 4.7 h. CI never runs this
-(D-21).
+**Numerical stability is in the forward pass now, not only in the gradient.** `ndt1.loss` linearizes
+`exp` above a log-rate no healthy run reaches, which is the fix for the overflow 09-06c diagnosed
+and could not reach with gradient clipping alone. The clip stays, at the same a-priori 1.0.
+
+Runtime on this machine's CPU is roughly 69 s per pooled epoch on 7,132 windows, so the 200-epoch
+pooled run is about 3.8 h; the four rotation folds are 21,396 windows in total, so the rotation
+costs about 3.5 h at its own 60-epoch budget. CI never runs this (D-21).
 
 Checkpoints are state-dict `.pt` files under the gitignored `Decoder/checkpoints/`; any load goes
 through `ndt1.train.load_checkpoint`, which uses `torch.load(..., weights_only=True)` (T-04-04-01).
 No bare/blind `except`.
 
 Usage:
-    uv run --project Decoder python Decoder/scripts/train_real.py --smoke   # wiring check
-    uv run --project Decoder python Decoder/scripts/train_real.py           # the real run
-    uv run --project Decoder python Decoder/scripts/train_real.py --skip-loso
+    uv run --project Decoder python Decoder/scripts/train_real.py --smoke        # wiring check
+    uv run --project Decoder python Decoder/scripts/train_real.py --skip-loso    # pooled headline
+    uv run --project Decoder python Decoder/scripts/train_real.py --only-loso    # merge rotation
     uv run --project Decoder python Decoder/scripts/train_real.py --diagnostic
+    uv run --project Decoder python Decoder/scripts/train_real.py --derive-margin
+
+The published run is the two-stage form: the pooled pass with `--skip-loso` writes the headline,
+the trajectory and the checkpoint, and `--only-loso` then merges the rotation into the same JSON.
+Running both in one invocation also works, but the headline would then exist only in memory for the
+hours the rotation takes.
 """
 from __future__ import annotations
 
@@ -93,7 +105,7 @@ from torch import Tensor, nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from ndt1.data import BIN_MS, IndySpikeDataset
-from ndt1.loss import hide_scored_positions, random_mask
+from ndt1.loss import LOG_RATE_LINEARIZE_ABOVE, hide_scored_positions, random_mask
 from ndt1.metrics import co_bps, mean_firing_rate
 from ndt1.model_ane import NDT1ANE
 from ndt1.sessions import (
@@ -132,38 +144,44 @@ DEVICE: str = "cpu"
 #: encoder activation at once. Purely a memory bound; it does not change any number.
 EVAL_CHUNK: int = 512
 
-# --- The PRE-REGISTERED convergence rule (Plan 09-06c) -----------------------------------------
-# Written into 09-training-evidence.md and committed BEFORE the run that reads it, because a
-# stopping rule chosen after seeing the curve is a tuned budget with extra steps.
+# --- The budget: no stopping rule at all (Plan 09-06d) -----------------------------------------
+# Plan 09-06c pre-registered a stopping rule on the training loss and applied it without
+# modification. It fired at its 12-epoch floor, and a pre-registered probe then showed the curve
+# had 48 more useful epochs in it: from epoch 12 to 60 the loss falls 1.3% while pooled co-bps
+# rises 4.2x. A plateau criterion on a masked Poisson NLL that is 71 to 80% empty bins is a poor
+# proxy for convergence of co-bps, and the run measured that rather than assuming it.
 #
-# The rule is defined on the TRAINING LOSS and nothing else: `ndt1.train.loss_plateaued` cannot see
-# a co-bps. Stopping at the epoch where the headline metric happens to peak is exactly the tuning
-# D-22 and D-25 exist to prevent, and it is the failure this task was set up to avoid.
+# The response is NOT a better stopping rule. Inventing one after seeing which budget gives which
+# number is the tuning the whole pre-registration chain exists to prevent, and any rule that stops
+# somewhere inside the curve is a selection. Plan 09-06d removes the selection instead: train to a
+# large cap, record co-bps along the way, and PUBLISH THE WHOLE TRAJECTORY. The headline is the
+# value AT THE CAP; the trajectory is printed beside it so a reader can see where it flattens and
+# judge convergence without taking anyone's word for it. No epoch is ever chosen after the fact.
 #
-# Stop at the first epoch where |(L[i-1] - L[i]) / L[i-1]| < PLATEAU_REL_TOL held for each of the
-# last PLATEAU_PATIENCE epochs, provided at least MIN_EPOCHS have run; otherwise stop at EPOCH_CAP
-# and report that the curve had NOT converged.
+#   EPOCH_CAP = 200. A compute bound, not a result-shaped choice. The 09-06c budget probe measured
+#     4137.8 s for 60 pooled epochs (69 s/epoch on 7,132 windows), so 200 pooled epochs is about
+#     3.8 h of CPU. It is 3.3x the largest budget this phase has run and 16.7x the budget of the
+#     number it supersedes. Hitting it is the EXPECTED outcome, not a failure mode: stop_reason is
+#     "epoch_cap" by design and the headline is labeled a floor whenever the trajectory has not
+#     flattened by then.
+#   LOSO_EPOCH_CAP = 60. A COST decision, pre-registered before the run and reported as a cost
+#     rather than as a result. The four folds are 21,396 training windows to the pooled 7,132, so a
+#     full-cap rotation would be about 11.5 h ON TOP of the pooled run. 60 is not a new number: it
+#     is the epoch cap 09-06c already committed, so the reduced budget is an inherited constant
+#     rather than one chosen for this run. Every fold gets the same budget, every fold runs to it,
+#     and each fold's budget is reported beside its number so the rotation is never read as though
+#     it were trained as far as the headline.
+#   COBPS_SAMPLE_EVERY = 10. The trajectory is sampled at epoch 1, then every 10th epoch, then at
+#     the cap. 21 points over 200 epochs is dense enough to see a plateau and cheap enough not to
+#     distort the run: one scoring pass over the pooled test split is about 5 s against a 69 s
+#     epoch. tests/test_cobps_trajectory.py asserts the probe is bit-identical-preserving on the
+#     loss curve, so measuring cannot change what is measured.
 #
-#   PLATEAU_REL_TOL = 1e-3. A tenth of a percent per epoch. For scale, the 09-06b run's first-epoch
-#     relative improvement was 3.9% and its last three were 0.071%, 0.125% and 0.143%, so this
-#     tolerance sits just below where that truncated run stopped and the rule agrees it had not
-#     converged (pinned in tests/test_plateau_stop.py). Twenty further epochs inside the band move
-#     the loss by under 2%, against the 6% that run achieved in twelve.
-#   PLATEAU_PATIENCE = 3. One quiet epoch cannot end a run that is still learning. Three is also
-#     the window 09-06 used when it judged convergence by eye ("epochs 10 to 12 oscillating inside
-#     0.0018"), so the criterion is continuous with the one this repository already applied.
-#   MIN_EPOCHS = 12. The converged run is never SHORTER than the truncated run it replaces, so the
-#     new number can never be "we stopped earlier and got a different answer".
-#   EPOCH_CAP = 60. A compute bound, not a result-shaped choice: 09-06b measured 844 s for 12
-#     pooled epochs (70 s/epoch) and the four LOSO folds together are 21,396 training windows to
-#     the pooled 7,132, so a full run costs about 281 s per epoch. Sixty epochs is about 4.7 h of
-#     CPU worst case, which is the largest single run this artifact can afford. Hitting it is a
-#     reportable outcome, not a silent one: the run records stop_reason="epoch_cap" and the
-#     evidence says the curve had not converged.
-#
-# Every run in the rotation gets the SAME rule and stops independently under it. A fold that
-# plateaus sooner stops sooner; the per-fold stopping epoch is committed in the metrics JSON.
-EPOCH_CAP: int = 60
+# The 09-06c rule itself is KEPT in the codebase, behind `--plateau-stop`, together with its tests.
+# Deleting it would erase the arm the current numbers are compared against.
+EPOCH_CAP: int = 200
+LOSO_EPOCH_CAP: int = 60
+COBPS_SAMPLE_EVERY: int = 10
 PLATEAU_REL_TOL: float = 1e-3
 PLATEAU_PATIENCE: int = 3
 MIN_EPOCHS: int = 12
@@ -300,8 +318,15 @@ def _score(
 
 
 def _train_pool(
-    train_windows: list[Tensor], *, epochs: int, plateau_rel_tol: float | None
-) -> tuple[nn.Module, dict[str, object]]:
+    train_windows: list[Tensor],
+    *,
+    epochs: int,
+    plateau_rel_tol: float | None,
+    trajectory_eval: tuple[Tensor, dict[str, Tensor]] | None = None,
+    sample_every: int = COBPS_SAMPLE_EVERY,
+    trajectory_sink: Path | None = None,
+    tag: str = "pooled",
+) -> tuple[nn.Module, dict[str, object], list[dict[str, object]]]:
     """Train a fresh NDT1ANE on the concatenated per-session train windows (BC1S list -> (B,S,C)).
 
     ``train_ndt1`` consumes ``(B, S, C)`` windows, so the BC1S tensors are inverted back here.
@@ -309,22 +334,56 @@ def _train_pool(
     model is constructed (init order), and ``train_ndt1`` re-seeds the global RNG and its own mask
     generator (T-04-04-03).
 
-    ``epochs`` is the HARD CAP. Where the run actually stops is decided by the pre-registered
-    convergence rule above, on the training loss alone; the pooled run and every LOSO fold get the
-    same rule and stop independently under it.
+    ``epochs`` is the budget, and by default it is also where the run ends: Plan 09-06d removed the
+    stopping rule, so the reported value is the value at the cap and no epoch is selected after the
+    fact. ``plateau_rel_tol`` re-enables the 09-06c rule for reproduction of that arm.
+
+    ``trajectory_eval`` is ``(eval_windows_bc1s, {null_name: null_rate})``. When supplied, held-out
+    co-bps against every named null is measured at epoch 1, every ``sample_every`` epochs, and at
+    the final epoch, and returned as the third element. The probe is READ-ONLY with respect to the
+    run: it scores under ``eval()`` + ``no_grad`` on its own seeded mask generator, restores
+    training mode, and touches neither the optimizer nor the training RNG stream.
+    ``tests/test_cobps_trajectory.py`` asserts the loss curve is bit-identical with and without it,
+    because a trajectory that perturbs the run it describes is not a record of that run.
+
+    ``trajectory_sink`` appends each row to a JSONL file as it is measured, so a multi-hour run
+    that is interrupted still leaves its measured points on disk.
     """
     # (N, C, 1, S) -> (N, S, C)
     pooled = torch.cat([w.squeeze(2).permute(0, 2, 1).contiguous() for w in train_windows], dim=0)
     loader = DataLoader(TensorDataset(pooled), batch_size=BATCH_SIZE, shuffle=False)
     torch.manual_seed(SEED)
     model = NDT1ANE(seq_len=SEQ_LEN)
+    mask_ratio = float(model.mask_ratio)
     steps = (pooled.shape[0] + BATCH_SIZE - 1) // BATCH_SIZE * epochs
     _log(f"  training on {pooled.shape[0]} windows, cap {epochs} epochs, <={steps} steps")
     started = time.monotonic()
+    trajectory: list[dict[str, object]] = []
+
+    def _sample_here(epoch: int) -> bool:
+        return epoch == 1 or epoch % sample_every == 0 or epoch == epochs
 
     def _progress(epoch: int, loss: float) -> None:
         # A run that can take hours has to be observable while it runs, not only afterwards.
-        _log(f"    epoch {epoch:>2}/{epochs}: loss {loss:.6f}  ({time.monotonic() - started:.0f}s)")
+        elapsed = time.monotonic() - started
+        _log(f"    epoch {epoch:>3}/{epochs}: loss {loss:.6f}  ({elapsed:.0f}s)")
+        if trajectory_eval is None or not _sample_here(epoch):
+            return
+        eval_bc1s, nulls = trajectory_eval
+        scores = _score(model, eval_bc1s, nulls, mask_ratio=mask_ratio)
+        model.train()  # `_score` puts the model in eval(); training must resume where it left off
+        row: dict[str, object] = {
+            "epoch": epoch,
+            "loss": _json_float(loss),
+            "wall_clock_s": round(elapsed, 1),
+            **{name: _json_float(value) for name, value in scores.items()},
+        }
+        trajectory.append(row)
+        rendered = ", ".join(f"{k} {scores[k]:.4f}" for k in sorted(scores))
+        _log(f"      co-bps @ epoch {epoch}: {rendered}")
+        if trajectory_sink is not None:
+            with trajectory_sink.open("a", encoding="utf-8") as handle:
+                handle.write(json.dumps({"tag": tag, **row}) + "\n")
 
     history = train_ndt1(
         model,
@@ -342,53 +401,79 @@ def _train_pool(
     )
     losses = cast(list[float], history["losses"])
     curve = " ".join(f"{x:.4f}" for x in losses)
+    max_rates = cast(list[float], history["max_log_rate_per_epoch"])
     _log(
         f"  done in {time.monotonic() - started:.0f}s after {history['epochs_run']} epochs "
         f"(stop_reason={history['stop_reason']}); per-epoch loss: {curve}"
     )
-    return model, history
+    _log(
+        f"  max predicted log-rate over the run: {max(max_rates):.4f} "
+        f"(linearization threshold {LOG_RATE_LINEARIZE_ABOVE})"
+    )
+    return model, history, trajectory
 
 
 
 def _convergence_record(
-    losses: list[float], *, epochs_run: int, stop_reason: str, epoch_cap: int
+    losses: list[float],
+    *,
+    epochs_run: int,
+    stop_reason: str,
+    epoch_cap: int,
+    plateau_rel_tol: float | None,
 ) -> dict[str, object]:
-    """The stopping decision, made auditable: the rule, the epoch, and the numbers that fired it.
+    """What governed where this run ended, made auditable rather than asserted.
 
-    `stop_reason` alone says WHETHER the rule fired; it does not let a reader check that it should
-    have. This records the per-epoch relative changes the rule actually inspected, so the decision
-    can be recomputed from the committed curve without re-running anything.
+    Two regimes, and the record has to say which one applied, because "stopped at 200" and
+    "stopped at 200 because a rule said so" are different claims:
 
-    ``fired_at_floor`` is called out on purpose. The rule cannot fire before ``MIN_EPOCHS``, so a
-    run that stops exactly there stopped at the earliest epoch available to it, which is a much
-    weaker statement than a curve that went flat on its own and must not be read as the stronger
-    one.
+    * ``plateau_rel_tol is None`` (Plan 09-06d, the published regime): no stopping rule at all. The
+      run goes to the cap and the reported value is the value AT the cap. ``converged`` is False
+      unless the trajectory says otherwise, and the trajectory is what the reader judges from.
+    * ``plateau_rel_tol`` set (Plan 09-06c, kept for reproduction): the loss-plateau rule. The
+      per-epoch relative changes the rule inspected are recorded so the decision can be recomputed
+      from the committed curve, and ``fired_at_floor`` distinguishes a curve that went flat on its
+      own from a run that stopped at the earliest epoch the rule allowed.
+
+    ``relative_change_per_epoch`` is recorded in BOTH regimes: it is a description of the curve,
+    not of a decision, and it is what a reader uses to see how flat the loss actually was.
     """
     changes = [
         abs((previous - current) / abs(previous)) if previous else float("nan")
         for previous, current in zip(losses[:-1], losses[1:], strict=True)
     ]
     inspected = changes[-PLATEAU_PATIENCE:] if len(changes) >= PLATEAU_PATIENCE else changes
-    return {
-        "rule": (
-            f"stop at the first epoch at which |(L[i-1] - L[i]) / L[i-1]| < {PLATEAU_REL_TOL} has "
+    if plateau_rel_tol is None:
+        rule = (
+            f"NO stopping rule. Train to the {epoch_cap}-epoch cap, record held-out co-bps along "
+            f"the way, publish the whole trajectory, and report the value AT the cap. No epoch is "
+            f"selected after the fact, so there is no stopping decision to audit"
+        )
+    else:
+        rule = (
+            f"stop at the first epoch at which |(L[i-1] - L[i]) / L[i-1]| < {plateau_rel_tol} has "
             f"held for each of the last {PLATEAU_PATIENCE} epochs and at least {MIN_EPOCHS} epochs "
             f"have run; otherwise stop at {epoch_cap} and report that the curve had NOT converged"
-        ),
+        )
+    return {
+        "rule": rule,
+        "stopping_rule_applied": plateau_rel_tol is not None,
         "pre_registered_in": (
             ".planning/phases/09-real-data-ingest-ndt1-retrain-zenodo-3854034/"
             "09-training-evidence.md, committed before the run"
         ),
-        "rel_tol": PLATEAU_REL_TOL,
-        "patience": PLATEAU_PATIENCE,
-        "min_epochs": MIN_EPOCHS,
+        "rel_tol": plateau_rel_tol,
+        "patience": PLATEAU_PATIENCE if plateau_rel_tol is not None else None,
+        "min_epochs": MIN_EPOCHS if plateau_rel_tol is not None else None,
         "epoch_cap": epoch_cap,
         "epochs_run": epochs_run,
         "stop_reason": stop_reason,
         "converged": stop_reason == "plateau",
         "fired_at_floor": stop_reason == "plateau" and epochs_run == MIN_EPOCHS,
         "relative_change_per_epoch": [_json_float(x) for x in changes],
-        "inspected_by_the_rule": [_json_float(x) for x in inspected],
+        "inspected_by_the_rule": (
+            [_json_float(x) for x in inspected] if plateau_rel_tol is not None else []
+        ),
     }
 
 
@@ -409,11 +494,13 @@ def _run_annotate_convergence(args: argparse.Namespace) -> int:
     if len(losses) != len(payload["losses"]):
         print("error: the committed curve has a null epoch; the run diverged", file=sys.stderr)
         return 1
+    rel_tol = config.get("plateau_rel_tol")
     payload["convergence"] = _convergence_record(
         losses,
         epochs_run=int(config["epochs_run"]),
         stop_reason=str(config["stop_reason"]),
         epoch_cap=int(config["epoch_cap"]),
+        plateau_rel_tol=rel_tol,
     )
     for fold in payload.get("loso", []):
         fold_losses = [x for x in fold["losses"] if x is not None]
@@ -423,7 +510,8 @@ def _run_annotate_convergence(args: argparse.Namespace) -> int:
             fold_losses,
             epochs_run=int(fold["epochs_run"]),
             stop_reason=str(fold["stop_reason"]),
-            epoch_cap=int(config["epoch_cap"]),
+            epoch_cap=int(config.get("loso_epoch_cap", config["epoch_cap"])),
+            plateau_rel_tol=rel_tol,
         )
     out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     record = payload["convergence"]
@@ -505,12 +593,19 @@ def _run_loso(
     epochs: int,
     mask_ratio: float,
     plateau_rel_tol: float | None,
+    trajectory_sink: Path | None = None,
 ) -> list[dict[str, object]]:
     """Full leave-one-session-out rotation (D-13).
 
     Each fold retrains from scratch on the in-fold sessions' TRAIN halves with the identical config,
     then evaluates on the held-out session's FULL binned matrix -- not just its test tail -- because
     the held-out session had zero exposure, so every one of its bins is legitimately held out.
+
+    ``epochs`` is the rotation's own budget and is normally SMALLER than the pooled run's cap
+    (:data:`LOSO_EPOCH_CAP`). That is a cost decision, pre-registered before the run: a full-cap
+    rotation is 21,396 training windows to the pooled 7,132 and would cost hours on top of the
+    headline. It is recorded per fold, beside the fold's number, so the rotation is never read as
+    though it had been trained as far as the pooled model.
     """
     by_id = {s.session_id: s for s in loaded}
     folds: list[dict[str, object]] = []
@@ -519,19 +614,25 @@ def _run_loso(
         train_ids = [str(sid) for sid in cast(list[str], fold["train_ids"])]
         _log(f"LOSO fold: hold out {held_out}, train on {', '.join(train_ids)}")
         fold_windows = [train_bc1s[sid] for sid in train_ids]
-        model, history = _train_pool(
-            fold_windows, epochs=epochs, plateau_rel_tol=plateau_rel_tol
+        # Built BEFORE training so the same eval set and the same nulls serve the in-run trajectory
+        # and the final score; a trajectory scored against a different null than the headline would
+        # not be a trajectory of the headline.
+        eval_bc1s = _windows_bc1s(by_id[held_out].binned)
+        fold_nulls = {
+            "train_null": mean_firing_rate(torch.cat(fold_windows, dim=0)),
+            "test_mean_null": mean_firing_rate(eval_bc1s),
+        }
+        model, history, trajectory = _train_pool(
+            fold_windows,
+            epochs=epochs,
+            plateau_rel_tol=plateau_rel_tol,
+            trajectory_eval=(eval_bc1s, fold_nulls),
+            trajectory_sink=trajectory_sink,
+            tag=f"loso:{held_out}",
         )
         losses = cast(list[float], history["losses"])
 
-        eval_bc1s = _windows_bc1s(by_id[held_out].binned)
-        fold_train_mean = mean_firing_rate(torch.cat(fold_windows, dim=0))
-        scores = _score(
-            model,
-            eval_bc1s,
-            {"train_null": fold_train_mean, "test_mean_null": mean_firing_rate(eval_bc1s)},
-            mask_ratio=mask_ratio,
-        )
+        scores = _score(model, eval_bc1s, fold_nulls, mask_ratio=mask_ratio)
         _log(
             f"  {held_out}: train_null co-bps {scores['train_null']:.4f}, "
             f"test_mean_null {scores['test_mean_null']:.4f}"
@@ -544,6 +645,7 @@ def _run_loso(
                 f"  WARNING: fold {held_out} DIVERGED. The loss curve is committed so the epoch it "
                 f"happened at is auditable; the fold contributes no value to the summary."
             )
+        max_rates = cast(list[float], history["max_log_rate_per_epoch"])
         folds.append(
             {
                 "held_out_session": held_out,
@@ -554,9 +656,12 @@ def _run_loso(
                 "eval_windows": int(eval_bc1s.shape[0]),
                 "losses": [_json_float(x) for x in losses],
                 "final_loss": _json_float(losses[-1]),
+                "epoch_budget": int(epochs),
                 "epochs_run": int(cast(int, history["epochs_run"])),
                 "stop_reason": str(history["stop_reason"]),
                 "diverged": diverged,
+                "max_log_rate_per_epoch": [_json_float(x) for x in max_rates],
+                "trajectory": trajectory,
             }
         )
     return folds
@@ -807,6 +912,88 @@ def _run_supersede_current(args: argparse.Namespace) -> int:
     return 0
 
 
+def _trajectory_sink(checkpoint_dir: Path, *, smoke: bool = False) -> Path:
+    """Where the in-run co-bps rows are appended as they are measured (gitignored, append-only).
+
+    The metrics JSON is written once, at the end. A run that takes hours therefore has nothing on
+    disk until it finishes, and an interruption costs every point it had already measured. This
+    file is the cheap insurance: one JSON object per line, flushed at each sample, so a killed run
+    still leaves an auditable partial trajectory next to its log.
+    """
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    name = "09-06d-trajectory.smoke.jsonl" if smoke else "09-06d-trajectory.jsonl"
+    return checkpoint_dir / name
+
+
+def _loso_budget_note(loso_epochs: int, pooled_epochs: int) -> str:
+    """Say, in the artifact itself, that the rotation's budget is a cost decision not a result."""
+    return (
+        f"The rotation ran at {loso_epochs} epochs per fold against the pooled run's "
+        f"{pooled_epochs}. That is a COST decision pre-registered before the run, not a result "
+        f"decision: the four folds are 21,396 training windows to the pooled 7,132, so a full-cap "
+        f"rotation would have cost roughly 11.5 h of CPU on top of the headline run. {loso_epochs} "
+        f"is the epoch cap Plan 09-06c had already committed, so it is an inherited constant "
+        f"rather than a number chosen for this run. Every fold got the same budget and ran to it. "
+        f"The consequence is that the folds are LESS trained than the pooled model, so a "
+        f"cross-session number here is a floor for that budget and must not be compared against "
+        f"the pooled figure as though both were trained equally."
+    )
+
+
+def _run_only_loso(args: argparse.Namespace, loaded: list[SessionLoad]) -> int:
+    """Run the rotation alone and merge it into an --out-json a pooled run already wrote.
+
+    Splitting the two stages is what makes a multi-hour run survivable: the pooled headline, its
+    checkpoint and its trajectory are committed to disk before the rotation starts, so a failure
+    hours into the rotation costs the rotation and nothing else.
+    """
+    out_json = args.out_json if args.out_json is not None else _DEFAULT_OUT_JSON
+    if not out_json.is_file():
+        print(
+            f"error: {out_json} does not exist; --only-loso merges a rotation into the metrics a "
+            f"pooled run has already written, so run the pooled pass first",
+            file=sys.stderr,
+        )
+        return 1
+    payload = json.loads(out_json.read_text(encoding="utf-8"))
+    if payload.get("co_bps", {}).get("pooled", {}).get("train_null") is None:
+        print(
+            f"error: {out_json} has no pooled co-bps to attach a rotation to; the pooled pass "
+            f"either has not run or did not produce a value",
+            file=sys.stderr,
+        )
+        return 1
+
+    started_at = time.time()
+    splits = pooled_splits(loaded, test_frac=TEST_FRAC)
+    train_bc1s = {sid: _windows_bc1s(tr) for sid, tr, _ in splits}
+    mask_ratio = float(NDT1ANE(seq_len=SEQ_LEN).mask_ratio)
+    epochs = int(args.loso_epoch_cap)
+    plateau_rel_tol = PLATEAU_REL_TOL if args.plateau_stop else None
+    _log(f"LOSO-only rotation at {epochs} epochs per fold, merging into {out_json}")
+    loso = _run_loso(
+        loaded,
+        train_bc1s,
+        epochs=epochs,
+        mask_ratio=mask_ratio,
+        plateau_rel_tol=plateau_rel_tol,
+        trajectory_sink=_trajectory_sink(Path(args.checkpoint_dir)),
+    )
+    payload["loso"] = loso
+    payload["loso_summary"] = {
+        "null": "train_null",
+        **_summarize([cast(float, f["train_null"]) for f in loso]),
+        "test_mean_null": _summarize([cast(float, f["test_mean_null"]) for f in loso]),
+        "epoch_budget_per_fold": epochs,
+        "budget_note": _loso_budget_note(epochs, int(payload["config"]["epoch_cap"])),
+    }
+    payload["config"]["loso_epoch_cap"] = epochs
+    payload["wall_clock_loso_s"] = round(time.time() - started_at, 1)
+    out_json.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _log(f"merged {len(loso)} folds into {out_json}")
+    return 0
+
+
 def _summarize(values: list[float]) -> dict[str, object]:
     """Mean, sample std, min and max over the FINITE folds (D-13 requires spread, not a mean alone).
 
@@ -865,12 +1052,24 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
             "--out-json and merge it in"
         ),
     )
+    parser.add_argument("--epoch-cap", type=int, default=EPOCH_CAP)
+    parser.add_argument("--loso-epoch-cap", type=int, default=LOSO_EPOCH_CAP)
     parser.add_argument(
-        "--no-plateau-stop",
+        "--only-loso",
         action="store_true",
         help=(
-            "disable the pre-registered convergence rule and run the full epoch cap; the "
-            "supplementary budget probe, never the published run"
+            "run ONLY the leave-one-session-out rotation and merge it into an --out-json a pooled "
+            "run has already written; the pooled headline is therefore on disk before the "
+            "rotation starts and cannot be lost to a failure hours later"
+        ),
+    )
+    parser.add_argument(
+        "--plateau-stop",
+        action="store_true",
+        help=(
+            "re-enable the Plan 09-06c loss-plateau stopping rule. OFF by default since Plan "
+            "09-06d: the published run has no stopping rule, goes to the epoch cap, and reports "
+            "the value at the cap with the whole co-bps trajectory beside it"
         ),
     )
     parser.add_argument(
@@ -929,15 +1128,24 @@ def main(argv: list[str] | None = None) -> int:
     if args.diagnostic:
         return _run_diagnostic(args, loaded)
 
-    # A wiring check runs one epoch and is never subject to the convergence rule; the real run
-    # gets the cap and the pre-registered rule that decides where inside it to stop.
-    epochs = 1 if args.smoke else EPOCH_CAP
-    plateau_rel_tol = None if (args.smoke or args.no_plateau_stop) else PLATEAU_REL_TOL
-    if args.no_plateau_stop:
+    if args.only_loso:
+        return _run_only_loso(args, loaded)
+
+    # A wiring check runs one epoch. The real run gets the cap and, since Plan 09-06d, no stopping
+    # rule: it goes all the way to the cap and the value AT the cap is what is reported.
+    epochs = 1 if args.smoke else int(args.epoch_cap)
+    plateau_rel_tol = PLATEAU_REL_TOL if (args.plateau_stop and not args.smoke) else None
+    if plateau_rel_tol is None and not args.smoke:
         _log(
-            f"BUDGET PROBE: the convergence rule is disabled and every run goes to the full "
-            f"{epochs}-epoch cap. This is the supplementary probe pre-registered in "
-            f"09-training-evidence.md, not the published run."
+            f"No stopping rule (Plan 09-06d). Training runs to the full {epochs}-epoch cap and "
+            f"held-out co-bps is recorded at epoch 1, every {COBPS_SAMPLE_EVERY} epochs, and at "
+            f"the cap. The headline is the value AT the cap; no epoch is selected afterwards."
+        )
+    elif plateau_rel_tol is not None:
+        _log(
+            f"REPRODUCTION MODE: the Plan 09-06c loss-plateau rule is enabled (rel_tol "
+            f"{PLATEAU_REL_TOL}, patience {PLATEAU_PATIENCE}, floor {MIN_EPOCHS}). This is not the "
+            f"09-06d published regime."
         )
     if args.smoke:
         loaded = sorted(loaded, key=lambda s: int(s.stats["num_bins"]))[:2]
@@ -978,10 +1186,20 @@ def main(argv: list[str] | None = None) -> int:
 
     # --- Pooled training (D-11, D-14) ----------------------------------------------------------
     _log(f"pooled training on {len(loaded)} sessions")
-    model, history = _train_pool(
-        [train_bc1s[sid] for sid in ordered_ids], epochs=epochs, plateau_rel_tol=plateau_rel_tol
+    pooled_nulls = {
+        "train_null": pooled_train_null,
+        "test_mean_null": mean_firing_rate(pooled_test),
+    }
+    model, history, trajectory = _train_pool(
+        [train_bc1s[sid] for sid in ordered_ids],
+        epochs=epochs,
+        plateau_rel_tol=plateau_rel_tol,
+        trajectory_eval=(pooled_test, pooled_nulls),
+        trajectory_sink=_trajectory_sink(Path(args.checkpoint_dir), smoke=args.smoke),
+        tag="pooled",
     )
     losses = [float(x) for x in cast(list[float], history["losses"])]
+    max_log_rates = [float(x) for x in cast(list[float], history["max_log_rate_per_epoch"])]
     if not all(np.isfinite(x) for x in losses):
         _log("WARNING: the POOLED training loss went non-finite; the headline number is not usable")
     mask_ratio = float(model.mask_ratio)
@@ -1027,15 +1245,17 @@ def main(argv: list[str] | None = None) -> int:
     # --- LOSO rotation (RD-04b, D-13) ----------------------------------------------------------
     loso: list[dict[str, object]] = []
     loso_summary: dict[str, object] | None = None
+    loso_epochs = 1 if args.smoke else int(args.loso_epoch_cap)
     if args.skip_loso:
         _log("skipping the LOSO rotation (--skip-loso)")
     else:
         loso = _run_loso(
             loaded,
             train_bc1s,
-            epochs=epochs,
+            epochs=loso_epochs,
             mask_ratio=mask_ratio,
             plateau_rel_tol=plateau_rel_tol,
+            trajectory_sink=_trajectory_sink(Path(args.checkpoint_dir), smoke=args.smoke),
         )
         # The flat mean/std/min/max/folds keys summarize the D-22 gate null, which is what the
         # published LOSO headline quotes; the drift-robust null's spread is nested beside it.
@@ -1043,6 +1263,8 @@ def main(argv: list[str] | None = None) -> int:
             "null": "train_null",
             **_summarize([cast(float, f["train_null"]) for f in loso]),
             "test_mean_null": _summarize([cast(float, f["test_mean_null"]) for f in loso]),
+            "epoch_budget_per_fold": loso_epochs,
+            "budget_note": _loso_budget_note(loso_epochs, epochs),
         }
 
     payload = {
@@ -1062,12 +1284,15 @@ def main(argv: list[str] | None = None) -> int:
         "config": {
             "epochs": epochs,
             "epoch_cap": epochs,
+            "loso_epoch_cap": loso_epochs,
+            "cobps_sample_every": COBPS_SAMPLE_EVERY,
             "epochs_run": int(cast(int, history["epochs_run"])),
             "stop_reason": str(history["stop_reason"]),
             "plateau_rel_tol": plateau_rel_tol,
             "plateau_patience": PLATEAU_PATIENCE,
             "min_epochs": MIN_EPOCHS,
             "grad_clip_norm": DEFAULT_GRAD_CLIP_NORM,
+            "log_rate_linearize_above": LOG_RATE_LINEARIZE_ABOVE,
             "lr": LR,
             "batch_size": BATCH_SIZE,
             "seq_len": SEQ_LEN,
@@ -1081,6 +1306,7 @@ def main(argv: list[str] | None = None) -> int:
         },
         "env": _environment(),
         "losses": [_json_float(x) for x in losses],
+        "max_log_rate_per_epoch": [_json_float(x) for x in max_log_rates],
         "train_windows": int(pooled_train.shape[0]),
         "test_windows": int(pooled_test.shape[0]),
         "co_bps": {
@@ -1088,6 +1314,17 @@ def main(argv: list[str] | None = None) -> int:
                 "train_null": _json_float(pooled_scores["train_null"]),
                 "test_mean_null": _json_float(pooled_scores["test_mean_null"]),
             },
+            # The whole co-bps-versus-epoch curve, not a value selected from it. The headline above
+            # is this list's LAST row, which is the value at the epoch cap; publishing the rest is
+            # how a reader sees whether it had flattened, without having to trust that it had.
+            "trajectory": trajectory,
+            "trajectory_note": (
+                "Held-out pooled co-bps measured at epoch 1, every "
+                f"{COBPS_SAMPLE_EVERY} epochs, and at the {epochs}-epoch cap, against the same two "
+                "nulls as the headline and on the same seeded mask. The reported value is the row "
+                "at the cap. No epoch was selected from this curve, and the checkpoint saved is "
+                "the model at the cap, not the model at whichever epoch scored best."
+            ),
             "per_session": {
                 sid: {k: _json_float(v) for k, v in scores.items()}
                 for sid, scores in per_session.items()
@@ -1102,6 +1339,7 @@ def main(argv: list[str] | None = None) -> int:
             epochs_run=int(cast(int, history["epochs_run"])),
             stop_reason=str(history["stop_reason"]),
             epoch_cap=epochs,
+            plateau_rel_tol=plateau_rel_tol,
         ),
         "loso": loso,
         "loso_summary": loso_summary,
