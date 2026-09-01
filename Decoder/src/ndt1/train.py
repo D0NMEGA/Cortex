@@ -12,7 +12,7 @@ Composes the Wave-2 pieces into the BERT-style masked spike-RECONSTRUCTION objec
         │                         NDT1ANE.forward  ──▶  predicted log-rates (B, C, 1, S)
         │                               │
         ▼                               ▼
-    random_mask(...) ─▶ masked_poisson_nll(rates, targets, mask) ─▶ backward ─▶ AdamW.step
+    random_mask(...) ─▶ masked_poisson_nll(rates, targets, mask) ─▶ backward ─▶ clip ─▶ AdamW.step
 
 The mask does two jobs and both are load-bearing: it selects the positions the Poisson NLL is
 summed over, AND it corrupts those same positions in the encoder input (``masked_forward``), so
@@ -20,6 +20,10 @@ the model predicts a scored bin from its context and never from its own observed
 shipped only the first half; Plan 09-06b added the second and
 ``tests/test_masked_input_isolation.py`` holds it in place. Every co-bps measured before that
 correction is superseded (``09-training-evidence.md``).
+
+Gradients are norm-clipped between ``backward()`` and ``optimizer.step()`` (Plan 09-06c,
+:data:`DEFAULT_GRAD_CLIP_NORM`), because the ``log_input=True`` Poisson NLL overflows on a single
+predicted log-rate excursion and AdamW cannot arrest it on its own.
 
 ``train_ndt1`` returns a history dict (per-epoch mean loss, and — if an eval set is supplied —
 the held-out co-bps against the train-split mean-rate null). Checkpoints are saved as a plain
@@ -55,10 +59,12 @@ from ndt1.metrics import co_bps, mean_firing_rate
 #: real Indy spikes under the Plan 09-06b objective (two LOSO folds and the committed slow
 #: gate); see ``deferred-items-09-06b.md`` item 1.
 #:
-#: Why a norm cap is close to free for the numbers it does not rescue: AdamW normalizes each
-#: coordinate by its own second-moment estimate, so scaling the whole gradient vector by a
-#: constant leaves the update almost unchanged to first order. The clip therefore bites hard on
-#: the rare exploding step and barely at all on ordinary ones.
+#: What the cap does and does not buy, because it is easy to over-claim. AdamW normalizes each
+#: coordinate by its own second-moment estimate, so rescaling the whole gradient vector leaves the
+#: per-coordinate step roughly at ``lr``. The clip therefore stops an outlier gradient from
+#: poisoning the moment estimates; it does NOT make an oversized learning rate safe. Measured in
+#: ``tests/test_grad_clipping.py``: on the same batch, the clip turns a non-training run into a
+#: descending one at ``lr = 0.05`` and changes nothing at ``lr = 0.1``.
 DEFAULT_GRAD_CLIP_NORM: float = 1.0
 
 
@@ -121,7 +127,7 @@ def train_ndt1(
     seed: int = 0,
     weight_decay: float = 0.01,
     eval_set: tuple[Tensor, Tensor] | None = None,
-    grad_clip_norm: float | None = None,
+    grad_clip_norm: float | None = DEFAULT_GRAD_CLIP_NORM,
 ) -> dict[str, object]:
     """Run masked-modeling training: mask → forward → clip → masked Poisson NLL → AdamW step.
 
@@ -138,8 +144,9 @@ def train_ndt1(
         eval_set: optional ``(eval_targets_bc1s, eval_mask)`` for a held-out co-bps reported in
             the history under ``"eval_co_bps"`` (train-split mean rate is the null).
         grad_clip_norm: max total gradient norm applied between ``backward()`` and
-            ``optimizer.step()``. ``None`` disables the guard, which is what every run before
-            Plan 09-06c did; see :data:`DEFAULT_GRAD_CLIP_NORM` for why it exists.
+            ``optimizer.step()``. On by default, because a numerical-stability guard every caller
+            has to remember to switch on is one the next caller will forget. ``None`` disables it,
+            which is what every run before Plan 09-06c did; see :data:`DEFAULT_GRAD_CLIP_NORM`.
 
     Returns:
         ``{"losses": [per-epoch mean loss, ...], "eval_co_bps": float | None,
