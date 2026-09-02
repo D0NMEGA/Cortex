@@ -39,26 +39,30 @@ EPOCHS: int = 12
 LR: float = 2e-3
 TEST_FRAC: float = 0.2
 BATCH_SIZE: int = 16
-# Documented margin, RE-DERIVED from the real-data observation (Plan 09-06c, D-22), machine-derived
+# Documented margin, RE-DERIVED from the real-data observation (Plan 09-06d, D-22), machine-derived
 # by `train_real.py --derive-margin` and bound to the committed JSON by tests/test_cobps_margin.py.
 #
 # The pooled held-out co-bps measured on the four real Indy M1 sessions under the corrected
-# objective, with gradient clipping and the pre-registered convergence rule, is 0.0713 bits/spike
-# against the train-split mean-rate null, and 0.0094 is 13.1% of that: the fraction Phase 4 used
-# when it set 0.05 against an observed 0.3804, applied unchanged so that the observation is the
-# only input to the derivation. The RULE has never moved across three re-derivations; only the
-# observation it reads has.
+# objective, with gradient clipping, the linearized Poisson NLL, and NO stopping rule -- 200 epochs
+# to a pre-registered cap -- is 0.4096 bits/spike against the train-split mean-rate null, and 0.054
+# is 13.1% of that: the fraction Phase 4 used when it set 0.05 against an observed 0.3804, applied
+# unchanged so that the observation is the only input to the derivation. The RULE has never moved
+# across four re-derivations; only the observation it reads has.
 #
-# Read 09-training-evidence.md before reading this constant. Three predecessors are superseded and
-# all three are named below so a regression says WHY:
+# Read 09-training-evidence.md before reading this constant. Four predecessors are superseded and
+# all four are named below so a regression says WHY:
 #   0.05    Phase 4, from 0.3804 on a purpose-built learnable synthetic sinusoid
 #   0.25    Plan 09-06, from 1.9116 under an objective the encoder could read the answers through
 #   0.00082 Plan 09-06b, from 0.0062 at a fixed 12-epoch unclipped budget on a curve that had not
 #           flattened and whose training diverged in one LOSO fold and in this very gate
+#   0.0094  Plan 09-06c, from 0.0713 at 12 clipped epochs, where a pre-registered stopping rule
+#           fired at its own floor and left 4.2x of the available co-bps unmeasured
 #
-# It is NOT inflated to look like a pass, and this gate does not currently reach the assertion at
-# all: its own training path still diverges (see the module docstring and deferred-items-09-06c.md).
-CO_BPS_MARGIN: float = 0.0094
+# It is NOT inflated to look like a pass. Read the evidence for what a gate at this size does and
+# does not assert, and note that the pooled train-split null is the WEAKEST of the three nulls
+# reported: the same checkpoint is +0.3814 against the pooled test mean and NEGATIVE on every
+# leave-one-session-out fold against the held-out session's own mean.
+CO_BPS_MARGIN: float = 0.054
 
 _DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 _CHECKPOINT_DIR = Path(__file__).resolve().parent.parent / "checkpoints"

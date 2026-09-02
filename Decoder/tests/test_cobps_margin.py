@@ -19,11 +19,19 @@ against the DEFECTIVE objective. Plan 09-06c added gradient clipping, replaced t
 with a rule pre-registered on the training loss, and re-derived once more. The derivation RULE has
 never changed across any of these; only the observation it reads has.
 
-The chain is three links long now and none of them may be deleted:
+Plan 09-06c's own ``0.0094`` is superseded in turn. Its objective was correct and its numerics
+were guarded, but the pre-registered stopping rule fired at its own 12-epoch floor, and a probe
+registered before it ran then measured that epochs 12 to 60 move the training loss 1.3% while
+pooled co-bps rises 4.2x. Plan 09-06d removed the stopping rule instead of replacing it -- 200
+epochs to a fixed cap, the whole co-bps trajectory published, the value at the cap reported -- and
+fixed the forward-pass overflow that had cost a LOSO fold. Fourth re-derivation, same fraction.
 
-  1.9116  defective objective                      superseded_visible_input_objective
-  0.0062  corrected objective, 12 unclipped epochs  superseded_truncated_budget
-  (top)   corrected objective, clipped, stopped by the pre-registered rule
+The chain is four links long now and none of them may be deleted:
+
+  1.9116  defective objective                       superseded_visible_input_objective
+  0.0062  corrected objective, 12 unclipped epochs   superseded_truncated_budget
+  0.0713  clipped, stopping rule fired at its floor  superseded_rule_stopped_at_floor
+  (top)   no stopping rule, 200 epochs to the cap
 
 These quick tests hold the re-derivation in place:
 
@@ -60,13 +68,19 @@ VISIBLE_INPUT_MARGIN: float = 0.25
 #: 12-epoch unclipped run on a curve that had not flattened.
 TRUNCATED_BUDGET_MARGIN: float = 0.00082
 
+#: What Plan 09-06c committed, against a REAL observation under the corrected objective with
+#: gradient clipping, from a run its own pre-registered stopping rule ended at that rule's floor.
+RULE_STOPPED_MARGIN: float = 0.0094
+
 #: The JSON keys under which each superseded measurement is preserved.
 SUPERSEDED_KEY: str = "superseded_visible_input_objective"
 TRUNCATED_BUDGET_KEY: str = "superseded_truncated_budget"
+RULE_STOPPED_KEY: str = "superseded_rule_stopped_at_floor"
 
 #: The pooled train-null co-bps each superseded run published, to full double precision.
 VISIBLE_INPUT_CO_BPS: float = 1.9115827904116325
 TRUNCATED_BUDGET_CO_BPS: float = 0.006214627530704778
+RULE_STOPPED_CO_BPS: float = 0.07133016502133391
 
 _METRICS_PATH = (
     Path(__file__).resolve().parents[2]
@@ -189,4 +203,47 @@ def test_every_superseded_record_says_what_replaced_it() -> None:
         pointer = record.get("superseded_by")
         assert isinstance(pointer, str) and pointer, (
             f"{key} records numbers but does not say what supersedes them"
+        )
+
+
+def test_margin_is_not_the_superseded_rule_stopped_constant() -> None:
+    """The margin is not the one derived from a run a stopping rule ended at its own floor."""
+    assert CO_BPS_MARGIN != RULE_STOPPED_MARGIN, (
+        f"CO_BPS_MARGIN is still {RULE_STOPPED_MARGIN}, the Plan 09-06c constant derived from an "
+        f"observed {RULE_STOPPED_CO_BPS:.4f} measured at 12 epochs, where the pre-registered "
+        f"stopping rule fired at MIN_EPOCHS rather than on a flat curve. Plan 09-06d removed the "
+        f"stopping rule and trained to a 200-epoch cap; the margin must follow the new observation."
+    )
+
+
+def test_the_rule_stopped_numbers_are_preserved_and_labeled() -> None:
+    """The third link. Its objective was correct, so the note has to say what actually replaced it.
+
+    A reader who finds 0.0713 quoted elsewhere needs to learn that the problem was neither the
+    objective nor the numerics guard but the BUDGET the stopping rule cut short, and that the run
+    also lost a LOSO fold to a forward-pass overflow the clip could not reach.
+    """
+    record = _metrics().get(RULE_STOPPED_KEY)
+    assert isinstance(record, dict), (
+        f"{RULE_STOPPED_KEY} is missing from the committed metrics JSON. train_real.py carries "
+        f"every superseded_* record across a re-run so a chain cannot lose a link."
+    )
+    assert record["co_bps"]["pooled"]["train_null"] == RULE_STOPPED_CO_BPS
+    assert record["config"]["epochs_run"] == 12
+    note = record["note"]
+    assert isinstance(note, str) and "must not be quoted" in note.lower(), (
+        "the superseded record must carry the warning that says how it may be used"
+    )
+
+
+def test_the_chain_has_all_four_links() -> None:
+    """Four measurements, four labels, none deleted, and the live number is not one of them."""
+    metrics = _metrics()
+    for key in (SUPERSEDED_KEY, TRUNCATED_BUDGET_KEY, RULE_STOPPED_KEY):
+        assert key in metrics, f"{key} was dropped from the supersession chain"
+    live = metrics["co_bps"]["pooled"]["train_null"]
+    for superseded in (VISIBLE_INPUT_CO_BPS, TRUNCATED_BUDGET_CO_BPS, RULE_STOPPED_CO_BPS):
+        assert live != superseded, (
+            f"the published pooled co-bps is {live}, which is a superseded value; a re-run must "
+            f"replace the top-level measurement, not restore an old one"
         )
