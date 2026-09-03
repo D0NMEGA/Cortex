@@ -51,9 +51,15 @@ and narrated in [`09-coreml-evidence.md`](09-coreml-evidence.md) under "Latency 
 | Provenance | real-data checkpoint `ndt1_real_with_velocity.pt` sha256=`9d542cb51d4a` |
 | Tool | `CortexDecoderBench`, in-process Swift `ContinuousClock` |
 
-The fp16 package was measured in the same run at p50 0.131291 ms and p99 0.141959 ms, also
-CPU-placed. The two artifacts are within 0.9 microseconds of each other at p99, so whichever package
-the phase settles on for deployment, the latency picture does not move.
+Two other candidate packages were measured on the same machine in the same corroborating tier: the
+fp16 package at p50 0.131291 ms and p99 0.141959 ms, and the per-channel 4-bit package at p50
+0.130666 ms and p99 0.165042 ms. All three are CPU-placed and all three sit more than ten times
+inside the 2 ms decoder budget, so the deployment-artifact choice does not move the latency picture.
+That choice has since been settled: `09-coreml-evidence.md` recommends shipping the **fp16** package,
+because 4-bit per-tensor palettization collapses the held-out velocity R2 and per-channel
+palettization only partly recovers it. The `latency` entry transcribed in the table above is still
+the 4-bit package's, which is why that is the one this file transcribes. Point the runbook at
+whichever package is actually being shipped on the day the capture is taken.
 
 **This Mac number is sufficient for the phase to complete.** D-17 carries the DEC-08 / DEC-11 device
 disposition forward unchanged: M5 Pro corroborating, iPad Pro M4 canonical, the canonical capture
@@ -131,7 +137,8 @@ cat Packages/CortexDecoder/.bench/latency_histogram.json
 This reproduces the committed Mac number. It is optional and it is not the gate; it is here so the
 device figure can be read against a Mac figure taken from the same rebuilt artifact on the same day.
 `CORTEX_DECODER_MODEL_URL` accepts either a `.mlpackage` or a compiled `.mlmodelc`, so the same
-command measures any candidate package by pointing the variable at it. With no model URL set the
+command measures any candidate package by pointing the variable at it: swap in
+`ndt1_real_vel_fp16.mlpackage` to measure the package the phase recommends shipping. With no model URL set the
 bench prints a usage message and exits 0, which is why a clean clone never fails.
 
 ### Step 3: the canonical leg (iPad Pro M4, Xcode GUI)
@@ -140,8 +147,10 @@ bench prints a usage message and exits 0, which is why a clean clone never fails
 `CortexDecoderBench` code driven from an Xcode-built host, exactly as the Phase-5 runbook specified.
 
 1. Pair and trust the iPad Pro M4 in Xcode 26.3 (Window > Devices and Simulators).
-2. Copy the rebuilt `ndt1_real_vel_4bit.mlpackage` into the host app's bundle or its Documents
-   directory, and point the bench at that on-device path. The `CORTEX_DECODER_MODEL_URL`
+2. Copy the rebuilt package into the host app's bundle or its Documents directory, and point the
+   bench at that on-device path. Use the package that is actually shipping, which under the current
+   recommendation is `ndt1_real_vel_fp16.mlpackage`; `ndt1_real_vel_4bit.mlpackage` is the one the
+   committed corroborating entry was measured on, so capturing both makes the comparison direct. The `CORTEX_DECODER_MODEL_URL`
    environment variable can be set in the scheme's Run > Arguments > Environment Variables pane; the
    bench also accepts the path as `argv[1]`.
 3. Select the iPad as the run destination and build and run **from the Xcode GUI**. The free
