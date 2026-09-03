@@ -1,4 +1,45 @@
 {
+  "ane": {
+    "all_eligible": true,
+    "claim": "ELIGIBILITY (neuralEngine in supported_compute_devices) only. PLACEMENT (preferred == neuralEngine) is NOT asserted: at 1.29M params Core ML CPU-places on Mac, which is why preferred_tally is informational.",
+    "cpu_only_ops": 0,
+    "env": {
+      "coremltools": "9.0",
+      "machine": "arm64",
+      "numpy": "2.4.6",
+      "platform": "macOS-26.5-arm64-arm-64bit",
+      "python": "3.12.13",
+      "scikit-learn": "1.9.0",
+      "torch": "2.12.1"
+    },
+    "model": "NDT1ANEWithVelocity (real-data, 4-bit)",
+    "n_schedulable": 239,
+    "op_type_tally": {
+      "ios16.einsum": 24,
+      "ios16.reduce_mean": 24,
+      "ios18.add": 25,
+      "ios18.batch_norm": 12,
+      "ios18.concat": 6,
+      "ios18.conv": 39,
+      "ios18.gelu": 6,
+      "ios18.mul": 12,
+      "ios18.real_div": 12,
+      "ios18.slice_by_index": 1,
+      "ios18.softmax": 12,
+      "ios18.sqrt": 12,
+      "ios18.square": 12,
+      "ios18.sub": 12,
+      "ios18.transpose": 12,
+      "split": 18
+    },
+    "phase5_baseline": "226/226 eligible, 0 CPU-only (randomly-initialized graph)",
+    "preferred_tally": {
+      "CPU": 239
+    },
+    "provenance": "real-data checkpoint ndt1_real_with_velocity.pt sha256=9d542cb51d4a",
+    "smoke": false,
+    "tool": "MLComputePlan via ndt1.compute_plan, scoped to CPU_AND_NE"
+  },
   "checkpoint": {
     "param_count": 1292544,
     "path": "Decoder/checkpoints/ndt1_real_pooled.pt",
@@ -469,6 +510,42 @@
     "torch": "2.12.1"
   },
   "excluded_sessions": [],
+  "latency": {
+    "canonical": "iPad Pro M4 capture, optional and never auto-approved (D-17); tracked in 09-HUMAN-UAT.md by Plan 09-11. A Mac number is NOT an iPad-M4 number and is not presented as one.",
+    "compute_units": ".cpuAndNeuralEngine (the DEC-07 production set, not .all)",
+    "device": "Apple M5 Pro (arm64), macOS-26.5-arm64-arm-64bit",
+    "fp16_comparison": {
+      "max_ms": 0.271208,
+      "min_ms": 0.110875,
+      "model": "ndt1_real_vel_fp16.mlpackage",
+      "n": 10000,
+      "p50_ms": 0.131291,
+      "p50_ns": 131291,
+      "p99_ms": 0.141959,
+      "p99_ns": 141959,
+      "placement": "CPU"
+    },
+    "max_ms": 0.355584,
+    "min_ms": 0.110458,
+    "model": "ndt1_real_vel_4bit.mlpackage",
+    "n": 10000,
+    "p50_ms": 0.130708,
+    "p50_ns": 130708,
+    "p99_ms": 0.141083,
+    "p99_ns": 141083,
+    "phase5_baseline": {
+      "device": "M5 Pro, CPU-placed",
+      "note": "05-latency-evidence.md, measured on a randomly-initialized graph",
+      "p50_ms": 0.12325,
+      "p99_ms": 0.139333
+    },
+    "placement": "CPU",
+    "placement_note": "MEASURED as CPU. At 1.29M params Core ML CPU-places on Mac (the scale trap), so this is a CPU latency, which is exactly why it is corroborating rather than canonical.",
+    "provenance": "real-data checkpoint ndt1_real_with_velocity.pt sha256=9d542cb51d4a",
+    "status": "corroborating",
+    "tool": "CortexDecoderBench, in-process Swift ContinuousClock, 50 warmup + 10,000 timed passes",
+    "toolchain": "Xcode 26.3 / Swift 6.2.4 (swiftlang-6.2.4.1.4, clang-1700.6.4.2)"
+  },
   "loso": [
     {
       "diverged": false,
@@ -1665,6 +1742,102 @@
     2.12579607963562,
     2.486150026321411
   ],
+  "palettization": {
+    "determinism": "identical across two runs",
+    "determinism_detail": {
+      "note": "Two palettize_4bit calls on the same fp16 package, compared by package size and by the Poisson-NLL delta each produces on the same fixed window.",
+      "package_bytes_identical": true,
+      "run1_nll_delta": 0.0203520607440415,
+      "run2_nll_delta": 0.0203520607440415,
+      "verdict": "identical across two runs"
+    },
+    "env": {
+      "coremltools": "9.0",
+      "machine": "arm64",
+      "numpy": "2.4.6",
+      "platform": "macOS-26.5-arm64-arm-64bit",
+      "python": "3.12.13",
+      "scikit-learn": "1.9.0",
+      "torch": "2.12.1"
+    },
+    "granularity": "per_tensor",
+    "mode": "kmeans",
+    "nbits": 4,
+    "phase4_synthetic_baseline": {
+      "nll_delta": 0.009114,
+      "note": "04-palettization-evidence.md, measured on a randomly-initialized NDT1ANE",
+      "size_ratio": 3.471
+    },
+    "reconstruction_model": {
+      "checkpoint": "ndt1_real_pooled.pt",
+      "fp16_bytes": 2704783,
+      "model": "NDT1ANE (real-data pooled)",
+      "nll_4bit": 0.816546258234531,
+      "nll_delta": 0.0203520607440415,
+      "nll_fp16": 0.8368983189785725,
+      "palettized_bytes": 792409,
+      "provenance": "real-data checkpoint ndt1_real_pooled.pt sha256=f95b257bf247",
+      "sha256": "f95b257bf2479b49102a2d8afee3c46d9008c51ba754d42a60a26762b7d3af8e",
+      "size_ratio": 3.4133673393411734
+    },
+    "shipped_model": {
+      "checkpoint": "ndt1_real_with_velocity.pt",
+      "diagnostic_bias_corrected": {
+        "axes": {
+          "vx": -0.5694300443242297,
+          "vy": -1.0456237253609357
+        },
+        "offset_cm_s": [
+          -3.3597140312194824,
+          11.902524948120117
+        ],
+        "offset_rows": 16384,
+        "r2_4bit_bias_corrected": -0.7709910250818595,
+        "status": "DIAGNOSTIC, estimated on train rows only; NOT the reported r2_4bit"
+      },
+      "fp16_bytes": 2708540,
+      "lag_bins": 1,
+      "model": "NDT1ANEWithVelocity (real-data)",
+      "n": 56943,
+      "null": "the POOLED TRAIN-split mean velocity per axis (the Plan 09-07 null)",
+      "palettized_bytes": 796165,
+      "provenance": "real-data checkpoint ndt1_real_with_velocity.pt sha256=9d542cb51d4a",
+      "r2_4bit": -1.7869711068934158,
+      "r2_4bit_axes": {
+        "vx": -0.4608603747554909,
+        "vy": -3.593835559860292
+      },
+      "r2_delta": -2.2108414795810702,
+      "r2_fp16": 0.42387037268765426,
+      "r2_fp16_axes": {
+        "vx": 0.34458357961851527,
+        "vy": 0.5319009349284156
+      },
+      "sessions": [
+        "indy_20160624_03",
+        "indy_20160627_01",
+        "indy_20160630_01",
+        "indy_20160915_01"
+      ],
+      "sha256": "9d542cb51d4af4811f324fbc6bda0b503da7b15aafc98b5e1340e1a7f49cce65",
+      "size_ratio": 3.4019832572393915
+    },
+    "smoke": false,
+    "threshold_census": {
+      "largest_skipped_elements": 560,
+      "palettized_tensors_in_package": 39,
+      "smallest_palettized_elements": 4096,
+      "tensors_over_threshold": 39,
+      "tensors_total": 103,
+      "tensors_under_threshold": 64,
+      "velocity_head_palettized": false,
+      "velocity_head_weight_elements": 192
+    },
+    "velocity_head_elements": 192,
+    "velocity_head_note": "weight_threshold=2048 skips any weight tensor with fewer elements. The velocity readout is a 1x1 Conv2d(96 -> 2), i.e. 2 x 96 = 192 elements, so it is never quantized and the shipped model's R2 delta is entirely encoder-attributable.",
+    "velocity_head_palettized": false,
+    "weight_threshold": 2048
+  },
   "schema_version": 1,
   "sessions": [
     {
