@@ -2865,6 +2865,157 @@
         "train_r2": 0.43825305404681847
       }
     ],
+    "loso": [
+      {
+        "delta_versus_in_pool": -7.495324164422054,
+        "fitted": true,
+        "held_out_session": "indy_20160624_03",
+        "heldout_r2": {
+          "n": 4968,
+          "null": "this session's own TRAIN-split mean velocity per axis",
+          "pooled": -6.990723205094921,
+          "vx": -10.010245754254676,
+          "vy": -2.8157120344356175
+        },
+        "heldout_r2_training_pool_null": {
+          "n": 4968,
+          "null": "the mean velocity of the fold's three TRAINING sessions",
+          "pooled": -6.9907140421704534,
+          "vx": -10.010284668178574,
+          "vy": -2.8156829626825615
+        },
+        "in_pool_heldout_r2": 0.5046009593271332,
+        "lag_bins": 1,
+        "lag_ms": 20.0,
+        "lambda": 0.1,
+        "lambda_rule": "train R2 spans 2.67e-02 across the grid, above the pre-registered flat tolerance 0.001, so the tie-breaker fired: generalized cross-validation on the train split alone, minimized at lambda=0.1",
+        "train_r2": 0.46315778352673864,
+        "train_rows": 208193,
+        "train_sessions": [
+          "indy_20160627_01",
+          "indy_20160630_01",
+          "indy_20160915_01"
+        ]
+      },
+      {
+        "delta_versus_in_pool": -0.2706462691704433,
+        "fitted": true,
+        "held_out_session": "indy_20160627_01",
+        "heldout_r2": {
+          "n": 33598,
+          "null": "this session's own TRAIN-split mean velocity per axis",
+          "pooled": 0.23629194712543478,
+          "vx": 0.16760452207107657,
+          "vy": 0.33494328571860676
+        },
+        "heldout_r2_training_pool_null": {
+          "n": 33598,
+          "null": "the mean velocity of the fold's three TRAINING sessions",
+          "pooled": 0.2362913129080163,
+          "vx": 0.16760450425258644,
+          "vy": 0.33494196064810855
+        },
+        "in_pool_heldout_r2": 0.5069382162958781,
+        "lag_bins": 0,
+        "lag_ms": 0.0,
+        "lambda": 0.1,
+        "lambda_rule": "train R2 spans 5.50e-02 across the grid, above the pre-registered flat tolerance 0.001, so the tie-breaker fired: generalized cross-validation on the train split alone, minimized at lambda=0.1",
+        "train_r2": 0.35535061340558804,
+        "train_rows": 93677,
+        "train_sessions": [
+          "indy_20160624_03",
+          "indy_20160630_01",
+          "indy_20160915_01"
+        ]
+      },
+      {
+        "delta_versus_in_pool": -1.0703487082952141,
+        "fitted": true,
+        "held_out_session": "indy_20160630_01",
+        "heldout_r2": {
+          "n": 14599,
+          "null": "this session's own TRAIN-split mean velocity per axis",
+          "pooled": -0.9257469655823012,
+          "vx": -1.2236791042189652,
+          "vy": -0.5301219847778844
+        },
+        "heldout_r2_training_pool_null": {
+          "n": 14599,
+          "null": "the mean velocity of the fold's three TRAINING sessions",
+          "pooled": -0.9257509739501597,
+          "vx": -1.2236785592884494,
+          "vy": -0.5301298968400259
+        },
+        "in_pool_heldout_r2": 0.14460174271291293,
+        "lag_bins": 2,
+        "lag_ms": 40.0,
+        "lambda": 0.1,
+        "lambda_rule": "train R2 spans 3.35e-02 across the grid, above the pre-registered flat tolerance 0.001, so the tie-breaker fired: generalized cross-validation on the train split alone, minimized at lambda=0.1",
+        "train_r2": 0.5872635134694109,
+        "train_rows": 169660,
+        "train_sessions": [
+          "indy_20160624_03",
+          "indy_20160627_01",
+          "indy_20160915_01"
+        ]
+      },
+      {
+        "delta_versus_in_pool": -0.407815425360061,
+        "fitted": true,
+        "held_out_session": "indy_20160915_01",
+        "heldout_r2": {
+          "n": 3778,
+          "null": "this session's own TRAIN-split mean velocity per axis",
+          "pooled": 0.07184306324471701,
+          "vx": -0.19485527637704547,
+          "vy": 0.334251327688187
+        },
+        "heldout_r2_training_pool_null": {
+          "n": 3778,
+          "null": "the mean velocity of the fold's three TRAINING sessions",
+          "pooled": 0.07183872306178862,
+          "vx": -0.19484392868016442,
+          "vy": 0.33423893025313534
+        },
+        "in_pool_heldout_r2": 0.479658488604778,
+        "lag_bins": 1,
+        "lag_ms": 20.0,
+        "lambda": 0.1,
+        "lambda_rule": "train R2 spans 2.76e-02 across the grid, above the pre-registered flat tolerance 0.001, so the tie-breaker fired: generalized cross-validation on the train split alone, minimized at lambda=0.1",
+        "train_r2": 0.4672912134514403,
+        "train_rows": 212950,
+        "train_sessions": [
+          "indy_20160624_03",
+          "indy_20160627_01",
+          "indy_20160630_01"
+        ]
+      }
+    ],
+    "loso_summary": {
+      "delta_versus_in_pool": {
+        "folds": 4,
+        "max": -0.2706462691704433,
+        "mean": -2.3110336418119433,
+        "min": -7.495324164422054,
+        "std": 3.473786960314329
+      },
+      "encoder_note": "READOUT-only rotation: the encoder is the same pooled checkpoint in every fold and was pretrained on all four sessions, so this is a strictly weaker transfer claim than Plan 09-06d's leave-one-session-out co-bps, where the encoder was retrained from scratch without the held-out session",
+      "failed_folds": [],
+      "folds": 4,
+      "max": 0.23629194712543478,
+      "mean": -1.9020837900767675,
+      "min": -6.990723205094921,
+      "null": "the held-out session's OWN TRAIN-split mean velocity per axis",
+      "positive_folds": 2,
+      "std": 3.431060220333211,
+      "training_pool_null": {
+        "folds": 4,
+        "max": 0.2362913129080163,
+        "mean": -1.902083745037702,
+        "min": -6.9907140421704534,
+        "std": 3.4310543461793768
+      }
+    },
     "null": "constant TRAIN-split mean velocity per axis",
     "per_session": {
       "indy_20160624_03": {
@@ -2898,6 +3049,7 @@
     },
     "smoke": false,
     "supersedes": "05-velocity-head-evidence.md velocity_r2.json R2 0.99985 (a self-consistency check on synthetic labels, not a decode result)",
+    "wall_clock_loso_s": 3.7,
     "wall_clock_s": 1255.9
   },
   "wall_clock_loso_s": 14835.6,
