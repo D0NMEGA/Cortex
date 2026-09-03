@@ -47,6 +47,8 @@ def test_missing_checkpoint_returns_random_init_label(tmp_path: Path) -> None:
     label = load_real_weights_if_present(model, tmp_path / "absent.pt")
 
     assert "random init" in label
+    # Load-bearing: callers gate on the substring `real-data`, so the random-init label must not
+    # contain it. A label reading "no real-data checkpoint at ..." would satisfy that guard.
     assert "real-data" not in label
     assert _state_fingerprint(model) == before, "a missing checkpoint must not perturb the weights"
 
@@ -127,13 +129,14 @@ def test_no_unguarded_torch_load() -> None:
     """T-04-04-01: the module never reaches `torch.load` without `weights_only=True`.
 
     Loading routes through `ndt1.train.load_checkpoint`, which pins `weights_only=True`. If a
-    direct call is ever added here, it must carry the flag on the same line.
+    direct CALL is ever added here it must carry the flag on the same line; the match is on
+    `torch.load(` so that prose mentioning the function in a docstring does not trip it.
     """
     source = (
         Path(__file__).resolve().parents[1] / "src" / "ndt1" / "real_checkpoint.py"
     ).read_text()
     for line in source.splitlines():
-        if "torch.load" in line and not line.lstrip().startswith("#"):
+        if "torch.load(" in line and not line.lstrip().startswith("#"):
             assert "weights_only=True" in line, f"unguarded torch.load: {line.strip()!r}"
     assert "load_checkpoint" in source, "the load must route through ndt1.train.load_checkpoint"
 
