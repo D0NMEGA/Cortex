@@ -9,6 +9,12 @@ dependencies = [
     "numpy>=1.26",
     "h5py>=3.10",
     "scipy>=1.11",
+    # coremltools' k-means palettizer uses its bundled kmeans1d only for weight tensors with
+    # >= 10,000 elements; anything smaller that still clears weight_threshold=2048 falls through
+    # to scikit-learn and raises ModuleNotFoundError without it. The real-data checkpoints hit
+    # that branch (the trained 4,096-element positional encoding), while an untrained model does
+    # not, because its zero-initialized positional encoding is folded away before palettization.
+    "scikit-learn>=1.5",
 ]
 
 [project.optional-dependencies]
