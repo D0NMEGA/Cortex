@@ -212,7 +212,7 @@ p99 sits inside the 2 ms decoder budget with about 3.5x headroom regardless of p
   repo is ever published, both reports must be scrubbed together or neither.
 - **Files modified:** `09-HUMAN-UAT.md`, `deferred-items-09-11.md`
 - **Verification:** confirmed by reading the Phase-5 committed report, which carries the identical
-  `deviceID` `00008112-001049A40A46601E` and `serialNumber`.
+  `deviceID` `[redacted-device-id]` and `serialNumber`.
 - **Committed in:** `cb5f7cb`
 
 **Total deviations:** 2 auto-fixed (1 bug, 1 missing critical).

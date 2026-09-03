@@ -3,17 +3,17 @@
   "deviceInfo" : {
     "capacity" : "128 GB",
     "modelName" : "iPad Air 11-inch (M2)",
-    "deviceID" : "00008112-001049A40A46601E",
+    "deviceID" : "[redacted-device-id]",
     "deviceType" : {
       "iPad" : {
 
       }
     },
-    "serialNumber" : "MF6PQKJLKQ",
+    "serialNumber" : "[redacted-serial]",
     "osNameAndVersionWithoutBuildNumber" : "iPadOS 18.7.8",
     "isCloudDevice" : false,
     "isSupported" : true,
-    "displayName" : "D0NMEGA’s Soulja Tablet",
+    "displayName" : "[redacted-device-name]",
     "osNameAndVersionWithInternalBuildNumber" : "iPadOS 18.7.8"
   },
   "jsonVersion" : 1,

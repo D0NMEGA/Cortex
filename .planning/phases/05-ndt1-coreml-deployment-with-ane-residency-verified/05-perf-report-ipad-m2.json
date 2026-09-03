@@ -6,10 +6,10 @@
     "capacity" : "128 GB",
     "osNameAndVersionWithoutBuildNumber" : "iPadOS 18.7.8",
     "osNameAndVersionWithInternalBuildNumber" : "iPadOS 18.7.8",
-    "deviceID" : "00008112-001049A40A46601E",
-    "serialNumber" : "MF6PQKJLKQ",
+    "deviceID" : "[redacted-device-id]",
+    "serialNumber" : "[redacted-serial]",
     "isCloudDevice" : false,
-    "displayName" : "D0NMEGA’s Soulja Tablet",
+    "displayName" : "[redacted-device-name]",
     "isSupported" : true,
     "deviceType" : {
       "iPad" : {
