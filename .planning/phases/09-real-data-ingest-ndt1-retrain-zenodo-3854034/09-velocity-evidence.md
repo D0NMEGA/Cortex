@@ -8,6 +8,11 @@ M1 sessions (Zenodo record 3854034). All four sessions are positive against thei
 **+0.5046, +0.5069, +0.1446, +0.4797**. Measured on the development Mac, **CPU only, no
 hardware-gated claim**.
 
+**Transfer is a different story, and it is neither of the two clean answers.** A leave-one-session-out
+rotation of the readout, added after the numbers above and reported below, degrades **every** fold,
+leaves **two of four** above a constant-velocity null (+0.2363 and +0.0718), and collapses on one
+(-6.9907). The readout partially transfers.
+
 This replaces `velocity_r2.json`'s **0.99985**, which was never a decode result.
 
 ## At a glance
@@ -25,6 +30,9 @@ This replaces `velocity_r2.json`'s **0.99985**, which was never a decode result.
 | Locked ridge lambda | **0.1**, by the pre-registered cross-validation tie-breaker | not applicable |
 | Graph-versus-arithmetic parity | 4.8e-05 cm/s max abs | not applicable |
 | In-sample train R2 at the locked settings | 0.4646 | the fit rows' own mean |
+| Readout rotation, per fold | **+0.2363, +0.0718, -0.9257, -6.9907**, 2 of 4 positive | the held-out session's own TRAIN-split mean |
+| Readout rotation, mean and spread | mean -1.9021, std 3.4311, median -0.4270, 0 folds failed | the held-out session's own TRAIN-split mean |
+| Readout rotation, cost of holding a session out | mean -2.3110, range -0.2706 to -7.4953, **4 of 4 negative** | the same session with itself in the pool |
 | Superseded, synthetic self-consistency check | **0.99985** | `05-velocity-head-evidence.md` |
 
 Every value in that table was produced on this machine's CPU from the four manifest-pinned real
@@ -297,8 +305,97 @@ nothing more: one drift measurement on one session does not establish a cause, a
 drift figure was measured for the other three under this plan.
 
 **All four sessions are positive.** This is the same direction as Plan 09-06d's within-session
-co-bps result and, like it, says nothing about cross-session transfer. No leave-one-session-out
-velocity fit was run under this plan.
+co-bps result, and like it, every row of that table is a chronological tail of a session the readout
+was fit on and the encoder was pretrained on. What happens on a session the readout has never seen
+is the next section.
+
+## Cross-session transfer: the readout rotation (R5)
+
+Four folds. For each session: fit the ridge on the other three sessions' TRAIN rows, with the lag
+and the lambda **re-selected on those three alone**, then score held-out R2 on the excluded
+session's own TEST tail against **its own TRAIN-split mean**. Selecting either knob once globally
+would have chosen it on data that includes the held-out session. All four folds fitted; none failed.
+
+**Read the scope of this experiment before the numbers.** The encoder is the same pooled checkpoint
+in every fold, and it was pretrained on all four sessions, including the held-out one. This rotation
+therefore isolates whether the linear **readout** transfers, holding the representation fixed. It is
+**not** Plan 09-06d's leave-one-session-out co-bps, where the encoder itself was retrained from
+scratch without the held-out session, and it is a **strictly weaker** transfer claim. A genuinely
+new session in deployment would face both problems at once: a readout that has not seen it and an
+encoder that has not either. **These numbers therefore bound true cross-session performance from
+above.**
+
+| Held-out session | Locked lag | Fit rows | `vx` | `vy` | pooled | Held-out bins | With this session in the pool | Cost of holding it out |
+|---|---|---|---|---|---|---|---|---|
+| `indy_20160627_01` | 0 bins | 93,677 | +0.1676 | +0.3349 | **+0.2363** | 33,598 | +0.5069 | -0.2706 |
+| `indy_20160915_01` | 1 bin | 212,950 | -0.1949 | +0.3343 | **+0.0718** | 3,778 | +0.4797 | -0.4078 |
+| `indy_20160630_01` | 2 bins | 169,660 | -1.2237 | -0.5301 | **-0.9257** | 14,599 | +0.1446 | -1.0703 |
+| `indy_20160624_03` | 1 bin | 208,193 | -10.0102 | -2.8157 | **-6.9907** | 4,968 | +0.5046 | -7.4953 |
+
+Rotation over the four folds: **mean -1.9021, sample std 3.4311, min -6.9907, max +0.2363, median
+-0.4270, 2 of 4 positive, 0 failed**. Lambda locked at 0.1 in all four folds.
+
+**The mean is not the result here.** One fold is 7.6x further from zero than the next worst, so the
+mean of -1.9021 is a statement about that fold and little else. The median of -0.4270 and the fold
+list are the honest summary, and the reason both are printed is that a rotation reported as a mean
+alone would hide exactly the structure that makes this interesting.
+
+### What the rotation says, stated precisely
+
+**1. Transfer partially holds. It neither survives nor fails cleanly.** Two of four held-out sessions
+are decoded better than a constant-velocity null by a readout that never saw them (+0.2363 and
++0.0718). Two are not (-0.9257 and -6.9907). Any single-sentence verdict in either direction would
+be false to the data.
+
+**2. Holding a session out always costs, and the cost is never small.** All four deltas are negative,
+from -0.2706 to -7.4953. Even the best-transferring fold loses more than half its in-pool R2
+(+0.5069 down to +0.2363). Whatever the readout learns is at least partly session-specific.
+
+**3. The null choice, which was decisive for co-bps, is immaterial here.** Scored against the fold's
+three TRAINING sessions' mean velocity instead of the held-out session's own, the four numbers are
++0.2363, +0.0718, -0.9258, -6.9907: identical to four decimal places. Mean velocity in a self-paced
+reach is near zero on both axes, so every constant-velocity null is nearly the same constant. Plan
+09-06d's 0.59 bits/spike gap between its two co-bps nulls has no counterpart here, and this result
+does not turn on that subtlety at all.
+
+**4. Per-fold re-selection did not move the lag toward the published anchor.** The four folds locked
+1, 0, 2 and 1 bins, every one of them tripping the 5-8 bin warning. Four independent selections on
+four different training pools agreeing on 0 to 2 bins is further evidence that the 20 ms optimum is a
+property of the trailing-causal-window geometry rather than of one particular pooling.
+
+### Does this corroborate the co-bps rotation? Partly, and the disagreement matters
+
+Plan 09-06d's leave-one-session-out co-bps, against the held-out session's own mean, ranked the
+sessions from easiest to hardest as `indy_20160624_03` (-0.1238), `indy_20160915_01` (-0.1890),
+`indy_20160627_01` (-0.3060), `indy_20160630_01` (-0.7805). The velocity readout rotation ranks them
+`indy_20160627_01` (+0.2363), `indy_20160915_01` (+0.0718), `indy_20160630_01` (-0.9257),
+`indy_20160624_03` (-6.9907).
+
+**Where they agree:** `indy_20160630_01` is the hardest session for the encoder rotation and the
+second hardest here, and it is also the weakest within-session velocity result of the four
+(+0.1446). Three views of that session point the same way.
+
+**Where they disagree, which is the more informative half:** `indy_20160624_03` is the **easiest**
+fold for the co-bps rotation and the **worst by a wide margin** here. The two metrics do not rank
+these sessions the same way, so "this session is the outlier" is not a property of the session that
+transfers between them. No magnitude should be compared across the two rotations in any case: co-bps
+is in bits per spike and R2 is dimensionless, and any numerical similarity between them is a
+coincidence of scale.
+
+### The collapsed fold, and what is not claimed about it
+
+`indy_20160624_03` at -6.9907 means the residual sum of squares is about eight times the null's, and
+`vx` alone is at -10.0102. That is a **scale and offset** failure, not a sign failure: the readout is
+not predicting the wrong direction so much as the wrong magnitude, by a lot. There is a mechanism
+available in the arithmetic, which is that a rank-2 linear map with a single fitted intercept has no
+way to adapt to a session-level shift in the distribution of the encoder outputs it consumes, so an
+unseen session whose feature distribution sits outside the training pool's is extrapolated rather
+than interpolated.
+
+**That mechanism is not established here.** It was not tested, and the obvious test, re-centering the
+held-out session's features or its predictions, is deliberately not run: it would be tuning to
+rescue a number after seeing that it is bad, which is the one thing this phase's whole
+pre-registration chain exists to prevent. It is written down as an open question instead.
 
 ## Reading the number honestly (D-25)
 
@@ -319,6 +416,13 @@ impressive, and it lands slightly above the 0.1 to 0.4 band 09-RESEARCH predicte
 configuration. It is reported as measured. Nothing was clamped, no setting was re-rolled to improve
 it, and the pre-registration committed to publishing a negative value as the finding had one
 appeared.
+
+**The pooled 0.4238 is a within-pool number, and the rotation is what bounds it.** Every row of the
+per-session table is a session the readout was fit on. On a session it has not seen, the same
+readout returns +0.2363, +0.0718, -0.9257 and -6.9907, and even that understates the deployment
+problem, because in deployment the encoder would not have seen the session either. **0.4238 is what
+this decoder does on sessions it has been fit for; it is not what it would do on a new recording
+day.**
 
 **What is missing, and it matters more than the value.** There is **no error bar anywhere in this
 file**. The 56,943 held-out bins are not 56,943 independent samples: cursor velocity is
@@ -347,6 +451,9 @@ uv run --project Decoder python Decoder/scripts/fit_velocity_real.py --smoke
 # The published run. About 21 minutes of CPU; detach it.
 nohup uv run --project Decoder python Decoder/scripts/fit_velocity_real.py \
   > Decoder/checkpoints/09-07-logs/velocity.log 2>&1 &
+
+# The readout rotation. Seconds, off the cached design matrices.
+uv run --project Decoder python Decoder/scripts/fit_velocity_real.py --reuse-rates --loso
 
 uv run --project Decoder pytest Decoder/tests -m "not slow" -q       # 189 passed, 9 deselected
 uv run --project Decoder ruff check Decoder                          # All checks passed
