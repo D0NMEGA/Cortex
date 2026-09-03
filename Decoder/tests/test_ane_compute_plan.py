@@ -11,8 +11,21 @@ false-fail on the ~1.29M-param model on Mac (the meridian scale trap, Decision 2
 
 The einsum-disposition test is the arbiter for the einsum-attention risk (Decision 6): coremltools
 lowers ``bchq,bkhc->bkhq`` to MIL ops; if any einsum-derived op is CPU-only the test fails and
-points to the Task-3 contingency rewrite. Transient packages build under ``Decoder/checkpoints/``
-(gitignored), isolated by ``tmp_path.name``; only the verdict NUMBERS are committed (evidence doc).
+points to the Task-3 contingency rewrite. Only the verdict NUMBERS are committed (evidence doc).
+
+**Every transient package and compiled model builds under the test's own ``tmp_path``, never under
+the shared ``Decoder/checkpoints/``.** This is load-bearing, not tidiness. ``compile_model`` moves
+its freshly compiled ``.mlmodelc`` to ``destination_path`` with ``shutil.move``, which -- when that
+destination ALREADY EXISTS as a directory -- nests the new compile INSIDE it instead of replacing
+it, then returns the unchanged destination anyway. ``MLComputePlan.load_from_path`` therefore reads
+the FIRST compile ever written to that path and silently ignores every later one. Measured
+directly: compiling the encoder-only model (224 schedulable ops) and then the with-velocity model
+(226) to one shared destination returns 224 both times. Because the build directory names here are
+derived from the stable test name, the shared-directory version of this module had been re-scanning
+a compiled artifact from 2026-06-21 on every run since, with 217 unread compiles accumulated across
+four directories. A per-invocation ``tmp_path`` destination cannot pre-exist, so each scan is of the
+model the run actually built. This also closes the Phase-9 deferred item recording this module as
+flaky.
 """
 from __future__ import annotations
 
@@ -58,14 +71,16 @@ def _checkpoints_dir() -> Path:
     return ckpt_dir
 
 
-def _build_and_scan_palettized(tag: str) -> dict:
+def _build_and_scan_palettized(build_dir: Path, tag: str) -> dict:
     """Build the (vx,vy) package, palettize to 4-bit, compile, and scan its compute plan.
+
+    ``build_dir`` must be the test's own ``tmp_path`` so the ``.mlmodelc`` destination cannot
+    pre-exist; see the module docstring for the stale-compile mechanism that makes this mandatory.
 
     Returns the :func:`scan_ane_eligibility` verdict dict for the COMPILED 4-bit palettized model.
     """
-    ckpt_dir = _checkpoints_dir()
-    fp16_path = ckpt_dir / f"ndt1_vel_fp16_{tag}.mlpackage"
-    palettized_path = ckpt_dir / f"ndt1_vel_4bit_{tag}.mlpackage"
+    fp16_path = build_dir / f"ndt1_vel_fp16_{tag}.mlpackage"
+    palettized_path = build_dir / f"ndt1_vel_4bit_{tag}.mlpackage"
 
     model = NDT1ANEWithVelocity(seq_len=SEQ_LEN)
     convert_to_mlpackage(model, fp16_path, seq_len=SEQ_LEN)
@@ -84,7 +99,7 @@ def test_palettized_model_every_op_ane_eligible(tmp_path: Path) -> None:
     residency artifacts (``runtime_plan.json`` + ``residency.txt``) the evidence doc transcribes.
     The einsum-op device disposition is recorded into ``runtime_plan.json`` either way.
     """
-    scan = _build_and_scan_palettized(tmp_path.name)
+    scan = _build_and_scan_palettized(tmp_path, tmp_path.name)
 
     # Record the einsum-op disposition INTO the scan before persisting, so runtime_plan.json is
     # evidence of the Decision-6 outcome regardless of pass/fail.
@@ -121,9 +136,8 @@ def test_palettized_op_eligibility_matches_fp16(tmp_path: Path) -> None:
     ANE-eligible op types is identical (4-bit weights are decompressed for the ANE — placement
     must not change). This confirms residency is correctly characterized on the deployment artifact.
     """
-    ckpt_dir = _checkpoints_dir()
-    fp16_path = ckpt_dir / f"ndt1_vel_fp16_parity_{tmp_path.name}.mlpackage"
-    palettized_path = ckpt_dir / f"ndt1_vel_4bit_parity_{tmp_path.name}.mlpackage"
+    fp16_path = tmp_path / f"ndt1_vel_fp16_parity_{tmp_path.name}.mlpackage"
+    palettized_path = tmp_path / f"ndt1_vel_4bit_parity_{tmp_path.name}.mlpackage"
 
     model = NDT1ANEWithVelocity(seq_len=SEQ_LEN)
     convert_to_mlpackage(model, fp16_path, seq_len=SEQ_LEN)
@@ -151,7 +165,7 @@ def test_einsum_attention_lowers_to_ane_eligible_ops(tmp_path: Path) -> None:
     rewrite (the contingency). If all are ANE-eligible, the einsum lowering is clean (the expected
     common case) and Task 3 is not triggered.
     """
-    scan = _build_and_scan_palettized(f"einsum_{tmp_path.name}")
+    scan = _build_and_scan_palettized(tmp_path, f"einsum_{tmp_path.name}")
     cpu_only_einsum = [
         r
         for r in scan["records"]
