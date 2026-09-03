@@ -116,7 +116,7 @@ sha256 is independently verifiable on the machine that produced this report.
 | README policy still requires the not-yet-retired photodiode/24.7 tokens (RD-10 is Phase 10's job, not Phase 9's) | `Tools/scripts/readme-policy.sh` / `--self-test` | clean pass; self-test 9/9 negative controls bite | [OK] PASS |
 | Checkpoint provenance matches disk | `shasum -a 256 Decoder/checkpoints/ndt1_real_pooled.pt Decoder/checkpoints/ndt1_real_with_velocity.pt` | `f95b257bf2479b49...` and `9d542cb51d4af481...` -- exact match to every evidence document's cited hash | [OK] PASS |
 | Manifest has zero PENDING entries | `grep -c PENDING Decoder/manifests/indy_sessions.json` | 0 | [OK] PASS |
-| Committed slow co-bps gate (`@pytest.mark.slow`, non-CI-blocking by design) | `pytest Decoder/tests/test_heldout_cobps.py -m slow -q` | Pre-existing `Decoder/checkpoints/sc2_metrics.json` on disk (real-session run) reads `held_out_co_bps: 0.6797322079523844`, matching `deferred-items-09-09.md`'s documented 0.679732 to full precision, with an identical per-epoch loss trajectory. A live re-run was started during this verification; it is a genuine ~14-minute real-data training run (not a canned check) and had not completed at report time -- see note below. | [OK] PASS (via matching pre-existing artifact; live confirmation pending) |
+| Committed slow co-bps gate (`@pytest.mark.slow`, non-CI-blocking by design) | `pytest Decoder/tests/test_heldout_cobps.py -m slow -q` | **CONFIRMED live during this verification**: `1 passed in 856.76s (0:14:16)`. The freshly written `Decoder/checkpoints/sc2_metrics.json` reads `held_out_co_bps: 0.6797322079523844` with a byte-identical per-epoch loss trajectory to the pre-existing artifact and to `deferred-items-09-09.md`'s documented 0.679732 -- a deterministic (`seed=0`) reproduction on real session data, run end-to-end on this machine during this verification, not merely a pre-existing artifact read. | [OK] PASS (live re-run, confirmed) |
 
 **Note on the slow co-bps gate.** This test is `@pytest.mark.slow`, explicitly excluded from the
 blocking `decoder-python` CI job by design (D-21: CI never trains). It is not the phase's headline
@@ -124,10 +124,10 @@ number -- that is `train_real.py`'s output, independently verified above via che
 it is a Phase-4-era regression smoke test whose own docstring only claims "converges to non-trivial
 reconstruction loss." `deferred-items-09-09.md` documents it passing at HEAD with co-bps 0.679732 on
 2026-09-02, and explicitly cautions that this number is NOT comparable to the headline 0.4096 (weaker,
-non-D-12 split) and must not be quoted as a result. The pre-existing `sc2_metrics.json` artifact on
-this machine matches that documented run byte-for-byte in every reported field, which is strong
-evidence the claim is accurate independent of whether the live re-run finishes inside this report's
-window.
+non-D-12 split) and must not be quoted as a result. A live re-run was executed end-to-end during this
+verification (started before the Requirements Coverage section was drafted, finished 14m16s later) and
+reproduced `held_out_co_bps=0.6797322079523844` and the identical loss trajectory exactly, confirming
+the claim by direct measurement rather than by reading a pre-existing artifact alone.
 
 ### Requirements Coverage
 
