@@ -1,10 +1,12 @@
 ---
-status: pending
+status: partial
 phase: 09-real-data-ingest-ndt1-retrain-zenodo-3854034
 source: [09-VALIDATION.md "Manual-Only Verifications", 09-CONTEXT.md D-17, 09-coreml-evidence.md "Latency with real weights (RD-06b)"]
 gates: 1
+deferred: 1
+corroborating_captures: 1
 started: 2026-09-02T00:00:00Z
-updated: 2026-09-02T00:00:00Z
+updated: 2026-09-02T22:40:00Z
 ---
 
 # Phase 9 human UAT: the one device-gated measurement
@@ -29,6 +31,11 @@ One gate, RD-06b: the canonical iPad Pro M4 p99 for the real-data `(vx, vy)` dec
 Everything else in RD-06 is already closed on the dev Mac and committed. This file exists only to
 carry the one measurement that cannot be taken here, to state what it would add, and to record what
 the user decided about it.
+
+**Disposition, 2026-09-02: the canonical M4 gate is DEFERRED.** A device capture was taken, but on
+an iPad Air 11-inch (M2) rather than an iPad Pro M4, so it is recorded as a second corroborating
+datapoint and does not close the gate. See "The iPad Air M2 capture" below and the disposition table
+at the end.
 
 ## What is already measured and committed
 
@@ -71,6 +78,91 @@ target device. It is not a blocker on RD-06 and nothing downstream waits on it.
 labeled with the device that produced it in every place it appears, and it may not be quoted as an
 iPad-M4 number or as an ANE number. A capture under this gate would sit beside it, never on top of
 it.
+
+## The iPad Air M2 capture, 2026-09-02 (corroborating, not canonical)
+
+A device capture was taken and the raw Xcode Core ML Performance Report is committed beside this
+file as `09-perf-report-ipad-m2.json`. **It ran on an iPad Air 11-inch (M2), not on an iPad Pro M4,
+so it does not close the gate below.** It is a second corroborating datapoint next to the M5 Pro
+one, on different silicon.
+
+Method: Xcode Core ML Performance Report against
+`Decoder/checkpoints/ndt1_real_vel_sweep_fp16.mlpackage`, the fp16 with-velocity model that plan
+09-08 recommends shipping. Its 2,708,540 byte size matches the fp16 package in the committed
+palettization table exactly; it is the same fp16 conversion of `NDT1ANEWithVelocity`, written under
+the granularity sweep's filename. Phase 5 used this same method on this same device, so the two
+captures are directly comparable.
+
+| Field | Value |
+|---|---|
+| Device | iPad Air 11-inch (M2) |
+| OS | iPadOS 18.7.8 |
+| Model | `ndt1_real_vel_sweep_fp16.mlpackage`, 2,708,540 B, ML Program, Float16 |
+| Compute units | `computeUnit` enum 2 (`.all`), with neuralEngine, gpu and cpu all listed available |
+| Schedulable ops | **239** |
+| ANE eligibility | **239 / 239** list `neuralEngine` among their supported devices |
+| Preferred-device tally | **{cpu: 239}**, zero ANE, zero GPU |
+| n | 120 predict samples (`loadCount` 3, `experimentIterations` 3, `predictionCount` 40) |
+| min | 0.1881 ms |
+| p50 | **0.2240 ms** |
+| p90 | 0.2710 ms |
+| p99 | **0.5790 ms** |
+| max | 4.9390 ms |
+
+Percentiles are nearest-rank over the 120 samples, which is the convention `CortexDecoderBench`
+uses, so they line up with the Mac figures rather than being computed a different way. The report
+stores seconds; the milliseconds above are converted.
+
+Three things this capture establishes, and several it does not.
+
+**1. It independently corroborates the 226-to-239 op-count correction.** Phase 5's capture on this
+same iPad reported 226 schedulable ops. Plan 09-08 found that every ANE scan since 2026-06-21 had
+been reading a stale compiled artifact, because `compile_model` nests its output via `shutil.move`
+instead of replacing the destination, and corrected the trained graph's tally to 239: twelve
+`batch_norm` ops plus one `add` that a zero-initialized `pos_encoding` folds away in an untrained
+model. Recomputed across the two committed reports, the per-op-type delta is exactly that and
+nothing else.
+
+| Op type | Phase 5 capture (untrained) | This capture (trained) | Change |
+|---|---|---|---|
+| `ios18.batch_norm` | 0 | 12 | +12 |
+| `ios18.add` | 24 | 25 | +1 |
+| every other op type | identical | identical | 0 |
+| **total** | **226** | **239** | **+13** |
+
+The Xcode Performance Report never touches the `compile_model` path that produced the stale reads,
+and this ran on different silicon with a different tool from the Mac scan. Same answer.
+
+**2. Eligibility holds on real hardware with real weights.** 239 of 239 schedulable ops list
+`neuralEngine` among their supported devices, with zero CPU-only ops. That reproduces the Mac
+verdict on a physical iPad.
+
+**3. The scale trap is reproduced on trained weights.** Phase 5 measured `{cpu: 226}` on a
+randomly-initialized model; this is `{cpu: 239}` on the trained one, with the Neural Engine and the
+GPU both listed as available and the compute-unit set at `.all`. The scheduler still placed every
+op on the CPU. Placement is measured, not assumed, and the framing Phase 5 adopted stands: 100
+percent ANE-eligible, CPU-scheduled at this scale, and inside the 2 ms decoder budget either way,
+here with about 3.5x headroom on mobile silicon.
+
+**What it does not establish.**
+
+- **M2 is not M4.** Different silicon and a different Core ML scheduler generation. Nothing here
+  settles what an M4 would do, and the canonical iPad Pro M4 row stays deferred with its
+  prerequisite intact.
+- **iPadOS 18.7.8 is not iPadOS 26.** The project's stated baseline is iPadOS 26. This matches the
+  OS of the Phase-5 capture, which is what makes the M2-to-M2 comparison clean, but it is not the
+  target OS and the scheduler could behave differently there.
+- **The compute-unit set differs from the Mac bench.** This report ran under `.all` (enum 2), while
+  the committed Mac number was measured under `.cpuAndNeuralEngine` (enum 3, the DEC-07 production
+  set). Phase 5 had the same mismatch. The all-CPU outcome is arguably the stronger statement, since
+  the scheduler declined the Neural Engine with the GPU also on the table, but the two
+  configurations are not identical and the difference is recorded rather than smoothed over.
+- **The 4.9390 ms max is a cold-start outlier.** It is literally the first of the 120 samples. It is
+  reported because it happened; it is not the p99, which is 0.5790 ms, and it must not be quoted as
+  a steady-state figure.
+
+The committed M5 Pro number is untouched by this capture. Both are corroborating, on different
+devices, and neither is canonical.
 
 ## The distinction this gate exists to test: eligibility is not placement
 
@@ -181,8 +273,14 @@ line, and from `latency_histogram.json` if it can be retrieved from the device:
   Instruments Core ML per-op compute-unit lane if the trace was captured
 - the exact device and OS string (for example, iPad Pro M4 / iPadOS 26 with the build number)
 
-Do not transcribe a serial number, a UDID, or an Apple account identifier. The gate needs the device
-model, the pass count and the timing percentiles, and nothing else.
+Keep identifiers out of the transcribed prose: the gate needs the device model, the pass count and
+the timing percentiles, and nothing else. The raw Xcode report is a different matter and is committed
+whole, following the Phase-5 precedent (`05-perf-report-ipad-m2.json`), so that a reviewer can
+recompute every figure from the tool's own output. Those raw reports do carry the device's
+`deviceID`, `serialNumber` and display name. The same three values for the same device are already
+committed from Phase 5, so committing this report adds no identifier the repository did not already
+hold. If they are ever scrubbed, both files have to be scrubbed together or the exercise is
+pointless.
 
 ## What a capture would change
 
@@ -200,13 +298,19 @@ It would **add** a canonical entry, and only add one.
   not re-run until it reads `NeuralEngine`, and the budget check is reported against whatever
   placement actually occurred. A low or unremarkable number is published as-is (D-25).
 
+The M2 capture above is exactly this procedure carried out at the corroborating tier: it added a
+section and a disposition row, it reported CPU placement as measured, and it changed nothing about
+the Mac number. The canonical M4 slot is still empty.
+
 ## Disposition
 
 | Gate | Requirement | Status | Date | Prerequisite |
 |---|---|---|---|---|
-| RD-06b canonical iPad Pro M4 p99, real-data `(vx, vy)` decoder | RD-06 (D-17) | **PRESENTED, awaiting user decision** | 2026-09-02 | A provisioned iPad Pro M4 on iPadOS 26, paired with Xcode 26.3, signed through the GUI on the free Personal team |
+| RD-06b canonical iPad Pro M4 p99, real-data `(vx, vy)` decoder | RD-06 (D-17) | **DEFERRED** | 2026-09-02 | A provisioned iPad Pro M4 on iPadOS 26, paired with Xcode 26.3 and signed through the GUI on the free Personal team. Not available. |
+| RD-06b corroborating device capture, iPad Air 11-inch (M2) | RD-06 (D-17) | **CAPTURED, corroborating** | 2026-09-02 | Met. Evidence: `09-perf-report-ipad-m2.json` |
 
-Captured values, to be filled in only from a real device run:
+Canonical iPad Pro M4 values. Nothing here was measured, and nothing here may be filled in from the
+M2 capture:
 
 | Field | Value |
 |---|---|
@@ -220,13 +324,26 @@ Captured values, to be filled in only from a real device run:
 `not measured` is the literal placeholder. It is used deliberately so that nothing in this file can
 later be mistaken for a measurement.
 
+Corroborating iPad Air M2 values, taken 2026-09-02 and recomputed here from
+`09-perf-report-ipad-m2.json` rather than copied from a message:
+
+| Field | Value |
+|---|---|
+| p50 | 0.2240 ms |
+| p99 | 0.5790 ms |
+| n | 120 predict samples |
+| Preferred-device tally | {cpu: 239}, zero ANE, zero GPU |
+| ANE eligibility | 239 / 239 |
+| Device and OS | iPad Air 11-inch (M2), iPadOS 18.7.8 |
+
 **why_human:** the capture requires real iPad Pro M4 hardware, GUI provisioning under a free
 Personal team, and a live Instruments session. None of that runs on a CI runner or on the dev Mac,
 and no software substitute exists for it, because placement is precisely the property that changes
 with the chip. This follows the eligibility-closed-on-Mac, placement-gated-on-device split already
 applied in Phase 3 SC#1, Phase 5 SC#1 / DEC-08, Phase 6 SC#2 / SC#4, and Phase 8 Gate 2. The
 always-available proxy is the committed corroborating Mac measurement plus the 239/239 ANE
-eligibility scan, and that proxy is never substituted for the canonical claim.
+eligibility scan, now joined by the iPad Air M2 capture above. That proxy tier is never substituted
+for the canonical claim, and an M2 result is not promoted to an M4 one.
 
 ## Honesty clause
 
@@ -239,16 +356,31 @@ number keeps its device label and its `corroborating` status in every place it a
 If this gate is captured, the numbers written down are the numbers the device printed, including an
 unflattering one.
 
+The 2026-09-02 capture is the deferred case with a corroborating datapoint attached. It ran on an
+iPad Air M2, so the canonical M4 row stays empty and RD-06's canonical half stays open. The M2
+numbers are labeled with the device and the OS that produced them everywhere they appear, and they
+are not offered as a substitute for the M4 measurement that was not taken.
+
 ## Summary
 
 total: 1
 verified: 0
-deferred: 0
-presented: 1
+deferred: 1
+corroborating_captures: 1
 auto_approved: 0
 
-The single RD-06b gate is **PRESENTED** and unresolved as of 2026-09-02. It was not auto-approved
-despite `workflow.auto_advance: true`, and no iPad-M4 value exists in this repository. RD-06 rests
-on the committed corroborating M5 Pro measurement (p99 0.141083 ms, MEASURED CPU placement) and the
-239/239 ANE eligibility scan, which is what D-17 permits. The gate flips to CAPTURED or DEFERRED
-when the user decides.
+The single RD-06b canonical gate is **DEFERRED** as of 2026-09-02, its prerequisite being a
+provisioned iPad Pro M4. It was not auto-approved despite `workflow.auto_advance: true`, and **no
+iPad-M4 value exists in this repository.**
+
+A real device capture was taken on the same day on an iPad Air 11-inch (M2) running iPadOS 18.7.8,
+and is committed raw as `09-perf-report-ipad-m2.json`. It is recorded as corroborating: 239/239 ANE
+eligible, `{cpu: 239}` placement measured under `.all`, p50 0.2240 ms and p99 0.5790 ms over 120
+predict samples. Its most useful contribution is not the latency figure but the independent
+confirmation, through a different tool on different silicon, of Plan 09-08's 226-to-239 op-count
+correction.
+
+RD-06 therefore rests on two corroborating measurements, the M5 Pro one (p99 0.141083 ms, MEASURED
+CPU placement) and this M2 one, plus the 239/239 ANE eligibility scan. That is what D-17 permits.
+The canonical half stays open, and this gate flips to CAPTURED the day an iPad Pro M4 is
+provisioned.
