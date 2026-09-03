@@ -2660,6 +2660,246 @@
   },
   "test_windows": 1782,
   "train_windows": 7132,
+  "velocity": {
+    "checkpoint": {
+      "path": "Decoder/checkpoints/ndt1_real_with_velocity.pt",
+      "sha256": "9d542cb51d4af4811f324fbc6bda0b503da7b15aafc98b5e1340e1a7f49cce65"
+    },
+    "derivation": "finite difference at 250 Hz then mean aggregate per 20 ms bin; no smoothing filter",
+    "design_matrix": {
+      "columns": "the encoder's raw output at that last bin, NOT exponentiated",
+      "encoder_input": "raw unmasked spike counts, i.e. the serving condition",
+      "held_out_rows": 56943,
+      "rows": "one stride-1 32-bin window per bin, indexed by the window's LAST bin",
+      "train_rows": 228160
+    },
+    "encoder": {
+      "path": "Decoder/checkpoints/ndt1_real_pooled.pt",
+      "sha256": "f95b257bf2479b49102a2d8afee3c46d9008c51ba754d42a60a26762b7d3af8e"
+    },
+    "env": {
+      "coremltools": "9.0",
+      "h5py": "3.16.0",
+      "machine": "arm64",
+      "numpy": "2.4.6",
+      "platform": "macOS-26.5-arm64-arm-64bit",
+      "python": "3.12.13",
+      "torch": "2.12.1"
+    },
+    "forward_parity_max_abs_cm_s": 4.8046802774592834e-05,
+    "heldout_r2": {
+      "n": 56943,
+      "null": "the POOLED TRAIN-split mean velocity per axis",
+      "pooled": 0.4237569742298172,
+      "vx": 0.3429702983746863,
+      "vy": 0.5338311704024574
+    },
+    "in_sample_train_r2": 0.4646425429807043,
+    "label_source": "finger_pos rows 1-2 (planar), negation undone; NOT rows 0-1 (z, -x)",
+    "lag_alignment_diagnostic": {
+      "curve": [
+        {
+          "lag_bins": -8,
+          "lag_ms": -160.0,
+          "lambda": 1.0,
+          "n": 228132,
+          "train_r2": 0.3571041739673869
+        },
+        {
+          "lag_bins": -7,
+          "lag_ms": -140.0,
+          "lambda": 1.0,
+          "n": 228136,
+          "train_r2": 0.37021159835780704
+        },
+        {
+          "lag_bins": -6,
+          "lag_ms": -120.0,
+          "lambda": 1.0,
+          "n": 228140,
+          "train_r2": 0.38451317809852115
+        },
+        {
+          "lag_bins": -5,
+          "lag_ms": -100.0,
+          "lambda": 1.0,
+          "n": 228144,
+          "train_r2": 0.3998258876292966
+        },
+        {
+          "lag_bins": -4,
+          "lag_ms": -80.0,
+          "lambda": 1.0,
+          "n": 228148,
+          "train_r2": 0.4156006449643731
+        },
+        {
+          "lag_bins": -3,
+          "lag_ms": -60.0,
+          "lambda": 1.0,
+          "n": 228152,
+          "train_r2": 0.43089907315707
+        },
+        {
+          "lag_bins": -2,
+          "lag_ms": -40.0,
+          "lambda": 1.0,
+          "n": 228156,
+          "train_r2": 0.44450818972153294
+        },
+        {
+          "lag_bins": -1,
+          "lag_ms": -20.0,
+          "lambda": 1.0,
+          "n": 228160,
+          "train_r2": 0.4551912607126517
+        }
+      ],
+      "note": "negative offsets, computed AFTER the pre-registered sweep and never part of the selection. D-08's sweep is one-sided, so a shifted label would pin its argmax at lag 0; these rows are what distinguish that from a genuine interior optimum.",
+      "verdict": "alignment OK: over the two-sided curve -8 to 8 bins the maximum is still lag 1, an INTERIOR optimum, so the labels are not shifted"
+    },
+    "lag_bins": 1,
+    "lag_ms": 20.0,
+    "lag_sweep": [
+      {
+        "lag_bins": 0,
+        "lag_ms": 0.0,
+        "lambda": 1.0,
+        "n": 228164,
+        "train_r2": 0.46203351682542815
+      },
+      {
+        "lag_bins": 1,
+        "lag_ms": 20.0,
+        "lambda": 1.0,
+        "n": 228160,
+        "train_r2": 0.4646365905176578
+      },
+      {
+        "lag_bins": 2,
+        "lag_ms": 40.0,
+        "lambda": 1.0,
+        "n": 228156,
+        "train_r2": 0.46309882989133977
+      },
+      {
+        "lag_bins": 3,
+        "lag_ms": 60.0,
+        "lambda": 1.0,
+        "n": 228152,
+        "train_r2": 0.45789005082850376
+      },
+      {
+        "lag_bins": 4,
+        "lag_ms": 80.0,
+        "lambda": 1.0,
+        "n": 228148,
+        "train_r2": 0.44953931148005055
+      },
+      {
+        "lag_bins": 5,
+        "lag_ms": 100.0,
+        "lambda": 1.0,
+        "n": 228144,
+        "train_r2": 0.4385212061008633
+      },
+      {
+        "lag_bins": 6,
+        "lag_ms": 120.0,
+        "lambda": 1.0,
+        "n": 228140,
+        "train_r2": 0.42533464847092306
+      },
+      {
+        "lag_bins": 7,
+        "lag_ms": 140.0,
+        "lambda": 1.0,
+        "n": 228136,
+        "train_r2": 0.41043636576444087
+      },
+      {
+        "lag_bins": 8,
+        "lag_ms": 160.0,
+        "lambda": 1.0,
+        "n": 228132,
+        "train_r2": 0.3941896868823508
+      }
+    ],
+    "lambda": 0.1,
+    "lambda_rule": "train R2 spans 2.64e-02 across the grid, above the pre-registered flat tolerance 0.001, so the tie-breaker fired: generalized cross-validation on the train split alone, minimized at lambda=0.1",
+    "lambda_sweep": [
+      {
+        "gcv": 64.13747727377537,
+        "lambda": 0.01,
+        "n": 228160,
+        "train_r2": 0.46464260626355247
+      },
+      {
+        "gcv": 64.13746502965071,
+        "lambda": 0.1,
+        "n": 228160,
+        "train_r2": 0.4646425429807012
+      },
+      {
+        "gcv": 64.13798550744694,
+        "lambda": 1.0,
+        "n": 228160,
+        "train_r2": 0.4646365905176578
+      },
+      {
+        "gcv": 64.18050313272572,
+        "lambda": 10.0,
+        "n": 228160,
+        "train_r2": 0.464268886593992
+      },
+      {
+        "gcv": 64.8330857077644,
+        "lambda": 100.0,
+        "n": 228160,
+        "train_r2": 0.458769511759469
+      },
+      {
+        "gcv": 67.27818588770691,
+        "lambda": 1000.0,
+        "n": 228160,
+        "train_r2": 0.43825305404681847
+      }
+    ],
+    "null": "constant TRAIN-split mean velocity per axis",
+    "per_session": {
+      "indy_20160624_03": {
+        "n": 4968,
+        "null": "this session's own TRAIN-split mean velocity per axis",
+        "pooled": 0.5046009593271332,
+        "vx": 0.4584714119261415,
+        "vy": 0.5683830217429913
+      },
+      "indy_20160627_01": {
+        "n": 33597,
+        "null": "this session's own TRAIN-split mean velocity per axis",
+        "pooled": 0.5069382162958781,
+        "vx": 0.4246238216045879,
+        "vy": 0.6251617991498415
+      },
+      "indy_20160630_01": {
+        "n": 14600,
+        "null": "this session's own TRAIN-split mean velocity per axis",
+        "pooled": 0.14460174271291293,
+        "vx": 0.05855656761357275,
+        "vy": 0.2588613876111545
+      },
+      "indy_20160915_01": {
+        "n": 3778,
+        "null": "this session's own TRAIN-split mean velocity per axis",
+        "pooled": 0.479658488604778,
+        "vx": 0.3813447735214276,
+        "vy": 0.5763907419161391
+      }
+    },
+    "smoke": false,
+    "supersedes": "05-velocity-head-evidence.md velocity_r2.json R2 0.99985 (a self-consistency check on synthetic labels, not a decode result)",
+    "wall_clock_s": 1255.9
+  },
   "wall_clock_loso_s": 14835.6,
   "wall_clock_s": 22385.3
 }
