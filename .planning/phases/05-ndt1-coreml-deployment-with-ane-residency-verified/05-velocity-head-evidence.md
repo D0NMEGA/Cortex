@@ -1,5 +1,27 @@
 # Phase 5 Plan 01 Evidence — Velocity readout head (DEC-10)
 
+> **SUPERSEDED FOR THE REAL-DATA CLAIM (Phase 9, 2026-09-02).** The R2 of **0.99985** reported below
+> was a **self-consistency check, not a decode result**, and it should never have been read as one.
+> `Decoder/tests/test_velocity_head.py::test_load_ridge_reproduces_linear_map_and_records_r2` (the
+> test that writes `velocity_r2.json`) generates its labels as `x_all @ w_true + b_true + 0.01 *
+> noise` and then regresses those same rates onto them. Recovering a seeded linear map from its own
+> inputs confirms exactly one thing, which is what that test set out to confirm: `load_ridge`
+> reproduces `X @ W.T + b` and the readout is not degenerate. It measures nothing about decoding
+> movement. Nothing here is retracted; the number is superseded, and `velocity.supersedes` in
+> `09-decoder-metrics.json` names it so the replacement is auditable.
+>
+> The real held-out R2, fit and scored on real `finger_pos` kinematics from four O'Doherty/Makin Indy
+> M1 sessions (Zenodo 3854034) against a constant TRAIN-split mean-velocity null, is in
+> [`09-velocity-evidence.md`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-velocity-evidence.md)
+> and [`09-decoder-metrics.json`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-decoder-metrics.json):
+> pooled **0.4238** (vx 0.3430, vy 0.5338) over 56,943 held-out 20 ms bins, all four sessions positive
+> within session. A leave-one-session-out rotation of the readout degrades **every** fold and leaves
+> only two of four above the null (median -0.4270), and it bounds transfer from above, because the
+> encoder saw all four sessions in every fold.
+>
+> The rest of this file (the head mechanism, the fp32-vs-fp16 parity delta, the conversion path) is a
+> true record of what Phase 5 measured and is **NOT retroactively edited**.
+
 **Date:** 2026-06-21
 **Result:** ✅ **PASS** — **DEC-10 closed.** The NDT1 encoder, with a linear velocity readout head
 appended, converts to a Core ML `.mlpackage` that emits a **2-vector `(vx, vy)` fp16 cursor

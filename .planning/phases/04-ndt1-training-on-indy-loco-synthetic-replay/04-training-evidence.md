@@ -1,5 +1,27 @@
 # Phase 4 SC#2 Evidence — NDT1 masked-modeling converges to non-trivial held-out reconstruction
 
+> **SUPERSEDED FOR THE REAL-DATA CLAIM (Phase 9, 2026-09-02).** The co-bps below is invalid on two
+> independent counts, not one.
+>
+> 1. **Synthetic data.** It was measured on a **synthetic Poisson fallback**, exactly as the
+>    Methodology section below already discloses ("No real `.mat` was present under `Decoder/data/`").
+> 2. **A defective objective.** `train.py` fed the encoder **unmasked** spike counts and used the mask
+>    only to select which positions the loss was summed over, so the model could read the value at
+>    every position it was scored on. That is self-reconstruction, not masked modeling. The same code
+>    path produced Phase 9's first real-data figure of 1.9116, roughly 10x the NLB'21 `mc_rtt` range,
+>    which is what exposed it. Plan 09-06b corrected the objective; every scoring path now hides the
+>    scored positions from the encoder.
+>
+> Neither count is a reason to rewrite this file. It remains a true record of what Phase 4 measured
+> and is **NOT retroactively edited**. The real-data number, NDT1 retrained on four real
+> O'Doherty/Makin Indy M1 sessions (Zenodo 3854034), lives in
+> [`09-training-evidence.md`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-training-evidence.md)
+> and [`09-decoder-metrics.json`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-decoder-metrics.json):
+> pooled held-out **co-bps 0.4096** against the train-split per-channel mean-rate null (0.3814 against
+> the pooled test-mean null), all four sessions positive within session, and all four
+> leave-one-session-out folds **negative** against the held-out session's own mean. Cite the Phase-9
+> value for any real-data claim; cite the number below only as a superseded synthetic-replay result.
+
 **Date:** 2026-06-21
 **Result:** ✅ **PASS** — held-out **co-bps = 0.3804 bits/spike**, beating the mean-firing-rate null
 (co-bps ≡ 0 by definition) by ~7.6× the documented `> 0.05` margin.

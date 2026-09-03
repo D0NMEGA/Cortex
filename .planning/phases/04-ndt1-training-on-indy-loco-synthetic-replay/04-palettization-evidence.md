@@ -1,5 +1,31 @@
 # Phase 4 SC4 Evidence — `.mlpackage` conversion (DEC-03) + 4-bit palettization (DEC-05)
 
+> **SUPERSEDED FOR THE REAL-DATA CLAIM (Phase 9, 2026-09-02).** Both numbers below were measured on a
+> **randomly-initialized NDT1**: Phase 4 had no trained real-data weights, and its training run used
+> the synthetic Poisson fallback. They are re-measured on the real checkpoints in
+> [`09-coreml-evidence.md`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-coreml-evidence.md)
+> and [`09-decoder-metrics.json`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-decoder-metrics.json).
+> The two numbers behave differently, and that was predicted before the run:
+>
+> - **The size ratio 3.471x is expected to reproduce and does** (real data: **3.4134x**, within 1.7%).
+>   The architecture, the parameter count and which tensors clear `weight_threshold=2048` are all
+>   unchanged by training, so compression does not depend on the weight values.
+> - **The Poisson-NLL delta 0.009114 is NOT expected to reproduce and does not** (real data:
+>   **0.020352**). k-means centroids are fit to the actual weight values, so a delta measured on a
+>   random initialization says nothing about a trained model. A second finding sits behind this one:
+>   coremltools uses its bundled `kmeans1d` only for tensors with at least 10,000 elements and falls
+>   through to scikit-learn's `KMeans` below that, so this model's 4,096-element positional encoding
+>   takes the scikit-learn path. That is why `scikit-learn` is now a declared dependency of the
+>   `Decoder/` subsystem rather than an implicit one.
+>
+> Phase 9 also found that the 4-bit package **destroys the real velocity decode** (held-out R2 falls
+> from +0.423870 at fp16 to -1.786971 at 4-bit per-tensor), which is why the recommendation on record
+> is to **ship fp16**. Phase 4 could not have seen that: it had no velocity head and no real
+> kinematics to score against.
+>
+> This file is **NOT retroactively edited**. It remains a true record of what Phase 4 measured on a
+> randomly-initialized graph. Cite the Phase-9 values for any real-data claim.
+
 **Date:** 2026-06-21
 **Result:** ✅ **PASS** — the NDT1 encoder→rates graph converts to an `mlprogram` `.mlpackage`,
 palettizes to a **4-bit k-means** package that is **3.471× smaller** (fp16 → 4-bit), and whose
