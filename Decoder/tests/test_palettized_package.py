@@ -5,6 +5,11 @@ the quick ``-m "not slow"`` CI run. DEC-05 runs on the DEC-03 output (correct or
 convert -> palettize), CPU-only — NO Neural-Engine targeting (Phase 5). Both packages are
 built transiently under ``Decoder/checkpoints/`` (gitignored); only the size ratio is recorded
 (to ``sc4_size.json``, also gitignored) and committed numerically in the evidence note.
+
+As of Phase 9 these slow tests prefer the real-data checkpoint under ``Decoder/checkpoints/``
+when it is present and fall back to random initialization otherwise; the ``provenance`` field
+in the emitted JSON records which, so a synthetic number can never be mistaken for a real-data
+one.
 """
 from __future__ import annotations
 
@@ -17,6 +22,7 @@ import pytest
 from ndt1.convert import convert_to_mlpackage
 from ndt1.model_ane import NDT1ANE
 from ndt1.palettize import PALETTIZE_NBITS, package_size_bytes, palettize_4bit
+from ndt1.real_checkpoint import load_real_weights_if_present
 
 SEQ_LEN = 32
 
@@ -29,6 +35,7 @@ SEQ_LEN = 32
 def test_palettized_package_exists_and_is_smaller(tmp_path: Path) -> None:
     """convert (DEC-03) -> palettize (DEC-05): 4-bit package exists and shrinks vs fp16."""
     model = NDT1ANE(seq_len=SEQ_LEN)
+    provenance = load_real_weights_if_present(model)
     ckpt_dir = Path(__file__).resolve().parents[1] / "checkpoints"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     fp16_path = ckpt_dir / f"ndt1_fp16_{tmp_path.name}.mlpackage"
@@ -55,9 +62,13 @@ def test_palettized_package_exists_and_is_smaller(tmp_path: Path) -> None:
         "fp16_bytes": fp16_size,
         "palettized_bytes": palettized_size,
         "size_ratio_fp16_over_4bit": round(ratio, 4),
+        "provenance": provenance,
     }
     (ckpt_dir / "sc4_size.json").write_text(json.dumps(record, indent=2))
-    print(f"\n[SC4a size] fp16={fp16_size} B  4bit={palettized_size} B  ratio={ratio:.3f}x")
+    print(
+        f"\n[SC4a size] fp16={fp16_size} B  4bit={palettized_size} B  ratio={ratio:.3f}x  "
+        f"weights={provenance}"
+    )
 
 
 def test_palettize_source_is_kmeans_4bit_no_ane() -> None:

@@ -10,6 +10,14 @@ generous margin (an R&D characterization, not a pre-set hard threshold — 04-RE
 Poisson NLL is computed INLINE (this plan does not depend on 04-04's metrics.py, which lives in
 a parallel worktree). The model readout is linear -> outputs are log-rates -> ``log_input=True``
 (``exp(lograte) - count*lograte``), matching ``nn.PoissonNLLLoss``'s log-rate parameterization.
+
+As of Phase 9 these slow tests prefer the real-data checkpoint under ``Decoder/checkpoints/``
+when it is present and fall back to random initialization otherwise; the ``provenance`` field
+in the emitted JSON records which, so a synthetic number can never be mistaken for a real-data
+one.
+
+The model here is the bare ``NDT1ANE`` reconstruction encoder, which is the D-16 Poisson-NLL
+target; the R2 leg of D-16 on the with-velocity model is produced by ``rederive_coreml.py``.
 """
 from __future__ import annotations
 
@@ -23,6 +31,7 @@ import pytest
 from ndt1.convert import INPUT_FEATURE_NAME, convert_to_mlpackage
 from ndt1.model_ane import NDT1ANE
 from ndt1.palettize import PALETTIZE_NBITS, palettize_4bit
+from ndt1.real_checkpoint import load_real_weights_if_present
 
 SEQ_LEN = 32
 # The subject of this delta is the nbits=4 (4-bit, 16-centroid) palettized package vs fp16.
@@ -52,6 +61,7 @@ def test_palettization_loss_delta_within_bound(tmp_path: Path) -> None:
     import coremltools as ct
 
     model = NDT1ANE(seq_len=SEQ_LEN)
+    provenance = load_real_weights_if_present(model)
     ckpt_dir = Path(__file__).resolve().parents[1] / "checkpoints"
     ckpt_dir.mkdir(parents=True, exist_ok=True)
     fp16_path = ckpt_dir / f"ndt1_fp16_delta_{tmp_path.name}.mlpackage"
@@ -90,11 +100,12 @@ def test_palettization_loss_delta_within_bound(tmp_path: Path) -> None:
         "nll_4bit": nll_4bit,
         "abs_delta": delta,
         "bound": LOSS_DELTA_BOUND,
+        "provenance": provenance,
     }
     (ckpt_dir / "sc4_delta.json").write_text(json.dumps(record, indent=2))
     print(
         f"\n[SC4b delta] NLL fp16={nll_fp16:.6f}  4bit={nll_4bit:.6f}  "
-        f"|delta|={delta:.6f} <= bound={LOSS_DELTA_BOUND}"
+        f"|delta|={delta:.6f} <= bound={LOSS_DELTA_BOUND}  weights={provenance}"
     )
 
     # SC4b: the 4-bit reconstruction stays within a documented bound of the fp16 reconstruction.

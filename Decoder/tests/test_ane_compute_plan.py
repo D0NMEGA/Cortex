@@ -26,6 +26,15 @@ a compiled artifact from 2026-06-21 on every run since, with 217 unread compiles
 four directories. A per-invocation ``tmp_path`` destination cannot pre-exist, so each scan is of the
 model the run actually built. This also closes the Phase-9 deferred item recording this module as
 flaky.
+
+As of Phase 9 these slow tests prefer the real-data checkpoint under ``Decoder/checkpoints/``
+when it is present and fall back to random initialization otherwise; the ``provenance`` field
+in the emitted JSON records which, so a synthetic number can never be mistaken for a real-data
+one.
+
+Eligibility is a graph property and is invariant to weight VALUES, so the tally is expected to
+be identical either way -- but it is recorded, not assumed, because a tally that did move would
+mean the traced graph changed (D-17).
 """
 from __future__ import annotations
 
@@ -42,6 +51,7 @@ from ndt1.compute_plan import (
 from ndt1.convert import convert_to_mlpackage
 from ndt1.model_ane import NDT1ANEWithVelocity
 from ndt1.palettize import palettize_4bit
+from ndt1.real_checkpoint import load_real_weights_if_present
 
 SEQ_LEN = 32  # matches conftest SEQ_LEN; small window keeps the trace fast.
 
@@ -83,11 +93,14 @@ def _build_and_scan_palettized(build_dir: Path, tag: str) -> dict:
     palettized_path = build_dir / f"ndt1_vel_4bit_{tag}.mlpackage"
 
     model = NDT1ANEWithVelocity(seq_len=SEQ_LEN)
+    provenance = load_real_weights_if_present(model)
     convert_to_mlpackage(model, fp16_path, seq_len=SEQ_LEN)
     palettize_4bit(fp16_path, palettized_path)
 
     compiled = compiled_model_path(palettized_path)
-    return scan_ane_eligibility(compiled)  # default CPU_AND_NE
+    scan = scan_ane_eligibility(compiled)  # default CPU_AND_NE
+    scan["provenance"] = provenance
+    return scan
 
 
 @pytest.mark.slow
@@ -140,6 +153,7 @@ def test_palettized_op_eligibility_matches_fp16(tmp_path: Path) -> None:
     palettized_path = tmp_path / f"ndt1_vel_4bit_parity_{tmp_path.name}.mlpackage"
 
     model = NDT1ANEWithVelocity(seq_len=SEQ_LEN)
+    provenance = load_real_weights_if_present(model)
     convert_to_mlpackage(model, fp16_path, seq_len=SEQ_LEN)
     palettize_4bit(fp16_path, palettized_path)
 
@@ -152,7 +166,8 @@ def test_palettized_op_eligibility_matches_fp16(tmp_path: Path) -> None:
     }
     assert palettized_eligible == fp16_eligible, (
         "palettization changed the ANE-eligible op set: "
-        f"fp16={sorted(fp16_eligible)} 4bit={sorted(palettized_eligible)}"
+        f"fp16={sorted(fp16_eligible)} 4bit={sorted(palettized_eligible)} "
+        f"(weights: {provenance})"
     )
 
 
