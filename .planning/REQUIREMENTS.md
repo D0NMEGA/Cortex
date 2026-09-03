@@ -44,9 +44,9 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 - [x] **DEC-03**: Trained PyTorch checkpoint converts to `.mlpackage` via coremltools
 - [x] **DEC-04**: Tensor activations reshape to BC1S `(B, C, 1, S)` layout per `apple/ml-ane-transformers`
 - [x] **DEC-05**: 4-bit palettization applied via `coremltools.optimize.palettize_weights` with `OpPalettizerConfig(nbits=4)`
-- [x] **DEC-06**: Every model op ANE-eligible — validated against the ANE op-support matrix via `MLComputePlan` (226/226 ops Neural-Engine-eligible, **zero CPU-only ops**); einsum attention lowers to ANE-eligible MIL ops (05-02)
+- [x] **DEC-06**: Every model op ANE-eligible — validated against the ANE op-support matrix via `MLComputePlan` (226/226 ops Neural-Engine-eligible, **zero CPU-only ops**); einsum attention lowers to ANE-eligible MIL ops (05-02). *Op tally corrected to **239/239, 0 CPU-only** in Phase 9 (RD-06): the 226 was read off a stale compiled artifact and was measured on an untrained graph; the eligibility verdict survives the correction*
 - [x] **DEC-07**: `MLModelConfiguration.computeUnits = .cpuAndNeuralEngine` (NOT `.all`) — build-failing Swift gate (05-03)
-- [x] **DEC-08**: Decoder **100% ANE-eligible** (226/226 ops, 0 CPU-only) verified on-device — `MLComputePlan` (Mac, 05-02) + Xcode Performance Report (iPad Air M2, 05-05); runtime **placement measured & reported honestly** — CPU at 1.29M-param scale (M5 Pro + iPad-M2, the CoreML scale trap), <2ms p99 met regardless. *Reframed 2026-06-21 from "ANE residency verified at runtime": placement is measured, not assumed — public API cannot force ANE placement at this model scale*
+- [x] **DEC-08**: Decoder **100% ANE-eligible** (226/226 ops, 0 CPU-only, corrected to **239/239** on the trained real-data graph in Phase 9, RD-06) verified on-device — `MLComputePlan` (Mac, 05-02) + Xcode Performance Report (iPad Air M2, 05-05); runtime **placement measured & reported honestly** — CPU at 1.29M-param scale (M5 Pro + iPad-M2, the CoreML scale trap), <2ms p99 met regardless. *Reframed 2026-06-21 from "ANE residency verified at runtime": placement is measured, not assumed — public API cannot force ANE placement at this model scale*
 - [x] **DEC-09**: Input tensor enters CoreML zero-copy — shared `IOSurface` + `MTLBuffer storageModeShared` (`kCVPixelFormatType_OneComponent16Half`) via `MLMultiArray(pixelBuffer:)`, pointer-identity proven (05-03; chosen over `MPSGraphTensorData` for the `MLModel.prediction` path)
 - [x] **DEC-10**: Output is 2-vector cursor velocity (vx, vy) at fp16, emitted every 20ms
 - [x] **DEC-11**: Decoder inference latency <2ms p99 — measured p99 ≈0.51ms (iPad-M2) / ≈0.14ms (M5 Pro); CPU-scheduled at this scale (not M4 ANE — see DEC-08); canonical iPad-M4 capture optional/future
@@ -92,12 +92,12 @@ The v1 bar. Phases 1-8 shipped a pipeline whose decoder was only ever shown a **
 fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"). RD closes
 that: real O'Doherty/Makin Indy M1 spikes, end to end, with every inherited number re-derived.
 
-- [ ] **RD-01**: All four manifested Indy M1-only sessions (Zenodo 3854034) downloaded and SHA-256-pinned — zero `"PENDING"` entries left in `manifests/indy_sessions.json`, integrity gate negative-control proven
-- [ ] **RD-02**: `ndt1.data.load_session` ingests each real v7.3 HDF5 session — 96-channel gate passes, cell-array spike deref correct, 20 ms binned firing rates inside a test-pinned plausible band
-- [ ] **RD-03**: NDT1 retrained on real multi-session spikes; held-out chronological-tail co-bps on **real data** committed as evidence, beating the mean-firing-rate null by a documented margin, replacing the synthetic 0.3804
-- [ ] **RD-04**: Multi-session generalization reported — per-session held-out co-bps plus a leave-one-session-out number
-- [ ] **RD-05**: 4-bit palettization delta re-measured on the real-data checkpoint (not inherited from the synthetic run)
-- [ ] **RD-06**: Real-data checkpoint re-converted to `.mlpackage`; ANE eligibility (226/226, zero CPU-only) and <2 ms p99 re-verified with real weights
+- [x] **RD-01**: All four manifested Indy M1-only sessions (Zenodo 3854034) downloaded and SHA-256-pinned — zero `"PENDING"` entries left in `manifests/indy_sessions.json`, integrity gate negative-control proven -- **committed: 1,767,820,363 B across four sessions, zero PENDING, four negative controls on a real fetched file, `09-ingest-evidence.md`; enforced by `Tools/scripts/decoder-policy.sh`**
+- [x] **RD-02**: `ndt1.data.load_session` ingests each real v7.3 HDF5 session — 96-channel gate passes, cell-array spike deref correct, 20 ms binned firing rates inside a test-pinned plausible band -- **committed: all four at 96 channels, 285,359 complete 20 ms bins over 5,707.2 s; the truthy-`MATLAB_empty` deref defect found and fixed, pinned by the committed `tiny_v73.mat` fixture, `09-ingest-evidence.md`**
+- [x] **RD-03**: NDT1 retrained on real multi-session spikes; held-out chronological-tail co-bps on **real data** committed as evidence, beating the mean-firing-rate null by a documented margin, replacing the synthetic 0.3804 -- **committed: co-bps 0.4096 (train-split per-channel mean-rate null; 0.3814 against the pooled test-mean null), `CO_BPS_MARGIN` 0.054, `09-training-evidence.md`. 0.3804 is superseded twice over, on synthetic data AND under a defective objective. Citation sweep applied to the decoder-owned surfaces (D-24); README and ADR-0002 remain for the Phase-10 repo-wide sweep**
+- [x] **RD-04**: Multi-session generalization reported — per-session held-out co-bps plus a leave-one-session-out number -- **committed: within session all four positive (+0.2127, +0.1661, +0.2062, +0.2455); across sessions all four LOSO folds NEGATIVE (-0.1238, -0.3060, -0.7805, -0.1890, mean -0.3498). Reported, not assumed: the encoder does NOT transfer to an unseen session, `09-training-evidence.md`**
+- [x] **RD-05**: 4-bit palettization delta re-measured on the real-data checkpoint (not inherited from the synthetic run) -- **committed: size ratio 3.4134x (reproduces Phase 4's 3.471x to 1.7%), Poisson-NLL delta 0.020352 (does not reproduce 0.009114, and was not expected to). 4-bit destroys the real velocity decode (R2 +0.423870 fp16 to -1.786971 per-tensor; best 4-bit +0.191784 at 2.6262x), so the recommendation on record is ship fp16, `09-coreml-evidence.md`**
+- [x] **RD-06**: Real-data checkpoint re-converted to `.mlpackage`; ANE eligibility and <2 ms p99 re-verified with real weights -- **committed: 239/239 ops ANE-eligible, 0 CPU-only. NOT 226: Phase 5's tally was read off a stale compiled artifact and was measured on an untrained graph; the trained graph carries 12 `batch_norm` ops plus one `add`. Decoder p99 0.141083 ms on Apple M5 Pro with ops MEASURED as CPU-placed, labeled CORROBORATING. The canonical iPad-Pro-M4 capture is deferred and never auto-approved (`09-HUMAN-UAT.md`, D-17), `09-coreml-evidence.md`**
 - [ ] **RD-07**: ReFIT-Kalman gains re-fit on real data; raw-vs-ReFIT BPS ablation re-run on real Indy sessions with the honest remaining gap to 4.16 / 8.5 BPS stated
 - [ ] **RD-08**: Closed loop replays a real session end-to-end at 120Hz with a webgrid hit; software-timed glass-to-glass p99 re-derived on the real-data path
 - [ ] **RD-09**: Repo-wide sweep — no synthetic-derived number is presented as a real-data result; README, ADRs and every `*-evidence.md` carry the re-derived number or an explicit synthetic label
@@ -232,12 +232,12 @@ Coverage: 65/65 v1 requirements mapped to phases (100%).
 | LAT-06 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
 | LAT-07 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
 | LAT-08 | RETIRED to Future work (was Phase 10) | Not scheduled -- preserved in ROADMAP "Future work" |
-| RD-01 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
-| RD-02 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
-| RD-03 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
-| RD-04 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
-| RD-05 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
-| RD-06 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | TBD |
+| RD-01 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | 09-01 (complete), 09-05 (complete) |
+| RD-02 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | 09-02 (complete), 09-03 (complete), 09-04 (complete), 09-06 (complete), 09-07 (complete) |
+| RD-03 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | 09-06 (complete), 09-09 (complete), 09-10 (complete) |
+| RD-04 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | 09-06 (complete), 09-09 (complete) |
+| RD-05 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | 09-08 (complete), 09-09 (complete), 09-10 (complete) |
+| RD-06 | Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | 09-07 (complete), 09-08 (complete), 09-09 (complete); iPad-Pro-M4 canonical p99 deferred, tracked in 09-HUMAN-UAT.md |
 | RD-07 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |
 | RD-08 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |
 | RD-09 | Phase 10: v1 Real-Data Closed Loop & Launch | TBD |

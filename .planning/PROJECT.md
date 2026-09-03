@@ -38,10 +38,10 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 #### Decoder Training (Phase 4 — completed 2026-06-21)
 - [x] NDT1 (Ye & Pandarinath 2021) in ANE-conducive BC1S form — 6 layers, h=2 (∈{1,2}, NOT the miscited h=4), 128 `d_model`, 20ms bins, **1,292,544 params** (~1.3M); `nn.Conv2d` 1×1 everywhere, zero `nn.Linear` on the inference path — **DEC-01** (param guardrail + structural head-count tests)
-- [x] Masked-modeling training loop on O'Doherty Indy/Loco (Zenodo 3854034) — h5py v7.3 loader + 20ms binning → `(num_bins, 96)`, leakage-free chronological-tail split; held-out **co-bps = 0.3804** bits/spike beats the mean-rate null by ~7.6× the 0.05 margin (`04-training-evidence.md`); also closed Phase-2 **D-11** (`CORTEX_CHANNEL_COUNT == 96` reconciled vs `cortex_shm.h`/`cortex_ring.h`/`frame.rs`) — **DEC-02**
+- [x] Masked-modeling training loop on O'Doherty Indy/Loco (Zenodo 3854034) — h5py v7.3 loader + 20ms binning → `(num_bins, 96)`, leakage-free chronological-tail split; held-out **co-bps = 0.3804** bits/spike **on a synthetic Poisson fallback** (`04-training-evidence.md`; no real `.mat` was present under `Decoder/data/`, and the objective let the encoder read the positions it was scored on) beats the mean-rate null by ~7.6× the 0.05 margin. **Invalid on both counts and superseded for the real-data claim by co-bps = 0.4096 bits/spike on four real Indy M1 sessions** against the train-split per-channel mean-rate null, margin 0.054 (`09-training-evidence.md`, Phase 9); also closed Phase-2 **D-11** (`CORTEX_CHANNEL_COUNT == 96` reconciled vs `cortex_shm.h`/`cortex_ring.h`/`frame.rs`) — **DEC-02**
 - [x] CoreML conversion — traced encoder→rates → `ct.convert(convert_to="mlprogram")` → `.mlpackage` (coremltools 9.0, torch 2.12.1) — **DEC-03**
 - [x] BC1S `(B, C, 1, S)` activations on the inference path — 93 rank-4 activations verified by forward-hook; `(B, S, C)` negative-control test raises — **DEC-04**
-- [x] 4-bit k-means palettization via `OpPalettizerConfig(mode="kmeans", nbits=4)` — **3.471×** size reduction (2,678,038 → 771,534 B), Poisson-NLL Δ = 0.009114 ≤ 0.5 (`04-palettization-evidence.md`) — **DEC-05**
+- [x] 4-bit k-means palettization via `OpPalettizerConfig(mode="kmeans", nbits=4)` — **3.471×** size reduction (2,678,038 → 771,534 B), Poisson-NLL Δ = 0.009114 ≤ 0.5 (`04-palettization-evidence.md`) — **DEC-05**. Both measured on a **randomly-initialized** NDT1. Re-measured on the real checkpoint in Phase 9 (`09-coreml-evidence.md`): the size ratio reproduces (**3.4134x**), the NLL delta does not (**0.020352**), and 4-bit destroys the real velocity decode (held-out R2 +0.423870 fp16 to -1.786971 at 4-bit), so the recommendation on record is **ship fp16**
 - Pure decoder R&D in an isolated `Decoder/` uv subsystem (CPython 3.12); NO ANE residency / `computeUnits` / `<2ms` work — that is Phase 5.
 
 ### Active
@@ -52,12 +52,12 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 #### Decoder Pipeline
 - [x] NDT1 implementation (6 layers, h=1-2 heads, 128 hidden dim, 20ms binning, ~1.3M params) — **validated Phase 4 (DEC-01; 1,292,544 params)**
-- [x] Training loop on O'Doherty Indy/Loco synthetic spike replay (Zenodo 3854034) — **validated Phase 4 (DEC-02; held-out co-bps 0.3804)**
+- [x] Training loop on O'Doherty Indy/Loco synthetic spike replay (Zenodo 3854034) — **validated Phase 4 (DEC-02; held-out co-bps 0.3804, synthetic AND produced by a defective objective; real-data co-bps 0.4096, Phase 9)**
 - [x] PyTorch → coremltools → `.mlpackage` pipeline with BC1S `(B, C, 1, S)` tensor layout — **validated Phase 4 (DEC-03/DEC-04)**
-- [x] 4-bit palettization via `OpPalettizerConfig(nbits=4)` — **validated Phase 4 (DEC-05; 3.471× size, Δloss 0.009)**
+- [x] 4-bit palettization via `OpPalettizerConfig(nbits=4)` — **validated Phase 4 (DEC-05; 3.471× size, Δloss 0.009, both on random init; real-data 3.4134x, NLL delta 0.020352, Phase 9)**
 - [x] CoreML deployment with `MLModelConfiguration.computeUnits = .cpuAndNeuralEngine` — **validated Phase 5 (DEC-07, build-failing gate)**
-- [x] ANE-**eligibility** verified on-device (MLComputePlan + Xcode Performance Report); runtime placement **measured** (CPU at ~1.3M-param scale) — **Phase 5 (DEC-06/08)**
-- [x] Decoder inference <2ms p99 — **≈0.5ms (iPad-M2) / 0.14ms (M5 Pro), Phase 5 (DEC-11)**
+- [x] ANE-**eligibility** verified on-device (MLComputePlan + Xcode Performance Report); runtime placement **measured** (CPU at ~1.3M-param scale) — **Phase 5 (DEC-06/08)**; op tally corrected in Phase 9 to **239/239 eligible, 0 CPU-only** on the trained graph (Phase 5's 226 was read off a stale compiled artifact and was never the shipped graph's op count)
+- [x] Decoder inference <2ms p99 — **≈0.5ms (iPad-M2) / 0.14ms (M5 Pro), Phase 5 (DEC-11)**; re-measured on the real weights, **p99 0.141083ms on Apple M5 Pro, ops measured CPU-placed, corroborating not canonical** (Phase 9)
 - [x] ReFIT-Kalman closed-loop recalibration filter (6-DOF state, intent-rotation per cursor update) — **validated Phase 7 (REFIT-01/02/03)**: steady-state constant-gain 6-DOF Kalman (observable-block DARE, zero position rows, Schur-stable) + gated Gilja-2012 intent-rotation in `Packages/CortexReFIT`, Foundation-free simd on the policed hot path; 3-way ablation refit_bps 0.374 ≥ raw 0.161 (+133% S&M-2004 Fitts-TP, deterministic CI guard). NOT compared to 4.16/8.5 Webgrid bitrate (Phase 8, D-13)
 
 #### Renderer
@@ -95,7 +95,11 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 - [ ] GPIO pulse from acquisition daemon at intent-emission timestamp
 - [ ] ~~10,000-trial photodiode capture script (Saleae at 100+ MS/s)~~ RETIRED to Future work 2026-08-28
 - [ ] ~~Statistical analysis producing the defensible "24.7 ± 1.3ms (p50, σ=0.8ms, n=10k)" claim~~ RETIRED to Future work 2026-08-28
-- [ ] Four Indy M1 sessions materialized + SHA-256-pinned; NDT1 retrained on real spikes (RD-01..RD-06)
+- [x] Four Indy M1 sessions materialized + SHA-256-pinned; NDT1 retrained on real spikes (RD-01..RD-06) -- **validated Phase 9**, 285,359 bins of real O'Doherty/Makin Indy M1 spikes (Zenodo 3854034), all numbers CPU-only on the dev Mac except where labeled:
+  - Pooled held-out **co-bps 0.4096** vs the train-split per-channel mean-rate null (0.3814 vs the pooled test-mean null), `CO_BPS_MARGIN` 0.054 (`09-training-evidence.md`)
+  - **Within session it decodes, across sessions it does not.** All four sessions positive against their own held-out mean (+0.2127, +0.1661, +0.2062, +0.2455); all four leave-one-session-out folds **negative** (-0.1238, -0.3060, -0.7805, -0.1890, mean -0.3498). The encoder does not transfer to an unseen session
+  - Pooled held-out **velocity R2 0.4238** (vx 0.3430, vy 0.5338) over 56,943 bins of real `finger_pos` kinematics; the readout rotation leaves only 2 of 4 folds positive (median -0.4270) and bounds transfer from **above**, since the encoder saw all four sessions in every fold (`09-velocity-evidence.md`)
+  - CoreML on the real checkpoints: **239/239 ANE-eligible, 0 CPU-only**; 4-bit destroys the decode (R2 -1.786971 per-tensor, best 4-bit +0.191784 at 2.6262x), so **ship fp16**; decoder **p99 0.141083ms on Apple M5 Pro**, ops measured CPU-placed, corroborating (`09-coreml-evidence.md`). The canonical iPad-Pro-M4 capture is deferred, never auto-approved (`09-HUMAN-UAT.md`)
 - [ ] ReFIT re-fit + closed loop replayed on a real session; synthetic-number sweep + gate rewrite (RD-07..RD-10)
 - [ ] Launch video and README documenting methodology
 
@@ -146,7 +150,7 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| CoreML on ANE (not MLX) | MLX has unbounded P99 + no ANE; CoreML is the only path meeting <2ms p99 budget | ✓ Validated Phase 5 — 226/226 ANE-**eligible** (MLComputePlan + iPad Perf Report); **<2ms p99 met** (≈0.5ms iPad-M2 / 0.14ms M5 Pro). Runtime placement measured **CPU** at 1.29M-param scale (the CoreML scale trap, reported honestly — DEC-06/08/11); M4-ANE placement an optional future datapoint |
+| CoreML on ANE (not MLX) | MLX has unbounded P99 + no ANE; CoreML is the only path meeting <2ms p99 budget | ✓ Validated Phase 5 — 226/226 ANE-**eligible** (MLComputePlan + iPad Perf Report); **<2ms p99 met** (≈0.5ms iPad-M2 / 0.14ms M5 Pro). Runtime placement measured **CPU** at 1.29M-param scale (the CoreML scale trap, reported honestly — DEC-06/08/11); M4-ANE placement an optional future datapoint. **Op tally corrected in Phase 9 to 239/239 eligible, 0 CPU-only.** Phase 5's 226 was read through a `compile_model` defect: `shutil.move` nested each fresh `.mlmodelc` inside the existing destination and returned the unchanged path, so every scan since 2026-06-21 read a stale compiled artifact. Isolating each compile under `tmp_path` fixed it; the trained graph carries 12 `batch_norm` ops and one extra `add` that a zero-initialized `pos_encoding` folds away when untrained. The eligibility verdict survives the correction (`09-coreml-evidence.md`) |
 | pthread + `QOS_CLASS_USER_INTERACTIVE` (not Swift Task) | Swift cooperative scheduling cannot meet 1ms deadlines; 154 sources across Massicotte/Adamson/Napier confirm | ✓ Validated Phase 3 — `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE,0)` is the worker's first action, `import Darwin` only; SC#2 `hotpath-policy.sh` gate enforces it in CI (SC#1 `.trace` M4-gated, `03-HUMAN-UAT.md`) |
 | `kqueue`+`recvmsg` over POSIX shm (not Network.framework) | Sub-µs vs 50-200µs overhead; disqualifying difference for 1ms deadline | ✓ Validated Phase 2 — shm busy-poll round-trip p99=208ns (CF#2: doorbell is the idle wake, the ring is the measured path) |
 | `CAMetalDisplayLink` (not `CADisplayLink`) | Bundles drawable acquisition, encode deadline, on-glass timestamp into one callback for beam-raced 120Hz | — Pending |
@@ -165,6 +169,7 @@ Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credib
 | Retire the photodiode rig; re-point v1 at real-data decoding | Hardware-gated (BOM + provisioned iPad Pro M4, the same gap behind 3 deferred Phase-8 gates). The decoder had only ever seen synthetic Poisson data, so real data is the higher-value claim per unit of risk. LAT-01..08 preserved in ROADMAP "Future work"; 24.7 ms stays a target, never a result | — Accepted (user, 2026-08-28) |
 | Indy/Loco (Zenodo 3854034) as training data | Canonical BCI pretraining dataset; only viable synthetic source absent real electrodes | ✓ Validated Phase 4 (DEC-02) — h5py v7.3 loader + 20ms binning → (num_bins,96), chronological split, reproducible session manifest + checksummed downloader |
 | ReFIT-Kalman recalibration on top of NDT1 | Gilja 2012 — what gets BrainGate from 4.16 → 8.5 BPS in humans | ✓ Validated Phase 7 (REFIT-01/02/03; +133% S&M Fitts-TP ablation uplift, ReFIT-inspired online assist on synthetic replay) |
+| Retrain NDT1 on four real Indy M1 sessions (the Option B set) | Two of the four originally-manifested sessions were 192-channel M1+S1 and were correctly rejected by the loader's 96-channel gate; slicing an M1 subset out of them would have mixed array configurations into a pool whose premise is stable channel-to-neuron identity. The chosen set spans 2016-06-24 to 2016-09-15 and exercises both `finger_pos` row layouts, `(6, k)` on three sessions and `(3, k)` on `indy_20160915_01` | ✓ Validated Phase 9 (RD-01..RD-06): 1.77 GB, four SHA-256-pinned sessions, 285,359 bins (`09-ingest-evidence.md`) |
 
 ## Evolution
 
