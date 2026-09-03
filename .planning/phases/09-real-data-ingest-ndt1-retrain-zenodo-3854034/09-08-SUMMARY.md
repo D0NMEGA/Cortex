@@ -18,6 +18,9 @@ provides:
   - "ndt1.real_checkpoint: load_real_weights_if_present, which returns a provenance label rather than a boolean, so no artifact can record a number without recording which weights produced it"
   - "Decoder/scripts/rederive_coreml.py: both conversions, both palettization deltas, the weight_threshold census, the ANE scan and a two-run determinism check, refusing to start on random weights"
   - "The measured finding that the 4-bit palettized shipped model does NOT decode velocity: held-out R2 -1.786971 against the fp16 package's +0.423870, delta -2.210841"
+  - "A pre-registered four-point granularity sweep showing per-channel palettization recovers the decode to +0.191784, positive but 45% of fp16, at 2.6262x compression"
+  - "The recommendation on which artifact ships, grounded in R2, size, eligibility and p99: ship fp16"
+  - "Two traps recorded for the next caller: enable_per_channel_scale breaks ANE eligibility (38 CPU-only ops), and a group_size that does not divide a channel count silently leaves that tensor uncompressed"
   - "The corrected ANE op tally for the shipped graph: 239 schedulable ops, all eligible, zero CPU-only, superseding Phase 5's 226 which was measured on an untrained graph"
   - "The root cause and fix for the flaky ANE gate: compile_model nests into an existing destination, so every scan since 2026-06-21 read a stale compiled artifact"
   - "Re-measured palettization on real weights: size ratio 3.4134x (reconstruction) and 3.4020x (shipped), Poisson-NLL delta 0.020352"
@@ -57,7 +60,10 @@ key-decisions:
   - "scikit-learn was added rather than forcing kmeans1d, because it is the unchanged OpPalettizerConfig defaults that make the size ratio comparable to Phase 4 at all; changing the algorithm would have destroyed the comparison the plan asks for"
   - "The 4-bit velocity collapse is published as the measured result rather than investigated into a fix, because every available remedy changes the shipped model and this plan is forbidden from retraining either one"
   - "The bias-corrected R2 estimates its offset on train rows only and is labeled a diagnostic, so the question `offset or destroyed` is answered without a re-centered number entering the headline"
-  - "Latency was measured on both the 4-bit and the fp16 package, because the R2 collapse makes which artifact ships an open question and the latency cost of that choice is now on the record"
+  - "Latency was measured on all three candidate packages, because the R2 collapse makes which artifact ships an open question and the latency cost of that choice is now on the record"
+  - "The granularity grid was fixed and committed before the sweep ran, and all four configurations are published including the three that did not help"
+  - "The sweep configures palettization locally in the script rather than changing ndt1.palettize, so the per-tensor baseline it is measured against is not quietly redefined"
+  - "fp16 is recommended over the best 4-bit configuration because R2 decides and the 1.6 MB saving does not pay for 55% of the decode; latency headroom is at least 12x either way"
   - "The stale-compile bug was fixed at the two call sites this plan owns rather than in compute_plan.py, which is outside the declared files_modified; the library-level footgun is logged as a deferred item"
 
 patterns-established:
@@ -144,6 +150,55 @@ A diagnostic distinguishes "offset" from "destroyed": subtracting a constant est
 rows only** recovers part of the loss and leaves R2 at **-0.770991**, still worse than the constant
 null. Re-centering is not a fix, and neither remedy was applied, because both change the shipped
 model and this plan may not retrain either one.
+
+### The authorized follow-up: per-channel palettization rescues the decode, partly
+
+A pre-registered four-point grid, fixed in the committed script before the sweep ran, scored on
+exactly the same 56,943 rows as the baseline. All four are published; three did not help.
+
+| Configuration | Held-out R2 | Bytes | Ratio | LUTs | Eligible | CPU-only | max abs channel shift |
+|---|---|---|---|---|---|---|---|
+| fp16 | **+0.423870** | 2,708,540 | 1.000x | 0 | yes | 0 | reference |
+| 4-bit `per_grouped_channel` group 1 | **+0.191784** | 1,031,338 | 2.6262x | 39 | yes | 0 | **0.16916** |
+| 4-bit `per_tensor` (default) | -1.786971 | 796,165 | 3.4020x | 39 | yes | 0 | 1.21573 |
+| 4-bit `per_grouped_channel` group 16 | -4.161405 | 814,638 | 3.3248x | 38 | yes | 0 | 0.92612 |
+| 4-bit `per_grouped_channel` group 32 | -4.927721 | 1,447,511 | 1.8712x | 32 | yes | 0 | 1.11737 |
+| 4-bit `per_tensor` + `per_channel_scale` | -0.242031 | 1,203,108 | 2.2513x | 39 | **NO** | **38** | 0.69615 |
+
+**The mechanism was attenuated, not removed**, which is the direct answer to whether the diagnosis
+held. Per-channel cuts the max per-channel shift 7.2x (1.21573 to 0.16916) and the residual scatter
+1.5x, but the shift still dominates the residual by 3.35x against per-tensor's 15.6. An R2 that
+recovers to positive without recovering to fp16 is exactly what that predicts. Across the grid the
+extremes order correctly, but the middle does not: `per_tensor` has the largest shift yet a better
+R2 than either group 16 or group 32, so the statistic explains the mechanism without being a
+sufficient predictor, and the evidence says so rather than overclaiming.
+
+Two incidental traps, both recorded because they would cost the next person a day.
+`enable_per_channel_scale=True` **fails the DEC-06 gate**: 38 CPU-only ops, `all_eligible` false,
+found by the `tmp_path`-isolated scan so it is a property of the model. And a `group_size` that does
+not divide a tensor's channel count silently leaves it uncompressed: with output-channel counts of
+1, 96, 128 and 560 among the 39 palettizable tensors, `group_size=32` skips the positional encoding
+**and all six 71,680-element FFN tensors**, palettizes only 32, and so compresses worse (1.8712x)
+than per-tensor while also decoding worse. The LUT counts are what make those ratios readable.
+
+### The recommendation: ship fp16
+
+| Candidate | R2 | Bytes | Eligibility | p99, M5 Pro | Headroom vs 2 ms |
+|---|---|---|---|---|---|
+| **fp16** | **+0.423870** | 2,708,540 | 239/239, 0 CPU-only | 0.141959 ms | 14x |
+| 4-bit per-channel | +0.191784 | 1,031,338 | 239/239, 0 CPU-only | 0.165042 ms | 12x |
+| 4-bit per-tensor | -1.786971 | 796,165 | 239/239, 0 CPU-only | 0.141083 ms | 14x |
+
+R2 decides and nothing else contradicts it. The best 4-bit configuration costs **55% of the decode**
+to save **1,677,202 bytes** on a model already under 3 MB. Latency does not differentiate: all three
+sit inside 0.141 to 0.166 ms p99 with at least 12x headroom, so the 24 microsecond spread is noise
+against the budget. Eligibility does not differentiate either. The one option that is disqualified
+outright is today's `per_tensor` default, which does not decode.
+
+If a memory constraint ever forces 4-bit, the configuration is `per_grouped_channel` with
+`group_size=1`, and the still-untested refit of the readout on the palettized encoder's output
+should be tried first. That remedy was not run because this plan may not retrain either model, and
+the bias-corrected diagnostic (-0.770991) means it is a hypothesis rather than a known fix.
 
 ### Phase 5's 226 was never the shipped graph's op count
 
@@ -304,6 +359,23 @@ that choice (about 0.9 microseconds at p99) is now on the record rather than req
 `env` and `smoke`. Every key the plan specifies is present with the specified shape, and the diff is
 173 insertions and 0 deletions, so no previously published value was touched.
 
+**9. The granularity sweep was added after the plan's tasks, on coordinator request.** It is this
+plan's own deferred item 1, executed rather than deferred. It stays inside the plan's
+`files_modified` plus the two documents this plan owns, adds only
+`palettization.granularity_sweep` and `latency.per_channel_4bit_comparison` to the metrics JSON, and
+leaves every per-tensor number exactly as measured, because the comparison between them is the
+finding. The grid was committed in `9b86739` before the run that produced the published numbers. A
+`--smoke` wiring check on 1,024 rows ran before that commit, so smoke-scale values were seen before
+the full run; the grid was not changed afterwards, and the only edits between were a LUT-count
+diagnostic and a smoke-mode file path.
+
+**10. `Decoder/checkpoints/` was found empty at the start of the follow-up**, having lost both
+real-data checkpoints, Plan 09-07's 218 MB rates cache and the 09-08 run logs. Nothing in this plan
+wipes that directory. Both checkpoints were restored from the scratch backup taken during the
+checkpoints-hidden control and verified against their committed sha256 values (`f95b257b...` and
+`9d542cb5...`) before any measurement ran, so every number in the sweep is attributable to the same
+weights as the baseline it is compared against. Logged as deferred item 5.
+
 ## Issues Encountered
 
 **The project's deployment artifact does not do the thing the project exists to do.** The 4-bit
@@ -330,14 +402,16 @@ cleanly. The velocity R2 leg is the one the plan added last and it is the one th
 
 ## Deferred Items
 
-Four in `deferred-items-09-08.md`. Item 1 is the consequential one: the 4-bit velocity collapse
-leaves the choice of deployment artifact open, with two candidate remedies (refit the readout on the
-palettized encoder's output, or ship fp16 at 3.4x the size for about 0.9 microseconds of p99) and an
-explicit note that neither was run and that the bias-corrected diagnostic means remedy 1 is a
-hypothesis rather than a known fix. Item 2 records that `ndt1.compute_plan.compiled_model_path` is
-still unhardened for the next caller, since `compute_plan.py` sits outside this plan's
-`files_modified`. Items 3 and 4 are the Phase-4/5 supersession sweep (Plan 09-10 owns it) and the
-absence of any error bar, which is the third artifact in this phase to carry that gap.
+Five in `deferred-items-09-08.md`, of which **item 1 is now RESOLVED with a recommendation**: the
+granularity sweep answered which artifact should ship, and the answer is fp16. Its remaining open
+thread is the untested readout refit on the palettized encoder's output, kept as a hypothesis rather
+than promoted to a fix. Item 2 records that `ndt1.compute_plan.compiled_model_path` is still
+unhardened for the next caller, since `compute_plan.py` sits outside this plan's `files_modified`.
+Items 3 and 4 are the Phase-4/5 supersession sweep (Plan 09-10 owns it) and the absence of any error
+bar, the third artifact in this phase to carry that gap. Item 5 is new and is not this plan's doing:
+`Decoder/checkpoints/` was emptied between the original plan and the follow-up, destroying both
+checkpoints, a 218 MB cache and the run logs. The checkpoints were restored from a scratch backup
+and hash-verified, but nothing would have detected the loss except a run that needed them.
 
 ## Known Stubs
 
@@ -387,7 +461,14 @@ uv run ... rederive_coreml.py (checkpoints hidden)                       -> 1, r
 swift build --package-path Packages/CortexDecoder                        -> Build complete
 CORTEX_DECODER_MODEL_URL=... CortexDecoderBench (4-bit, then fp16)       -> 0, 0
 git status --porcelain Decoder/checkpoints Decoder/data .bench           -> 0 lines
-git diff --stat (metrics JSON)                                           -> 173 insertions, 0 deletions
+git diff --stat (metrics JSON, first pass)                               -> 173 insertions, 0 deletions
+
+Follow-up (the granularity sweep):
+uv run ... rederive_coreml.py --granularity-sweep --smoke                -> 0 (wiring)
+uv run ... rederive_coreml.py --granularity-sweep                        -> 0 (4/4 configs scored)
+CORTEX_DECODER_MODEL_URL=<per-channel pkg> CortexDecoderBench            -> 0
+uv run --project Decoder pytest Decoder/tests -m "not slow" -q           -> 208 passed, 9 deselected
+bash Tools/scripts/decoder-policy.sh                                     -> 0 (09-09's gate)
 ```
 
 The plan's inline verification block prints `palettization/ane/latency sections OK`. Every
@@ -409,16 +490,21 @@ number.
 - **Plan 09-11** should present the device capture against 239 ops, not 226, and should be told that
   the 4-bit artifact does not decode, so a device run on it measures the latency of a model that
   produces wrong velocities. That is still a valid latency measurement and an invalid demo.
-- **Phase 10 inherits an open question rather than a settled artifact:** which package ships. The
-  numbers needed to decide are all committed (R2, size, p99 for both), and the two candidate
-  remedies are written down in `deferred-items-09-08.md` with the evidence that neither is
-  guaranteed.
+- **Phase 10 inherits a recommendation rather than an open question:** ship fp16. All three
+  candidates are measured on the same rows and the same machine, and the decision rests on R2 with
+  size, eligibility and p99 all recorded. The one genuinely open thread is the untested readout
+  refit on the palettized encoder's output, which matters only if a memory constraint later forces
+  4-bit.
+- **Plan 09-11's device capture should run against the fp16 package** if the recommendation is
+  accepted, since a device run on the per-tensor 4-bit artifact measures the latency of a model that
+  produces wrong velocities: a valid latency measurement and an invalid demo.
 - **Open constraint on everything downstream:** `+0.423870` is the **fp16** package's held-out R2 and
   inherits every constraint Plan 09-07 placed on 0.4238 (within-pool, no error bar, constant
   TRAIN-mean null). `-1.786971` is the **4-bit** package's, and neither may be quoted without the
-  other. `-0.770991` is a diagnostic and is not a decode result. `239/239` is an ELIGIBILITY claim on
-  a dev Mac, not a residency claim. `0.141083 ms` is a CPU-placed M5 Pro measurement and may never be
-  quoted as an iPad-M4 or an ANE number.
+  other. `-0.770991` is a diagnostic and is not a decode result. `+0.191784` is the best 4-bit
+  configuration and may not be quoted as "4-bit works" without the fp16 figure beside it. `239/239`
+  is an ELIGIBILITY claim on a dev Mac, not a residency claim. `0.141083 ms` is a CPU-placed M5 Pro
+  measurement and may never be quoted as an iPad-M4 or an ANE number.
 
 ## Status rationale
 
@@ -427,13 +513,17 @@ resolved with determinism established over eight runs, every verification comman
 acceptance criterion met, and no number clamped, re-rolled or inherited. Four flagged gaps prevent a
 clean `PASS`:
 
-1. **The 4-bit shipped artifact does not decode velocity**, and this plan is scoped out of fixing
-   it. The deliverable was the measurement, and the measurement is bad news that someone must act on.
+1. **The 4-bit shipped artifact does not decode velocity.** The follow-up narrowed this from an open
+   question to a recommendation (ship fp16), but the recommendation still needs accepting and the
+   default configuration in `ndt1.palettize` is still the broken one. The untested readout refit
+   remains a hypothesis.
 2. **`compiled_model_path` is still unhardened** for callers outside the two this plan owns.
 3. **Phase-5 artifacts still publish 226/226 and their latency pair** as properties of the shipped
    graph; the supersession sweep belongs to Plan 09-10.
 4. **No error bar on any number here**, the third artifact in this phase to carry that gap, and it
    matters more for a -2.21 delta than it did for the figures it supersedes.
+5. **`Decoder/checkpoints/` was wiped between the plan and its follow-up** by something outside this
+   plan. Recovered and hash-verified, but the cause is unfound.
 
 ## Self-Check: PASSED
 

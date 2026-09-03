@@ -533,6 +533,17 @@
     "p50_ns": 130708,
     "p99_ms": 0.141083,
     "p99_ns": 141083,
+    "per_channel_4bit_comparison": {
+      "model": "ndt1_real_vel_4bit_per_grouped_channel_1.mlpackage",
+      "n": 10000,
+      "note": "Measured so the deployment-artifact recommendation rests on all three candidates. Same device and same corroborating-not-canonical framing as the other two.",
+      "p50_ms": 0.130666,
+      "p50_ns": 130666,
+      "p99_ms": 0.165042,
+      "p99_ns": 165042,
+      "placement": "CPU",
+      "status": "corroborating"
+    },
     "phase5_baseline": {
       "device": "M5 Pro, CPU-placed",
       "note": "05-latency-evidence.md, measured on a randomly-initialized graph",
@@ -1761,6 +1772,168 @@
       "torch": "2.12.1"
     },
     "granularity": "per_tensor",
+    "granularity_sweep": {
+      "env": {
+        "coremltools": "9.0",
+        "machine": "arm64",
+        "numpy": "2.4.6",
+        "platform": "macOS-26.5-arm64-arm-64bit",
+        "python": "3.12.13",
+        "scikit-learn": "1.9.0",
+        "torch": "2.12.1"
+      },
+      "grid": [
+        {
+          "granularity": "per_grouped_channel",
+          "group_size": 1,
+          "label": "per_grouped_channel/1",
+          "per_channel_scale": false
+        },
+        {
+          "granularity": "per_grouped_channel",
+          "group_size": 16,
+          "label": "per_grouped_channel/16",
+          "per_channel_scale": false
+        },
+        {
+          "granularity": "per_grouped_channel",
+          "group_size": 32,
+          "label": "per_grouped_channel/32",
+          "per_channel_scale": false
+        },
+        {
+          "granularity": "per_tensor",
+          "group_size": 32,
+          "label": "per_tensor+per_channel_scale",
+          "per_channel_scale": true
+        }
+      ],
+      "pre_registered": "The grid was fixed in GRANULARITY_SWEEP and committed before the sweep ran. Every configuration is published, including the ones that do not help.",
+      "provenance": "real-data checkpoint ndt1_real_with_velocity.pt sha256=9d542cb51d4a",
+      "results": [
+        {
+          "ane_all_eligible": true,
+          "ane_cpu_only_ops": 0,
+          "ane_n_schedulable": 239,
+          "channel_shift": {
+            "max_abs_channel_shift": 0.16915907679746547,
+            "mean_abs_channel_shift": 0.037346034590225625,
+            "mean_abs_difference": 0.053322668480632274,
+            "residual_std_after_removing_shift": 0.05048920325432837,
+            "shift_to_residual_ratio": 3.350400994552508
+          },
+          "fp16_bytes": 2708540,
+          "granularity": "per_grouped_channel",
+          "group_size": 1,
+          "label": "per_grouped_channel/1",
+          "n": 56943,
+          "palettized_bytes": 1031338,
+          "palettized_tensors_in_package": 39,
+          "per_channel_scale": false,
+          "r2": 0.191784007753374,
+          "r2_axes": {
+            "vx": 0.05750757313786181,
+            "vy": 0.37473955641012546
+          },
+          "size_ratio": 2.626238924581466,
+          "wall_clock_s": 13.3
+        },
+        {
+          "ane_all_eligible": true,
+          "ane_cpu_only_ops": 0,
+          "ane_n_schedulable": 239,
+          "channel_shift": {
+            "max_abs_channel_shift": 0.9261177505056063,
+            "mean_abs_channel_shift": 0.1578056574087188,
+            "mean_abs_difference": 0.17226060383205144,
+            "residual_std_after_removing_shift": 0.09101407317232943,
+            "shift_to_residual_ratio": 10.175544486972477
+          },
+          "fp16_bytes": 2708540,
+          "granularity": "per_grouped_channel",
+          "group_size": 16,
+          "label": "per_grouped_channel/16",
+          "n": 56943,
+          "palettized_bytes": 814638,
+          "palettized_tensors_in_package": 38,
+          "per_channel_scale": false,
+          "r2": -4.161404897915413,
+          "r2_axes": {
+            "vx": -7.180572965891052,
+            "vy": -0.04770056889375418
+          },
+          "size_ratio": 3.324838762738787,
+          "wall_clock_s": 6.7
+        },
+        {
+          "ane_all_eligible": true,
+          "ane_cpu_only_ops": 0,
+          "ane_n_schedulable": 239,
+          "channel_shift": {
+            "max_abs_channel_shift": 1.1173742177585761,
+            "mean_abs_channel_shift": 0.1681244720996599,
+            "mean_abs_difference": 0.17687873344084437,
+            "residual_std_after_removing_shift": 0.07486735913928262,
+            "shift_to_residual_ratio": 14.924717935887418
+          },
+          "fp16_bytes": 2708540,
+          "granularity": "per_grouped_channel",
+          "group_size": 32,
+          "label": "per_grouped_channel/32",
+          "n": 56943,
+          "palettized_bytes": 1447511,
+          "palettized_tensors_in_package": 32,
+          "per_channel_scale": false,
+          "r2": -4.927720789835551,
+          "r2_axes": {
+            "vx": -7.814852299552802,
+            "vy": -0.9939201127695234
+          },
+          "size_ratio": 1.8711705817779622,
+          "wall_clock_s": 6.3
+        },
+        {
+          "ane_all_eligible": false,
+          "ane_cpu_only_ops": 38,
+          "ane_n_schedulable": 239,
+          "channel_shift": {
+            "max_abs_channel_shift": 0.6961492869692544,
+            "mean_abs_channel_shift": 0.18350421207666537,
+            "mean_abs_difference": 0.19045872308556178,
+            "residual_std_after_removing_shift": 0.08239160173694532,
+            "shift_to_residual_ratio": 8.449274832547566
+          },
+          "fp16_bytes": 2708540,
+          "granularity": "per_tensor",
+          "group_size": 32,
+          "label": "per_tensor+per_channel_scale",
+          "n": 56943,
+          "palettized_bytes": 1203108,
+          "palettized_tensors_in_package": 39,
+          "per_channel_scale": true,
+          "r2": -0.24203108923927674,
+          "r2_axes": {
+            "vx": -0.14908321799894142,
+            "vy": -0.36867526792890115
+          },
+          "size_ratio": 2.251285836350519,
+          "wall_clock_s": 24.1
+        }
+      ],
+      "scored_on": {
+        "n": 56943,
+        "null": "the POOLED TRAIN-split mean velocity per axis (the Plan 09-07 null)",
+        "rows": "the same held-out rows the per_tensor baseline was scored on",
+        "sessions": [
+          "indy_20160624_03",
+          "indy_20160627_01",
+          "indy_20160630_01",
+          "indy_20160915_01"
+        ]
+      },
+      "shift_probe_windows": 384,
+      "smoke": false
+    },
     "mode": "kmeans",
     "nbits": 4,
     "phase4_synthetic_baseline": {

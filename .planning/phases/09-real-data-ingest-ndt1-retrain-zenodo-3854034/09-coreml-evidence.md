@@ -8,6 +8,9 @@ the reconstruction model barely notices the quantization (Poisson-NLL delta 0.02
 same 4-bit palettization**. Separately, the real-data graph schedules **239** ops, not the 226
 Phase 5 recorded, all of them ANE-eligible with zero CPU-only. Decoder p99 is 0.1411 ms on this
 Mac with the ops measured as CPU-placed, which makes it corroborating rather than canonical.
+A follow-up sweep establishes that per-channel palettization recovers the 4-bit decode to
+**+0.191784**, positive but 45% of fp16, at 2.6262x compression: enough to show the diagnosis was
+right, not enough to justify shipping 4-bit. **The recommendation is to ship the fp16 package.**
 
 RD-05 and RD-06 forbid inheriting a number from the synthetic run. Nothing here is inherited. The
 Phase-4 and Phase-5 figures appear only as explicitly labeled baselines, so that the comparison is
@@ -184,6 +187,107 @@ ridge readout fit on float32 encoder output and then deployed on a 4-bit encoder
 and that the choice of deployment artifact is now an open question rather than a settled one. The
 untested candidates are refitting the readout on the palettized encoder's output and excluding the
 encoder from palettization; both are Phase-10 work and neither was run here.
+
+---
+
+## Can per-channel palettization rescue the 4-bit decode? Partly (RD-05 follow-up)
+
+The per-tensor failure above is a per-CHANNEL shift, and per-tensor k-means is the worst case for
+exactly that: one 16-entry lookup table for an entire weight tensor. coremltools 9.0 offers
+`granularity="per_grouped_channel"`, which shares one LUT across `group_size` channels, so
+`group_size=1` is genuinely per-channel. A four-point grid was fixed in the committed script before
+the sweep ran and every point is published, including the three that do not help.
+
+All configurations are scored on **exactly the same 56,943 held-out rows** against the same
+constant TRAIN-split mean-velocity null, so every row of this table is directly comparable.
+
+| Configuration | Held-out R2 | Package bytes | Size ratio | LUTs | ANE eligible | CPU-only | max abs per-channel shift |
+|---|---|---|---|---|---|---|---|
+| fp16, no palettization | **+0.423870** | 2,708,540 | 1.000x | 0 | yes | 0 | reference |
+| 4-bit `per_grouped_channel`, group 1 | **+0.191784** | 1,031,338 | 2.6262x | 39 | yes | 0 | **0.16916** |
+| 4-bit `per_tensor` (the shipped default) | -1.786971 | 796,165 | 3.4020x | 39 | yes | 0 | 1.21573 |
+| 4-bit `per_grouped_channel`, group 16 | -4.161405 | 814,638 | 3.3248x | 38 | yes | 0 | 0.92612 |
+| 4-bit `per_grouped_channel`, group 32 | -4.927721 | 1,447,511 | 1.8712x | 32 | yes | 0 | 1.11737 |
+| 4-bit `per_tensor` + `enable_per_channel_scale` | -0.242031 | 1,203,108 | 2.2513x | 39 | **NO** | **38** | 0.69615 |
+
+**Per-channel palettization rescues the decode, but only partly.** `group_size=1` is the single
+configuration that produces a positive R2: **+0.191784** against per-tensor's -1.786971. It beats
+the constant-velocity null, so the 4-bit model decodes. It is also **45% of the fp16 package's
++0.423870**, so more than half the decode quality is still lost.
+
+### The mechanism was attenuated, not removed
+
+This is the direct evidence that the diagnosis was correct and that it is also incomplete.
+
+| | `per_tensor` | `per_grouped_channel` group 1 | Change |
+|---|---|---|---|
+| max abs per-channel mean shift | 1.21573 | **0.16916** | 7.2x smaller |
+| residual scatter after removing the shift | 0.07793 | 0.05049 | 1.5x smaller |
+| shift-to-residual ratio | 15.6 | **3.35** | still shift-dominated |
+
+Per-channel palettization cuts the per-channel shift by 7.2x, which is why the decode comes back
+from -1.79 to +0.19. But the shift still dominates the residual scatter by 3.35x, so the failure
+mode is attenuated rather than eliminated, and that is exactly consistent with an R2 that recovers
+to positive without recovering to fp16.
+
+Across the grid, larger shift goes with worse R2 at both extremes: the configuration with 7.2x less
+shift is the only one that decodes. The ordering is **not** monotone in the middle, though, since
+`per_tensor` has the largest shift yet a better R2 than either group 16 or group 32. So the shift
+statistic explains the mechanism without being a sufficient predictor of R2 on its own, and this
+note does not claim otherwise.
+
+### Two incidental results worth recording
+
+**`group_size` that does not divide a channel count silently skips the tensor.** The LUT counts
+explain size ratios that otherwise look random. Among the 39 palettizable tensors the output-channel
+counts are 1, 96, 128 and 560. `group_size=16` does not divide 1, so it palettizes 38 tensors.
+`group_size=32` divides neither 1 nor 560, so it skips the positional encoding **and all six
+71,680-element FFN tensors**, palettizes only 32, and therefore compresses *worse* (1.8712x) than
+per-tensor while decoding worse too. A group size must divide the channel counts to mean what it
+appears to mean.
+
+**`enable_per_channel_scale=True` breaks ANE eligibility.** It is the one configuration in the grid
+that fails the DEC-06 gate: **38 CPU-only ops**, `all_eligible` false. It would be disqualified on
+that ground regardless of its R2, and the scan that found it is the `tmp_path`-isolated one, so this
+is a property of the model and not of a stale compiled artifact. Every other configuration holds at
+239 schedulable ops, all eligible, zero CPU-only, so the granularity change does not otherwise
+disturb the graph.
+
+---
+
+## Recommendation on the deployment artifact: ship fp16
+
+The measured trade, with all three candidates on the same rows and the same machine:
+
+| Candidate | Held-out R2 | Package bytes | ANE eligibility | p99, M5 Pro, CPU-placed | Budget headroom |
+|---|---|---|---|---|---|
+| **fp16** | **+0.423870** | 2,708,540 | 239/239, 0 CPU-only | 0.141959 ms | 14x |
+| 4-bit per-channel (group 1) | +0.191784 | 1,031,338 | 239/239, 0 CPU-only | 0.165042 ms | 12x |
+| 4-bit per-tensor (today's default) | -1.786971 | 796,165 | 239/239, 0 CPU-only | 0.141083 ms | 14x |
+
+**Recommendation: ship the fp16 package.** The decision turns on R2 and nothing else contradicts it.
+
+- **R2 decides it.** Moving to the best 4-bit configuration costs 55% of the decode quality
+  (+0.423870 to +0.191784) on the capability the model exists to provide.
+- **Size does not pay for that.** The saving is 1,677,202 bytes, on a model that is already under
+  3 MB. Giving up more than half the decode to save 1.6 MB is a bad trade at this scale, and it
+  would be a different conversation on a model two orders of magnitude larger.
+- **Latency does not decide.** All three sit between 0.141 and 0.166 ms p99 against a 2 ms budget,
+  so every candidate has at least 12x headroom and the 24 microsecond spread is not a
+  differentiator.
+- **Eligibility does not decide either.** Both viable candidates are 239/239 with zero CPU-only.
+- **Today's default is the one option that is disqualified.** `per_tensor` 4-bit does not decode.
+  Whatever ships, it should not be that.
+
+If a future memory constraint forces 4-bit, the configuration is `per_grouped_channel` with
+`group_size=1`, not the current default, and the untested remedy from `deferred-items-09-08.md`
+should be tried first: refit the readout on the palettized encoder's output, which is cheap and
+which nothing here rules out. That remedy was not run, because this plan may not retrain either
+model.
+
+This recommendation is about which artifact to ship. It does not revisit any Plan 09-07 constraint
+on what +0.423870 itself means: it remains a within-pool, held-out figure against a constant
+TRAIN-split mean-velocity null, with no error bar.
 
 ---
 
@@ -365,6 +469,10 @@ uv run --project Decoder pytest Decoder/tests -m slow -k "palettiz or ane_comput
 uv run --project Decoder python Decoder/scripts/rederive_coreml.py
 uv run --project Decoder python Decoder/scripts/rederive_coreml.py --smoke   # wiring check only
 
+# The pre-registered per-channel granularity sweep. Merges only palettization.granularity_sweep
+# and leaves every per_tensor number exactly as it was measured:
+uv run --project Decoder python Decoder/scripts/rederive_coreml.py --granularity-sweep
+
 # Swift leg. Build the bench, then run it against the 4-bit package the Python leg wrote:
 swift build --package-path Packages/CortexDecoder
 CORTEX_DECODER_MODEL_URL="$PWD/Decoder/checkpoints/ndt1_real_vel_4bit.mlpackage" \
@@ -392,6 +500,10 @@ rebuilds them, the numbers in `09-decoder-metrics.json`, and this note.
   or placement claim.
 - **0.141083 ms p99** is a CPU-placed measurement on an Apple M5 Pro. It may not be quoted as an
   iPad-M4 number, or as an ANE number, under any circumstance.
+- **+0.191784** is the best 4-bit configuration (`per_grouped_channel`, `group_size=1`). It may not
+  be quoted as "4-bit works" without the fp16 figure beside it, because it is 45% of it.
+- The four sweep configurations are a pre-registered grid and all four are published. Quoting only
+  the one that helps would misrepresent a sweep in which three did not.
 - Phase 5's **226/226** and Phase 4's **3.471x** and **0.009114** are synthetic-weight figures and
   are superseded here. 226 in particular was never the shipped graph's op count.
 

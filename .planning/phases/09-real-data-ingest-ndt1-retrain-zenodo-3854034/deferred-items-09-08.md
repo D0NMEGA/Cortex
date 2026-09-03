@@ -5,37 +5,59 @@ Logged, not fixed, per the executor scope boundary. Items 1 and 2 are the conseq
 
 | # | Found during | Item | Why deferred |
 |---|--------------|------|--------------|
-| 1 | Task 3 | **The 4-bit palettized shipped model does not decode velocity** (held-out R2 -1.786971 against the fp16 package's +0.423870). The choice of deployment artifact is now an open question. | Fixing it means either refitting the readout on the palettized encoder's output or excluding the encoder from palettization. Both change the shipped model, and this plan is forbidden from retraining either model. Phase-10 work. |
+| 1 | Task 3 | **The 4-bit palettized shipped model does not decode velocity** (held-out R2 -1.786971 against the fp16 package's +0.423870). | **RESOLVED with a recommendation**, after the authorized per-channel follow-up. Ship fp16. See below. |
 | 2 | Task 3 | `ndt1.compute_plan.compiled_model_path` silently returns a stale `.mlmodelc` when its destination already exists. | Fixed at both call sites this plan owns, but the library function itself is unhardened and `compute_plan.py` is outside this plan's `files_modified`. |
 | 3 | Task 3 | Phase 5's `05-ane-eligibility-evidence.md` and `05-latency-evidence.md` publish 226/226 and 0.139333 ms as properties of the shipped graph. 226 was measured on an untrained graph and is not the shipped op count. | Plan 09-10 owns the supersession sweep across Phase 4/5 artifacts. |
 | 4 | Task 3 | No error bar on any number here, matching the gap Plans 09-06d and 09-07 recorded. | Same reason as those plans: no resampling scheme is defined for autocorrelated held-out bins. |
+| 5 | the per-channel follow-up | `Decoder/checkpoints/` was emptied between plan 09-08 and this follow-up, destroying both real-data checkpoints, Plan 09-07's 218 MB rates cache and the 09-08 run logs. The checkpoints were restored from a scratch backup and verified against their committed sha256 values before any measurement ran. | Nothing in this plan wipes that directory, so the cause is elsewhere and outside this plan's scope. Worth finding, because the checkpoints represent hours of training and are gitignored by design, so nothing would have detected the loss except a run that needed them. |
 
-## Item 1: the 4-bit velocity collapse
+## Item 1: the 4-bit velocity collapse, and its resolution
 
-The measured facts, in full, are in `09-coreml-evidence.md`. In brief: per-tensor 4-bit k-means
-introduces a systematic per-channel mean shift in the encoder's output (up to 1.21573 against a
-residual scatter of 0.07793), and the ridge readout, fit on the un-palettized encoder's output,
-turns that into a constant velocity error of [-11.24, +12.92] cm/s against a signal whose per-axis
-standard deviation is [2.87, 2.02] cm/s. The reconstruction objective barely registers the same
-quantization (Poisson-NLL delta 0.020352).
+**Status: resolved with a recommendation. The recommendation is to ship the fp16 package.**
 
-Two candidate remedies, neither run here:
+The original finding stands: per-tensor 4-bit k-means introduces a systematic per-channel mean
+shift in the encoder's output (up to 1.21573 against a residual scatter of 0.07793), and the ridge
+readout, fit on the un-palettized encoder's output, turns that into a constant velocity error of
+[-11.24, +12.92] cm/s against a signal whose per-axis standard deviation is [2.87, 2.02] cm/s. The
+reconstruction objective barely registers the same quantization (Poisson-NLL delta 0.020352).
 
-1. **Refit the readout on the palettized encoder's output.** Cheap: the design matrix would come
-   from the 4-bit package instead of the float32 model, and Plan 09-07's cached-rates machinery
-   already exists. This is the obvious first attempt.
-2. **Ship the fp16 package.** It decodes (R2 +0.423870) and its measured p99 on this Mac is
-   0.141959 ms against the 4-bit package's 0.141083 ms, so the latency cost is about 0.9
-   microseconds. The cost is package size: 2,708,540 B against 796,165 B.
+A pre-registered four-point granularity sweep then tested the obvious remedy. Full table and
+mechanism analysis are in `09-coreml-evidence.md`; the decision-relevant rows:
 
-A bias-corrected diagnostic was run to distinguish "offset" from "destroyed" and is reported in the
-evidence. It leaves R2 at -0.770991, so a constant correction is not sufficient and remedy 1 is not
-guaranteed to work either. Whoever takes this should treat remedy 1 as a hypothesis to test, not a
-fix to apply.
+| Candidate | Held-out R2 | Package bytes | ANE eligibility | p99, M5 Pro |
+|---|---|---|---|---|
+| **fp16** | **+0.423870** | 2,708,540 | 239/239, 0 CPU-only | 0.141959 ms |
+| 4-bit `per_grouped_channel` group 1 | +0.191784 | 1,031,338 | 239/239, 0 CPU-only | 0.165042 ms |
+| 4-bit `per_tensor` (today's default) | -1.786971 | 796,165 | 239/239, 0 CPU-only | 0.141083 ms |
 
-**This item must be resolved before any claim that this repository ships a working 4-bit
-on-device velocity decoder.** No such claim currently exists in a committed artifact, and
-`09-coreml-evidence.md` states the constraint explicitly.
+Per-channel palettization does rescue the decode, from -1.79 to a positive +0.19, and the shift
+statistic confirms why: max abs per-channel shift falls 7.2x, from 1.21573 to 0.16916. But it stays
+shift-dominated (shift-to-residual ratio 3.35 against per-tensor's 15.6), so the mechanism is
+attenuated rather than removed, and the recovered R2 is only 45% of fp16's.
+
+**The trade therefore does not pay.** Moving to the best 4-bit configuration costs 55% of the
+decode quality to save 1,677,202 bytes on a model already under 3 MB, while every candidate has at
+least 12x latency headroom against the 2 ms budget and both viable candidates are fully ANE-eligible.
+R2 decides, and nothing else contradicts it.
+
+Two constraints that follow:
+
+1. **Whatever ships, it must not be the current `per_tensor` 4-bit default.** It is the one option
+   measured as broken.
+2. **If a future memory constraint forces 4-bit**, the configuration is `per_grouped_channel` with
+   `group_size=1`, and the remedy below should be tried first.
+
+**Still untested, and deliberately so:** refitting the readout on the palettized encoder's output.
+It is cheap, Plan 09-07's cached-rates machinery already exists, and nothing measured here rules it
+out. It was not run because this plan may not retrain either model. Whoever takes it should treat it
+as a hypothesis: the bias-corrected diagnostic (-0.770991 with a train-estimated constant removed)
+shows the damage is not a pure offset, so a refit is not guaranteed to recover fp16 quality.
+
+Two incidental results from the sweep, recorded because they are traps for the next person:
+`enable_per_channel_scale=True` **breaks ANE eligibility** (38 CPU-only ops, `all_eligible` false),
+and a `group_size` that does not divide a tensor's channel count silently leaves that tensor
+uncompressed, which is why `group_size=32` skips all six 71,680-element FFN tensors and compresses
+worse than per-tensor.
 
 ## Item 2: the unhardened `compiled_model_path`
 
