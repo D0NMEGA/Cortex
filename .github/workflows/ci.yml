@@ -537,3 +537,73 @@ jobs:
             fi
           fi
           set -e
+
+  # --- Phase 9 (D-18 / RD-06c): the Decoder Python subsystem's first blocking CI gate ---
+  # Closes a real hole: before this, 3,582 lines of Python had zero CI coverage (ci.yml contained
+  # no uv, no pytest, no ndt1). Runs the QUICK suite only (-m "not slow"): per the tier split
+  # (D-21 / Phase 2 D-18 / Phase 6 D-10) CI gates correctness and structure and NEVER trains,
+  # NEVER downloads the 1.77 GB dataset, and NEVER asserts a measured number. Every test here
+  # passes on a checkout with an empty Decoder/data/ and no checkpoints (both are gitignored).
+  #
+  # A sibling job rather than a step inside build-and-lint: that job is already near its 30-minute
+  # timeout with the Rust toolchain, SwiftPM, DerivedData and seven policy gates, and the Python
+  # suite shares none of it, so a separate job fails fast on Python regressions and runs in
+  # parallel.
+  #
+  # The dev extra is REQUIRED -- a bare `uv run pytest` fails with a misleading
+  # "No module named numpy" (see AGENTS.md). setup-uv handles its own cache save/restore; do NOT
+  # wrap it in an actions/cache step the way SwiftPM/DerivedData are wrapped (09-RESEARCH 11).
+  decoder-python:
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 09-09-PLAN and 09-RESEARCH 11 both specify astral-sh/setup-uv@v8, but that ref does not
+      # exist: this publisher ships no floating major tags (refs/tags/v8, v9 and v10 all 404), so
+      # @v8 would fail to resolve. Per the plan's own fallback rule this pins the latest tag that
+      # does resolve, v10.0.1. Both inputs whose defaults changed since v8 are set explicitly here,
+      # so the v9/v10 breaking changes (enable-cache:auto now disables the cache for
+      # pull_request_target/workflow_run/release; prune-cache now defaults to false) do not apply.
+      - name: Set up uv (Decoder Python subsystem)
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            Decoder/uv.lock
+            Decoder/pyproject.toml
+          cache-suffix: decoder-py312
+          prune-cache: true
+
+      - name: Sync Decoder env (the dev extra is REQUIRED -- see AGENTS.md)
+        run: uv sync --project Decoder --extra dev
+
+      - name: Print Decoder toolchain versions
+        run: |
+          uv run --project Decoder python -VV
+          uv run --project Decoder python -c "import numpy, h5py, torch, coremltools; print('numpy', numpy.__version__); print('h5py', h5py.__version__); print('torch', torch.__version__); print('coremltools', coremltools.__version__)"
+
+      - name: Ruff (no bare/blind except -- the BLE gate)
+        run: uv run --project Decoder ruff check Decoder
+
+      - name: Decoder quick suite (no dataset, no training, no measured-number assertions)
+        run: uv run --project Decoder pytest Decoder/tests -m "not slow" -q
+
+      # Runs AFTER the suite on purpose: it proves the suite that just passed had no dataset to
+      # read. Decoder/data/ is gitignored, so a non-empty one on a CI checkout means the dataset
+      # leaked into git (threat T-09-09-04).
+      - name: Prove the quick suite needs no dataset
+        run: |
+          set -euo pipefail
+          test ! -e Decoder/data || test -z "$(ls -A Decoder/data 2>/dev/null)" \
+            || { echo "ERROR: Decoder/data is non-empty on a CI checkout -- the dataset must stay gitignored" >&2; exit 1; }
+          echo "OK: the quick suite above ran with an empty Decoder/data/."
+
+      # D-19: ties every published decoder number back to the manifest bytes it came from. The
+      # --self-test runs alongside the gate, exactly as the seven build-and-lint policy gates do,
+      # so a silently weakened gate fails CI loudly (threat T-09-09-02).
+      - name: Decoder provenance policy gate + self-test (D-19)
+        run: |
+          ./Tools/scripts/decoder-policy.sh
+          ./Tools/scripts/decoder-policy.sh --self-test
