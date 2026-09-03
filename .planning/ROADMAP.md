@@ -194,7 +194,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] 09-08-PLAN.md — CoreML re-derivation on the real checkpoint: palettization delta on BOTH models, ANE op scan, device-labeled p99, `09-coreml-evidence.md` (RD-05, RD-06) [Wave 5]
 - [x] 09-09-PLAN.md — `decoder-policy.sh` + `check_decoder_provenance.py` + `test_metrics_schema.py` + the blocking `decoder-python` CI job (RD-01, RD-03, RD-04, RD-05, RD-06) [Wave 6]
 - [x] 09-10-PLAN.md — D-24 citation sweep: superseded banners on the Phase-4/5 evidence + PROJECT/ROADMAP/REQUIREMENTS labels (RD-03, RD-05) [Wave 6]
-- [ ] 09-11-PLAN.md — `09-HUMAN-UAT.md` + the never-auto-approve iPad-Pro-M4 canonical p99 gate (RD-06; `autonomous: false`) [Wave 7]
+- [x] 09-11-PLAN.md — `09-HUMAN-UAT.md` + the never-auto-approve iPad-Pro-M4 canonical p99 gate (RD-06; `autonomous: false`) [Wave 7] — gate PRESENTED, not auto-approved; canonical iPad-M4 row DEFERRED (hardware absent, all value fields `not measured`). An **iPad Air 11-inch (M2) / iPadOS 18.7.8** capture was taken instead and recorded as corroborating: 239 ops, `{cpu: 239}` placement, 239/239 ANE-eligible, p50 0.2240 ms / p99 0.5790 ms (n=120), committed as `09-perf-report-ipad-m2.json`. It independently reproduces the 226→239 correction on different silicon through a tool that never touches the `compile_model` stale-artifact path.
 
 ### Phase 10: v1 Real-Data Closed Loop & Launch
 **Goal**: The full pipeline runs on a real recorded session — real M1 spikes replayed through daemon → IPC → decoder → ReFIT-Kalman → 120Hz renderer → BCI HID — and the repo republishes itself honestly: every synthetic-derived number is re-derived or labeled, the photodiode claim is retired to Future work with its reason recorded, and a CI gate makes the retired claim structurally impossible to resurrect as an achieved result. This is the v1 milestone and the artefact for Bliss Chapman / Nir Even-Chen review.
@@ -226,7 +226,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 6/6 | ✓ Complete | 2026-06-22 |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
-| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 10/11 | In progress (09-11 HUMAN-UAT outstanding) | - |
+| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
 | 10. v1 Real-Data Closed Loop & Launch | v1 | 0/TBD | Not started | - |
 
 ---
