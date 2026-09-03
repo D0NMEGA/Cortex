@@ -43,6 +43,17 @@ drift; pooled, it is the pooled train mean. Nothing is clamped and nothing is re
 low honest number completes the phase, and a negative R2 means the readout is worse than a
 constant-velocity null, which is then the finding.
 
+**R5, the readout rotation (`--loso`).** A separate pass, merged into the velocity section a full
+run has already written, mirroring `train_real.py --only-loso`. For each session: fit on the other
+three sessions' TRAIN rows, **re-selecting the lag and the lambda on those three alone** by R1 and
+R2, and score held-out R2 on the excluded session's own TEST tail against **its own train-split
+mean**, the drift-robust null. The training-pool mean is reported beside it and is never the
+headline, for the same reason Plan 09-06d refuses to headline its LOSO `train_null`. A fold that
+fails to fit is recorded with its exception, never dropped. The encoder is the same pooled
+checkpoint in every fold and was pretrained on all four sessions, so R5 isolates the READOUT's
+transfer and is a strictly weaker claim than Plan 09-06d's encoder rotation. Nothing in R5 changes
+the shipped checkpoint: the readout that ships is the globally fit one.
+
 **R4, the forward-parity gate.** The fitted head is only accepted if the assembled
 `NDT1ANEWithVelocity` reproduces `X @ W.T + b` to within `PARITY_TOL` cm/s on real held-out windows.
 This is what proves the design matrix is exactly the tensor the shipped graph feeds its readout.
@@ -605,19 +616,142 @@ def _r2_record(scored: dict[str, float], label: str, null: str) -> dict[str, obj
     }
 
 
-def _score_heldout(design: SessionDesign, lag: int, fit: RidgeFit) -> dict[str, object]:
-    """Held-out R2 for one session against ITS OWN train-split mean (R3).
+def _score_heldout(
+    design: SessionDesign,
+    lag: int,
+    fit: RidgeFit,
+    *,
+    null_mean: np.ndarray | None = None,
+    null_label: str = "this session's own TRAIN-split mean velocity per axis",
+) -> dict[str, object]:
+    """Held-out R2 on one session's TEST tail, by default against ITS OWN train-split mean (R3).
 
-    That null is the harder one under within-session drift: the pooled train mean is an average
-    over four recordings and sits further from any single session's tail, which inflates R2.
+    That default is the harder null under within-session drift: any mean taken over other
+    recordings sits further from this session's tail, which inflates R2. `null_mean` overrides it
+    so the rotation (R5) can also report the weaker training-pool-mean variant through the same
+    scoring arithmetic rather than a second copy of it.
     """
     _, train_vel = apply_lag(design.train_rates, design.train_vel, lag)
     test_rates, test_vel = apply_lag(design.test_rates, design.test_vel, lag)
     predicted = test_rates @ fit.weight.T + fit.bias
-    scored = heldout_r2(test_vel, predicted, train_vel.mean(axis=0))
-    return _r2_record(
-        scored, design.session_id, "this session's own TRAIN-split mean velocity per axis"
-    )
+    null = train_vel.mean(axis=0) if null_mean is None else null_mean
+    return _r2_record(heldout_r2(test_vel, predicted, null), design.session_id, null_label)
+
+
+def _summarize(values: list[float]) -> dict[str, object]:
+    """Fold count, mean, sample std, min and max over the folds that FITTED.
+
+    D-13's discipline: a rotation reported as a mean alone hides its spread, and a fold that did
+    not produce a value is recorded as a failure rather than averaged away.
+    """
+    if not values:
+        return {"folds": 0, "mean": None, "std": None, "min": None, "max": None}
+    arr = np.asarray(values, dtype=np.float64)
+    return {
+        "folds": int(arr.size),
+        "mean": float(arr.mean()),
+        "std": float(arr.std(ddof=1)) if arr.size > 1 else 0.0,
+        "min": float(arr.min()),
+        "max": float(arr.max()),
+    }
+
+
+def _run_readout_loso(
+    designs: list[SessionDesign], within: dict[str, object]
+) -> tuple[list[dict[str, object]], dict[str, object]]:
+    """Leave-one-session-out READOUT rotation (R5). Returns `(folds, summary)`.
+
+    For each session: fit the ridge on the other three sessions' TRAIN rows, re-selecting the lag
+    and the lambda on those three alone, and score held-out R2 on the excluded session's own TEST
+    tail. Re-selecting per fold is not optional: locking the lag or the lambda once globally would
+    have chosen them on data that includes the held-out session.
+
+    **What this measures, and what it does not.** The encoder is the SAME pooled checkpoint in
+    every fold, and it was pretrained on all four sessions, so this isolates whether the linear
+    READOUT transfers. It is NOT Plan 09-06d's leave-one-session-out co-bps, where the encoder
+    itself was retrained from scratch without the held-out session, and it is a strictly weaker
+    transfer claim than that one.
+    """
+    folds: list[dict[str, object]] = []
+    for held_out in designs:
+        others = [d for d in designs if d.session_id != held_out.session_id]
+        pairs = [(d.train_rates, d.train_vel) for d in others]
+        _log(f"fold holding out {held_out.session_id}, training on {len(others)} sessions")
+        try:
+            lag = _select_lag(_run_lag_sweep(pairs, LAG_BINS_SWEEP))
+            rates, vel = _stack_at_lag(pairs, lag)
+            lambda_curve, fits = _run_lambda_sweep(rates, vel)
+            lam, rationale = _select_lambda(lambda_curve)
+            fit = fits[lam]
+            own = _score_heldout(held_out, lag, fit)
+            pool = _score_heldout(
+                held_out,
+                lag,
+                fit,
+                null_mean=vel.mean(axis=0),
+                null_label="the mean velocity of the fold's three TRAINING sessions",
+            )
+        except (ValueError, np.linalg.LinAlgError) as exc:
+            # Recorded, never dropped: a fold that produced no value is a fact about the rotation.
+            _log(f"  FOLD FAILED: {type(exc).__name__}: {exc}")
+            folds.append(
+                {
+                    "held_out_session": held_out.session_id,
+                    "fitted": False,
+                    "reason": f"{type(exc).__name__}: {exc}",
+                }
+            )
+            continue
+        baseline = within.get(held_out.session_id, {})
+        in_pool = baseline.get("pooled") if isinstance(baseline, dict) else None
+        delta = None if in_pool is None else own["pooled"] - float(in_pool)
+        _log(
+            f"  lag {lag}, lambda {lam:g}, fit on {fit.rows} rows -> held-out R2 "
+            f"{own['pooled']:+.4f} (vx {own['vx']:+.4f}, vy {own['vy']:+.4f}) on {own['n']} bins"
+        )
+        if delta is not None:
+            _log(f"  versus {float(in_pool):+.4f} with this session IN the pool: {delta:+.4f}")
+        folds.append(
+            {
+                "held_out_session": held_out.session_id,
+                "fitted": True,
+                "train_sessions": [d.session_id for d in others],
+                "lag_bins": lag,
+                "lag_ms": float(lag) * BIN_MS,
+                "lambda": lam,
+                "lambda_rule": rationale,
+                "train_rows": fit.rows,
+                "train_r2": fit.train_r2,
+                "heldout_r2": own,
+                "heldout_r2_training_pool_null": pool,
+                "in_pool_heldout_r2": in_pool,
+                "delta_versus_in_pool": delta,
+            }
+        )
+    fitted = [f for f in folds if f["fitted"]]
+    scores = [float(f["heldout_r2"]["pooled"]) for f in fitted]
+    deltas = [
+        float(f["delta_versus_in_pool"])
+        for f in fitted
+        if f["delta_versus_in_pool"] is not None
+    ]
+    summary = {
+        "null": "the held-out session's OWN TRAIN-split mean velocity per axis",
+        **_summarize(scores),
+        "failed_folds": [f["held_out_session"] for f in folds if not f["fitted"]],
+        "positive_folds": sum(1 for s in scores if s > 0.0),
+        "delta_versus_in_pool": _summarize(deltas),
+        "training_pool_null": _summarize(
+            [float(f["heldout_r2_training_pool_null"]["pooled"]) for f in fitted]
+        ),
+        "encoder_note": (
+            "READOUT-only rotation: the encoder is the same pooled checkpoint in every fold and "
+            "was pretrained on all four sessions, so this is a strictly weaker transfer claim "
+            "than Plan 09-06d's leave-one-session-out co-bps, where the encoder was retrained "
+            "from scratch without the held-out session"
+        ),
+    }
+    return folds, summary
 
 
 def _resolve_paths(args: argparse.Namespace) -> tuple[Path, Path]:
@@ -679,6 +813,12 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         "--reuse-rates",
         action="store_true",
         help="reuse cached design matrices when their encoder and session hashes still match",
+    )
+    parser.add_argument(
+        "--loso",
+        action="store_true",
+        help="run the READOUT leave-one-session-out rotation (R5) and merge it into the velocity "
+        "section a full run has already written; pair it with --reuse-rates",
     )
     parser.add_argument(
         "--smoke",
@@ -802,6 +942,30 @@ def main(argv: list[str] | None = None) -> int:
     ]
     designs = [design for design, _ in built]
     train_pairs = [(d.train_rates, d.train_vel) for d in designs]
+
+    if args.loso:
+        published = payload.get("velocity", {})
+        if not isinstance(published, dict) or "per_session" not in published:
+            print(
+                f"error: {metrics_path} has no velocity.per_session to attach a rotation to; the "
+                f"full run has either not happened or did not produce one",
+                file=sys.stderr,
+            )
+            return 1
+        _log("readout leave-one-session-out rotation (R5): lag and lambda re-selected per fold")
+        folds, summary = _run_readout_loso(designs, published["per_session"])
+        published["loso"] = folds
+        published["loso_summary"] = summary
+        published["wall_clock_loso_s"] = round(time.time() - started, 1)
+        metrics_path.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        )
+        _log(
+            f"rotation: {summary['folds']} fitted, {summary['positive_folds']} positive, "
+            f"mean {summary['mean']:+.4f}" if summary["folds"] else "rotation: no fold fitted"
+        )
+        _log(f"merged velocity.loso into {_repo_relative(metrics_path)}")
+        return 0
 
     _log("lag sweep (R1): TRAIN rows only, 0-160 ms in whole bins")
     lag_curve = _run_lag_sweep(train_pairs, LAG_BINS_SWEEP)
