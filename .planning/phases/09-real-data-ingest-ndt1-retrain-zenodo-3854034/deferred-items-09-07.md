@@ -1,31 +1,36 @@
 # Deferred items, Plan 09-07 (velocity readout on real kinematics)
 
-Four items. None blocks Plan 09-08's conversion: the checkpoint it converts exists, carries the
-Plan 09-06 encoder bit-identically, and its readout is fit on real `finger_pos` velocity.
+Four items, of which item 1 is CLOSED inside this plan. None blocks Plan 09-08's conversion: the
+checkpoint it converts exists, carries the Plan 09-06 encoder bit-identically, and its readout is
+fit on real `finger_pos` velocity.
 
-## 1. No cross-session velocity readout, and it is now cheap to run
+## 1. CLOSED. The cross-session velocity readout was measured
 
-**What is missing.** Plan 09-06d's headline is a split: the encoder beats a mean-rate null on
-held-out data from sessions it trained on (4 of 4 positive) and loses to it on sessions it has
-never seen (4 of 4 LOSO folds negative). This plan measured only the within-pool half of the same
-question for velocity. Every number in `09-velocity-evidence.md` is a chronological tail of a
-session the encoder trained on. Whether the READOUT transfers to an unseen session is unmeasured,
-and the evidence says so rather than implying otherwise.
+**Closed 2026-09-02**, in the same plan, by `fit_velocity_real.py --loso`. Four folds, four fitted,
+no failures, two seconds off the cached design matrices. Results, scored on each held-out session's
+own TEST tail against its own TRAIN-split mean: **+0.2363, +0.0718, -0.9257, -6.9907**, mean
+-1.9021, median -0.4270, 2 of 4 positive, and all four deltas against the same session's in-pool
+number negative (-0.2706 to -7.4953). Full reporting in `09-velocity-evidence.md`, section
+"Cross-session transfer: the readout rotation (R5)"; raw values in `velocity.loso` and
+`velocity.loso_summary`.
 
-**Why it was not done here.** It is not in Plan 09-07's success criteria, and adding an unplanned
-measurement after seeing a favourable pooled number is the shape of the thing this phase's
-pre-registration chain exists to prevent.
+**What remains open from it, folded in here rather than opened as a fifth item.**
 
-**What it would cost now: seconds, not hours.** `fit_velocity_real.py --reuse-rates` reads the
-cached per-session design matrices from `Decoder/checkpoints/09-07-rates/`, so a four-fold rotation
-is four ridge solves plus four scorings on matrices that already exist. The 21-minute forward pass
-does not have to run again. The one design question the follow-up must answer first is which null
-to score against, and Plan 09-06d already settled the analogous one: the held-out session's OWN
-mean, never the training pool's, because the pooled mean is the weakest constant predictor applied
-to the hardest task and the gap between the two nulls IS the cross-session heterogeneity.
+*The collapsed fold has no established cause.* `indy_20160624_03` at -6.9907 is a scale and offset
+failure: the residual sum of squares is about eight times the null's and `vx` alone is -10.0102. The
+mechanism available in the arithmetic is that a rank-2 linear map with one fitted intercept cannot
+adapt to a session-level shift in the encoder-output distribution it consumes. That was not tested,
+and the obvious test (re-centering the held-out session's features or predictions) was deliberately
+not run, because it would be tuning to rescue a number after seeing it is bad. If a future plan wants
+it, the honest form is to pre-register the re-centering as a stated method change with its own
+held-out evaluation, not as a repair.
 
-**Recommendation.** Fold it into Plan 09-11 or into Phase 10's RD-07 work, where a cross-session
-`R` fit would want the same numbers.
+*The rotation is readout-only, so the real cross-session number is worse.* The encoder is the same
+pooled checkpoint in every fold and was pretrained on all four sessions. A true cross-session test
+would retrain the encoder without the held-out session, as Plan 09-06d's co-bps rotation does, and
+then fit the readout on the remaining three. That is a multi-hour run, not a two-second one, and it
+is the experiment that would say what this decoder does on a genuinely new recording day. The
+numbers already published bound it from above.
 
 ## 2. No error bar anywhere in this artifact
 

@@ -25,6 +25,8 @@ provides:
   - "The answer to the lag warning this plan tripped: the two-sided -160 to +160 ms curve has an interior maximum at +20 ms, so the labels are not shifted"
   - "A forward-parity gate that measures, rather than assumes, that the design matrix is the tensor the shipped 1x1 conv consumes: 4.8e-05 cm/s"
   - "Decoder/checkpoints/09-07-rates/: 218 MB of cached per-session design matrices, hash-guarded, which makes any follow-up readout fit seconds rather than 21 minutes"
+  - "The readout leave-one-session-out rotation: transfer PARTIALLY holds, +0.2363 and +0.0718 on two unseen sessions against -0.9257 and -6.9907 on the other two, with all four folds degrading relative to having the session in the pool"
+  - "The bound the rotation puts on the headline: 0.4238 is what this decoder does on sessions it was fit for, and it is an upper bound on a new recording day because the rotation still holds the encoder fixed"
 affects: [09-08, 09-09, 09-10, 09-11, RD-02, RD-06, Phase 10 RD-07]
 
 # Tech tracking
@@ -37,6 +39,8 @@ tech-stack:
     - "Verify provenance by hash, not by name: check every input session's sha256 and the encoder's own sha256 against the metrics file before producing a number that will be attributed to them"
     - "Call the split function rather than restate its arithmetic, so the block a readout is scored on cannot drift from the block the encoder was evaluated on"
     - "Commit the script, and therefore its selection rules, before the run that produces any published number; the commit ordering is the audit trail"
+    - "Re-select every tuned knob inside each rotation fold rather than once globally, because a knob locked on the full pool was chosen on data that includes the held-out session"
+    - "State an experiment's scope before its numbers when it is a weaker version of a neighbouring one, so a reader cannot mistake a readout-only rotation for an encoder rotation"
 
 key-files:
   created:
@@ -54,7 +58,9 @@ key-decisions:
   - "Held-out design rows start a full window AFTER the split point, so no held-out prediction reads a bin the encoder trained on; the cost is 124 rows out of 285,235"
   - "Per session the null is that session's own train mean, which is the harder of the two available nulls; the pooled train mean would sit further from any single session's tail and inflate the number"
   - "The lambda lock is reported as 0.1 because the pre-registered rule says so, and the evidence states plainly that the choice is immaterial rather than dressing a sixth-significant-figure difference as a selection"
-  - "No leave-one-session-out velocity fit was run: it is not in this plan's success criteria, and adding an unplanned measurement after seeing a favourable pooled number is the shape of the thing this phase's pre-registration chain exists to prevent"
+  - "The rotation scores each held-out session's own TEST tail, the same rows as the within-pool table, so every fold is a paired comparison against a published number that differs only in whether the session was in the training pool"
+  - "The rotation is reported by fold list and median rather than by mean, because one fold sits 7.6x further from zero than the next and a mean would have been a statement about that fold alone"
+  - "The mechanism for the collapsed fold is offered from the arithmetic and explicitly NOT tested, because the obvious test is re-centering, which would be tuning to rescue a number after seeing it is bad"
 
 patterns-established:
   - "When a plan's step would break the artifact it is trying to produce, implement the correct thing and add the assertion that would have caught the plan's version, so the deviation is auditable rather than argued"
@@ -63,7 +69,7 @@ patterns-established:
 requirements-completed: [RD-02]
 
 # Metrics
-duration: about 55m
+duration: about 1h 5m
 completed: 2026-09-02
 ---
 
@@ -72,17 +78,19 @@ completed: 2026-09-02
 **The shipped model's velocity readout is now fit on real `finger_pos` movement instead of on labels
 generated from the rates it regresses, and it decodes: pooled held-out R2 0.4238 against a constant
 TRAIN-split mean-velocity null over 56,943 held-out bins, with all four sessions positive against
-their own train means. Two of the plan's own steps would have broken the artifact if followed
-literally, and the run tripped its own lag warning, which is answered by measurement rather than by
-argument.**
+their own train means. Transfer is the more interesting half: a leave-one-session-out rotation of the
+readout degrades every fold, keeps two of four above a constant-velocity null, and collapses on one,
+so transfer partially holds and 0.4238 is an upper bound on a new recording day rather than a
+description of it. Two of the plan's own steps would have broken the artifact if followed literally,
+and the run tripped its own lag warning, which is answered by measurement rather than by argument.**
 
 ## Performance
 
-- **Duration:** about 55 min wall, of which 1,255.9 s was the measured run and 1,252.0 s of that was
-  285,235 stride-1 encoder forward passes on CPU
-- **Tasks:** 2 of 2
+- **Duration:** about 1 h 5 min wall, of which 1,255.9 s was the measured run and 1,252.0 s of that
+  was 285,235 stride-1 encoder forward passes on CPU. The rotation added 2 s, off the cache
+- **Tasks:** 2 of 2, plus the coordinator's follow-up rotation
 - **Files:** 4 created, 1 modified
-- **Commits:** 4
+- **Commits:** 7
 
 ## Accomplishments
 
@@ -105,6 +113,42 @@ nulls. This is within-pool held-out decoding on sessions the encoder trained on,
 Plan 09-06d's positive co-bps half was, and like it, it says nothing about cross-session transfer.
 No leave-one-session-out velocity fit was run, and the evidence says so instead of implying
 otherwise.
+
+### Cross-session transfer, measured on request
+
+A readout leave-one-session-out rotation, added after the numbers above at the coordinator's
+request, closing this plan's own deferred item 1. Fit on three sessions' TRAIN rows with the lag and
+lambda re-selected on those three alone, scored on the excluded session's own TEST tail against its
+own TRAIN-split mean. Four folds, four fitted, no failures, two seconds off the cached design
+matrices.
+
+| Held-out session | Rotation R2 | With it in the pool | Cost of holding it out |
+|---|---|---|---|
+| `indy_20160627_01` | **+0.2363** | +0.5069 | -0.2706 |
+| `indy_20160915_01` | **+0.0718** | +0.4797 | -0.4078 |
+| `indy_20160630_01` | **-0.9257** | +0.1446 | -1.0703 |
+| `indy_20160624_03` | **-6.9907** | +0.5046 | -7.4953 |
+
+Mean -1.9021, sample std 3.4311, median -0.4270, 2 of 4 positive. **Transfer partially holds**,
+which is neither of the two clean answers. Every fold degrades and even the best loses more than
+half its in-pool R2, so what the readout learns is at least partly session-specific; but two unseen
+sessions are still decoded better than a constant-velocity null by a readout that never saw them.
+
+Three things are reported that a mean alone would have buried. **The mean is not the result:** one
+fold is 7.6x further from zero than the next, so the fold list and the median carry the finding.
+**The null choice is immaterial here:** scored against the fold's three training sessions' mean
+instead, the numbers are identical to four decimal places, because mean velocity in a self-paced
+reach is near zero, so Plan 09-06d's 0.59 bits/spike gap between its two co-bps nulls has no
+counterpart. **The scope is weaker than it looks:** the encoder is the same pooled checkpoint in
+every fold and was pretrained on all four sessions, so this isolates the readout and bounds true
+cross-session performance from above.
+
+On the coordinator's observation that `indy_20160630_01` is the outlier: it partly corroborates and
+partly does not, and both halves are published. That session is the hardest fold for the encoder
+rotation, the second hardest here, and the weakest within-session result, so three views agree. But
+`indy_20160624_03` is the co-bps rotation's **easiest** fold and this rotation's worst by a wide
+margin, so outlier status does not transfer between the two metrics. No magnitude is compared across
+them: co-bps is bits per spike and R2 is dimensionless.
 
 ### The lag warning, answered rather than noted
 
@@ -155,7 +199,12 @@ to gitignored scratch paths.
 2. **Task 1, the measurement** - `e9f3760` (feat): the `velocity` section, 240 insertions and 0
    deletions to the metrics JSON
 3. **Task 2** - `99c48d3` (docs): `09-velocity-evidence.md`
-4. **Deferred items and this summary** - see `git log`
+4. **Deferred items and this summary** - `b9c0a48` (docs)
+5. **Rotation pre-registration** - `b4a2edb` (feat): the `--loso` mode and its R5 rules, before the
+   rotation ran
+6. **Rotation measurement** - `07ff695` (feat): 152 insertions and 0 deletions, adding only `loso`,
+   `loso_summary` and `wall_clock_loso_s`, with no previously published value changed
+7. **Rotation reporting** - `bba51de` (docs), plus the deferred-item closure and this revision
 
 ## Deviations from Plan
 
@@ -281,12 +330,23 @@ to gitignored scratch paths.
 
 ### Non-issue deviations
 
-**10. Task 1 landed as two commits rather than one.** The script, and therefore its four selection
+**10. A leave-one-session-out readout rotation was added after the plan's tasks, on coordinator
+request.** It is not in Plan 09-07's success criteria; it is this plan's own deferred item 1,
+executed rather than deferred. It stays inside the plan's `files_modified` (the script, the metrics
+JSON, the evidence) and it does not touch the shipped checkpoint: `--loso` merges into the velocity
+section a full run already wrote, exactly as `train_real.py --only-loso` does. Its rules were
+committed in `b4a2edb` before it ran, and that is a weaker guarantee than the main run's and is said
+so here: the rules were written after the within-pool numbers were known. What they mostly are is
+the already-committed R1, R2 and R3 applied per fold, and the genuinely new decisions (score the
+held-out session's own TEST tail, headline its own train mean, record rather than drop a failed
+fold) were fixed by the request before anything ran.
+
+**11. Task 1 landed as two commits rather than one.** The script, and therefore its four selection
 rules, is committed in `ba47798` before the run; the numbers follow in `e9f3760`. This mirrors
 Plan 09-06d's `06eb61f` before `967f38e` and makes the ordering checkable with
 `git merge-base --is-ancestor`.
 
-**11. The metrics `velocity` section carries five keys beyond the plan's sketch:**
+**12. The metrics `velocity` section carries five keys beyond the plan's sketch:**
 `design_matrix`, `lag_alignment_diagnostic`, `lambda_rule`, `forward_parity_max_abs_cm_s`,
 `in_sample_train_r2`, plus `encoder`, `env`, `wall_clock_s` and `smoke` mirroring the file's
 existing idiom. Every key the plan specifies is present with the specified shape, and the diff is
@@ -309,22 +369,36 @@ is not the problem, but the disagreement with `nlb_tools` is real and the explan
 is an interpretation rather than a tested hypothesis. `deferred-items-09-07.md` item 4 records the
 experiment that would test it.
 
+**The favourable within-pool result did not survive contact with the transfer question, and that
+is the plan's most important output.** Pooled +0.4238 with four of four sessions positive reads as a
+working cursor decoder. The rotation shows that number is conditional on having fit the readout for
+the session it runs on: hold a session out and the same pipeline returns +0.2363, +0.0718, -0.9257
+and -6.9907. The evidence now leads with that rather than appending it, because a reader who takes
+0.4238 away and nothing else has taken away something misleading. It also still understates the
+deployment problem, since the rotation holds the encoder fixed and that encoder saw every session.
+
 **The result is favourable, and that is its own hazard.** A pooled +0.4238 with all four sessions
 positive is a better outcome than 09-RESEARCH predicted for this architecture, and the temptation in
 that situation is to stop asking questions. Three things were done instead of stopping: the
 per-session spread (0.1446 to 0.5069) is reported alongside the pooled figure rather than under it;
 the absence of any error bar and the fact that 56,943 autocorrelated bins are not 56,943 independent
 samples are stated in the evidence rather than left to a reader; and the missing cross-session half
-of the question is written down as a deferred item with the note that the cached design matrices
-make it a seconds-long follow-up, rather than being quietly omitted.
+of the question was written down as a deferred item rather than quietly omitted, which is what made
+it a two-second follow-up when the coordinator asked for it.
 
 ## Deferred Items
 
-Four, in `deferred-items-09-07.md`: no cross-session velocity readout, and it is now cheap because
-the design matrices are cached; no error bar anywhere, the second artifact in this phase to carry
-that gap; only one of the four sessions has a measured within-session drift figure, so the
-suggestive coincidence with the weakest session cannot be called an explanation; and the untested
-interpretation of why the lag is 20 ms rather than 140 ms.
+Four in `deferred-items-09-07.md`, of which **item 1 is now CLOSED** by the rotation above. Three
+remain open: no error bar anywhere, the second artifact in this phase to carry that gap; only one of
+the four sessions has a measured within-session drift figure, so the suggestive coincidence with the
+weakest session cannot be called an explanation; and the untested interpretation of why the lag is
+20 ms rather than 140 ms.
+
+Two questions the rotation itself raised are folded into item 1's closure note rather than opened as
+a fifth item: the collapsed `indy_20160624_03` fold has no established cause, and the obvious test
+for it (re-centering) is deliberately not run because it would be tuning to rescue a bad number; and
+a true cross-session test would retrain the encoder without the held-out session, which is a
+multi-hour run rather than a two-second one.
 
 ## Known Stubs
 
@@ -365,8 +439,10 @@ uv run --project Decoder ruff check Decoder                                  -> 
 uv run --project Decoder pytest Decoder/tests -m "not slow" -q               -> 189 passed, 9 deselected
 uv run --project Decoder python Decoder/scripts/fit_velocity_real.py --smoke -> 0
 uv run --project Decoder python Decoder/scripts/fit_velocity_real.py         -> 0 (1,255.9 s)
+uv run ... fit_velocity_real.py --smoke --reuse-rates --loso                 -> 0
+uv run ... fit_velocity_real.py --reuse-rates --loso                         -> 0 (2 s, 4/4 folds fitted)
 git status --porcelain Decoder/checkpoints Decoder/data                      -> 0 lines
-git diff --stat .../09-decoder-metrics.json                                  -> 240 insertions(+), 0 deletions
+git diff --stat .../09-decoder-metrics.json                                  -> 392 insertions(+), 0 deletions
 ```
 
 Both of the plan's inline verify blocks print `OK`. Every acceptance grep passes, including the
@@ -398,41 +474,55 @@ evidence contains none of `photodiode`, `24.7`, `226/226`, the Neural Engine acr
   +0.5069 attached and with no error bar claimed. It must never be set against the 0.633-0.838 range
   from arXiv 2406.06626 as a comparison in either direction: different bin width, different readout
   class, different protocol. It is not a cross-session transfer result and must not be quoted as
-  one.
+  one; the rotation below is what qualifies it.
+- **Open constraint on the rotation numbers:** +0.2363, +0.0718, -0.9257 and -6.9907 are a
+  READOUT-only leave-one-session-out result with the encoder held fixed and pretrained on all four
+  sessions. They may be quoted as an UPPER bound on cross-session velocity decoding and never as a
+  measurement of it, and never alongside Plan 09-06d's LOSO co-bps values as though the two
+  rotations ran the same experiment: that one retrains the encoder, this one does not, and co-bps
+  and R2 do not share units. Quote the fold list or the median (-0.4270), not the mean (-1.9021),
+  which one fold dominates.
 
 ## Status rationale
 
-`PARTIAL`, not `PASS`. Both tasks executed and committed, every verification command is green, the
-success criteria are met, and no number was clamped or re-rolled. Four flagged gaps prevent a clean
-`PASS`, all four recorded in `deferred-items-09-07.md`:
+`PARTIAL`, not `PASS`. Both tasks executed and committed, the coordinator's follow-up rotation
+executed and committed, every verification command is green, the success criteria are met, and no
+number was clamped or re-rolled. Five flagged gaps prevent a clean `PASS`:
 
-1. **No cross-session velocity readout was measured**, so only the within-pool half of this phase's
-   central question has a velocity answer.
-2. **No error bar exists anywhere in the artifact**, and the held-out bins are autocorrelated, so
-   the reported precision is not established.
-3. **The per-session spread has a suggestive but unestablished explanation**: one of four sessions
+1. **No error bar exists anywhere in the artifact**, and the held-out bins are autocorrelated, so
+   the reported precision is not established. This now matters more, not less: the rotation's
+   sample std is 3.4311 across four folds.
+2. **The collapsed rotation fold has no established cause**, and the obvious diagnostic was
+   deliberately not run because it would be tuning to rescue a bad number.
+3. **The rotation is readout-only**, so it bounds cross-session performance from above rather than
+   measuring it. The encoder rotation that would measure it is a multi-hour run.
+4. **The per-session spread has a suggestive but unestablished explanation**: one of four sessions
    has a measured drift figure.
-4. **The lag interpretation is untested**, though the alignment question it raises is answered by
+5. **The lag interpretation is untested**, though the alignment question it raises is answered by
    measurement.
+
+Deferred item 1, the absence of any cross-session velocity number, was the largest gap at first
+writing and is now closed.
 
 ## Self-Check: PASSED
 
 Files claimed created, verified present on disk:
 
-- `Decoder/scripts/fit_velocity_real.py` FOUND (916 lines)
-- `.planning/phases/09-.../09-velocity-evidence.md` FOUND (362 lines)
-- `.planning/phases/09-.../deferred-items-09-07.md` FOUND (77 lines)
+- `Decoder/scripts/fit_velocity_real.py` FOUND (1080 lines)
+- `.planning/phases/09-.../09-velocity-evidence.md` FOUND (469 lines)
+- `.planning/phases/09-.../deferred-items-09-07.md` FOUND (82 lines)
 - `.planning/phases/09-.../09-07-SUMMARY.md` FOUND
-- `.planning/phases/09-.../09-decoder-metrics.json` FOUND (modified, 240 insertions, 0 deletions)
+- `.planning/phases/09-.../09-decoder-metrics.json` FOUND (modified, 392 insertions, 0 deletions)
 - `Decoder/checkpoints/ndt1_real_with_velocity.pt` FOUND (gitignored, sha256 verified)
 
-Commits claimed, verified in `git log 06e6fee..HEAD`: `ba47798` FOUND, `e9f3760` FOUND,
-`99c48d3` FOUND.
+Commits claimed, verified in `git log 06e6fee..HEAD`: `ba47798`, `e9f3760`, `99c48d3`, `b9c0a48`,
+`b4a2edb`, `07ff695`, `bba51de` all FOUND.
 
 Commit ORDERING verified, which is this task's load-bearing provenance claim:
 `git merge-base --is-ancestor ba47798 e9f3760` exits 0, so the four selection rules were committed
-before the commit carrying the numbers they produced. The only execution before `ba47798` was a
-3000-bin `--smoke` wiring check writing to gitignored scratch paths.
+before the commit carrying the numbers they produced, and `git merge-base --is-ancestor b4a2edb
+07ff695` exits 0 for the rotation's R5 rules. The only execution before either was a 3000-bin
+`--smoke` wiring check writing to gitignored scratch paths.
 
 Number provenance verified rather than trusted: every table in `09-velocity-evidence.md` was
 rendered from the committed `09-decoder-metrics.json` by script rather than transcribed, and the
@@ -442,7 +532,14 @@ measured (1.9 s to load the four sessions, 0.7 s to hash their 1.77 GB) rather t
 the gap between timestamps.
 
 The shipped checkpoint was reloaded from disk and its encoder compared tensor by tensor against
-`ndt1_real_pooled.pt`: 101 of 101 `torch.equal`, 0 missing, 0 different.
+`ndt1_real_pooled.pt`: 101 of 101 `torch.equal`, 0 missing, 0 different. The rotation did not
+rewrite it: `--loso` saves no checkpoint.
+
+Every rotation number transcribed into `09-velocity-evidence.md` was checked back against
+`velocity.loso` in the committed JSON by script, all 26 matching. The rotation added exactly three
+keys (`loso`, `loso_summary`, `wall_clock_loso_s`) and changed no previously published value, which
+was verified by diffing the velocity block against its committed predecessor rather than by reading
+the patch.
 
 Files this plan did NOT touch, as required by its file discipline: `kinematics.py`, `qc.py`,
 `sessions.py`, `train.py`, `loss.py`, `velocity_head.py`, `model_ane.py`, `STATE.md`, `ROADMAP.md`,
