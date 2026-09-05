@@ -17,6 +17,7 @@ from typing import Any
 
 import numpy as np
 import pytest
+
 from ndt1.replay_export import (
     EXPORT_SCHEMA_VERSION,
     N_CHANNELS,
@@ -73,13 +74,26 @@ def _sidecar(n_bins: int = _N_BINS, **overrides: Any) -> dict[str, Any]:
     return sidecar
 
 
-def _write(tmp_path: Path, **overrides: Any) -> tuple[Path, Path, dict[str, np.ndarray]]:
+def _write(tmp_path: Path) -> tuple[Path, Path, dict[str, np.ndarray]]:
     """Write a valid export into `tmp_path`; return `(sidecar_path, binary_path, arrays)`."""
     arrays = _arrays()
     binary = tmp_path / "tiny.replay.bin"
     sidecar_path = tmp_path / "tiny.replay.json"
-    write_export(binary, sidecar_path, sidecar=_sidecar(**overrides), **arrays)
+    write_export(binary, sidecar_path, sidecar=_sidecar(), **arrays)
     return sidecar_path, binary, arrays
+
+
+def _tamper(sidecar_path: Path, **overrides: Any) -> None:
+    """Rewrite a written sidecar's header fields in place.
+
+    The refusals below are tested against a sidecar that is wrong ON DISK, which is the threat
+    (a hand-edited, truncated or substituted export), rather than against a writer talked into
+    emitting one -- `build_sidecar` takes those fields from module constants, so the writer cannot
+    emit them wrong on its own.
+    """
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    sidecar.update(overrides)
+    sidecar_path.write_text(json.dumps(sidecar, sort_keys=True, indent=2) + "\n", encoding="utf-8")
 
 
 # ------------------------------------------------------------------------------ the binary layout
@@ -158,9 +172,7 @@ def test_read_export_rejects_a_truncated_binary_naming_both_sizes(tmp_path: Path
 def test_read_export_refuses_to_size_an_allocation_from_the_sidecar(tmp_path: Path) -> None:
     """A sidecar declaring 10^9 bins over a 3 KB file raises on the size check, not on memory."""
     sidecar_path, _, _ = _write(tmp_path)
-    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
-    sidecar["n_bins"] = 10**9
-    sidecar_path.write_text(json.dumps(sidecar, sort_keys=True, indent=2) + "\n", encoding="utf-8")
+    _tamper(sidecar_path, n_bins=10**9)
 
     with pytest.raises(ValueError) as excinfo:
         read_export(sidecar_path)
@@ -180,7 +192,8 @@ def test_the_size_check_precedes_the_read() -> None:
 
 def test_read_export_rejects_a_schema_bump(tmp_path: Path) -> None:
     """A future layout is refused, never guessed at: the record layout IS the schema."""
-    sidecar_path, _, _ = _write(tmp_path, schema_version=EXPORT_SCHEMA_VERSION + 1)
+    sidecar_path, _, _ = _write(tmp_path)
+    _tamper(sidecar_path, schema_version=EXPORT_SCHEMA_VERSION + 1)
     with pytest.raises(ValueError) as excinfo:
         read_export(sidecar_path)
     assert "schema_version" in str(excinfo.value)
@@ -199,7 +212,8 @@ def test_read_export_rejects_an_impossible_header(
     tmp_path: Path, key: str, value: int, token: str
 ) -> None:
     """Non-positive counts, a wrong channel width and a wrong record size are all refused."""
-    sidecar_path, _, _ = _write(tmp_path, **{key: value})
+    sidecar_path, _, _ = _write(tmp_path)
+    _tamper(sidecar_path, **{key: value})
     with pytest.raises(ValueError) as excinfo:
         read_export(sidecar_path)
     assert token in str(excinfo.value)
@@ -210,7 +224,8 @@ def test_read_export_rejects_a_source_sha256_that_is_not_64_lowercase_hex(
     tmp_path: Path, digest: str
 ) -> None:
     """T-10-02-02: a sidecar naming bytes that were never verified is an unverifiable claim."""
-    sidecar_path, _, _ = _write(tmp_path, source_sha256=digest)
+    sidecar_path, _, _ = _write(tmp_path)
+    _tamper(sidecar_path, source_sha256=digest)
     with pytest.raises(ValueError) as excinfo:
         read_export(sidecar_path)
     assert "source_sha256" in str(excinfo.value)
@@ -268,8 +283,10 @@ def test_read_export_verifies_the_binary_digest_on_request(tmp_path: Path) -> No
 
 def test_workspace_from_cursor_squares_the_larger_span_and_contains_every_sample() -> None:
     """10-PREREGISTRATION section 3: a square box on the larger span, 30x30, half-cell radius."""
-    angle = np.linspace(0.0, 2.0 * np.pi, 512)
-    planar_cm = np.stack([3.0 * np.cos(angle), 2.0 * np.sin(angle)], axis=1)  # 60 mm by 40 mm
+    # Explicit extremes rather than a sampled curve: 60 mm of x excursion, 40 mm of y.
+    planar_cm = np.array(
+        [[-3.0, -2.0], [3.0, 2.0], [0.0, 0.0], [1.5, -1.0], [-2.25, 0.75]], dtype=np.float64
+    )
 
     box = workspace_from_cursor(planar_cm)
 
@@ -309,6 +326,11 @@ def test_the_sidecar_carries_the_verbatim_open_loop_disclosure(tmp_path: Path) -
     )
 
 
+# Everything ABOVE the marker line below is scanned by the guard test that follows. The guard
+# itself is excluded, because it has to name the patterns it forbids in order to forbid them.
+# GUARD SPLIT MARKER: do not move or reword this line
+
+
 def test_no_number_is_a_measured_threshold_assertion() -> None:
     """D-09: this module gates shape and provenance, never a measured value against a bar.
 
@@ -335,6 +357,3 @@ def test_no_number_is_a_measured_threshold_assertion() -> None:
         f"D-09: this module compares a measured value against a bar: {offenders}. Schema tests "
         f"gate shape and provenance; measured numbers belong in the committed evidence artifacts."
     )
-
-
-# GUARD SPLIT MARKER: do not move or reword this line
