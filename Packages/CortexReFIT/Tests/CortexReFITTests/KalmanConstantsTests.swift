@@ -6,9 +6,40 @@
 // stay zero (the observability resolution, 07-RESEARCH §2.3), H must select velocity only, and A
 // must carry the constant-acceleration `dt` coupling. A code-gen regression that breaks any of
 // these fails CI (threat T-07-01-02).
+//
+// Plan 10-03 (RD-07) adds two more: the provenance header must record a REAL-data noise fit, and
+// the gain actually committed to that file must be Schur-stable. `import Foundation` is fine here —
+// only `Sources/CortexReFIT` is hot-path policed, and these two tests read a file and take a
+// spectral-radius estimate, neither of which happens at runtime.
+import Foundation
 import Testing
 
 @testable import CortexReFIT
+
+/// Row-major matrix product for the small fixed-size stability check below.
+///
+/// In the TEST target on purpose: `Sources/CortexReFIT` is hot-path policed and must not grow
+/// arithmetic helpers it never uses at runtime.
+private func matMul(_ lhs: [[Double]], _ rhs: [[Double]]) -> [[Double]] {
+  let rows = lhs.count
+  let inner = rhs.count
+  let cols = rhs[0].count
+  var out = [[Double]](repeating: [Double](repeating: 0.0, count: cols), count: rows)
+  for i in 0 ..< rows {
+    for j in 0 ..< cols {
+      var sum = 0.0
+      for p in 0 ..< inner { sum += lhs[i][p] * rhs[p][j] }
+      out[i][j] = sum
+    }
+  }
+  return out
+}
+
+/// The induced infinity norm: the largest absolute row sum. Submultiplicative, which is what makes
+/// the Gelfand estimate below an upper bound on the spectral radius.
+private func maxAbsRowSum(_ matrix: [[Double]]) -> Double {
+  matrix.map { $0.reduce(0.0) { $0 + abs($1) } }.max() ?? 0.0
+}
 
 // The CortexReFIT library target sets `.defaultIsolation(MainActor.self)`, so its statics are
 // MainActor-isolated; the suite adopts the same isolation to read them synchronously.
@@ -76,6 +107,89 @@ struct KalmanConstantsTests {
     #expect(KalmanConstants.R[1].x == 0)
     #expect(KalmanConstants.R[0].x > 0)
     #expect(KalmanConstants.R[1].y > 0)
+  }
+
+  /// RD-07 / SC#1a: the constants must be fit from REAL held-out Indy residuals, not the documented
+  /// default. `Decoder/scripts/fit_kalman_gain.py`'s data-present branch was a stub through Phase 9
+  /// (both branches returned `default_noise`), so "the script ran" is not evidence the fit happened.
+  /// The generated provenance header IS the evidence, so this test reads it as a string.
+  ///
+  /// The `R=diag(` / `R_offdiag=` pair pins the diagonal-R resolution: 10-PREREGISTRATION section 4
+  /// step 3 fixes the filter's R as the DIAGONAL of the residual covariance because the measurement
+  /// model is per-axis, and the off-diagonal is published rather than discarded. That is why
+  /// `noiseProvenanceShapes` below can keep requiring `R[0].y == 0` unchanged: the two agree by
+  /// pre-registration, not by coincidence, and a general 2x2 R could not land here silently.
+  @Test("Provenance header records a real-data noise fit, not the default")
+  func noiseSourceIsRealData() throws {
+    let url = URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent() // CortexReFITTests
+      .deletingLastPathComponent() // Tests
+      .deletingLastPathComponent() // CortexReFIT (package root)
+      .appendingPathComponent("Sources/CortexReFIT/KalmanConstants.swift")
+    let source = try String(contentsOf: url, encoding: .utf8)
+    #expect(source.contains("noise source = indy-heldout"))
+    #expect(!source.contains("noise source = default"))
+    #expect(source.contains("grid_units_per_cm"))
+    #expect(source.contains("session=indy_20160630_01"))
+    #expect(source.contains("R=diag("))
+    #expect(source.contains("R_offdiag="))
+  }
+
+  /// RD-07 / SC#1b: the SHIPPED gain must be Schur-stable. `steady_state_gain` asserts this in
+  /// Python during the fit, and `Decoder/tests/test_kalman_gain.py` checks a representative noise
+  /// pair — but nothing checked the numbers actually committed to this file. This does.
+  ///
+  /// RESTRICTED TO THE OBSERVABLE BLOCK (state indices 2...5 = vx, vy, ax, ay) on purpose. K's
+  /// position rows are zero by construction, so the full 6x6 closed loop keeps A's position
+  /// integrators and has spectral radius exactly 1 BY DESIGN; a full-matrix test would fail on a
+  /// correct gain. Indices 2...5 are the block `steady_state_gain` solves.
+  ///
+  /// The assertion is on `‖M^n‖^(1/n)`, not on an eigen-decomposition: Gelfand's formula makes that
+  /// an UPPER BOUND on rho(M) for any submultiplicative norm, so `< 1` certifies stability, and
+  /// `rho <= ‖M^n‖^(1/n)` means an unstable gain can never pass. Matrix powers need no LAPACK, no
+  /// Accelerate import and no complex arithmetic, so the test stays dependency-free.
+  ///
+  /// A raw `‖M^64‖ < 1e-3` bar was considered and rejected: this closed loop is strongly
+  /// non-normal, so its inf-norm sits ABOVE 1 at n = 1 and only decays geometrically later (for the
+  /// Phase-7 default constants, rho = 0.9802 but ‖M^64‖ = 0.87). Such a bar would redden the build
+  /// on a perfectly stable gain, which is the false-red failure 10-PREREGISTRATION section 13
+  /// forbids. The nth-root form has no tuned constant in it at all.
+  @Test("The shipped closed-loop gain is Schur-stable on the observable block")
+  func shippedGainIsSchurStable() {
+    var m = observableClosedLoop() // 4x4
+    for _ in 0 ..< 6 { m = matMul(m, m) } // M^64
+    let norm64 = maxAbsRowSum(m)
+    for _ in 0 ..< 6 { m = matMul(m, m) } // M^4096
+    let norm4096 = maxAbsRowSum(m)
+
+    let spectralBound = pow(norm4096, 1.0 / 4096.0)
+    #expect(
+      spectralBound < 1.0,
+      "rho(M) <= ‖M^4096‖^(1/4096) = \(spectralBound); the shipped gain is not Schur-stable"
+    )
+    #expect(
+      norm4096 < norm64,
+      "‖M^n‖ is not decaying (‖M^64‖ = \(norm64), ‖M^4096‖ = \(norm4096)); rho(M) >= 1"
+    )
+  }
+
+  /// The 4x4 observable-block closed loop `(I - K_obs * H_obs) * A_obs`, read from the constants AS
+  /// SHIPPED. State indices 2...5 are `[vx, vy, ax, ay]`; H's meaningful columns are the same four.
+  private func observableClosedLoop() -> [[Double]] {
+    let aObs = (2 ... 5).map { row in (2 ... 5).map { col in Double(KalmanConstants.A[row][col]) } }
+    let hObs = (0 ... 1).map { row in (2 ... 5).map { col in Double(KalmanConstants.H[row][col]) } }
+    let kObs = (2 ... 5).map { row in
+      [Double(KalmanConstants.K[row].x), Double(KalmanConstants.K[row].y)]
+    }
+    var correction = [[Double]](repeating: [Double](repeating: 0.0, count: 4), count: 4)
+    for i in 0 ..< 4 {
+      for j in 0 ..< 4 {
+        var kh = 0.0
+        for m in 0 ..< 2 { kh += kObs[i][m] * hObs[m][j] }
+        correction[i][j] = (i == j ? 1.0 : 0.0) - kh
+      }
+    }
+    return matMul(correction, aObs)
   }
 
   /// The package namespace metadata matches the 6-DOF / 2-measurement contract.

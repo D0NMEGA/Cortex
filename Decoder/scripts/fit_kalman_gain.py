@@ -13,30 +13,50 @@ This is the offline half of the Phase-7 ReFIT-Kalman filter (CONTEXT D-02 / D-15
      owns the matching ``KalmanConstants`` Swift struct layout — this script writes literal values
      into that shape).
 
-Q/R fitting recipe (07-RESEARCH §3.2):
-  * **R** (2×2): covariance of the decoder residual ``e_k = z_decoded − v_true`` on a held-out
-    Indy split — how noisy the NDT1 velocity readout is.
-  * **Q** (4×4 on ``[v,a]``): a discrete **white-noise-jerk** model, ``σ_jerk²`` scaled from the
-    empirical distribution of true-acceleration increments on Indy.
+Q/R fitting recipe (07-RESEARCH §3.2, units fixed by 10-PREREGISTRATION §4 and §5):
+  * **R** (2×2): covariance of the decoder residual ``e_k = z_decoded − v_true`` on the held-out
+    chronological tail of the locked session — how noisy the NDT1 velocity readout is. Computed in
+    **grid-units/s**, the units the Swift filter runs in, NOT cm/s: the two differ by
+    ``grid_units_per_cm²``, which for this workspace is a factor of about 3400.
+  * **Q** (4×4 on ``[v,a]``): a discrete **white-noise-jerk** model whose ``σ_jerk²`` is the
+    variance of the second difference of the true binned velocity on the same held-out rows,
+    also in grid units.
+
+RD-07 / Plan 10-03 note. Through Phase 9 this script could NOT fit from data: both branches of
+``fit_noise`` returned ``default_noise``, so the committed header said ``noise source = default``
+even when ``--data-dir`` pointed at the real sessions (10-RESEARCH Correction 1). The data-present
+branch below is the implementation of that missing path; the generated provenance header, not the
+fact that the script ran, is the evidence the fit happened (10-RESEARCH Pitfall 1).
+
+The decoder whose residual is measured is the SHIPPED one: the Phase-9 pooled encoder plus the
+pooled ridge readout stored in ``Decoder/checkpoints/ndt1_real_with_velocity.pt``, applied to the
+held-out tail this readout never saw. That is the same decoder and the same rows whose held-out R2
+``09-decoder-metrics.json`` publishes, so R describes the noise of the decoder that actually ships
+rather than of a readout re-fit here and never deployed.
 
 When the held-out Indy artifacts are absent (the gitignored ``Decoder/data/`` is not present),
 the script does NOT crash: it falls back to the documented default Q/R below, prints a clear note,
 and records the seed/source in the generated file's header (mirrors the bench "skip cleanly when
-artifacts absent" idiom; threat T-07-01-03 — the fallback is deterministic). Everything is seeded
-(``--seed``, default 0); there is no unseeded RNG.
+artifacts absent" idiom; threat T-07-01-03 — the fallback is deterministic). A data dir that EXISTS
+but is missing the session or the checkpoints raises instead of falling back: a silent fallback
+there is precisely the defect Plan 10-03 exists to remove. Everything is seeded (``--seed``,
+default 0); there is no unseeded RNG.
 
 Usage::
 
     uv run --project Decoder --extra dev python Decoder/scripts/fit_kalman_gain.py
-    uv run --project Decoder --extra dev python Decoder/scripts/fit_kalman_gain.py \\
-        --data-dir <dir> --seed 0
+    uv run --project Decoder python Decoder/scripts/fit_kalman_gain.py \\
+        --data-dir Decoder/data --session indy_20160630_01 \\
+        --out Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift
 
 No bare/blind ``except`` (ruff ``BLE`` gate): only the specific data-absent path is branched on a
-``Path.exists`` check, and the model-residual loader (a future Plan-03 hook) raises explicit errors.
+``Path.exists`` check, the optional Plan 10-02 exporter import is guarded on ``ImportError`` alone,
+and every other failure raises an explicit error.
 """
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import textwrap
 from dataclasses import dataclass
@@ -76,6 +96,39 @@ _DEFAULT_SIGMA_JERK_SQ: float = 1.0
 #: Default per-axis decoder velocity-residual variance (grid-units/s)² — the measurement-noise floor
 #: (a documented stand-in for the held-out ``cov(z_decoded − v_true)`` diagonal; 07-RESEARCH §3.2).
 _DEFAULT_R_VAR: float = 0.25
+
+# ---------------------------------------------------------------------------
+# The held-out residual fit (RD-07; conventions pre-registered in 10-PREREGISTRATION §3, §4, §5
+# BEFORE this code ran, so none of them could be chosen after seeing a number).
+
+#: Millimetres per centimetre, and therefore the cursor-frame/finger-frame relation: the session's
+#: own ``cursor_pos`` is ``10 × planar_cm`` to R² 0.99997 with an offset under 0.03 mm
+#: (10-RESEARCH "the cursor frame is the finger frame times ten"). Not a fitted constant.
+GRID_MM_PER_CM: float = 10.0
+
+#: The replayed session, locked by CONTEXT D-08 before any Phase-10 outcome was known.
+DEFAULT_SESSION: str = "indy_20160630_01"
+
+#: Neural-to-kinematic lag in 20 ms bins, and the ridge strength the SHIPPED readout was fit at.
+#: Both are Phase-9 outcomes locked by 10-PREREGISTRATION §2; they are re-read from
+#: ``09-decoder-metrics.json`` at fit time so the emitted header cannot record a lag or a lambda
+#: the deployed readout was not actually fit with.
+LAG_BINS: int = 1
+RIDGE_LAMBDA: float = 0.1
+
+#: Millimetres of disagreement tolerated between this module's §3 arithmetic and Plan 10-02's
+#: exporter. Both are exact bounding-box maxima over the same float64 track, so anything above
+#: float noise means the two definitions of the box have genuinely diverged.
+_SIDE_MM_TOL: float = 1e-6
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+_PHASE_09_METRICS = (
+    _REPO_ROOT
+    / ".planning"
+    / "phases"
+    / "09-real-data-ingest-ndt1-retrain-zenodo-3854034"
+    / "09-decoder-metrics.json"
+)
 
 
 @dataclass(frozen=True)
@@ -151,22 +204,425 @@ def default_noise(seed: int) -> NoiseFit:
     return NoiseFit(q_obs=q_obs, r=r, source="default", seed=seed, note=note)
 
 
-def fit_noise(data_dir: Path, seed: int) -> NoiseFit:
-    """Fit Q/R from held-out Indy residuals if present, else fall back to documented defaults.
+def to_grid_units(v_cm_s: np.ndarray, side_mm: float) -> np.ndarray:
+    """Convert a velocity from cm/s to GRID-UNITS/s (10-PREREGISTRATION §4 step 2).
 
-    Data-grounded path (when ``data_dir`` exists with downloaded Indy ``.mat`` sessions): fit
-    **R** from the decoder velocity residual covariance and **Q** from the empirical jerk
-    distribution (07-RESEARCH §3.2). Surfacing the cursor/finger behavior arrays + the decoded
-    velocity is a Plan-03 (BPS-harness / D-11 replay) hook; until that lands, an existing but
-    un-wired data dir still falls back to the seeded default (and says so) rather than fabricating
-    a residual — honesty over a fake number.
+    One grid unit spans the whole ``side_mm``-millimetre workspace box, and a centimetre is
+    :data:`GRID_MM_PER_CM` millimetres, so the scale factor is ``k = 10.0 / side_mm`` grid-units per
+    centimetre. R and Q are fit in these units because the Swift filter runs in them; a residual fit
+    in cm/s and normalised afterwards is wrong by ``k²``.
+
+    Args:
+        v_cm_s: any array of velocities in centimetres per second.
+        side_mm: the workspace box side in millimetres (see :func:`workspace_side_mm`).
+
+    Returns:
+        The same array in grid-units per second, as float64.
+
+    Raises:
+        ValueError: if ``side_mm`` is not positive.
+    """
+    if not float(side_mm) > 0.0:
+        raise ValueError(f"side_mm must be positive; got {side_mm}")
+    return np.asarray(v_cm_s, dtype=np.float64) * (GRID_MM_PER_CM / float(side_mm))
+
+
+def residual_covariance(decoded: np.ndarray, true: np.ndarray) -> np.ndarray:
+    """Return the 2×2 sample covariance of ``decoded − true`` (mean-centered, ``ddof=1``).
+
+    This is R before the diagonal is taken. 10-PREREGISTRATION §4 step 3 says ``cov``, i.e. about
+    the mean, so a systematic decoder bias does NOT inflate R; the residual mean is published in the
+    provenance note and in the evidence artifact instead of being folded in silently.
+
+    Args:
+        decoded: ``(n, 2)`` decoded velocity.
+        true: ``(n, 2)`` true velocity on the same rows and in the same units.
+
+    Returns:
+        ``(2, 2)`` covariance of the residual.
+
+    Raises:
+        ValueError: on mismatched shapes, a non-2-column array, or fewer than 2 rows.
+    """
+    decoded = np.asarray(decoded, dtype=np.float64)
+    true = np.asarray(true, dtype=np.float64)
+    if decoded.shape != true.shape:
+        raise ValueError(
+            f"decoded {decoded.shape} and true {true.shape} must be the same shape; a mismatch "
+            f"means the two tracks are not row-aligned and the residual would pair unrelated bins"
+        )
+    if decoded.ndim != 2 or decoded.shape[1] != MEAS_DIM:
+        raise ValueError(f"expected (n, {MEAS_DIM}) velocity arrays; got {decoded.shape}")
+    if decoded.shape[0] < 2:
+        raise ValueError(f"need at least 2 rows for a sample covariance; got {decoded.shape[0]}")
+    resid = decoded - true
+    centered = resid - resid.mean(axis=0)
+    return centered.T @ centered / float(resid.shape[0] - 1)
+
+
+def jerk_variance(true_grid_s: np.ndarray, dt: float = DT) -> float:
+    """Return ``σ_jerk²`` implied by a velocity track: the variance of ``diff²(v) / dt²``.
+
+    The filter's ``A`` is constant-acceleration, so jerk is the second derivative of velocity and
+    its discrete estimate is ``(v[k+2] − 2v[k+1] + v[k]) / dt²`` in grid-units/s³. Averaged over the
+    two axes because :func:`white_noise_jerk_q` takes one isotropic scalar (10-PREREGISTRATION §5).
+
+    Args:
+        true_grid_s: ``(n, 2)`` true velocity in GRID-UNITS/s (convert first — the units matter).
+        dt: tick in seconds.
+
+    Returns:
+        The mean per-axis jerk variance, in ``(grid-units/s³)²``.
+
+    Raises:
+        ValueError: on a non-2-column array or fewer than 3 rows.
+    """
+    velocity = np.asarray(true_grid_s, dtype=np.float64)
+    if velocity.ndim != 2 or velocity.shape[1] != MEAS_DIM:
+        raise ValueError(f"expected (n, {MEAS_DIM}) velocity array; got {velocity.shape}")
+    if velocity.shape[0] < 3:
+        raise ValueError(f"a second difference needs at least 3 rows; got {velocity.shape[0]}")
+    jerk = np.diff(velocity, n=2, axis=0) / (float(dt) * float(dt))
+    return float(np.mean(np.var(jerk, axis=0)))
+
+
+def closed_loop_rho(q_obs: np.ndarray, r: np.ndarray) -> float:
+    """Spectral radius of ``(I − K_obs·H_obs)·A_obs`` on the OBSERVABLE ``[vx,vy,ax,ay]`` block.
+
+    Restricted to the observable block on purpose (review D-7): K's position rows are zero by
+    construction, so the full 6×6 closed loop keeps ``A``'s position integrators and has spectral
+    radius exactly 1 BY DESIGN — a full-matrix stability check would fail on a correct gain. Indices
+    2..5 are the block :func:`~ndt1.kalman_gain.steady_state_gain` itself solves.
+
+    :func:`~ndt1.kalman_gain.observable_gain` already refuses to return a non-Schur gain, so this
+    function exists to RECORD the number in the generated header rather than to re-check it: a
+    string in a committed file is auditable months later, a transient assertion is not.
+
+    Args:
+        q_obs: ``(4, 4)`` process-noise covariance on ``[vx,vy,ax,ay]``.
+        r: ``(2, 2)`` measurement-noise covariance on ``(vx, vy)``.
+
+    Returns:
+        ``max|λ|`` of the closed-loop observable block.
+
+    Raises:
+        ValueError: propagated from the solver when the pair does not stabilize.
+    """
+    a_obs = full_transition()[2:6, 2:6]
+    h_obs = full_measurement()[:, 2:6]
+    k_obs = steady_state_gain(q_obs, r)[2:6, :]
+    closed = (np.eye(OBS_DIM) - k_obs @ h_obs) @ a_obs
+    return float(np.max(np.abs(np.linalg.eigvals(closed))))
+
+
+def workspace_side_mm(planar_cm: np.ndarray) -> float:
+    """Side of the pre-registered ``cursor_bbox_square`` workspace box, in millimetres.
+
+    10-PREREGISTRATION §3, verbatim: ``cursor_mm = 10 × planar_cm``, take the axis-aligned bounding
+    box over the WHOLE session, and use ``side_mm = max(width, height)``. Square, so one grid unit
+    is the same physical distance on both axes.
+
+    Args:
+        planar_cm: ``(n, 2)`` cursor/finger track in centimetres, as ``load_session`` returns it.
+
+    Returns:
+        The longer bounding-box side, in millimetres.
+
+    Raises:
+        ValueError: on a non-2-column array or an empty track.
+    """
+    planar = np.asarray(planar_cm, dtype=np.float64)
+    if planar.ndim != 2 or planar.shape[1] != 2:
+        raise ValueError(f"expected an (n, 2) planar track; got {planar.shape}")
+    if planar.shape[0] == 0:
+        raise ValueError("cannot bound an empty track")
+    cursor_mm = GRID_MM_PER_CM * planar
+    spans = cursor_mm.max(axis=0) - cursor_mm.min(axis=0)
+    return float(spans.max())
+
+
+def _resolve_side_mm(planar_cm: np.ndarray) -> tuple[float, str]:
+    """``(side_mm, source_label)``, cross-checked against Plan 10-02's exporter when it is present.
+
+    :func:`workspace_side_mm` implements 10-PREREGISTRATION §3 directly, so this script does not
+    depend on Plan 10-02 having landed. When ``ndt1.replay_export`` IS importable, both are computed
+    and a disagreement RAISES: two implementations of the same pre-registered box that quietly
+    diverge would normalise R by different constants, and the difference is a factor of ``k²``.
+    """
+    local = workspace_side_mm(planar_cm)
+    try:
+        from ndt1.replay_export import workspace_from_cursor
+    except ImportError:
+        return local, "10-PREREGISTRATION-section-3 (ndt1.replay_export not importable)"
+    exported = float(workspace_from_cursor(planar_cm)["side_mm"])
+    if abs(exported - local) > _SIDE_MM_TOL:
+        raise ValueError(
+            f"ndt1.replay_export.workspace_from_cursor reports side_mm={exported!r} but the "
+            f"10-PREREGISTRATION section 3 arithmetic gives {local!r}; the two definitions of the "
+            f"cursor_bbox_square box have diverged and R would be normalised by the wrong constant"
+        )
+    return exported, "ndt1.replay_export.workspace_from_cursor (cross-checked against section 3)"
+
+
+def _phase09_velocity_record() -> dict[str, object]:
+    """The Phase-9 ``velocity`` metrics block, or ``{}`` when the JSON is absent.
+
+    Read so the header's ``lag_bins`` and ``lambda`` describe how the SHIPPED readout was actually
+    fit rather than restating a constant, and so the checkpoint whose residual is measured can be
+    matched against the one that produced the published held-out R2.
+    """
+    if not _PHASE_09_METRICS.is_file():
+        return {}
+    payload = json.loads(_PHASE_09_METRICS.read_text(encoding="utf-8"))
+    record = payload.get("velocity", {})
+    return record if isinstance(record, dict) else {}
+
+
+def _dig(record: dict[str, object], *keys: str) -> object:
+    """Nested lookup returning ``None`` at the first missing or non-dict level.
+
+    The metrics JSON is external input to this script, so every level is checked rather than
+    assumed; a schema change upstream should degrade the provenance print, not crash the fit.
+    """
+    current: object = record
+    for key in keys:
+        if not isinstance(current, dict):
+            return None
+        current = current.get(key)
+    return current
+
+
+@dataclass(frozen=True)
+class HeldOutResidual:
+    """The held-out decoded/true velocity pair R is fit from, with the provenance of both.
+
+    Frozen: this record is the audit trail behind every number the generated header publishes, so a
+    caller that needs a variant builds a new one rather than mutating this.
+    """
+
+    session_id: str
+    session_sha256: str
+    encoder_sha256: str
+    velocity_sha256: str
+    checkpoint_label: str
+    decoded_cm_s: np.ndarray  # (n, 2) the shipped readout's output on the held-out tail
+    true_cm_s: np.ndarray  # (n, 2) the binned true velocity on the same rows
+    side_mm: float
+    side_mm_source: str
+    lag_bins: int
+    ridge_lambda: float
+    heldout_r2_pooled: float
+
+
+def heldout_decoded_and_true(data_dir: Path, session_id: str) -> HeldOutResidual:
+    """Decode the held-out chronological tail with the SHIPPED readout and return it beside truth.
+
+    Every numeric step is Plan 09-07's, imported from ``fit_velocity_real`` rather than restated:
+    the stride-1 BC1S window stack, the encoder forward pass, the chronological split and the lag
+    alignment. Reimplementing any of them is the fastest way to introduce an off-by-one against the
+    committed held-out R2. Those helpers are module-private by naming convention only; importing
+    them is deliberately preferred over copying their bodies, which is what would actually drift.
+
+    The readout is NOT re-fit here. ``ndt1_real_with_velocity.pt`` holds the pooled ridge head that
+    produced the published R2, and the tail rows below were never in its fit, so the residual is the
+    held-out error of the decoder that ships.
+
+    Args:
+        data_dir: directory holding the gitignored Indy ``.mat`` sessions.
+        session_id: session stem, e.g. ``indy_20160630_01``.
+
+    Returns:
+        A :class:`HeldOutResidual`.
+
+    Raises:
+        FileNotFoundError: if the session or either checkpoint is absent. This path never falls back
+            to the default: a silent fallback is the defect Plan 10-03 exists to remove.
+        ValueError: if the checkpoint on disk is not the one the Phase-9 metrics published, or if
+            the locked lag/lambda disagree with how that readout was fit.
+    """
+    # Imported here, not at module scope: the pure helpers above and the data-absent fallback must
+    # stay importable (and fast) on a checkout with no torch-heavy work to do.
+    if str(_SCRIPTS_DIR) not in sys.path:
+        sys.path.insert(0, str(_SCRIPTS_DIR))
+    import fit_velocity_real as fvr
+
+    from ndt1.data import load_session
+    from ndt1.kinematics import apply_lag, heldout_r2
+    from ndt1.model_ane import NDT1ANEWithVelocity
+    from ndt1.qc import band_violations, firing_rate_stats
+    from ndt1.real_checkpoint import (
+        REAL_ENCODER_CHECKPOINT,
+        REAL_VELOCITY_CHECKPOINT,
+        checkpoint_sha256,
+        load_real_weights_if_present,
+    )
+    from ndt1.sessions import SessionLoad
+    from ndt1.velocity_head import VELOCITY_DIM
+
+    mat = Path(data_dir) / f"{session_id}.mat"
+    if not mat.is_file():
+        raise FileNotFoundError(
+            f"no session at {mat}. The R fit reads a REAL held-out residual and will not fabricate "
+            f"one; materialize the dataset with Decoder/scripts/download_indy.py, or point "
+            f"--data-dir at a path that does not exist to take the documented default fallback."
+        )
+    for checkpoint in (REAL_ENCODER_CHECKPOINT, REAL_VELOCITY_CHECKPOINT):
+        if not checkpoint.is_file():
+            raise FileNotFoundError(
+                f"no checkpoint at {checkpoint}. Both Phase-9 checkpoints are required: the "
+                f"with-velocity one supplies the shipped readout, and the pooled encoder supplies "
+                f"the encoder digest the provenance header records."
+            )
+
+    published = _phase09_velocity_record()
+    velocity_sha = checkpoint_sha256(REAL_VELOCITY_CHECKPOINT)
+    encoder_sha = checkpoint_sha256(REAL_ENCODER_CHECKPOINT)
+    lag_bins, ridge_lambda = LAG_BINS, RIDGE_LAMBDA
+    recorded = _dig(published, "checkpoint", "sha256")
+    if isinstance(recorded, str) and recorded != velocity_sha:
+        raise ValueError(
+            f"{REAL_VELOCITY_CHECKPOINT.name} sha256 {velocity_sha[:12]} is not the "
+            f"{recorded[:12]} that 09-decoder-metrics.json published; this is not the readout "
+            f"whose held-out R2 the evidence cites, so its residual is not that decoder's"
+        )
+    recorded_lag = _dig(published, "lag_bins")
+    recorded_lambda = _dig(published, "lambda")
+    if isinstance(recorded_lag, (int, float)):
+        lag_bins = int(recorded_lag)
+    if isinstance(recorded_lambda, (int, float)):
+        ridge_lambda = float(recorded_lambda)
+    if (lag_bins, ridge_lambda) != (LAG_BINS, RIDGE_LAMBDA):
+        raise ValueError(
+            f"the shipped readout was fit at lag {lag_bins} bins / lambda {ridge_lambda}, but "
+            f"10-PREREGISTRATION section 2 locks lag {LAG_BINS} / lambda {RIDGE_LAMBDA}; the "
+            f"provenance header would record a lag and lambda the decoder was not fit with"
+        )
+
+    raw = load_session(mat)
+    binned = np.asarray(raw["binned"], dtype=np.float32)
+    stats = firing_rate_stats(binned)
+    session = SessionLoad(
+        session_id=session_id,
+        path=mat,
+        binned=binned,
+        planar_cm=np.asarray(raw["planar_cm"], dtype=np.float64),
+        t=np.asarray(raw["t"], dtype=np.float64),
+        t_start=float(raw["t_start"]),
+        t_end=float(raw["t_end"]),
+        stats=stats,
+        # Surfaced, not acted on, exactly as `available_sessions` does (D-03).
+        band_violations=band_violations(stats),
+    )
+    side_mm, side_mm_source = _resolve_side_mm(session.planar_cm)
+    print(
+        f"[fit_kalman_gain] {session_id}: {binned.shape[0]} bins, side_mm={side_mm:.4f} "
+        f"({side_mm_source}), band_violations={session.band_violations or 'none'}"
+    )
+
+    model = NDT1ANEWithVelocity(seq_len=fvr.SEQ_LEN)
+    label = load_real_weights_if_present(model, REAL_VELOCITY_CHECKPOINT)
+    if "real-data" not in label:
+        raise FileNotFoundError(
+            f"{label}: refusing to fit R on random weights, which would publish a number that "
+            f"describes no decoder at all"
+        )
+    model.eval()
+    print(f"[fit_kalman_gain] readout: {label} (shipped pooled ridge head, NOT re-fit here)")
+
+    vel_cm_s = fvr._velocity_bins(session, binned.shape[0])
+    rates = fvr._encoder_last_bin(model, binned)
+    design = fvr._split_design(session_id, binned, rates, vel_cm_s)
+    test_rates, test_vel = apply_lag(design.test_rates, design.test_vel, lag_bins)
+    _, train_vel = apply_lag(design.train_rates, design.train_vel, lag_bins)
+
+    weight = (
+        model.velocity_head.readout.weight.detach()
+        .numpy()
+        .reshape(VELOCITY_DIM, -1)
+        .astype(np.float64)
+    )
+    bias = model.velocity_head.readout.bias.detach().numpy().astype(np.float64)
+    decoded = test_rates @ weight.T + bias  # the arithmetic the 1x1 conv reproduces (Plan 09-07 R4)
+
+    scored = heldout_r2(test_vel, decoded, train_vel.mean(axis=0))
+    print(
+        f"[fit_kalman_gain] wiring check: held-out R2 pooled {scored['pooled']:+.6f} "
+        f"(vx {scored['vx']:+.6f}, vy {scored['vy']:+.6f}) on {int(scored['n'])} rows, against "
+        f"this session's own train-split mean. 09-decoder-metrics.json publishes "
+        f"{_dig(published, 'per_session', session_id, 'pooled')} for the same rows. Recorded, "
+        f"never reconciled by tuning."
+    )
+    return HeldOutResidual(
+        session_id=session_id,
+        session_sha256=fvr._sha256_of(mat),
+        encoder_sha256=encoder_sha,
+        velocity_sha256=velocity_sha,
+        checkpoint_label=label,
+        decoded_cm_s=decoded,
+        true_cm_s=np.asarray(test_vel, dtype=np.float64),
+        side_mm=side_mm,
+        side_mm_source=side_mm_source,
+        lag_bins=lag_bins,
+        ridge_lambda=ridge_lambda,
+        heldout_r2_pooled=float(scored["pooled"]),
+    )
+
+
+def _residual_note(
+    held: HeldOutResidual,
+    r_full: np.ndarray,
+    r: np.ndarray,
+    sigma_jerk_sq: float,
+    rho: float,
+    resid_grid: np.ndarray,
+) -> str:
+    """The one-line provenance the generated header carries verbatim.
+
+    ``R=diag(...)`` beside ``R_offdiag=...`` is the diagonal-R resolution made auditable from the
+    generated file alone: 10-PREREGISTRATION §4 step 3 fixes the filter's R as the diagonal because
+    the measurement model is per-axis, and the discarded off-diagonal is published rather than
+    dropped. ``resid_mean_grid_s`` is there for the same reason — R is a covariance about the mean,
+    so a decoder bias does not enter it and must therefore be visible next to it.
+    """
+    rms = np.sqrt(np.mean(resid_grid**2, axis=0))
+    mean = resid_grid.mean(axis=0)
+    return (
+        f"session={held.session_id} sha256={held.session_sha256[:12]} "
+        f"n_heldout={int(resid_grid.shape[0])} lag_bins={held.lag_bins} "
+        f"lambda={held.ridge_lambda} side_mm={held.side_mm:.4f} "
+        f"grid_units_per_cm={GRID_MM_PER_CM / held.side_mm:.8f} "
+        f"sigma_jerk_sq={sigma_jerk_sq:.6f} R=diag({r[0, 0]:.8f},{r[1, 1]:.8f}) "
+        f"R_offdiag={r_full[0, 1]:.8f} rho_closed_loop={rho:.6f} "
+        f"resid_rms_grid_s=({rms[0]:.6f},{rms[1]:.6f}) "
+        f"encoder_sha={held.encoder_sha256[:12]} velocity_sha={held.velocity_sha256[:12]} "
+        f"resid_mean_grid_s=({mean[0]:+.6f},{mean[1]:+.6f}) "
+        f"heldout_r2_pooled={held.heldout_r2_pooled:+.6f} readout=shipped_pooled_ridge "
+        f"side_mm_source={held.side_mm_source}"
+    )
+
+
+def fit_noise(data_dir: Path, seed: int, session_id: str = DEFAULT_SESSION) -> NoiseFit:
+    """Fit Q/R from the held-out Indy residual when present, else the documented default.
+
+    Data-present path (10-PREREGISTRATION §4 and §5, in order): decode the held-out chronological
+    tail with the shipped readout, convert the residual to grid-units/s, take
+    ``R = diag(cov(resid))``, take ``σ_jerk²`` from the second difference of the true velocity on
+    the same rows, and solve the gain through :func:`~ndt1.kalman_gain.steady_state_gain` — which
+    raises on a non-Schur solve, HERE, before anything is written. That raise is not caught: §5
+    says the fallback is to report it, not to silently revert to the default.
 
     Args:
         data_dir: directory expected to hold the gitignored Indy ``.mat`` sessions.
-        seed: RNG seed (recorded for reproducibility; the default path is deterministic).
+        seed: RNG seed (recorded for reproducibility; both paths are deterministic).
+        session_id: which session's held-out residual to fit (CONTEXT D-08 locks the default).
 
     Returns:
-        A :class:`NoiseFit` (``source`` is ``"default"`` on the absent/un-wired path).
+        A :class:`NoiseFit` whose ``source`` is ``"indy-heldout"`` on the data-present path and
+        ``"default"`` only when ``data_dir`` does not exist.
+
+    Raises:
+        FileNotFoundError: if ``data_dir`` exists but the session or a checkpoint does not.
+        ValueError: on a degenerate residual or a gain that does not stabilize.
     """
     if not data_dir.exists():
         print(
@@ -176,17 +632,32 @@ def fit_noise(data_dir: Path, seed: int) -> NoiseFit:
         )
         return default_noise(seed)
 
-    # Data dir exists but the residual extraction (decoded velocity vs true Indy velocity) is a
-    # Plan-03 hook (it needs the behavior arrays data.py does not yet surface). Until then we do NOT
-    # fabricate a residual: fall back to the documented default and say so plainly.
-    print(
-        f"[fit_kalman_gain] Indy data dir present ({data_dir}) but residual extraction is a "
-        f"Plan-03 hook (decoded-vs-true velocity not yet surfaced by data.py).\n"
-        f"[fit_kalman_gain] -> using documented DEFAULT Q/R (deterministic, seed={seed}) "
-        f"rather than fabricating residuals.",
-        file=sys.stderr,
-    )
-    return default_noise(seed)
+    held = heldout_decoded_and_true(Path(data_dir), session_id)
+    decoded_grid = to_grid_units(held.decoded_cm_s, held.side_mm)
+    true_grid = to_grid_units(held.true_cm_s, held.side_mm)
+    resid_grid = decoded_grid - true_grid
+
+    r_full = residual_covariance(decoded_grid, true_grid)
+    if not np.all(np.isfinite(r_full)):
+        raise ValueError(f"the held-out residual covariance is not finite: {r_full!r}")
+    # 10-PREREGISTRATION section 4 step 3: the filter's measurement model is per-axis, so R is the
+    # DIAGONAL. The off-diagonal is computed and published (see `_residual_note`), never used.
+    r = np.diag(np.diag(r_full))
+    if not np.all(np.diag(r) > 0.0):
+        raise ValueError(
+            f"R has a non-positive diagonal {np.diag(r)!r}; a degenerate measurement-noise "
+            f"covariance has no stabilizing DARE solution"
+        )
+
+    sigma_jerk_sq = jerk_variance(true_grid)
+    q_obs = white_noise_jerk_q(sigma_jerk_sq)
+    # Solve HERE so a non-Schur pair raises before any file is written (10-PREREGISTRATION §5).
+    steady_state_gain(q_obs, r)
+    rho = closed_loop_rho(q_obs, r)
+
+    note = _residual_note(held, r_full, r, sigma_jerk_sq, rho, resid_grid)
+    print(f"[fit_kalman_gain] fit on real held-out residuals: {note}")
+    return NoiseFit(q_obs=q_obs, r=r, source="indy-heldout", seed=seed, note=note)
 
 
 def _fmt_f(value: float) -> str:
@@ -242,7 +713,10 @@ def render_swift(
     header = "// KalmanConstants.swift — steady-state ReFIT-Kalman matrices (REFIT-01, D-15)."
     # Pre-wrap the provenance note into `//   ` comment lines under swiftformat's --maxwidth 120
     # (emitted swiftformat-clean by construction — no post-hoc wrapSingleLineComments needed).
-    note_lines = textwrap.wrap(fit.note, width=110)
+    # `break_on_hyphens=False`: the note is a sequence of `key=value` provenance tokens that are
+    # grepped as literals, and a wrap point inside `shipped_pooled_ridge` or a hyphenated source
+    # label would split a token across two comment lines and break that grep.
+    note_lines = textwrap.wrap(fit.note, width=110, break_on_hyphens=False)
     note_block = "\n".join(f"//   {line}" for line in note_lines)
     return f"""{header}
 //
@@ -254,6 +728,9 @@ def render_swift(
 //   dt          = {DT}  (20 ms tick, CONTEXT D-01)
 //   noise source = {fit.source}   seed = {fit.seed}
 {note_block}
+//   grid normalisation: R and Q are fit in GRID-UNITS/s using grid_units_per_cm = 10.0 / side_mm
+//   (10-PREREGISTRATION section 4, pre-registered before the fit ran). A residual fit in cm/s and
+//   normalised afterwards differs by grid_units_per_cm^2, which is large.
 //
 // Observability resolution (07-RESEARCH §2.3): the 6-DOF state [px,py,vx,vy,ax,ay] with a
 // velocity-only measurement is NOT observable — position is a pure integrator no measurement
@@ -325,6 +802,11 @@ def main(argv: list[str] | None = None) -> int:
         default=_DEFAULT_DATA_DIR,
         help="held-out Indy .mat dir (gitignored); absent -> documented default Q/R",
     )
+    parser.add_argument(
+        "--session",
+        default=DEFAULT_SESSION,
+        help="session whose held-out residual R is fit from (CONTEXT D-08 locks the default)",
+    )
     parser.add_argument("--seed", type=int, default=0, help="RNG seed (deterministic; recorded)")
     parser.add_argument(
         "--out",
@@ -336,7 +818,11 @@ def main(argv: list[str] | None = None) -> int:
 
     np.random.seed(args.seed)  # seed everything (no unseeded RNG — threat T-07-01-03)
 
-    fit = fit_noise(args.data_dir, args.seed)
+    # Printed BEFORE the write so the transcript of any run names the inputs it resolved, and so a
+    # default-noise run is visible in the log rather than only in the file it produced.
+    print(f"[fit_kalman_gain] data-dir={args.data_dir}  session={args.session}  seed={args.seed}")
+    fit = fit_noise(args.data_dir, args.seed, args.session)
+    print(f"[fit_kalman_gain] noise source={fit.source}")
     a = full_transition().astype(np.float64)
     h = full_measurement().astype(np.float64)
     k = steady_state_gain(fit.q_obs, fit.r)  # raises if not Schur-stable; zero position rows
