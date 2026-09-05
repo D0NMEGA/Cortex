@@ -24,5 +24,62 @@
       1
     ]
   ],
-  "matlab_empty_attribute_written": true
+  "matlab_empty_attribute_written": true,
+  "target_pitch_mm": 15.0,
+  "target_distinct_mm": [
+    [
+      -15.0,
+      -15.0
+    ],
+    [
+      0.0,
+      -15.0
+    ],
+    [
+      0.0,
+      0.0
+    ],
+    [
+      15.0,
+      0.0
+    ],
+    [
+      15.0,
+      15.0
+    ]
+  ],
+  "target_step_sample_indices": [
+    623,
+    1000,
+    1207,
+    1853
+  ],
+  "target_mid_bin_steps": 3,
+  "target_track_runs": [
+    [
+      0,
+      -15.0,
+      -15.0
+    ],
+    [
+      124,
+      0.0,
+      -15.0
+    ],
+    [
+      200,
+      0.0,
+      0.0
+    ],
+    [
+      241,
+      15.0,
+      0.0
+    ],
+    [
+      370,
+      15.0,
+      15.0
+    ]
+  ]
 }

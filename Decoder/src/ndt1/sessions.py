@@ -64,6 +64,10 @@ class SessionLoad:
     t_end: float
     stats: dict[str, float]  # ndt1.qc.firing_rate_stats output
     band_violations: list[str]  # ndt1.qc.band_violations output; empty means plausible
+    # D-01. Both are REQUIRED, with no default: a silently-`None` target array is a fabrication
+    # risk, because a caller that rotates toward a missing target has no way to notice.
+    target_mm: np.ndarray  # (num_bins, 2) float64 last-sample-per-bin target track in mm
+    target_distinct: np.ndarray  # (m, 2) float64 the distinct targets the session presented
 
 
 @dataclass(frozen=True)
@@ -141,6 +145,8 @@ def available_sessions(
                 stats=stats,
                 # Surfaced, NOT acted on: excluding here would make the drop invisible (D-03).
                 band_violations=band_violations(stats),
+                target_mm=np.asarray(session["target_mm"], dtype=np.float64),
+                target_distinct=np.asarray(session["target_distinct"], dtype=np.float64),
             )
         )
     return loaded, excluded

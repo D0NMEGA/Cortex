@@ -19,6 +19,11 @@ C-02, T-04-02-03):
   * `finger_pos` row 0 is near-constant (the depth axis) while rows 1 and 2 vary, so an extractor
     that takes rows 0-1 instead of 1-2 puts a flat axis into the planar pair and fails loudly
     instead of silently halving decode R2.
+  * `target_pos` steps MID-BIN three times out of four (10-RESEARCH Pitfall 4). A track that only
+    ever steps on a bin boundary is aggregated identically by every rule, including the mean, so it
+    would leave `bin_target_track`'s last-sample rule untested. The truth sidecar records the
+    expected per-bin track, computed in closed form from the uniform clock rather than by calling
+    the binner, so it is independent ground truth.
 
 Variants (only "clean" is committed; the rest are built into a tmp dir by tests):
 
@@ -66,6 +71,20 @@ DEPTH_MEAN_CM: float = 5.0
 DEPTH_NOISE_CM: float = 0.002  # keeps finger_pos row 0 std well under the 0.01 cm assertion
 PLANAR_AMPLITUDE_CM: float = 3.0  # std = A/sqrt(2) ~ 2.12 cm, comfortably over the 1.0 cm floor
 PLANAR_NOISE_CM: float = 0.05
+SAMPLES_PER_BIN: int = int(round(SAMPLE_RATE_HZ * BIN_S))  # 5 behavior samples per 20 ms bin
+
+#: The D-01 target track: a step function on a 15.0 mm grid, in millimetres, inside the fixture's
+#: +/-30 mm cursor excursion. Five points and four steps; three of the four steps land MID-BIN
+#: (index not a multiple of SAMPLES_PER_BIN), which is what exercises the last-sample rule.
+TARGET_PITCH_MM: float = 15.0
+TARGET_POINTS_MM: tuple[tuple[float, float], ...] = (
+    (-15.0, -15.0),
+    (0.0, -15.0),
+    (0.0, 0.0),
+    (15.0, 0.0),
+    (15.0, 15.0),
+)
+TARGET_STEP_SAMPLES: tuple[int, ...] = (623, 1000, 1207, 1853)
 
 VARIANTS: tuple[str, ...] = (
     "clean",
@@ -214,6 +233,29 @@ def _behavior_arrays(n_samples: int, *, n_rows: int) -> tuple[np.ndarray, np.nda
     return t, finger
 
 
+def _target_track(n_samples: int) -> np.ndarray:
+    """`target_pos` as h5py sees it: a `(2, n_samples)` piecewise-constant step function in mm."""
+    target = np.empty((2, n_samples), dtype=np.float64)
+    bounds = (0, *TARGET_STEP_SAMPLES, n_samples)
+    for index, (start, stop) in enumerate(zip(bounds[:-1], bounds[1:], strict=True)):
+        target[:, start:stop] = np.asarray(TARGET_POINTS_MM[index], dtype=np.float64)[:, None]
+    return target
+
+
+def _expected_target_runs(target: np.ndarray, num_bins: int) -> list[list[float]]:
+    """Run-length encode the expected per-bin track as `[[start_bin, x_mm, y_mm], ...]`.
+
+    The expectation is computed in CLOSED FORM from the fixture's uniform clock -- bin `i` ends at
+    sample `SAMPLES_PER_BIN * i + SAMPLES_PER_BIN - 1` -- never by calling `bin_target_track`. That
+    is what makes the sidecar independent ground truth rather than a restatement of the code the
+    fixture tests are checking.
+    """
+    bin_end = np.arange(num_bins) * SAMPLES_PER_BIN + (SAMPLES_PER_BIN - 1)
+    track = target[:, bin_end].T
+    starts = np.r_[0, np.flatnonzero(np.any(np.diff(track, axis=0) != 0.0, axis=1)) + 1]
+    return [[int(start), float(track[start, 0]), float(track[start, 1])] for start in starts]
+
+
 def _channel_names(n_channels: int) -> list[str]:
     """`M1 001` .. `M1 096`, then `S1 001` .. `S1 096` once the width exceeds one array."""
     names: list[str] = []
@@ -318,9 +360,13 @@ def build_fixture(out_path: Path, *, variant: str = "clean") -> Path:
         t_dset.attrs["MATLAB_class"] = np.bytes_("double")
         finger_dset = f.create_dataset("finger_pos", data=finger)
         finger_dset.attrs["MATLAB_class"] = np.bytes_("double")
+        target = _target_track(N_SAMPLES)
+        target_dset = f.create_dataset("target_pos", data=target)
+        target_dset.attrs["MATLAB_class"] = np.bytes_("double")
 
     _stamp_userblock(out_path)
 
+    num_bins = int(np.floor(t_end / BIN_S))
     truth = {
         "variant": variant,
         "seed": SEED,
@@ -332,13 +378,20 @@ def build_fixture(out_path: Path, *, variant: str = "clean") -> Path:
         "t_start": float(t[0]),
         "t_end": t_end,
         "bin_s": BIN_S,
-        "num_bins": int(np.floor(t_end / BIN_S)),
+        "num_bins": num_bins,
         "total_real_timestamps": total_real,
         "bin0_real_timestamps": bin0_real,
         "empty_cells": empty_cells,
         "channels_with_empty_cells": len(channels_with_empty_cells),
         "empty_payload_shapes": sorted(list(dims) for dims in empty_dims_used),
         "matlab_empty_attribute_written": tag_empty,
+        "target_pitch_mm": TARGET_PITCH_MM,
+        "target_distinct_mm": sorted(list(point) for point in TARGET_POINTS_MM),
+        "target_step_sample_indices": list(TARGET_STEP_SAMPLES),
+        "target_mid_bin_steps": sum(
+            1 for step in TARGET_STEP_SAMPLES if step % SAMPLES_PER_BIN != 0
+        ),
+        "target_track_runs": _expected_target_runs(target, num_bins),
     }
     truth_path = out_path.with_suffix(".truth.json")
     truth_path.write_text(json.dumps(truth, indent=2) + "\n", encoding="utf-8")

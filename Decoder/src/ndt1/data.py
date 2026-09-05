@@ -24,14 +24,20 @@ Hard rules enforced here:
   * An EMPTY MATLAB cell is discriminated by its `MATLAB_empty` attribute, never by `bool(ref)`:
     MATLAB writes empty cells as TRUTHY references (09-RESEARCH C-05, T-09-02-01).
   * The held-out split is the chronological tail — never a shuffle-split across time (Pitfall #10).
-  * Only `spikes`, `t`, `finger_pos` and `chan_names` are read; the `wf` array is never touched.
+  * Only `spikes`, `t`, `finger_pos`, `target_pos` and `chan_names` are read (Phase 10, D-01); the
+    `wf` array is never touched and the recorded cursor track stays unread.
   * No bare/blind `except`: only `OSError`/`KeyError`/`ValueError` are caught explicitly.
 
 Behavior arrays: as of Phase 9 (D-05) `finger_pos` IS read, because the shipped `.mlpackage` must
-carry a velocity readout fit on real kinematics rather than a fabricated one. Only `finger_pos` is
-read; `cursor_pos` and `target_pos` are not, and the large `wf` array is still never touched
-(T-04-02-02). `finger_pos` rows are `(z, -x, -y[, azimuth, elevation, roll])` in cm, so the planar
-pair is rows 1 and 2 and the negation is undone once, here.
+carry a velocity readout fit on real kinematics rather than a fabricated one. Phase 10 (D-01) adds
+`target_pos` as the third and last behavior array, because ReFIT's intent rotation must point at
+the target the subject was actually reaching for — rotating toward a target it never saw would
+fabricate intent. The recorded cursor track is still not read here (see the comment on the target
+block in `load_session`) and the large `wf` array is still never touched (T-04-02-02).
+`finger_pos` rows are `(z, -x, -y[, azimuth, elevation, roll])` in cm, so the planar pair is rows 1
+and 2 and the negation is undone once, here; `target_pos` is already a planar `(x, y)` pair in
+millimetres and is only transposed. The target track is aggregated LAST-SAMPLE-PER-BIN and is
+NEVER averaged (see :func:`bin_target_track`).
 """
 from __future__ import annotations
 
@@ -106,6 +112,127 @@ def bin_spikes(
     return binned
 
 
+def bin_target_track(
+    target_mm: np.ndarray,
+    t: np.ndarray,
+    *,
+    t_start: float,
+    t_end: float,
+    bin_ms: float = BIN_MS,
+) -> np.ndarray:
+    """Aggregate a per-sample target track into 20 ms bins by taking the LAST sample in each bin.
+
+    **The mean is forbidden here, and this is the reason.** `target_pos` is a step function on a
+    15 mm discrete grid; averaging across a bin that spans a target change produces an off-grid
+    target the subject never saw, which is exactly the fabrication D-01 exists to prevent. The last
+    sample is taken instead, which also matches `ndt1.kinematics.apply_lag`'s window-ending-at-bin-i
+    convention, and :func:`first_off_grid_index` is the assertion that a regression to the mean
+    would trip.
+
+    `num_bins` is recomputed with the identical `floor((t_end - t_start) / bin_s)` arithmetic
+    :func:`bin_spikes` and `ndt1.kinematics.bin_velocity` use, and the same high-edge clip, so the
+    counts, the velocity and the target track are row-aligned by construction.
+
+    Args:
+        target_mm: `(n_samples, 2)` per-sample `(x, y)` target position in millimetres,
+            row-aligned with `t`.
+        t: `(n_samples,)` behavior timestamps in seconds, non-decreasing.
+        t_start: window start (seconds, inclusive) -- pass `load_session`'s `"t_start"`.
+        t_end: window end (seconds, exclusive) -- pass `load_session`'s `"t_end"`.
+        bin_ms: bin width in milliseconds; defaults to :data:`BIN_MS` so the three binners cannot
+            drift apart.
+
+    Returns:
+        A `float64` array of shape `(num_bins, 2)`, every row of which is one of the input's own
+        samples verbatim.
+
+    Raises:
+        ValueError: if the shapes disagree, if the clock is not monotone (which makes "the last
+            sample" undefined), if the window or bin width is degenerate, or if any bin contains
+            no sample.
+    """
+    target = np.asarray(target_mm, dtype=np.float64)
+    clock = np.asarray(t, dtype=np.float64).ravel()
+    if target.ndim != 2 or target.shape[1] != 2:
+        raise ValueError(f"target_mm must be 2-D (n_samples, 2), got shape {target.shape}")
+    if target.shape[0] != clock.size:
+        raise ValueError(
+            f"target_mm has {target.shape[0]} samples but t has {clock.size}; the two must be "
+            f"row-aligned"
+        )
+    if bin_ms <= 0.0:
+        raise ValueError(f"bin_ms must be positive, got {bin_ms}")
+    if t_end <= t_start:
+        raise ValueError(f"t_end ({t_end}) must be greater than t_start ({t_start})")
+
+    backwards = np.flatnonzero(np.diff(clock) < 0.0) if clock.size > 1 else np.empty(0, np.intp)
+    if backwards.size:
+        first = int(backwards[0])
+        raise ValueError(
+            f"the behavior clock is not monotone: t[{first + 1}] = {float(clock[first + 1])} s "
+            f"precedes t[{first}] = {float(clock[first])} s, so 'the last sample in the bin' is "
+            f"undefined and the emitted target would depend on storage order"
+        )
+
+    bin_s = bin_ms / _MS_PER_S
+    num_bins = int(np.floor((t_end - t_start) / bin_s))
+    if num_bins <= 0:
+        raise ValueError(
+            f"window [{t_start}, {t_end}) s is shorter than one {bin_ms} ms bin (0 bins)"
+        )
+
+    in_range = np.flatnonzero((clock >= t_start) & (clock < t_end))
+    bin_idx = np.floor((clock[in_range] - t_start) / bin_s).astype(np.intp)
+    # Mirror bin_spikes' high-edge guard: a sample in the trailing partial bin lands in the last
+    # full bin rather than off the end of the matrix.
+    np.clip(bin_idx, 0, num_bins - 1, out=bin_idx)
+
+    # The last sample per bin, as its position in the input. `np.maximum.at` is unbuffered, so the
+    # result is the true maximum position rather than whichever assignment happened to land last;
+    # on a monotone clock the largest position in a bin IS its last sample in time.
+    last_position = np.full(num_bins, -1, dtype=np.intp)
+    np.maximum.at(last_position, bin_idx, in_range)
+
+    empty = np.flatnonzero(last_position < 0)
+    if empty.size:
+        raise ValueError(
+            f"target bin {int(empty[0])} contains no behavior samples ({empty.size} of "
+            f"{num_bins} bins are empty). Carrying the previous bin's target forward, or emitting "
+            f"a NaN, would put a target in the record that the subject was not shown at that time."
+        )
+    return target[last_position]
+
+
+def first_off_grid_index(track: np.ndarray, distinct: np.ndarray) -> int | None:
+    """Row index of the first `track` row that is not a member of `distinct`, else `None`.
+
+    The export's own negative control (10-RESEARCH Pitfall 4). Because `target_pos` lives on a
+    discrete grid, every aggregated target MUST be one of the session's observed `(x, y)` pairs.
+    A mean aggregator emits the midpoint of the two grid points a spanning bin covers -- a target
+    the subject never saw -- and this reports it as a row index instead of letting it reach an
+    artifact. The check is cheap and it is run on every load.
+
+    Args:
+        track: `(n, 2)` aggregated target track.
+        distinct: `(m, 2)` the session's observed distinct `(x, y)` pairs.
+
+    Returns:
+        The first offending row index, or `None` when every row is on the grid.
+
+    Raises:
+        ValueError: if either array is not 2-D with two columns.
+    """
+    rows = np.asarray(track, dtype=np.float64)
+    grid = np.asarray(distinct, dtype=np.float64)
+    if rows.ndim != 2 or rows.shape[1] != 2:
+        raise ValueError(f"track must be 2-D (n, 2), got shape {rows.shape}")
+    if grid.ndim != 2 or grid.shape[1] != 2:
+        raise ValueError(f"distinct must be 2-D (m, 2), got shape {grid.shape}")
+    member = (rows[:, None, :] == grid[None, :, :]).all(axis=2).any(axis=1)
+    offenders = np.flatnonzero(~member)
+    return int(offenders[0]) if offenders.size else None
+
+
 def chronological_split(
     binned: np.ndarray, *, test_frac: float = 0.2
 ) -> tuple[np.ndarray, np.ndarray]:
@@ -171,9 +298,10 @@ def load_session(path: Path) -> dict[str, object]:
     """Load one O'Doherty Indy/Loco session ``.mat`` (v7.3 = HDF5) into binned spike counts.
 
     Reads ONLY the ``spikes`` cell array (per-(channel,unit) timestamp vectors), the time vector
-    ``t``, ``finger_pos`` (D-05) and ``chan_names``; the ``wf`` array is never read (memory-DoS
-    guard, T-04-02-02). Spike units (unsorted hash + sorted) are aggregated per channel into a
-    multiunit train, then binned at 20 ms. Width is enforced == ``CORTEX_CHANNEL_COUNT`` (96).
+    ``t``, ``finger_pos`` (D-05), ``target_pos`` (D-01) and ``chan_names``; the ``wf`` array is
+    never read (memory-DoS guard, T-04-02-02). Spike units (unsorted hash + sorted) are aggregated
+    per channel into a multiunit train, then binned at 20 ms. Width is enforced ==
+    ``CORTEX_CHANNEL_COUNT`` (96).
 
     Args:
         path: path to a session ``.mat`` (MATLAB v7.3 = HDF5, loaded with h5py — the legacy
@@ -181,14 +309,19 @@ def load_session(path: Path) -> dict[str, object]:
 
     Returns:
         A dict with ``"binned"`` (the ``(num_bins, 96)`` float32 matrix), ``"t_start"``,
-        ``"t_end"``, ``"num_channels"``, ``"t"`` (the raw time vector, seconds) and
-        ``"planar_cm"`` (the ``(n_samples, 2)`` sign-corrected ``(x, y)`` kinematics in cm).
+        ``"t_end"``, ``"num_channels"``, ``"t"`` (the raw time vector, seconds),
+        ``"planar_cm"`` (the ``(n_samples, 2)`` sign-corrected ``(x, y)`` kinematics in cm),
+        ``"target_mm"`` (the ``(num_bins, 2)`` last-sample-per-bin target track in mm) and
+        ``"target_distinct"`` (the ``(m, 2)`` lexicographically sorted distinct target pairs the
+        session actually presented).
 
     Raises:
-        ValueError: if the session does not yield exactly ``CORTEX_CHANNEL_COUNT`` channels, or
-            required datasets are malformed.
+        ValueError: if the session does not yield exactly ``CORTEX_CHANNEL_COUNT`` channels, if
+            required datasets are malformed, or if the binned target track leaves the session's
+            own observed grid.
         OSError: if the file cannot be opened/read as HDF5.
-        KeyError: if the expected ``spikes``/``t``/``finger_pos`` datasets are absent.
+        KeyError: if the expected ``spikes``/``t``/``finger_pos``/``target_pos`` datasets are
+            absent.
     """
     path = Path(path)
     try:
@@ -266,6 +399,27 @@ def load_session(path: Path) -> dict[str, object]:
             # -1.0000. Negate once here so downstream code and the Phase-10 R fit see true (x, y)
             # in cm rather than inheriting the sign implicitly.
             planar_cm = (-finger[1:3, :]).T  # (n_samples, 2) == (x, y) in cm
+
+            if "target_pos" not in f:
+                raise KeyError(f"session {path.name} has no 'target_pos' dataset")
+            target = np.asarray(f["target_pos"][()], dtype=np.float64)
+            if target.ndim != 2 or target.shape[0] != 2:
+                raise ValueError(
+                    f"session {path.name} target_pos has shape {target.shape}; expected (2, k) "
+                    f"as h5py sees it (MATLAB k x 2), in millimetres"
+                )
+            if target.shape[1] != t.size:
+                raise ValueError(
+                    f"session {path.name} target_pos has {target.shape[1]} samples but t has "
+                    f"{t.size}"
+                )
+            # Unlike finger_pos -- rows (z, -x, -y[, ...]) in cm, hence the 1:3 slice and the one
+            # negation above -- target_pos is ALREADY a planar (x, y) pair in millimetres, so it is
+            # transposed and nothing else. Verified on indy_20160630_01: x range -52.5 to 52.5 mm,
+            # y range 7.5 to 112.5 mm, 64 distinct pairs, 15.0 mm pitch.
+            # cursor_pos stays UNREAD here (D-01). Decoder/scripts/export_replay.py reads it once,
+            # outside this loader, to verify the x10 frame relation, and discards it.
+            target_mm_samples = target.T  # (n_samples, 2) in mm -- NO sign correction
     except OSError as exc:
         raise OSError(f"could not read session .mat at {path}: {exc}") from exc
 
@@ -285,6 +439,16 @@ def load_session(path: Path) -> dict[str, object]:
     binned = bin_spikes(
         per_channel, num_channels=CORTEX_CHANNEL_COUNT, t_start=t_start, t_end=t_end
     )
+    target_mm = bin_target_track(target_mm_samples, t, t_start=t_start, t_end=t_end)
+    target_distinct = np.unique(target_mm_samples, axis=0)
+    off_grid = first_off_grid_index(target_mm, target_distinct)
+    if off_grid is not None:
+        raise ValueError(
+            f"session {path.name} emitted an off-grid target at row {off_grid}: "
+            f"{tuple(target_mm[off_grid])} is not one of the {target_distinct.shape[0]} observed "
+            f"(x, y) pairs. A value between two grid points is a target the subject never saw, "
+            f"which is the aggregation defect D-01 exists to prevent."
+        )
     return {
         "binned": binned,
         "t_start": t_start,
@@ -292,4 +456,6 @@ def load_session(path: Path) -> dict[str, object]:
         "num_channels": CORTEX_CHANNEL_COUNT,
         "t": t,
         "planar_cm": planar_cm,
+        "target_mm": target_mm,
+        "target_distinct": target_distinct,
     }
