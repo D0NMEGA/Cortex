@@ -3,15 +3,15 @@ donny_state_version: 1.0
 milestone: v1.0
 milestone_name: Real-Data Decoding
 status: executing
-stopped_at: Phase 9 context gathered
-last_updated: "2026-08-31T04:59:04.555Z"
-last_activity: 2026-08-31 -- Phase 09 execution started
+stopped_at: Phase 10 context gathered
+last_updated: "2026-09-05T05:08:48.285Z"
+last_activity: 2026-09-05 -- Phase 10 context gathered
 progress:
   total_phases: 10
-  completed_phases: 8
+  completed_phases: 9
   total_plans: 53
-  completed_plans: 42
-  percent: 79
+  completed_plans: 53
+  percent: 90
 ---
 
 # Project State
@@ -21,18 +21,18 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** A real-neural-data decoder running end-to-end under 25ms, reproducibly — NDT1 decoding real primate M1 spikes (O'Doherty/Makin Indy, Zenodo 3854034) through the sub-25ms software-timed pipeline. *Re-pointed 2026-08-28: the photodiode-instrumented "24.7 ± 1.3 ms" claim is RETIRED to Future work (hardware-gated); it stays a spec target and may not be cited as achieved.*
-**Current focus:** Phase 09 — real-data-ingest-ndt1-retrain-zenodo-3854034
+**Current focus:** Phase 10 — v1-real-data-closed-loop-launch (context gathered, ready for planning)
 
 **Re-plan 2026-08-28 (user-directed).** Phases 9-10 were the photodiode rig build + 10k-trial campaign. Both are retired to ROADMAP "Future work" (LAT-01..08 preserved, not deleted) — hardware-gated on the ~$110 BOM plus the provisioned iPad Pro M4 that already deferred three Phase-8 HUMAN-UAT gates. Replaced by real-data work, because the repo's largest credibility hole is that **every decoder number was produced on a synthetic Poisson fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"), so co-bps 0.3804, ReFIT 0.374-vs-0.161 and 1.953 BPS are all synthetic-data numbers. New requirements RD-01..RD-10. Infrastructure is already in place and unused: `download_indy.py` works, `data.py` is a real h5py v7.3 loader, the manifest lists 4 sessions with `sha256: "PENDING"`, and Zenodo is live (verified 2026-08-28: HTTP 200, ~1.5 GB total). Known blocker for Phase 10: `Tools/scripts/readme-policy.sh` **requires** the tokens `photodiode` and `24.7` in the README and its `--self-test` proves the gate bites when they are stripped — retiring the claim means rewriting the gate and its negative controls in lockstep (RD-10).
 
 ## Current Position
 
-Phase: 09 (real-data-ingest-ndt1-retrain-zenodo-3854034) — EXECUTING
-Plan: 1 of 11
-Status: Executing Phase 09
-Last activity: 2026-08-31 -- Phase 09 execution started
+Phase: 10 (v1-real-data-closed-loop-launch) — CONTEXT GATHERED
+Plan: 0 of TBD (not yet planned)
+Status: Phase 10 context captured; Phase 09 executed 11/11 and verified 5/5 (PARTIAL / human_needed: canonical iPad-M4 p99 gate deferred, RD-06 still open)
+Last activity: 2026-09-05 -- Phase 10 context gathered
 
-Progress: Phase 8 [██████████] 100% (7/7 plans complete) · Project [████████░░] 8/10 phases
+Progress: Phase 9 [██████████] 100% (11/11 plans executed) · Project [█████████░] 9/10 phases
 
 ## Performance Metrics
 
@@ -148,6 +148,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-08-30T18:22:50.799Z
-Stopped at: Phase 9 context gathered
-Resume file: .planning/phases/09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-CONTEXT.md
+Last session: 2026-09-05T05:08:48.283Z
+Stopped at: Phase 10 context gathered
+Resume file: .planning/phases/10-v1-real-data-closed-loop-launch/10-CONTEXT.md
