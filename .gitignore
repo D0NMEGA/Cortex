@@ -92,6 +92,13 @@ Decoder/**/*.mat
 # D-20: the committed synthetic v7.3 CI fixture is the ONE tracked .mat (no dataset redistribution).
 !Decoder/tests/fixtures/tiny_v73.mat
 Decoder/checkpoints/
+# --- Phase 10 (D-07): the real-session replay export. Gitignored like Decoder/data/ and
+# materialized by the committed Decoder/scripts/export_replay.py from the SHA-256-pinned .mat.
+# Raises no CC-BY redistribution question and keeps the Phase-9 D-21 tier split intact: CI never
+# reads it. The ONE tracked export is the synthetic fixture below.
+Decoder/exports/
+!Decoder/tests/fixtures/tiny_replay.bin
+!Decoder/tests/fixtures/tiny_replay.json
 Decoder/**/*.pt
 Decoder/**/*.ckpt
 Decoder/**/*.mlpackage/

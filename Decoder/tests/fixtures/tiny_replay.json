@@ -1,0 +1,51 @@
+{
+  "behavior_hz": 250.0,
+  "bin_ms": 20.0,
+  "binary_path": "tiny_replay.bin",
+  "binary_sha256": "69db628905ff51155b857c42e07a86ee5f9267b789c4cbf7c29b6732a07da2c0",
+  "disclosure": "synthetic fixture - not real neural data; exists so the export format is covered on a clean clone",
+  "encoder_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "env": {
+    "h5py": "3.16.0",
+    "numpy": "2.4.6",
+    "python": "3.12.13"
+  },
+  "frame_scale_mm_per_cm": 10.0,
+  "lag_bins": 1,
+  "lag_ms": 20.0,
+  "manifest_path": "Decoder/scripts/make_tiny_replay.py",
+  "n_bins": 256,
+  "n_channels": 96,
+  "record_bytes": 424,
+  "schema_version": 1,
+  "session_id": "tiny_replay_synthetic",
+  "source_sha256": "5577e3c7607bbc85ce7b4f14a5fba7d6bcc075d2c32c15b2727d8cc639780d01",
+  "target_grid": {
+    "distinct_targets": 4,
+    "log2_n_task": 2.0,
+    "pitch_mm": 15.0
+  },
+  "trials": 4,
+  "units": {
+    "spikes": "counts/bin",
+    "t_start": "s",
+    "target": "mm",
+    "velocity": "cm/s"
+  },
+  "velocity_checkpoint_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "workspace": {
+    "acquisition_radius_mm": 0.9999605221019081,
+    "cell_mm": 1.9999210442038162,
+    "centre_x_mm": -0.001184336942758435,
+    "centre_y_mm": 0.0,
+    "grid_cols": 30,
+    "grid_rows": 30,
+    "grid_units_per_cm": 0.16667324657610963,
+    "normalisation": "cursor_bbox_square",
+    "side_mm": 59.99763132611449,
+    "x_max_mm": 29.997631326114483,
+    "x_min_mm": -30.0,
+    "y_max_mm": 29.998815663057243,
+    "y_min_mm": -29.998815663057243
+  }
+}

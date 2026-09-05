@@ -33,6 +33,8 @@ _N_BINS = 8
 _BIN_S = 0.020
 #: The module under test, read as source by the ordering self-check (the `test_fixture_v73` idiom).
 _EXPORT_SOURCE = Path(__file__).resolve().parents[1] / "src" / "ndt1" / "replay_export.py"
+#: The committed SYNTHETIC export fixture, written by `Decoder/scripts/make_tiny_replay.py`.
+_FIXTURE_SIDECAR = Path(__file__).resolve().parent / "fixtures" / "tiny_replay.json"
 
 
 def _arrays(n_bins: int = _N_BINS) -> dict[str, np.ndarray]:
@@ -324,6 +326,32 @@ def test_the_sidecar_carries_the_verbatim_open_loop_disclosure(tmp_path: Path) -
     assert OPEN_LOOP_DISCLOSURE == (
         "open-loop replay of a recorded session; the subject was not in the loop"
     )
+
+
+# --------------------------------------------------------------------- the committed fixture (3d)
+
+
+def test_the_committed_synthetic_fixture_reads_through_the_current_reader() -> None:
+    """The committed bytes and the current reader agree, and the fixture says it is synthetic.
+
+    This is what lets every export-touching test run on a clean clone: no dataset and no
+    `Decoder/exports/`, just the 256-bin fixture `Decoder/scripts/make_tiny_replay.py` wrote
+    through the same writer the real path uses.
+    """
+    assert _FIXTURE_SIDECAR.is_file(), f"missing committed fixture sidecar at {_FIXTURE_SIDECAR}"
+    export = read_export(_FIXTURE_SIDECAR, verify_digest=True)
+
+    sidecar = export.sidecar
+    assert sidecar["n_bins"] == 256
+    assert sidecar["n_channels"] == 96
+    assert sidecar["record_bytes"] == 424
+    assert "synthetic fixture" in sidecar["disclosure"]
+    assert sidecar["session_id"] == "tiny_replay_synthetic"
+
+    assert export.spikes.shape == (256, N_CHANNELS)
+    assert export.velocity.shape == export.target.shape == (256, 2)
+    assert export.bin_starts.shape == (256,)
+    assert (_FIXTURE_SIDECAR.parent / "tiny_replay.bin").stat().st_size == 256 * RECORD_BYTES
 
 
 # Everything ABOVE the marker line below is scanned by the guard test that follows. The guard
