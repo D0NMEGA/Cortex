@@ -177,8 +177,18 @@ def square_box(cursor_mm: np.ndarray) -> dict[str, Any]:
     centre_y = (y_max + y_min) / 2.0
     half = side_mm / 2.0
 
-    box_x_min, box_x_max = centre_x - half, centre_x + half
-    box_y_min, box_y_max = centre_y - half, centre_y + half
+    # The axis whose span DEFINES side_mm gets the observed extremes verbatim, so containment on it
+    # holds exactly. Evaluating `centre +/- half` on that axis instead leaves the extreme sample up
+    # to an ulp outside the box (measured on indy_20160630_01: the x_max sample fell 1.4e-14 mm
+    # outside), which the strict containment check below correctly refuses. It is the same square
+    # either way: this fixes the floating-point evaluation, not the convention, so
+    # 10-PREREGISTRATION section 3 is unchanged.
+    if (x_max - x_min) >= (y_max - y_min):
+        box_x_min, box_x_max = x_min, x_max
+        box_y_min, box_y_max = centre_y - half, centre_y + half
+    else:
+        box_x_min, box_x_max = centre_x - half, centre_x + half
+        box_y_min, box_y_max = y_min, y_max
 
     contained = (
         (cursor[0] >= box_x_min)

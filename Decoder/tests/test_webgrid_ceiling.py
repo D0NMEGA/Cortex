@@ -139,6 +139,30 @@ def test_square_box_is_square_centred_and_contains_every_sample() -> None:
     assert bool(np.all(cursor[1] <= box["y_max_mm"]))
 
 
+def test_square_box_containment_is_exact_on_the_governing_axis() -> None:
+    """Regression: the extreme sample on the span-defining axis must not fall outside by an ulp.
+
+    Evaluating that axis as ``centre +/- side/2`` does not round-trip to the observed extreme. On
+    ``indy_20160630_01`` it left the x_max sample 1.4e-14 mm outside the box, and the strict
+    containment check refused the whole session. The governing axis therefore takes the observed
+    extremes verbatim. This is pinned with ``==`` rather than ``approx`` on purpose: ``approx``
+    would pass under the very defect it guards.
+    """
+    for cursor in (
+        np.asarray([[-74.03093184776830, 97.65103059072196], [0.0, 90.0]], dtype=np.float64),
+        np.asarray([[0.0, 90.0], [-74.03093184776830, 97.65103059072196]], dtype=np.float64),
+    ):
+        box = webgrid_ceiling.square_box(cursor)
+        x_span = float(cursor[0].max() - cursor[0].min())
+        y_span = float(cursor[1].max() - cursor[1].min())
+        if x_span >= y_span:
+            assert box["x_min_mm"] == float(cursor[0].min())
+            assert box["x_max_mm"] == float(cursor[0].max())
+        else:
+            assert box["y_min_mm"] == float(cursor[1].min())
+            assert box["y_max_mm"] == float(cursor[1].max())
+
+
 def test_square_box_raises_and_names_the_offending_count() -> None:
     """A non-finite sample breaks containment, so the box refuses instead of emitting a bad span."""
     cursor = np.asarray([[0.0, 1.0, np.nan], [0.0, 1.0, 2.0]], dtype=np.float64)
