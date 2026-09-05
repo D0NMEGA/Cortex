@@ -16,8 +16,10 @@ Future work in an ADR with LAT-01..LAT-08 preserved verbatim.
 
 Explicitly NOT this phase: NDT2 session-conditioning to repair Phase 9's negative leave-one-
 session-out transfer, a live-human two-stage ReFIT retrain, the photodiode rig itself, any new
-decoder training, the repo-wide SwiftLint sweep and the first pull request, and closing the
-deferred iPad Pro M4 device gates.
+decoder training, and closing the deferred iPad Pro M4 device gates.
+
+**Amended 2026-09-05 (D-18):** the repo-wide SwiftLint `--strict` sweep and the first push/PR were
+originally listed here as out of scope. They are now **in scope**.
 
 </domain>
 
@@ -113,9 +115,36 @@ deferred iPad Pro M4 device gates.
   Mac real-data replay is a runbook evidence artifact on hardware that exists; only the iPad-M4
   rows stay device-gated and never auto-approved (D-17 carried forward).
 - **D-16:** A recorded demo capture of the real-data loop on the M5 Pro is in scope as RD-08's
-  evidence that a webgrid hit was demonstrated. Opening the first pull request is out of scope:
+  evidence that a webgrid hit was demonstrated. ~~Opening the first pull request is out of scope:
   it arms SwiftLint `--strict` for the first time in the project's history (around 535 repo-root
-  violations today) and that is separate work, not a credibility-phase concern.
+  violations today) and that is separate work, not a credibility-phase concern.~~
+  **SUPERSEDED 2026-09-05 by D-18** on the pull-request half; the demo-capture half stands.
+
+### Decisions added 2026-09-05 (post-research, user-resolved)
+
+Added after `10-RESEARCH.md` surfaced six verified corrections to this file's premises. These two
+were escalated to the user because each changes the deliverable rather than its implementation.
+
+- **D-17:** The `8.5` Neuralink P1 reference is **kept**, but dated and sourced everywhere it
+  appears, with the current public wording ("over 10 BPS", neuralink.com/webgrid, verified live
+  2026-09-05) stated beside it. `readme-policy.sh`'s required `8.5` token is therefore unchanged.
+  `docs/cortex-spec.md`'s internal contradiction must be resolved in the same sweep: `:54` and
+  `:172` say 8.5 verified while `:313` says 8 verified, from the same cited source. Research
+  Correction 6 established that 8.5 is not sourceable to a Neuralink primary as a "verified peak",
+  and that the 9.51 figure carried by the research-inputs pass is **not** on the page and must not
+  be adopted. Rejected: re-pointing to the sourced May-2024 figure of 8, and publishing a dated
+  range - both were offered; the project chose to keep continuity and make the staleness visible.
+
+- **D-18:** **Phase 10 pushes `main`.** This reverses D-16's deferral of the first pull request.
+  The repo has never been pushed - `gh api .../actions/runs` returns `total_count: 0` and
+  `origin/main` is not a known revision - so "v1 launch" currently means nothing is public and no
+  gate has ever executed on a runner. Pushing arms SwiftLint `--strict` for the first time at
+  roughly 535 repo-root violations, including 67 in Phase-7 code that is currently labeled green.
+  **That sweep is therefore in scope for this phase**, not deferred. The user was shown this cost
+  explicitly and chose it over both the no-push option and the push-with-lint-soft-failed option.
+  Consequence for planning: the phase gains a lint-remediation workstream and a push/PR step, and
+  the "CI has never run" disclosure (Research Correction 3) may become obsolete during the phase -
+  the README wording must be written to match whichever state is true at the end.
 
 ### Implementer's Discretion
 
@@ -297,9 +326,9 @@ REQUIREMENTS.md, PROJECT.md, the Phase 9 handoff, and the codebase scout during 
   restated in the README's honest-gates table.
 - The photodiode rig and the 10,000-trial campaign (LAT-01..LAT-08). Already preserved verbatim in
   ROADMAP "Future work"; this phase records why they were retired, it does not schedule them.
-- A repo-wide SwiftLint `--strict` sweep and the first pull request. The strict gate has never
-  executed because every phase went direct to main; it arms on the first PR at roughly 535
-  repo-root violations. Its own piece of work, ahead of any ship step (D-16).
+- ~~A repo-wide SwiftLint `--strict` sweep and the first pull request.~~ **NO LONGER DEFERRED -
+  pulled into scope 2026-09-05 by D-18.** The strict gate has never executed because every phase
+  went direct to main; it arms on the first push/PR at roughly 535 repo-root violations.
 - Closing the deferred iPad Pro M4 device gates: the Phase-8 canonical latency, live TestFlight
   and on-device HID registration gates, plus Phase 9's canonical decoder p99. Disclosed as v1's
   boundary rather than closed (D-15).
