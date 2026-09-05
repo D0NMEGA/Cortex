@@ -303,3 +303,52 @@ Commits claimed, all confirmed in `git log`:
 
 *Phase: 10-v1-real-data-closed-loop-launch*
 *Completed: 2026-09-05*
+
+---
+
+## Correction note, 2026-09-05: the workspace box was reconciled after this plan
+
+Appended after the fact. Nothing above is rewritten or removed; this note says which of its
+statements were superseded and where the resolution lives. See
+`10-03a-RECONCILIATION-SUMMARY.md`.
+
+**Cross-artifact discrepancy 1 is RESOLVED, in favour of `10-ceiling.json`.** This plan flagged that
+its export computed `side_mm` 171.0725351294064 while Plan 10-01's `10-ceiling.json` recorded
+171.68196243849025, correctly identified the cause (this export followed `10-PREREGISTRATION`
+section 3's literal `cursor_mm = 10.0 * planar_cm`, while `webgrid_ceiling.py` boxed the recorded
+`cursor_pos` array), correctly identified the consequence for Plan 10-03's `k`, and correctly
+declined to resolve it here. Flagging it is what got it resolved. The user decided on 2026-09-05
+that the box is the recorded `cursor_pos` track; pre-registration section 3a records the amendment
+and the containment argument behind it, which is that 13 of the session's 365,809 recorded cursor
+samples fall outside the finger-derived box.
+
+**What that changes in this plan's output.** `ndt1.replay_export.workspace_from_cursor` now takes
+the recorded cursor track in millimetres and performs no `x 10` internally, and it is the only
+implementation of the box left in the repo. The export was regenerated. The measured-results table
+above therefore describes the SUPERSEDED box; the current export sidecar reads:
+
+| Field | This plan's value (superseded) | Current |
+|---|---|---|
+| `workspace.side_mm` | 171.0725351294064 | **171.68196243849025** |
+| `workspace.cell_mm` | 5.7024178376468795 | **5.7227320812830085** |
+| `workspace.acquisition_radius_mm` | 2.8512089188234397 | **2.8613660406415042** |
+| `workspace.grid_units_per_cm` | 0.05845473671408203 | **0.058247237263394945** |
+| sidecar sha256 | `020272235bbf8cea83c0c07a091a572df008dfe3ec9de45755d4b052ce94d42d` | **`a452ed69ef82d9c6f86d312e12defdadca843513a05092b0c1db1b9eb6dec4e3`** |
+
+**Everything else this plan produced stands.** The export binary is byte-identical at
+`binary_sha256` `5107b00911de761a60fe9ecc83dfef9b195d387ba42467586ef899755e57c48f`, because the box
+is sidecar metadata and no exported sample depends on it. `n_bins`, `trials`, the target grid, the
+record layout, the reader's refusals, the x10 frame-relation fit and the QC band are all unchanged.
+The committed synthetic fixture `tiny_replay.bin` is byte-identical and its workspace values are
+unchanged; only its `source_sha256` moved, because that field is the sha256 of its own generator and
+the generator gained the millimetre conversion at its call site.
+
+**Cross-artifact discrepancy 2, the `acq_radius_mm` versus `acquisition_radius_mm` spelling, is
+NOT resolved** and remains as this plan described it. Both artifacts keep their own committed key
+names, deliberately: `10-ceiling.json` is published and is not reissued.
+
+**Handoff corrections.** The "Next Phase Readiness" notes above quote the superseded values. Plan
+10-03 has been re-fit and its `k` is now 0.058247237263394945. Plan 10-09's provenance gate must bind
+to the CURRENT sidecar sha256, `a452ed69ef82d9c6f86d312e12defdadca843513a05092b0c1db1b9eb6dec4e3`,
+not the one listed above; the `binary_sha256` it also names is unchanged. Nothing in this correction
+touches `SIDECAR_KEYS`, so the schema that gate binds to is the same schema.

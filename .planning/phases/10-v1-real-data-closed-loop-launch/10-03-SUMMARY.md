@@ -322,3 +322,50 @@ default path and stays buildable.
 
 *Phase: 10-v1-real-data-closed-loop-launch*
 *Completed: 2026-09-05*
+
+---
+
+## Correction note, 2026-09-05: the gain was re-fit on the corrected workspace box
+
+Appended after the fact. Nothing above is rewritten or removed; this note says which of its numbers
+were superseded and where the resolution lives. See `10-03a-RECONCILIATION-SUMMARY.md`.
+
+**The `side_mm` decision recorded above was reversed by the user.** This plan's fourth decision reads
+"`side_mm` is 171.0725, not the 'about 171.7' the pre-registration expected", and resolved the
+disagreement by recording both and adjusting neither. That was the right move for an executor, but
+the two numbers are two different boxes rather than two measurements of one, so leaving both standing
+left `k` undefined. The user decided on 2026-09-05 that the box is the session's recorded
+`cursor_pos` track; pre-registration section 3a records the amendment, and the decisive fact is
+containment, which section 3 already required: 13 of the session's 365,809 recorded cursor samples
+fall outside the finger-derived box, and 0 fall outside the recorded-cursor box.
+
+**The fit was re-run on the corrected box.** `side_mm` 171.0725351294064 to 171.68196243849025, so
+every grid-unit quantity moved by `k^2 = 0.99291311`, exactly -0.7087 percent:
+
+| Quantity | This plan's value (superseded) | Shipped after the re-fit |
+|---|---|---|
+| `grid_units_per_cm` | 0.05845474 | **0.05824724** |
+| `R` | diag(0.15152282, 0.08984564) | **diag(0.15044900, 0.08920892)** |
+| `R_offdiag` | -0.03168725 | **-0.03146268** |
+| `sigma_jerk_sq` | 6092.058703 | **6048.884948** |
+| `rho_closed_loop` | 0.818794 | 0.818794 (unchanged) |
+| `K` as `Float` | as shipped | bit-identical (unchanged) |
+
+**Two of this plan's conclusions are strengthened rather than weakened by the re-fit.** The gain `K`
+is invariant under a common positive scaling of `Q` and `R`, so it is bit-identical as `Float` after
+the re-fit, and `CortexReFITBench --smoke` was re-run and reproduced this plan's recorded drift to
+every digit (`refit_bps` 1.1950503004699202, `kalman_only_bps` 0.0966477777818005,
+`refit_webgrid_bps` 8.004715490389097). So the "Cross-plan consequence" section above is still
+exactly right, Plan 10-05's repair is exactly the size this plan said it was, and the 8.0047 guard
+rail this plan raised still stands and still must not be quoted as progress anywhere.
+
+**Deviation 1's residual risk resolved, and one more defect found.** Plan 10-02 shipped the
+one-argument `workspace_from_cursor(track) -> dict` this code calls, so the predicted `TypeError` did
+not occur. The 1e-6 mm cross-check that deviation installed then did exactly the job it was installed
+for: with the exporter moved to the recorded-cursor box and this script still on `10 x planar_cm`, it
+raised loudly instead of quietly normalising R by the wrong constant.
+
+Separately, this plan's `SessionLoad(...)` call site was written in a worktree without Plan 10-02's
+`target_mm` / `target_distinct` fields, which are required with no default. On the merged tree the
+script raised `TypeError` before reaching the fit, so `KalmanConstants.swift` could not be
+regenerated from its own generator at all between `f80e84f` and the reconciliation. Fixed there.
