@@ -183,4 +183,46 @@ struct RecordedSpikeSourceTests {
     #expect(broken.modelBackedTicks == 0)
     #expect(!broken.allTicksModelBacked)
   }
+
+  // MARK: Test 9 - the Pattern-2 trap itself, driven against the real model
+
+  @Test("Test 9: the seqLen mismatch that used to pass silently is now visible on every tick")
+  func theSeqLenTrapIsVisible() throws {
+    // The .mlpackage is gitignored; SKIP cleanly when absent (the ClosedLoopPipelineTests Test 2
+    // idiom) so this suite stays green on a clean clone. With a real model present this is the direct
+    // control for RESEARCH Pattern 2: the SAME export, the SAME model, ONE variable changed - the
+    // source's window length - and the two runs must be distinguishable from the outside.
+    guard let modelURL = ClosedLoopPipeline.modelURLFromEnvironment() else { return }
+    let export = try Self.loadFixture()
+
+    // 32 bins: the shape the shipped model's (1, 96, 1, 32) spikes input wants.
+    let correct = ClosedLoopPipeline(
+      source: RecordedSpikeSource(export: export),
+      seed: Self.testSeed,
+      modelURL: modelURL
+    )
+    #expect(correct.sourceSeqLen == 32)
+    for _ in 0 ..< 6 {
+      _ = correct.tick()
+    }
+    #expect(correct.allTicksModelBacked, "at the model's own window length every tick runs NDT1")
+    #expect(correct.lastDecodeFailure == nil)
+
+    // 8 bins: SyntheticSpikeSource's default, and the exact mismatch that used to disappear into the
+    // synthetic fallback while the loop kept running and its numbers stopped being real.
+    let mismatched = ClosedLoopPipeline(
+      source: RecordedSpikeSource(export: export, numBins: 8),
+      seed: Self.testSeed,
+      modelURL: modelURL
+    )
+    #expect(mismatched.sourceSeqLen == 8)
+    for _ in 0 ..< 6 {
+      _ = mismatched.tick()
+    }
+    #expect(mismatched.modelBackedTicks == 0, "the model rejects the 8-bin buffer on every tick")
+    #expect(!mismatched.allTicksModelBacked, "so the run must NOT be publishable as a real-data number")
+    let reason = try #require(mismatched.lastDecodeFailure, "and the mismatch must be legible, not silent")
+    #expect(reason.contains("seqLen 8"), "the reason names the buffer's actual window length")
+    #expect(reason.contains("numBins 8"), "and the source's")
+  }
 }
