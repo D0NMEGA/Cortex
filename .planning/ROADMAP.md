@@ -206,6 +206,27 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A repo-wide sweep leaves no synthetic-derived number presented as a real-data result: README, ADRs, and every `*-evidence.md` either carry the re-derived real-data number or explicitly label the number synthetic
   4. `readme-policy.sh` is **rewritten, not deleted**: its required-disclosure set drops `photodiode`/`24.7` (which it currently mandates) and gains a real-data provenance disclosure plus a forbidden-token check that fails the build if the retired 24.7 ms photodiode figure reappears as an achieved measurement. Its negative-control `--self-test` is updated in lockstep and still proves every gate bites
   5. The photodiode path is documented as Future work with LAT-01..LAT-08 preserved verbatim, an ADR records why it was retired (hardware-gated, and not the project's largest credibility hole), and the README's honest-gates table reflects the new boundary: software-timed latency, real-data decoding
+**Plans**: 17 plans (14 waves) - a strictly-ordered spine after Wave 1. Waves 0-5 produce the real-data
+numbers (RD-07, RD-08); waves 6-10 republish and gate them (RD-09, RD-10); waves 11-13 are the D-18
+lint remediation and the first push, which arms `swiftlint --strict` for the first time in the project's
+history. Every measurement convention is pre-registered in Wave 0 before any number exists.
+- [ ] 10-01-PLAN.md - 10-PREREGISTRATION.md (R units, workspace box, dual-N, the fourth arm, the two seams, all three artifact schemas) + the true-cursor webgrid ceiling script, run and published (RD-07, RD-08) [Wave 0]
+- [ ] 10-02-PLAN.md - `target_pos` through `load_session` (last-sample-per-bin, membership-asserted) + the D-06 export writer/sidecar + the committed synthetic fixture + the real export materialized (RD-07, RD-08) [Wave 1]
+- [ ] 10-03-PLAN.md - implement `fit_kalman_gain.py`'s residual path (both branches returned `default_noise`), regenerate `KalmanConstants.swift` to `noise source = indy-heldout`, arm the header test (RD-07) [Wave 1]
+- [ ] 10-04-PLAN.md - `CortexCore.ReplayExport` + the `SpikeWindowSource` seam + `RecordedSpikeSource` + model-backed tick counting + `CortexDemoBench --real` (Seam A) (RD-08) [Wave 2]
+- [ ] 10-05-PLAN.md - freeze the Phase-7 gain for the synthetic fixture (D-09 byte-identity) + `ArmStatistics` + `CortexReplayBench`, the four-arm real-data ablation (RD-07) [Wave 3]
+- [ ] 10-06-PLAN.md - Seam B: the daemon replay producer + `RollingSpikeWindow` + `CortexSeamBSmoke` with an AES-GCM tamper control (RD-08) [Wave 4]
+- [ ] 10-07-PLAN.md - run the four-arm ablation on real spikes; `10-refit-real.json` + `10-refit-real-evidence.md` (RD-07) [Wave 4]
+- [ ] 10-08-PLAN.md - measure Seam A and Seam B; `10-replay.json` + `10-replay-evidence.md` with the D-11 decomposition (RD-08) [Wave 5]
+- [ ] 10-09-PLAN.md - `refit-real-policy.sh` + `check_real_replay_provenance.py` + `test_real_replay_schema.py` + CI wiring (RD-07, RD-08) [Wave 6]
+- [ ] 10-10-PLAN.md - `10-HUMAN-UAT.md` (six never-auto-approve device gates) + the M5-Pro demo capture (RD-08, RD-10; `autonomous: false`) [Wave 6]
+- [ ] 10-11-PLAN.md - the RD-09 code sweep: the methodology label's four-way coupled edit, 4.16 relabeled as T5 dense 9x9, 8.5 dated and sourced, the cross-system causal claim dropped (RD-09) [Wave 7]
+- [ ] 10-12-PLAN.md - README republish (real-data headline, D-14 provenance triple, honest gates, CI-has-never-run) + AGENTS.md + five superseded banners (RD-09, RD-10) [Wave 8]
+- [ ] 10-13-PLAN.md - rewrite `readme-policy.sh` (context-sensitive 24.7, the provenance triple, >= 14 controls) + ADR-0003 + the ADR index (RD-10) [Wave 9]
+- [ ] 10-14-PLAN.md - `honesty-sweep.sh` + `--self-test` (labels, banners, LAT-01..08 preservation, ADR structure) + CI wiring (RD-09, RD-10) [Wave 10]
+- [ ] 10-15-PLAN.md - pin the lint toolchain + `toolchain-policy.sh` + the measured lint baseline + the SwiftFormat sweep (RD-09, D-18) [Wave 11]
+- [ ] 10-16-PLAN.md - the `swiftlint --strict` sweep: CodingKeys for every Codable field so no JSON key moves, force-unwrap dispositions, scoped suppressions (RD-09, D-18) [Wave 12]
+- [ ] 10-17-PLAN.md - the pre-push audit, the authorization checkpoint, the first push, the first CI run, and the README reconcile (RD-09, D-18; `autonomous: false`) [Wave 13]
 
 ## Progress
 
@@ -227,7 +248,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
 | 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
-| 10. v1 Real-Data Closed Loop & Launch | v1 | 0/TBD | Not started | - |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 0/17 | Planned (17 plans, 14 waves) | - |
 
 ---
 
