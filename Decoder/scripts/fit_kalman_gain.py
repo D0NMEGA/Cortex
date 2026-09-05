@@ -17,7 +17,7 @@ Q/R fitting recipe (07-RESEARCH §3.2, units fixed by 10-PREREGISTRATION §4 and
   * **R** (2×2): covariance of the decoder residual ``e_k = z_decoded − v_true`` on the held-out
     chronological tail of the locked session — how noisy the NDT1 velocity readout is. Computed in
     **grid-units/s**, the units the Swift filter runs in, NOT cm/s: the two differ by
-    ``grid_units_per_cm²``, which for this workspace is a factor of about 3400.
+    ``grid_units_per_cm²``, which for this workspace is a factor of about 295.
   * **Q** (4×4 on ``[v,a]``): a discrete **white-noise-jerk** model whose ``σ_jerk²`` is the
     variance of the second difference of the true binned velocity on the same held-out rows,
     also in grid units.
@@ -50,8 +50,7 @@ Usage::
         --out Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift
 
 No bare/blind ``except`` (ruff ``BLE`` gate): only the specific data-absent path is branched on a
-``Path.exists`` check, the optional Plan 10-02 exporter import is guarded on ``ImportError`` alone,
-and every other failure raises an explicit error.
+``Path.exists`` check, and every other failure raises an explicit error.
 """
 from __future__ import annotations
 
@@ -72,6 +71,7 @@ from ndt1.kalman_gain import (
     full_transition,
     steady_state_gain,
 )
+from ndt1.replay_export import workspace_from_cursor
 
 # Repo-relative paths (this file lives at Decoder/scripts/fit_kalman_gain.py).
 _DECODER_ROOT = Path(__file__).resolve().parents[1]
@@ -104,6 +104,10 @@ _DEFAULT_R_VAR: float = 0.25
 #: Millimetres per centimetre, and therefore the cursor-frame/finger-frame relation: the session's
 #: own ``cursor_pos`` is ``10 × planar_cm`` to R² 0.99997 with an offset under 0.03 mm
 #: (10-RESEARCH "the cursor frame is the finger frame times ten"). Not a fitted constant.
+#:
+#: It is the 10.0 in ``k = 10.0 / side_mm`` (§4 step 2). It is NOT what defines the box: §3a boxes
+#: the RECORDED ``cursor_pos`` track, because the relation's fitted slope is 10.005 and a box built
+#: through it does not contain the track it is supposed to bound.
 GRID_MM_PER_CM: float = 10.0
 
 #: The replayed session, locked by CONTEXT D-08 before any Phase-10 outcome was known.
@@ -315,15 +319,22 @@ def closed_loop_rho(q_obs: np.ndarray, r: np.ndarray) -> float:
     return float(np.max(np.abs(np.linalg.eigvals(closed))))
 
 
-def workspace_side_mm(planar_cm: np.ndarray) -> float:
+def workspace_side_mm(cursor_mm: np.ndarray) -> float:
     """Side of the pre-registered ``cursor_bbox_square`` workspace box, in millimetres.
 
-    10-PREREGISTRATION §3, verbatim: ``cursor_mm = 10 × planar_cm``, take the axis-aligned bounding
-    box over the WHOLE session, and use ``side_mm = max(width, height)``. Square, so one grid unit
-    is the same physical distance on both axes.
+    10-PREREGISTRATION §3 as amended by §3a: take the axis-aligned bounding box of the session's
+    RECORDED ``cursor_pos`` track over the WHOLE session, and use ``side_mm = max(width, height)``.
+    Square, so one grid unit is the same physical distance on both axes.
+
+    This is a CROSS-CHECK, not the authority. ``ndt1.replay_export.workspace_from_cursor`` is the
+    one authoritative implementation of the box (§3a); :func:`_resolve_side_mm` returns ITS value
+    and uses this arithmetic only to catch a divergence. Keeping a second, independent restatement
+    of the rule is what turned the §3 ambiguity into a loud failure instead of a silent 0.7 percent
+    error in R, so it stays.
 
     Args:
-        planar_cm: ``(n, 2)`` cursor/finger track in centimetres, as ``load_session`` returns it.
+        cursor_mm: ``(n, 2)`` RECORDED cursor track in millimetres. NOT a centimetre finger track:
+            §3a removed the ``× 10`` that used to live inside this function.
 
     Returns:
         The longer bounding-box side, in millimetres.
@@ -331,37 +342,37 @@ def workspace_side_mm(planar_cm: np.ndarray) -> float:
     Raises:
         ValueError: on a non-2-column array or an empty track.
     """
-    planar = np.asarray(planar_cm, dtype=np.float64)
-    if planar.ndim != 2 or planar.shape[1] != 2:
-        raise ValueError(f"expected an (n, 2) planar track; got {planar.shape}")
-    if planar.shape[0] == 0:
+    cursor = np.asarray(cursor_mm, dtype=np.float64)
+    if cursor.ndim != 2 or cursor.shape[1] != 2:
+        raise ValueError(f"expected an (n, 2) cursor track in mm; got {cursor.shape}")
+    if cursor.shape[0] == 0:
         raise ValueError("cannot bound an empty track")
-    cursor_mm = GRID_MM_PER_CM * planar
-    spans = cursor_mm.max(axis=0) - cursor_mm.min(axis=0)
+    spans = cursor.max(axis=0) - cursor.min(axis=0)
     return float(spans.max())
 
 
-def _resolve_side_mm(planar_cm: np.ndarray) -> tuple[float, str]:
-    """``(side_mm, source_label)``, cross-checked against Plan 10-02's exporter when it is present.
+def _resolve_side_mm(cursor_mm: np.ndarray) -> tuple[float, str]:
+    """``(side_mm, source_label)`` from the authoritative box, cross-checked against §3 here.
 
-    :func:`workspace_side_mm` implements 10-PREREGISTRATION §3 directly, so this script does not
-    depend on Plan 10-02 having landed. When ``ndt1.replay_export`` IS importable, both are computed
-    and a disagreement RAISES: two implementations of the same pre-registered box that quietly
-    diverge would normalise R by different constants, and the difference is a factor of ``k²``.
+    ``ndt1.replay_export.workspace_from_cursor`` is authoritative and its value is what is
+    returned. :func:`workspace_side_mm` restates 10-PREREGISTRATION §3 independently and a
+    disagreement RAISES: two implementations of the same pre-registered box that quietly diverge
+    would normalise R by different constants, and the difference is a factor of ``k²``. That trap
+    is not decorative -- it is what fires if anything ever puts a centimetre track back into this
+    path, which is exactly the defect §3a corrects.
     """
-    local = workspace_side_mm(planar_cm)
-    try:
-        from ndt1.replay_export import workspace_from_cursor
-    except ImportError:
-        return local, "10-PREREGISTRATION-section-3 (ndt1.replay_export not importable)"
-    exported = float(workspace_from_cursor(planar_cm)["side_mm"])
+    local = workspace_side_mm(cursor_mm)
+    exported = float(workspace_from_cursor(cursor_mm)["side_mm"])
     if abs(exported - local) > _SIDE_MM_TOL:
         raise ValueError(
             f"ndt1.replay_export.workspace_from_cursor reports side_mm={exported!r} but the "
             f"10-PREREGISTRATION section 3 arithmetic gives {local!r}; the two definitions of the "
             f"cursor_bbox_square box have diverged and R would be normalised by the wrong constant"
         )
-    return exported, "ndt1.replay_export.workspace_from_cursor (cross-checked against section 3)"
+    # One space-free token on purpose: the label lands in the generated Swift provenance header,
+    # which is wrapped at 110 columns, and a label with spaces in it wraps across two comment lines
+    # (the same reason `render_swift` disables hyphen breaking).
+    return exported, "ndt1.replay_export.workspace_from_cursor+section-3a-cross-check"
 
 
 def _phase09_velocity_record() -> dict[str, object]:
@@ -446,6 +457,12 @@ def heldout_decoded_and_true(data_dir: Path, session_id: str) -> HeldOutResidual
         sys.path.insert(0, str(_SCRIPTS_DIR))
     import fit_velocity_real as fvr
 
+    # The box is the RECORDED cursor track (10-PREREGISTRATION §3a), which `load_session` does not
+    # return: D-01 keeps `cursor_pos` out of the loader. `export_replay` owns the one h5py cursor
+    # reader on the export path, so it is imported rather than duplicated here -- one reader, one
+    # box, one `k`.
+    from export_replay import read_cursor_mm
+
     from ndt1.data import load_session
     from ndt1.kinematics import apply_lag, heldout_r2
     from ndt1.model_ane import NDT1ANEWithVelocity
@@ -510,12 +527,21 @@ def heldout_decoded_and_true(data_dir: Path, session_id: str) -> HeldOutResidual
         t_start=float(raw["t_start"]),
         t_end=float(raw["t_end"]),
         stats=stats,
+        # D-01's third behavior array. Both fields are required, with no default, since Plan 10-02;
+        # this call site was written in a parallel worktree where they did not exist yet, so on the
+        # merged tree it raised `TypeError` before reaching the fit. Passed through, not defaulted:
+        # a default here would let a caller build a SessionLoad whose target track is silently
+        # empty, which is the failure mode the no-default choice exists to prevent.
+        target_mm=np.asarray(raw["target_mm"], dtype=np.float64),
+        target_distinct=np.asarray(raw["target_distinct"], dtype=np.float64),
         # Surfaced, not acted on, exactly as `available_sessions` does (D-03).
         band_violations=band_violations(stats),
     )
-    side_mm, side_mm_source = _resolve_side_mm(session.planar_cm)
+    cursor_mm = read_cursor_mm(mat)
+    side_mm, side_mm_source = _resolve_side_mm(cursor_mm)
     print(
-        f"[fit_kalman_gain] {session_id}: {binned.shape[0]} bins, side_mm={side_mm:.4f} "
+        f"[fit_kalman_gain] {session_id}: {binned.shape[0]} bins, "
+        f"{cursor_mm.shape[0]} recorded cursor samples, side_mm={side_mm!r} "
         f"({side_mm_source}), band_violations={session.band_violations or 'none'}"
     )
 

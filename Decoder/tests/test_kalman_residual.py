@@ -63,7 +63,7 @@ def test_to_grid_units_scales_by_ten_over_side_mm() -> None:
 
     10-PREREGISTRATION section 4 step 2 fixes this constant: `k = 10.0 / side_mm` grid-units per
     centimetre, because a grid unit spans `side_mm` millimetres and a centimetre is 10 of them.
-    Getting it wrong scales R by `k^2`, which for `side_mm = 171.7` is a factor of about 3400.
+    Getting it wrong scales R by `k^2`, which for `side_mm = 171.7` is a factor of about 295.
     """
     one_cm_s = np.array([[1.0, 0.0], [0.0, 1.0]])
     converted = fit_kalman_gain.to_grid_units(one_cm_s, _SIDE_MM)
@@ -149,14 +149,49 @@ def test_closed_loop_rho_rejects_a_degenerate_noise_pair() -> None:
 
 
 def test_workspace_side_mm_implements_the_preregistered_square_box() -> None:
-    """`side_mm` is the LONGER side of the cursor bounding box, in mm, from `planar_cm` times 10.
+    """`side_mm` is the LONGER side of the RECORDED cursor bounding box, in millimetres.
 
-    10-PREREGISTRATION section 3: `cursor_mm = 10 * planar_cm`, `side_mm = max(width, height)`. The
-    box is square so that one grid unit is the same distance on both axes, which is what makes the
-    scalar acquisition radius meaningful.
+    10-PREREGISTRATION section 3 as amended by section 3a: the box is the bounding box of the
+    session's own `cursor_pos` track, which is already in mm, and `side_mm = max(width, height)`.
+    The box is square so that one grid unit is the same distance on both axes, which is what makes
+    the scalar acquisition radius meaningful.
     """
-    planar_cm = np.array([[-5.0, 0.0], [12.17, 13.0], [0.0, 6.5]])
-    assert fit_kalman_gain.workspace_side_mm(planar_cm) == pytest.approx(171.7, abs=1e-9)
+    cursor_mm = np.array([[-50.0, 0.0], [121.7, 130.0], [0.0, 65.0]])
+    assert fit_kalman_gain.workspace_side_mm(cursor_mm) == pytest.approx(171.7, abs=1e-9)
+
+
+def test_workspace_side_mm_takes_millimetres_not_a_centimetre_track() -> None:
+    """Section 3a: the `x 10` that used to live inside this function is gone.
+
+    Pinned because the superseded reading is silent rather than loud: a centimetre track produces
+    a `side_mm` ten times too small, which scales `k = 10 / side_mm` by ten and R by a hundred.
+    """
+    cursor_mm = np.array([[0.0, 0.0], [171.7, 100.0]])
+    assert fit_kalman_gain.workspace_side_mm(cursor_mm) == pytest.approx(171.7, abs=1e-9)
+    assert fit_kalman_gain.workspace_side_mm(cursor_mm / 10.0) == pytest.approx(17.17, abs=1e-9)
+
+
+def test_resolve_side_mm_raises_when_the_two_implementations_disagree(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The cross-check is armed: the authority and the section-3 restatement must agree.
+
+    `_resolve_side_mm` returns `ndt1.replay_export.workspace_from_cursor`'s value, which is THE
+    box (section 3a), and raises above 1e-6 mm of disagreement. This test drives the trap through
+    a deliberately wrong local restatement rather than trusting that it would fire, because a
+    tripwire nobody has seen trip is not a tripwire. It fired for real during the 2026-09-05
+    reconciliation, when the two sides were briefly on different boxes.
+    """
+    cursor_mm = np.array([[0.0, 0.0], [171.7, 100.0]])
+    agreeing, source = fit_kalman_gain._resolve_side_mm(cursor_mm)
+    assert agreeing == pytest.approx(171.7, abs=1e-9)
+    assert "workspace_from_cursor" in source
+
+    # The wrong value is not arbitrary: 171.0725351294064 is the finger-derived side this script
+    # actually computed before the section-3a reconciliation.
+    monkeypatch.setattr(fit_kalman_gain, "workspace_side_mm", lambda _track: 171.0725351294064)
+    with pytest.raises(ValueError, match=r"have diverged"):
+        fit_kalman_gain._resolve_side_mm(cursor_mm)
 
 
 def test_fit_noise_falls_back_to_the_default_when_the_data_dir_is_absent(

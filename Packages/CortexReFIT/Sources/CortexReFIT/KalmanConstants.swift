@@ -7,11 +7,11 @@
 // Provenance:
 //   dt          = 0.02  (20 ms tick, CONTEXT D-01)
 //   noise source = indy-heldout   seed = 0
-//   session=indy_20160630_01 sha256=2ca8f6b7fcfc n_heldout=14600 lag_bins=1 lambda=0.1 side_mm=171.0725
-//   grid_units_per_cm=0.05845474 sigma_jerk_sq=6092.058703 R=diag(0.15152282,0.08984564) R_offdiag=-0.03168725
-//   rho_closed_loop=0.818794 resid_rms_grid_s=(0.389284,0.299734) encoder_sha=f95b257bf247
-//   velocity_sha=9d542cb51d4a resid_mean_grid_s=(-0.005428,+0.000949) heldout_r2_pooled=+0.144602
-//   readout=shipped_pooled_ridge side_mm_source=10-PREREGISTRATION-section-3 (ndt1.replay_export not importable)
+//   session=indy_20160630_01 sha256=2ca8f6b7fcfc n_heldout=14600 lag_bins=1 lambda=0.1 side_mm=171.6820
+//   grid_units_per_cm=0.05824724 sigma_jerk_sq=6048.884948 R=diag(0.15044900,0.08920892) R_offdiag=-0.03146268
+//   rho_closed_loop=0.818794 resid_rms_grid_s=(0.387902,0.298670) encoder_sha=f95b257bf247
+//   velocity_sha=9d542cb51d4a resid_mean_grid_s=(-0.005409,+0.000946) heldout_r2_pooled=+0.144602
+//   readout=shipped_pooled_ridge side_mm_source=ndt1.replay_export.workspace_from_cursor+section-3a-cross-check
 //   grid normalisation: R and Q are fit in GRID-UNITS/s using grid_units_per_cm = 10.0 / side_mm
 //   (10-PREREGISTRATION section 4, pre-registered before the fit ran). A residual fit in cm/s and
 //   normalised afterwards differs by grid_units_per_cm^2, which is large.
@@ -65,23 +65,23 @@ public nonisolated enum KalmanConstants {
   public static let K: [SIMD2<Float>] = [
     SIMD2<Float>(0.0, 0.0),
     SIMD2<Float>(0.0, 0.0),
-    SIMD2<Float>(0.32957715936826476, 0.0),
-    SIMD2<Float>(0.0, 0.36582623991546465),
-    SIMD2<Float>(3.2835785685665964, 0.0),
-    SIMD2<Float>(0.0, 4.147321059692332)
+    SIMD2<Float>(0.32957715936826487, 0.0),
+    SIMD2<Float>(0.0, 0.365826239915465),
+    SIMD2<Float>(3.283578568566595, 0.0),
+    SIMD2<Float>(0.0, 4.147321059692328)
   ]
 
   /// 4x4 process-noise covariance Q on the observable [vx,vy,ax,ay] block (provenance; 4 rows).
   public static let Qobs: [SIMD4<Float>] = [
-    SIMD4<Float>(0.0002436823481025904, 0.0, 0.024368234810259043, 0.0),
-    SIMD4<Float>(0.0, 0.0002436823481025904, 0.0, 0.024368234810259043),
-    SIMD4<Float>(0.024368234810259043, 0.0, 2.436823481025904, 0.0),
-    SIMD4<Float>(0.0, 0.024368234810259043, 0.0, 2.436823481025904)
+    SIMD4<Float>(0.0002419553979314815, 0.0, 0.024195539793148153, 0.0),
+    SIMD4<Float>(0.0, 0.0002419553979314815, 0.0, 0.024195539793148153),
+    SIMD4<Float>(0.024195539793148153, 0.0, 2.419553979314815, 0.0),
+    SIMD4<Float>(0.0, 0.024195539793148153, 0.0, 2.419553979314815)
   ]
 
   /// 2x2 measurement-noise covariance R on (vx,vy) (provenance; 2 rows).
   public static let R: [SIMD2<Float>] = [
-    SIMD2<Float>(0.15152282119292754, 0.0),
-    SIMD2<Float>(0.0, 0.08984564384360355)
+    SIMD2<Float>(0.15044899551772603, 0.0),
+    SIMD2<Float>(0.0, 0.08920891758412207)
   ]
 }
