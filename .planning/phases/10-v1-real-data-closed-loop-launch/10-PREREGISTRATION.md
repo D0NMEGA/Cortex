@@ -2,6 +2,7 @@
 phase: 10
 status: registered
 registered: 2026-09-05
+amended: 2026-09-05 (section 3a supersedes one line of section 3; no published number changed)
 supersedes: none
 rule: "No section below may be edited after a number it governs has been measured. A convention chosen after seeing the result is not a convention."
 ---
@@ -66,11 +67,13 @@ No retraining, no re-conversion, and no lag or lambda re-sweep happens in Phase 
 
 ## 3. The workspace-to-grid mapping
 
-Pre-registered. The grid box is a square, axis-aligned, derived from the session's own cursor
+Pre-registered. **The first line of this block was amended on 2026-09-05; read section 3a before
+using this section.** The grid box is a square, axis-aligned, derived from the session's own cursor
 track:
 
 ```
-cursor_mm      = 10.0 * planar_cm            (the verified x10 frame relation)
+cursor_mm      = the session's recorded cursor_pos track, transposed to (n_samples, 2)
+                 (already in millimetres; NOT derived from planar_cm)
 bbox           = axis-aligned bounding box of cursor_mm over the whole session
 side_mm        = max(bbox.width, bbox.height)
 centre_mm      = bbox centre
@@ -94,6 +97,78 @@ Expected values for `indy_20160630_01`: `side_mm` about 171.7, `cell_mm` about 5
 `acq_radius_mm` about 2.86. These are **expected, not asserted**. The script computes them and the
 emitted JSON records what it computed. A containment assertion is explicit: every cursor sample
 must fall inside the box, and the script raises if any does not.
+
+## 3a. Amendment, 2026-09-05: the box is the recorded `cursor_pos` track
+
+A dated amendment to section 3, made after Plans 10-01, 10-02 and 10-03 had run. It is recorded in
+full rather than applied silently, because a pre-registration that can be rewritten without a trace
+is not a pre-registration.
+
+**What the original text said.** The first line of section 3's block read, verbatim:
+
+```
+cursor_mm      = 10.0 * planar_cm            (the verified x10 frame relation)
+```
+
+`planar_cm` is `(-finger[1:3, :]).T` (`Decoder/src/ndt1/data.py:401`), the FINGER track. The literal
+text therefore derived the box from the finger track scaled by ten.
+
+**What it says now.** `cursor_mm` is the session's own recorded `cursor_pos` array, read from the
+`.mat` and already in millimetres. Nothing else in section 3 changes: the box is still square, still
+axis-aligned, still the larger of the two bounding-box spans, still centred on the bounding-box
+centre, still 30 x 30 with `acq_radius_mm = cell_mm / 2`, and still named `cursor_bbox_square`.
+
+**Why.** The two are different boxes, and the original text was internally inconsistent with the
+rest of its own section. Measured on `indy_20160630_01`, over all 365,809 behaviour samples:
+
+| Box | `side_mm` | `cell_mm` | `acq_radius_mm` |
+|---|---|---|---|
+| Recorded `cursor_pos` (this amendment) | 171.68196243849025 | 5.7227320812830085 | 2.8613660406415042 |
+| `10.0 * planar_cm` (the superseded literal text) | 171.0725351294064 | 5.7024178376468795 | 2.8512089188234397 |
+
+The decisive fact is containment, which section 3 already required in writing: "every cursor sample
+must fall inside the box, and the script raises if any does not." **13 of the 365,809 recorded
+cursor samples fall outside the finger-derived box; 0 fall outside the recorded-cursor box.** The
+finger-derived square is 171.07 mm on a side while the recorded cursor spans 171.68 mm on the same
+axis, so no centring of a 171.07 mm square can contain the recorded track. The finger box fails the
+pre-registered containment assertion by construction, not by a floating-point ulp. The converse was
+measured and holds cleanly: **0 of 365,809 finger-track samples fall outside the recorded-cursor
+box.** The recorded-cursor box is the only one of the two that contains both tracks, and containment
+is exactly what the assertion exists to protect, since a sample outside the box is a clipped
+excursion and a clipped trajectory is fabricated cursor behavior.
+
+Two further consistency points, both already visible in the original text. Section 3's own expected
+values ("`side_mm` about 171.7") are the recorded-cursor numbers, not the finger numbers. So is its
+reported excursion, "171.7 mm by 139.1 mm": the recorded cursor spans 171.68 by 139.13, the finger
+track 171.07 by 138.85.
+
+**Who decided.** The user, explicitly, on 2026-09-05, after Plan 10-02's own cross-artifact
+discrepancy note surfaced the disagreement. No agent chose this.
+
+**What changed as a result, and what did not.** No already-published number changed. Plan 10-01's
+`10-ceiling.json` and `10-ceiling-evidence.md` were computed on the recorded `cursor_pos` box and
+already carry `side_mm` 171.68196243849025 and 147 of 1,025 trials at radius 2.8613660406415042.
+They are correct as published, and they are not reissued. What moved is the two artifacts that had
+implemented the superseded literal text: the Plan 10-02 replay export sidecar and the Plan 10-03
+Kalman R fit, whose `k = 10.0 / side_mm` shifts by 0.35 percent and therefore moves `R` by
+0.71 percent. Both were regenerated on the corrected box, and the measured direction is recorded in
+`10-03a-RECONCILIATION-SUMMARY.md`. The amendment moves two artifacts ONTO a number that was
+committed before either of them ran. It does not move any number toward a more flattering result.
+
+**The x10 frame relation is not repealed, only demoted.** `cursor_pos = 10.0 * planar_cm` remains a
+verified property of this session and is still checked on every export by
+`Decoder/scripts/export_replay.py::verify_frame_relation`, which aborts if it stops holding. It is
+still what puts a decoded cm/s velocity into the millimetre frame, and it is still the 10.0 in
+`grid_units_per_cm = 10.0 / side_mm` (section 4's `k`). It is **not** what defines the box. The two
+uses are not interchangeable: a unit conversion tolerates a fitted slope of 10.005 harmlessly, while
+a bounding box built through that same 0.05 percent scale error stops containing the track it exists
+to bound.
+
+**Relation to this document's own no-edit rule.** The rule in the frontmatter stands. This is the
+remedy that rule itself prescribes, "a new dated section that supersedes the old one and states what
+changed and why, leaving the original text intact", applied in this repo's established form: the
+superseded line is quoted verbatim above, section 3 carries a pointer to this amendment, and the
+reference number the convention was registered to protect is unchanged.
 
 ## 4. Open Question 3, the R residual units
 
@@ -475,4 +550,7 @@ Pre-registered so no artifact adopts an unsourced number.
   stated here rather than resolved silently. Sections 9 and 16 are the two places that happens.
 - Where this document and `10-RESEARCH.md` disagree, this document governs. Section 9 is the one
   place that happens.
-- Nothing here may be edited after a number it governs has been measured.
+- Nothing here may be edited after a number it governs has been measured. One amendment has been
+  made under that rule's own remedy clause: section 3a, dated 2026-09-05, which supersedes a single
+  line of section 3 and leaves the superseded text quoted verbatim. It changed no published number.
+  It is the only amendment; anything else claiming to amend this document is not authorized by it.
