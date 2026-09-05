@@ -12,6 +12,12 @@
 /// The members are `nonisolated` so both a `nonisolated` value source (``SyntheticSpikeSource``,
 /// ``RecordedSpikeSource``) and the MainActor-isolated pipeline that drives them can share the seam
 /// under the package's `.defaultIsolation(MainActor.self)` posture.
+///
+/// ## What a conformance must guarantee (D-13, the determinism contract)
+/// ``window(_:)`` must be a PURE function of the conformer's own state and `windowIndex` - no RNG, no
+/// wall clock, no mutation. `ClosedLoopPipeline` drives it with its monotonic tick index, and the
+/// whole simulation path's reproducibility rests on the same index yielding the same bytes. A source
+/// that read a clock would put entropy back into a loop the repo has kept closed-form since Phase 7.
 public protocol SpikeWindowSource: Sendable {
   /// Recording channels per bin - the NDT1 `(1, channels, 1, S)` contract (96, DEC-02).
   nonisolated var channels: Int { get }

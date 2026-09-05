@@ -12,6 +12,13 @@
 // `trueVelocity(forWindow:)` take that window's LAST bin. That matches `apply_lag`'s convention, where
 // row i pairs the spike window ENDING at bin i with the kinematics one bin later, so the rotation
 // target and the decoded window describe the same instant rather than drifting apart by a window.
+//
+// ## Determinism (D-13, unchanged by swapping in real data)
+// Every member is a pure function of the mapped export and the window index: no RNG, no wall clock, no
+// mutation. Replaying a recorded session is therefore just as reproducible as the v0 synthetic stream,
+// and two runs over the same export produce byte-identical windows. That is what keeps Seam A's
+// comparability to the Phase-8 number resting on the source swap alone rather than on run-to-run
+// variation in the data the loop saw.
 import CortexCore
 
 /// A replay of one recorded session's spike bins, at the shipped model's window length.
