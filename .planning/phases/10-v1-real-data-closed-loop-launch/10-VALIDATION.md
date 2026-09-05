@@ -25,7 +25,7 @@ created: 2026-09-05
 | **Config file** | `Decoder/pyproject.toml`; per-package `Package.swift` |
 | **Env bootstrap (REQUIRED FIRST)** | `uv sync --project Decoder --extra dev` |
 | **Quick run command** | `uv run --project Decoder pytest Decoder/tests -m "not slow" -q` |
-| **Full suite command** | `uv run --project Decoder pytest Decoder/tests -q` plus `swift test` on CortexReFIT / CortexDemo / CortexDecoder plus every `*-policy.sh` and its `--self-test` |
+| **Full suite command** | `uv run --project Decoder pytest Decoder/tests -q --deselect Decoder/tests/test_heldout_cobps.py` plus `swift test` on CortexReFIT / CortexDemo / CortexDecoder plus every `*-policy.sh` and its `--self-test` |
 | **Estimated runtime** | ~30 s Python quick; ~2-4 min Swift packages plus gates |
 
 **Tier split (Phase 9 D-21, carried forward, reinforced by D-07).** CI gates correctness, structure
@@ -33,11 +33,23 @@ and provenance. CI never trains, never downloads the dataset, never reads the D-
 never asserts a measured number against a bar. Every automated command below must run green on a
 checkout with an empty `Decoder/data/` and no export present.
 
-**Standing caveat, new this phase.** The CI workflow has never executed (RESEARCH Correction 3:
-`gh api .../actions/runs` returns `total_count: 0`). Every "CI-blocking" row describes where an
-assertion is wired, not a run that has happened. Phase evidence must record locally-captured
-transcripts, and the README's present-tense "enforced as CI structural gates" claim is itself in
-scope for the RD-09 sweep.
+**Standing caveat, new this phase.** The CI workflow has never executed. Verified against GitHub
+on 2026-09-05, not inferred from local state: `repos/D0NMEGA/Cortex/actions/runs` returns
+`total_count: 0`, and `defaultBranchRef` is **empty** - the remote exists but holds no commits.
+Every "CI-blocking" row describes where an assertion is wired, not a run that has happened. Phase
+evidence must record locally-captured transcripts, and the README's present-tense "enforced as CI
+structural gates" claim is itself in scope for the RD-09 sweep.
+
+**D-18 consequence, recorded 2026-09-05:** the repository is **private** (`isPrivate: true`).
+Pushing `main` under D-18 makes CI run for the first time; it does **not** make the repo public.
+Repository visibility is a separate, unmade decision. Any README wording written for a public
+audience must not assume it.
+
+**D-09 exclusion, added 2026-09-05 after the Codex audit.** The full-suite command deselects
+`Decoder/tests/test_heldout_cobps.py`. That test asserts `heldout_co_bps > CO_BPS_MARGIN`
+(`:176`) after training (`:124-126`), so including it in a required gate would let a negative
+real-data result turn the build red - the exact "red build is pressure to tune" failure D-09
+exists to prevent. It remains runnable on demand as an evidence-producing run; it is not a gate.
 
 ---
 
@@ -77,7 +89,7 @@ column now names the plan that CREATES each missing artifact rather than a bare 
 | 10-13 T1 (SC#4a) | 10-13 | 9 | RD-10 | T-10-13-01 | `photodiode` / flat `24.7` no longer required | gate | `./Tools/scripts/readme-policy.sh --self-test` | 10-13 | ⬜ pending |
 | 10-13 T1 (SC#4b) | 10-13 | 9 | RD-10 | T-10-13-02, T-10-13-03 | Retired-context `24.7` passes; achieved-context `24.7` fails | gate | `./Tools/scripts/readme-policy.sh --self-test` (cases 1f and 1g) | 10-13 | ⬜ pending |
 | 10-13 T1 (SC#4c) | 10-13 | 9 | RD-10 | T-10-13-04 | D-14 provenance triple required, three strip controls | gate | `./Tools/scripts/readme-policy.sh --self-test` | 10-13 | ⬜ pending |
-| 10-13 T1 (SC#4d) | 10-13 | 9 | RD-10 | T-10-13-01 | Every pre-existing control still bites; count 9 -> >= 14 | gate | `./Tools/scripts/readme-policy.sh --self-test 2>&1 \| grep -c 'PASS \['` >= 14 | 10-13 | ⬜ pending |
+| 10-13 T1 (SC#4d) | 10-13 | 9 | RD-10 | T-10-13-01 | Every surviving control still bites; count 9 -> 12 non-baseline cases | gate | `./Tools/scripts/readme-policy.sh --self-test 2>&1 \| grep -c 'PASS \['` >= 12, **and** the executor states the arithmetic in the commit body | 10-13 | ⬜ pending |
 | 10-14 T1 (SC#5a) | 10-14 | 10 | RD-10 | T-10-14-03 | LAT-01..LAT-08 preserved verbatim in ROADMAP and REQUIREMENTS | gate | `./Tools/scripts/honesty-sweep.sh` | 10-14 | ⬜ pending |
 | 10-13 T2 + 10-14 T1 (SC#5b) | 10-13, 10-14 | 9, 10 | RD-10 | T-10-14-04 | ADR-0003 exists, four headings, Status line, indexed | gate | `./Tools/scripts/honesty-sweep.sh` | 10-13 | ⬜ pending |
 | 10-12 T1 (SC#5c) | 10-12 | 8 | RD-10 | T-10-12-02 | Honest-gates table reflects the new boundary | gate | `./Tools/scripts/readme-policy.sh --self-test` | 10-12 | ⬜ pending |

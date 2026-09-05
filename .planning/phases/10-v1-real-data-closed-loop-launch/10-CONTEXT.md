@@ -55,8 +55,17 @@ originally listed here as out of scope. They are now **in scope**.
 
 - **D-05:** The real spike stream goes through the full chain. `CortexDaemon` reads the exported
   real bins instead of generating synthetic spikes; IPC, decoder, ReFIT, renderer and HID are
-  unchanged. This is the only version where the re-derived glass-to-glass p99 is like-for-like
-  with the Phase-8 number, which included the IPC leg.
+  unchanged. ~~This is the only version where the re-derived glass-to-glass p99 is like-for-like
+  with the Phase-8 number, which included the IPC leg.~~
+  **FACTUALLY WRONG - struck 2026-09-05, verified twice (10-RESEARCH.md Correction 2, confirmed
+  independently by an external Codex audit).** The Phase-8 number did **not** include an IPC leg
+  and did **not** run the model: `Packages/CortexDemo/Package.swift` has no `CortexIPC` dependency,
+  no app-side ring consumer exists, and `CortexDemoBench/main.swift:90` builds
+  `ClosedLoopPipeline(seed:)` with no model URL against an arithmetically modelled present
+  timestamp (`:112-115`). There is therefore **no** single version that is like-for-like with
+  Phase 8. Plan against the Seam A / Seam B split instead: Seam A reproduces the Phase-8 geometry
+  with one variable changed, Seam B is the full D-05 chain, and the two are separately labeled and
+  never presented as the same measurement.
 - **D-06:** The Python side exports one artifact carrying the 20 ms binned counts (96 channels),
   the paired true velocity, and the target track, as a compact binary with a JSON sidecar
   recording session id, source sha256, bin count, the locked lag, and the workspace-to-grid
@@ -206,8 +215,9 @@ REQUIREMENTS.md, PROJECT.md, the Phase 9 handoff, and the codebase scout during 
   (section 4.1), and the dwell, timeout and acquisition-radius defaults (section 4.4)
 - `.planning/phases/07-.../07-CONTEXT.md`, `07-bps-evidence.md`, `refit_bps.json` - the ablation
   contract and the synthetic baseline being superseded
-- `Decoder/scripts/fit_kalman_gain.py` - the `--data-dir` real-residual path, written in Phase 7
-  and never yet run with data present; emits the Swift constants
+- `Decoder/scripts/fit_kalman_gain.py` - emits the Swift constants. **Its `--data-dir`
+  real-residual path is a no-op** (both `fit_noise` branches return `default_noise`); implementing
+  it is RD-07 work, not a re-run. See the struck Reusable-Assets entry below.
 - `Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift` - the generated target; the
   header forbids hand-editing the literals and `KalmanConstantsTests` enforces it
 - `Packages/CortexReFIT/Sources/CortexReFITBench/main.swift` - the deterministic three-arm ablation
@@ -260,14 +270,20 @@ REQUIREMENTS.md, PROJECT.md, the Phase 9 handoff, and the codebase scout during 
 ## Existing Code Insights
 
 ### Reusable Assets
-- `Decoder/scripts/fit_kalman_gain.py`: already implements the RD-07 re-fit. Its header states
-  "Re-run with `--data-dir` pointing at downloaded Indy .mat to fit R from decoder residuals"
-  and the committed `KalmanConstants.swift` provenance block records that it fell back to
-  defaults because held-out Indy data was absent. The data is now present, so the re-fit is a
-  re-run plus a residual source, not new machinery.
+- ~~`Decoder/scripts/fit_kalman_gain.py`: already implements the RD-07 re-fit ... so the re-fit is
+  a re-run plus a residual source, not new machinery.~~
+  **FACTUALLY WRONG - struck 2026-09-05, verified twice (Correction 1, confirmed by the Codex
+  audit).** Both branches of its `fit_noise` return `default_noise(seed)` (`:177`, `:189`). The
+  advertised `--data-dir` real-residual path is a **no-op**: the script cannot fit from data today
+  and never has. Its header claim and the `KalmanConstants.swift` "fell back to defaults" note
+  together create a false impression that only the data was missing. **RD-07's re-fit is new
+  implementation work, not a re-run.** Acceptance: the regenerated header reads
+  `noise source = indy-heldout`, never `default`.
 - `Packages/CortexReFITBench`: the three-arm ablation already isolates the filter stage on an
   identical replay. Adding D-04's shuffled-target arm is a fourth condition through the same
-  harness, not a new harness.
+  harness, not a new harness. **Caveat added 2026-09-05:** the harness makes incorrect selections
+  structurally zero (`CortexReFITBench/main.swift:283-285`), so its BPS is not measuring the same
+  quantity as a human point-and-click bitrate. See the comparability defects in `10-REVIEWS.md`.
 - `Packages/CortexDemo/ClosedLoopPipeline`: already has a decoder-backed path gated on
   `CORTEX_MODEL_URL` with a deterministic synthetic fallback. The real path swaps the source
   stage; the decode, filter, integrate and webgrid stages are untouched.

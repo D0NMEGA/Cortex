@@ -142,11 +142,28 @@ open-loop replay, and it is the substance D-11 needs.
 
 - **BrainGate 4.16 BPS**: Pandarinath et al. 2017, "High performance communication by people with
   paralysis using an intracortical brain-computer interface," eLife -
-  https://elifesciences.org/articles/18554. Consistent with `README.md:123`. The researcher should
-  confirm the exact 4.16 figure and the grid condition it was measured under against the paper.
-- **Webgrid BPS formula**: `BPS = log2(grid_size) * (net correct targets) / time`, matching the
-  `max(0, log2(N)*(Sc-Si)/t)` form already pinned in `bps-policy.sh` and disclosed in the README.
-  Neuralink's public description agrees (net correct targets per minute, scaled by grid size).
+  https://elifesciences.org/articles/18554. ~~Consistent with `README.md:123`.~~ **NOT consistent -
+  corrected 2026-09-05.** The paper reports 4.16 +/- 0.39 bps for T5 on the **dense 9x9 grid**; the
+  6x6 figures are T6 2.2, T5 3.7, T7 1.4. `README.md:123` and ~17 other locations label it 6x6,
+  including the Swift symbol `brainGate6x6BPS` and the serialized field `brain_gate_6x6_bps`.
+
+- ~~**Webgrid BPS formula**: `BPS = log2(grid_size) * (net correct targets) / time`, matching the
+  `max(0, log2(N)*(Sc-Si)/t)` form already pinned in `bps-policy.sh`. Neuralink's public
+  description agrees.~~
+  **WRONG ON BOTH HALVES - corrected 2026-09-05 after the Codex audit. This entry contradicted the
+  three-factor finding recorded earlier in this same file; that earlier finding is the correct one.**
+  1. **Against eLife:** the paper's achieved bitrate uses `log2(N - 1)`, not `log2(N)`. Matching the
+     `(correct - incorrect)` numerator does not make the formulas identical.
+  2. **Against Neuralink:** the live page describes a **three-factor** score - NTPM, grid size, and
+     the number of click types - not the two-factor form pinned in `bps-policy.sh`.
+  3. **Against the repo's own harness:** `CortexReFITBench/main.swift:283-285` makes incorrect
+     selections structurally zero, so `Si` is always 0 and the metric cannot express the
+     accuracy-speed tradeoff a human point-and-click bitrate measures.
+
+  Consequence: the repo's BPS is **not like-for-like with either reference**, independent of which
+  reference figure is chosen. RD-09 must disclose this rather than present the numbers as
+  comparable. This is a disclosure obligation, not necessarily a formula change - changing
+  `bps-policy.sh`'s pinned formula would break the Phase-7 byte-identity fixture (D-09).
 
 ## Sources not reachable this pass
 
