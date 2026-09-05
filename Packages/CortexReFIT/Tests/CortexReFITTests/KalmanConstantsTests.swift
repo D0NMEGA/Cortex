@@ -192,6 +192,34 @@ struct KalmanConstantsTests {
     return matMul(correction, aObs)
   }
 
+  /// Phase 10 / D-09: the FROZEN Phase-7 baseline gain has the same STRUCTURE as the shipped gain.
+  /// It is emitted by the same generator through the same `steady_state_gain` call, so its position
+  /// rows must be exactly zero for the same observability reason, and its velocity/acceleration rows
+  /// must be non-degenerate. A structural break here means the second emitted gain is not the gain
+  /// the documented default Q/R produces.
+  @Test("phase7BaselineK has 6 rows, zero position rows, and non-zero velocity/acceleration rows")
+  func frozenBaselineHasTheSameStructureAsTheShippedGain() {
+    #expect(KalmanConstants.phase7BaselineK.count == 6)
+    #expect(KalmanConstants.phase7BaselineK[0] == SIMD2<Float>(0, 0))
+    #expect(KalmanConstants.phase7BaselineK[1] == SIMD2<Float>(0, 0))
+    let velAccelRows = Array(KalmanConstants.phase7BaselineK[2 ..< 6])
+    #expect(!velAccelRows.allSatisfy { $0 == SIMD2<Float>(0, 0) })
+  }
+
+  /// Phase 10 / D-09: the frozen baseline is NOT the shipped gain after the Plan 10-03 re-fit.
+  ///
+  /// If these two ARE equal, the fit produced the documented default, which
+  /// ``noiseSourceIsRealData`` would already have caught from the header — so a failure here is a
+  /// REAL signal (the generator emitted the same gain twice, or the fit silently fell back), not a
+  /// tolerance artifact. The freeze only carries load while the two differ.
+  ///
+  /// Note what is NOT asserted: nothing about which gain is larger, or by how much. That would be an
+  /// assertion on the direction of a real-data result (10-PREREGISTRATION section 13).
+  @Test("phase7BaselineK is not the shipped re-fit gain K")
+  func frozenBaselineDiffersFromTheShippedGain() {
+    #expect(KalmanConstants.phase7BaselineK != KalmanConstants.K)
+  }
+
   /// The package namespace metadata matches the 6-DOF / 2-measurement contract.
   @Test("CortexReFIT namespace dimensions match the 6-DOF / 2-measurement contract")
   func namespaceDimensions() {

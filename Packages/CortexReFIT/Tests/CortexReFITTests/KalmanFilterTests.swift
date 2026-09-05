@@ -252,4 +252,70 @@ struct KalmanFilterTests {
     let projNoRot = simd_dot(outNoRot, towardTarget)
     #expect(projRot > projNoRot)
   }
+
+  // MARK: - Test 6: the injected-gain init is the same filter when handed the shipped gain
+
+  /// Test 6 (Phase 10, D-09): `KalmanFilter(gain:)` exists so the SYNTHETIC regression fixture can
+  /// hold the gain fixed at ``KalmanConstants/phase7BaselineK`` while the shipped ``KalmanConstants/K``
+  /// moves with a real-data re-fit. That seam is only safe if the two inits are the SAME filter when
+  /// handed the same gain: `init()` must be `init(gain: KalmanConstants.K)` and nothing else. Drive
+  /// both over an identical 64-tick measurement sequence and require bit-equal emitted velocities.
+  ///
+  /// This is the test that would catch a second unpacking implementation drifting from the first.
+  @Test("KalmanFilter(gain: KalmanConstants.K) reproduces KalmanFilter() exactly")
+  func injectedShippedGainMatchesDefaultInit() {
+    let x0: [Float] = [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
+    let target = SIMD2<Float>(0.9, 0.8)
+    let rAcq: Float = 0.02
+
+    let byDefault = KalmanFilter()
+    byDefault.setState(x0)
+    let byInjection = KalmanFilter(gain: KalmanConstants.K)
+    byInjection.setState(x0)
+
+    for t in 0 ..< 64 {
+      let phase = Float(t) * 0.1
+      let z = SIMD2<Float>(0.3 * cosf(phase), 0.3 * sinf(phase))
+      let p = SIMD2<Float>(0.2 + 0.005 * Float(t), 0.2 + 0.004 * Float(t))
+
+      byDefault.setCursorPosition(p)
+      byInjection.setCursorPosition(p)
+      let a = byDefault.step(measurement: z, target: target, acquisitionRadius: rAcq)
+      let b = byInjection.step(measurement: z, target: target, acquisitionRadius: rAcq)
+
+      #expect(a == b, "injected-gain output diverged at tick \(t): \(a) vs \(b)")
+      #expect(byDefault.stateVector == byInjection.stateVector, "state diverged at tick \(t)")
+    }
+  }
+
+  /// Test 7 (Phase 10, D-09): the frozen baseline gain produces a DIFFERENT filter from the shipped
+  /// re-fit gain. If these two ever agreed, `CortexReFITBench --smoke` would be immune to a re-fit by
+  /// coincidence rather than by construction, and the freeze would be silently load-free.
+  ///
+  /// It asserts a DIFFERENCE, never a direction or a magnitude, so it stays inside D-09.
+  @Test("KalmanFilter(gain: phase7BaselineK) differs from the shipped-gain filter")
+  func frozenBaselineGainProducesADifferentFilter() {
+    let x0: [Float] = [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
+    let target = SIMD2<Float>(0.9, 0.8)
+    let rAcq: Float = 0.02
+
+    let shipped = KalmanFilter()
+    shipped.setState(x0)
+    let frozen = KalmanFilter(gain: KalmanConstants.phase7BaselineK)
+    frozen.setState(x0)
+
+    var diverged = false
+    for t in 0 ..< 64 {
+      let phase = Float(t) * 0.1
+      let z = SIMD2<Float>(0.3 * cosf(phase), 0.3 * sinf(phase))
+      let p = SIMD2<Float>(0.2 + 0.005 * Float(t), 0.2 + 0.004 * Float(t))
+
+      shipped.setCursorPosition(p)
+      frozen.setCursorPosition(p)
+      let a = shipped.step(measurement: z, target: target, acquisitionRadius: rAcq)
+      let b = frozen.step(measurement: z, target: target, acquisitionRadius: rAcq)
+      if a != b { diverged = true }
+    }
+    #expect(diverged, "the frozen Phase-7 baseline gain and the shipped re-fit gain drive the filter identically")
+  }
 }
