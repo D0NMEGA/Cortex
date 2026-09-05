@@ -24,6 +24,7 @@ from ndt1.replay_export import (
     OPEN_LOOP_DISCLOSURE,
     RECORD_BYTES,
     build_sidecar,
+    count_outside_box,
     read_export,
     workspace_from_cursor,
     write_export,
@@ -51,10 +52,10 @@ def _arrays(n_bins: int = _N_BINS) -> dict[str, np.ndarray]:
 
 
 def _workspace() -> dict[str, Any]:
-    """A pre-registered box over a small synthetic cursor track."""
+    """A pre-registered box over a small synthetic RECORDED cursor track, in millimetres."""
     angle = np.linspace(0.0, 2.0 * np.pi, 64)
-    planar_cm = np.stack([3.0 * np.cos(angle), 2.0 * np.sin(angle)], axis=1)
-    return workspace_from_cursor(planar_cm)
+    cursor_mm = np.stack([30.0 * np.cos(angle), 20.0 * np.sin(angle)], axis=1)
+    return workspace_from_cursor(cursor_mm)
 
 
 def _sidecar(n_bins: int = _N_BINS, **overrides: Any) -> dict[str, Any]:
@@ -285,12 +286,13 @@ def test_read_export_verifies_the_binary_digest_on_request(tmp_path: Path) -> No
 
 def test_workspace_from_cursor_squares_the_larger_span_and_contains_every_sample() -> None:
     """10-PREREGISTRATION section 3: a square box on the larger span, 30x30, half-cell radius."""
-    # Explicit extremes rather than a sampled curve: 60 mm of x excursion, 40 mm of y.
-    planar_cm = np.array(
-        [[-3.0, -2.0], [3.0, 2.0], [0.0, 0.0], [1.5, -1.0], [-2.25, 0.75]], dtype=np.float64
+    # Explicit extremes rather than a sampled curve: 60 mm of x excursion, 40 mm of y. The input is
+    # the RECORDED cursor track in MILLIMETRES (section 3a), not a centimetre finger track.
+    cursor_mm = np.array(
+        [[-30.0, -20.0], [30.0, 20.0], [0.0, 0.0], [15.0, -10.0], [-22.5, 7.5]], dtype=np.float64
     )
 
-    box = workspace_from_cursor(planar_cm)
+    box = workspace_from_cursor(cursor_mm)
 
     assert box["normalisation"] == "cursor_bbox_square"
     assert box["side_mm"] == pytest.approx(60.0)
@@ -299,7 +301,6 @@ def test_workspace_from_cursor_squares_the_larger_span_and_contains_every_sample
     assert box["grid_rows"] == box["grid_cols"] == 30
     assert box["grid_units_per_cm"] == pytest.approx(10.0 / box["side_mm"])
 
-    cursor_mm = 10.0 * planar_cm
     assert cursor_mm[:, 0].min() >= box["x_min_mm"]
     assert cursor_mm[:, 0].max() <= box["x_max_mm"]
     assert cursor_mm[:, 1].min() >= box["y_min_mm"]
@@ -307,12 +308,43 @@ def test_workspace_from_cursor_squares_the_larger_span_and_contains_every_sample
     assert box["y_max_mm"] - box["y_min_mm"] == pytest.approx(box["side_mm"])
 
 
+def test_workspace_from_cursor_takes_millimetres_not_a_centimetre_track() -> None:
+    """Section 3a: the input is `cursor_pos` in mm, so no x10 conversion happens inside.
+
+    The regression this pins is the superseded section-3 reading, where the box was built from
+    `10.0 * planar_cm`. Feeding a centimetre track now yields a box ten times too small, and the
+    difference is not cosmetic: `side_mm` sets `k = 10 / side_mm`, so R scales by `k^2`.
+    """
+    track_mm = np.array([[0.0, 0.0], [60.0, 40.0]], dtype=np.float64)
+    assert workspace_from_cursor(track_mm)["side_mm"] == pytest.approx(60.0)
+    assert workspace_from_cursor(track_mm / 10.0)["side_mm"] == pytest.approx(6.0)
+
+
 def test_workspace_from_cursor_raises_when_a_sample_escapes_the_box() -> None:
     """A non-finite sample cannot be contained, and a silently clipped track is fabricated data."""
-    planar_cm = np.array([[0.0, 0.0], [1.0, 1.0], [np.nan, 0.5]], dtype=np.float64)
+    cursor_mm = np.array([[0.0, 0.0], [10.0, 10.0], [np.nan, 5.0]], dtype=np.float64)
     with pytest.raises(ValueError) as excinfo:
-        workspace_from_cursor(planar_cm)
+        workspace_from_cursor(cursor_mm)
     assert "containment" in str(excinfo.value)
+
+
+def test_count_outside_box_catches_a_track_the_box_does_not_contain() -> None:
+    """The section-3a containment argument, in miniature, on a track whose answer is known by hand.
+
+    A box built on one track is checked against a slightly LARGER second track, which is exactly
+    the finger-versus-cursor situation on `indy_20160630_01`: the box built from the smaller track
+    cannot contain the larger one, whatever the centring. Two of the four scaled corners escape on
+    the governing axis; the other two sit inside the padded axis.
+    """
+    track_mm = np.array(
+        [[-30.0, -20.0], [30.0, 20.0], [-30.0, 20.0], [30.0, -20.0]], dtype=np.float64
+    )
+    box = workspace_from_cursor(track_mm)
+
+    assert count_outside_box(box, track_mm) == 0
+    assert count_outside_box(box, 1.01 * track_mm) == 4
+    assert count_outside_box(box, 0.99 * track_mm) == 0
+    assert count_outside_box(box, np.array([[np.nan, 0.0]], dtype=np.float64)) == 1
 
 
 # ------------------------------------------------------------------------------- disclosure + D-09

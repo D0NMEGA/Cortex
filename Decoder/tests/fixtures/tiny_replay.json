@@ -19,7 +19,7 @@
   "record_bytes": 424,
   "schema_version": 1,
   "session_id": "tiny_replay_synthetic",
-  "source_sha256": "5577e3c7607bbc85ce7b4f14a5fba7d6bcc075d2c32c15b2727d8cc639780d01",
+  "source_sha256": "c98894f84389c658d916dfa0e739290d4e399da7ea5246a3ac768f37c3c12932",
   "target_grid": {
     "distinct_targets": 4,
     "log2_n_task": 2.0,

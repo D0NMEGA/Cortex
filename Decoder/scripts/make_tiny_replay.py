@@ -34,6 +34,7 @@ from pathlib import Path
 import numpy as np
 
 from ndt1.replay_export import (
+    FRAME_SCALE_MM_PER_CM,
     N_CHANNELS,
     build_sidecar,
     workspace_from_cursor,
@@ -120,7 +121,11 @@ def build_fixture(out_dir: Path) -> tuple[Path, Path]:
         binary_path=f"{_STEM}.bin",
         n_bins=N_BINS,
         lag_bins=1,
-        workspace=workspace_from_cursor(planar_cm),
+        # `workspace_from_cursor` takes the RECORDED cursor track in MILLIMETRES
+        # (10-PREREGISTRATION section 3a). A synthetic session has no recorded cursor, so the
+        # fixture's cursor IS its finger track under the x10 frame relation, converted here rather
+        # than inside the box function, where the conversion is what the amendment removed.
+        workspace=workspace_from_cursor(FRAME_SCALE_MM_PER_CM * planar_cm),
         target_grid={
             "distinct_targets": len(TARGET_POINTS_MM),
             "pitch_mm": TARGET_PITCH_MM,

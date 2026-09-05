@@ -418,7 +418,8 @@ def load_session(path: Path) -> dict[str, object]:
             # transposed and nothing else. Verified on indy_20160630_01: x range -52.5 to 52.5 mm,
             # y range 7.5 to 112.5 mm, 64 distinct pairs, 15.0 mm pitch.
             # cursor_pos stays UNREAD here (D-01). Decoder/scripts/export_replay.py reads it once,
-            # outside this loader, to verify the x10 frame relation, and discards it.
+            # outside this loader, to verify the x10 frame relation AND to build the workspace box
+            # (10-PREREGISTRATION 3a: the box is the recorded cursor track, not 10 x planar).
             target_mm_samples = target.T  # (n_samples, 2) in mm -- NO sign correction
     except OSError as exc:
         raise OSError(f"could not read session .mat at {path}: {exc}") from exc

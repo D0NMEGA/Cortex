@@ -50,8 +50,14 @@ from typing import Any
 
 import numpy as np
 
+#: The ONE authoritative implementation of the pre-registered box (10-PREREGISTRATION section 3a).
+#: Imported rather than restated, and aliased so the call site reads as a delegation: two copies of
+#: this arithmetic are what produced the 171.68-versus-171.07 split this script's own number was
+#: caught in the middle of. The 30x30 grid constant comes with it (`GRID_ROWS`), so D-02's grid size
+#: is also stated once.
+from ndt1.replay_export import workspace_from_cursor as _workspace_from_cursor
+
 _PENDING = "PENDING"
-_GRID = 30  # the 30x30 webgrid D-02 locks
 _BEHAVIOR_FS_HZ = 250.0  # the Indy behavior clock (median diff(t) = 0.004 s)
 
 #: The radius x dwell grid the evidence artifact reports, in millimetres and seconds. The first six
@@ -158,63 +164,41 @@ def ceiling(
 
 
 def square_box(cursor_mm: np.ndarray) -> dict[str, Any]:
-    """The pre-registered ``cursor_bbox_square`` workspace box (10-PREREGISTRATION section 3).
+    """The pre-registered ``cursor_bbox_square`` workspace box (10-PREREGISTRATION sections 3, 3a).
 
-    A square, axis-aligned box derived from the session's OWN cursor track: the side is the larger
-    of the two bounding-box spans and the box is centred on the bounding-box centre. Square keeps
-    the grid isotropic in grid units, so the scalar ``acquisitionRadius`` means the same distance
-    on both axes. Deriving it from the cursor rather than from the 105 mm target field is what
-    stops ``CursorIntegrator``'s ``[0, 1]`` clamp from CLIPPING real excursions, and a clipped
-    trajectory is fabricated cursor behavior.
+    A square, axis-aligned box derived from the session's OWN recorded cursor track: the side is
+    the larger of the two bounding-box spans and the box is centred on the bounding-box centre.
+    Square keeps the grid isotropic in grid units, so the scalar ``acquisitionRadius`` means the
+    same distance on both axes. Deriving it from the cursor rather than from the 105 mm target
+    field is what stops ``CursorIntegrator``'s ``[0, 1]`` clamp from CLIPPING real excursions, and
+    a clipped trajectory is fabricated cursor behavior.
+
+    The arithmetic is NOT restated here. ``ndt1.replay_export.workspace_from_cursor`` is the one
+    authoritative implementation of the box in this repo (section 3a, 2026-09-05); this function
+    transposes the ``(2, N)`` track this script works in into the ``(n, 2)`` that function takes,
+    and renames the keys onto the schema ``10-ceiling.json`` was committed with. That schema keeps
+    its own spelling (``acq_radius_mm``) and its own key set on purpose: the artifact is published
+    and is not reissued. Delegating changes no number -- the Plan 10-01 reference is unchanged at
+    ``side_mm`` 171.68196243849025, 147 of 1,025 trials at radius 2.8613660406415042.
 
     Raises ``ValueError`` naming the offending sample count if containment does not hold.
     """
     cursor = np.asarray(cursor_mm, dtype=np.float64)
-    x_min, x_max = float(cursor[0].min()), float(cursor[0].max())
-    y_min, y_max = float(cursor[1].min()), float(cursor[1].max())
-    side_mm = max(x_max - x_min, y_max - y_min)
-    centre_x = (x_max + x_min) / 2.0
-    centre_y = (y_max + y_min) / 2.0
-    half = side_mm / 2.0
+    if cursor.ndim != 2 or cursor.shape[0] != 2:
+        raise ValueError(f"cursor_mm must be (2, N), got shape {cursor.shape}")
 
-    # The axis whose span DEFINES side_mm gets the observed extremes verbatim, so containment on it
-    # holds exactly. Evaluating `centre +/- half` on that axis instead leaves the extreme sample up
-    # to an ulp outside the box (measured on indy_20160630_01: the x_max sample fell 1.4e-14 mm
-    # outside), which the strict containment check below correctly refuses. It is the same square
-    # either way: this fixes the floating-point evaluation, not the convention, so
-    # 10-PREREGISTRATION section 3 is unchanged.
-    if (x_max - x_min) >= (y_max - y_min):
-        box_x_min, box_x_max = x_min, x_max
-        box_y_min, box_y_max = centre_y - half, centre_y + half
-    else:
-        box_x_min, box_x_max = centre_x - half, centre_x + half
-        box_y_min, box_y_max = y_min, y_max
-
-    contained = (
-        (cursor[0] >= box_x_min)
-        & (cursor[0] <= box_x_max)
-        & (cursor[1] >= box_y_min)
-        & (cursor[1] <= box_y_max)
-    )
-    outside = int(cursor.shape[1] - int(np.count_nonzero(contained)))
-    if outside:
-        raise ValueError(
-            f"cursor_bbox_square containment failed for {outside} of {cursor.shape[1]} samples; "
-            "a non-finite or out-of-box sample would silently clip the replayed trajectory"
-        )
-
-    cell_mm = side_mm / _GRID
+    box = _workspace_from_cursor(cursor.T)
     return {
-        "x_min_mm": box_x_min,
-        "x_max_mm": box_x_max,
-        "y_min_mm": box_y_min,
-        "y_max_mm": box_y_max,
-        "side_mm": side_mm,
-        "centre_x_mm": centre_x,
-        "centre_y_mm": centre_y,
-        "cell_mm": cell_mm,
-        "acq_radius_mm": cell_mm / 2.0,
-        "normalisation": "cursor_bbox_square",
+        "x_min_mm": box["x_min_mm"],
+        "x_max_mm": box["x_max_mm"],
+        "y_min_mm": box["y_min_mm"],
+        "y_max_mm": box["y_max_mm"],
+        "side_mm": box["side_mm"],
+        "centre_x_mm": box["centre_x_mm"],
+        "centre_y_mm": box["centre_y_mm"],
+        "cell_mm": box["cell_mm"],
+        "acq_radius_mm": box["acquisition_radius_mm"],
+        "normalisation": box["normalisation"],
     }
 
 

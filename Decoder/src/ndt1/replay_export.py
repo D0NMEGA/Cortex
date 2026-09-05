@@ -7,6 +7,11 @@ stays in `ndt1`, where `bin_spikes`, `bin_velocity` and `bin_target_track` share
 by construction, because a second binner in Swift would be a silent drift hole. This file is the
 ONLY writer of the format and the ONLY Python reader of it.
 
+It also owns the ONE authoritative implementation of the pre-registered `cursor_bbox_square`
+workspace box (10-PREREGISTRATION sections 3 and 3a): `Decoder/scripts/webgrid_ceiling.py` and
+`Decoder/scripts/fit_kalman_gain.py` both delegate to `workspace_from_cursor` rather than restating
+its arithmetic, for the same reason the binner lives here.
+
 The binary carries no header. The header is the sidecar, so a human and a gate can both read it,
 and the reader validates the sidecar's declared shape against the binary's ACTUAL byte length
 before it allocates anything (ASVS V5). A `binary_path` that resolves outside the sidecar's own
@@ -53,6 +58,11 @@ NORMALISATION: str = "cursor_bbox_square"
 #: `cursor_pos` and `target_pos` are in millimetres; `finger_pos` planar is in centimetres. The
 #: relation is a pure unit conversion (measured on indy_20160630_01: slope 10.005, R2 0.99997), and
 #: `Decoder/scripts/export_replay.py` re-verifies it on the session it exports rather than assuming.
+#:
+#: It is the conversion, and the 10.0 in `grid_units_per_cm = 10.0 / side_mm`. It is NOT what
+#: defines the workspace box: 10-PREREGISTRATION section 3a boxes the RECORDED `cursor_pos` track,
+#: because a box built through this relation's 0.05 percent scale error leaves 13 of the session's
+#: 365,809 recorded cursor samples outside it and so fails section 3's containment assertion.
 FRAME_SCALE_MM_PER_CM: float = 10.0
 
 #: Verbatim, byte-identical wherever it appears (10-PREREGISTRATION section 12).
@@ -127,19 +137,31 @@ class ReplayExport:
     sidecar: dict[str, Any]
 
 
-def workspace_from_cursor(planar_cm: np.ndarray) -> dict[str, Any]:
-    """The pre-registered `cursor_bbox_square` workspace box (10-PREREGISTRATION section 3).
+def workspace_from_cursor(cursor_mm: np.ndarray) -> dict[str, Any]:
+    """The pre-registered `cursor_bbox_square` workspace box (10-PREREGISTRATION sections 3, 3a).
 
-    A square, axis-aligned box derived from the session's OWN cursor track:
-    `cursor_mm = 10.0 * planar_cm`, the side is the larger of the two bounding-box spans, and the
-    box is centred on the bounding-box centre. Square keeps the grid isotropic in grid units, so
-    the scalar acquisition radius means the same distance on both axes. Deriving the box from the
-    cursor rather than from the 105 mm target field is what stops `CursorIntegrator`'s `[0, 1]`
-    clamp from CLIPPING real excursions, and a clipped trajectory is fabricated cursor behavior.
+    THE authoritative implementation of the box, and the only one in this repo. Every other call
+    site delegates here: `Decoder/scripts/webgrid_ceiling.py::square_box` renames the keys onto its
+    own committed `10-ceiling.json` schema, and `Decoder/scripts/fit_kalman_gain.py` takes
+    `side_mm` from here and raises if its own section-3 arithmetic disagrees. Two implementations
+    that quietly diverge would normalise R by different constants, which is a factor of `k^2`.
+
+    A square, axis-aligned box derived from the session's OWN RECORDED cursor track: the side is
+    the larger of the two bounding-box spans and the box is centred on the bounding-box centre.
+    Square keeps the grid isotropic in grid units, so the scalar acquisition radius means the same
+    distance on both axes. Deriving the box from the cursor rather than from the 105 mm target
+    field is what stops `CursorIntegrator`'s `[0, 1]` clamp from CLIPPING real excursions, and a
+    clipped trajectory is fabricated cursor behavior.
+
+    The input is the RECORDED `cursor_pos` array, already in millimetres, NOT
+    `FRAME_SCALE_MM_PER_CM * planar_cm` (10-PREREGISTRATION section 3a, amended 2026-09-05). The
+    x10 finger-to-cursor relation is a verified unit conversion but its fitted slope is 10.005, and
+    a box built through it leaves 13 of `indy_20160630_01`'s 365,809 recorded cursor samples
+    outside itself, which is precisely what the containment check below refuses.
 
     Args:
-        planar_cm: `(n_samples, 2)` sign-corrected `(x, y)` cursor position in cm, i.e. exactly
-            what `ndt1.data.load_session` returns as `"planar_cm"`.
+        cursor_mm: `(n_samples, 2)` recorded `(x, y)` cursor position in millimetres, i.e. the
+            session's `cursor_pos` dataset transposed.
 
     Returns:
         The workspace dict written verbatim into the sidecar.
@@ -148,15 +170,14 @@ def workspace_from_cursor(planar_cm: np.ndarray) -> dict[str, Any]:
         ValueError: if the input is not `(n, 2)`, or if any sample falls outside the computed box
             (which a non-finite sample does).
     """
-    planar = np.asarray(planar_cm, dtype=np.float64)
-    if planar.ndim != 2 or planar.shape[1] != 2:
-        raise ValueError(f"planar_cm must be 2-D (n_samples, 2), got shape {planar.shape}")
-    if planar.shape[0] == 0:
-        raise ValueError("planar_cm is empty; a workspace box needs at least one cursor sample")
+    cursor = np.asarray(cursor_mm, dtype=np.float64)
+    if cursor.ndim != 2 or cursor.shape[1] != 2:
+        raise ValueError(f"cursor_mm must be 2-D (n_samples, 2), got shape {cursor.shape}")
+    if cursor.shape[0] == 0:
+        raise ValueError("cursor_mm is empty; a workspace box needs at least one cursor sample")
 
-    cursor_mm = FRAME_SCALE_MM_PER_CM * planar
-    x_min, x_max = float(cursor_mm[:, 0].min()), float(cursor_mm[:, 0].max())
-    y_min, y_max = float(cursor_mm[:, 1].min()), float(cursor_mm[:, 1].max())
+    x_min, x_max = float(cursor[:, 0].min()), float(cursor[:, 0].max())
+    y_min, y_max = float(cursor[:, 1].min()), float(cursor[:, 1].max())
     side_mm = max(x_max - x_min, y_max - y_min)
     centre_x = (x_max + x_min) / 2.0
     centre_y = (y_max + y_min) / 2.0
@@ -173,22 +194,8 @@ def workspace_from_cursor(planar_cm: np.ndarray) -> dict[str, Any]:
         box_x_min, box_x_max = centre_x - half, centre_x + half
         box_y_min, box_y_max = y_min, y_max
 
-    contained = (
-        (cursor_mm[:, 0] >= box_x_min)
-        & (cursor_mm[:, 0] <= box_x_max)
-        & (cursor_mm[:, 1] >= box_y_min)
-        & (cursor_mm[:, 1] <= box_y_max)
-    )
-    outside = int(cursor_mm.shape[0] - int(np.count_nonzero(contained)))
-    if outside:
-        raise ValueError(
-            f"cursor_bbox_square containment failed for {outside} of {cursor_mm.shape[0]} "
-            f"samples; a non-finite or out-of-box sample would silently clip the replayed "
-            f"trajectory, and a clipped trajectory is fabricated cursor behavior"
-        )
-
     cell_mm = side_mm / GRID_ROWS
-    return {
+    workspace = {
         "normalisation": NORMALISATION,
         "x_min_mm": box_x_min,
         "x_max_mm": box_x_max,
@@ -203,6 +210,47 @@ def workspace_from_cursor(planar_cm: np.ndarray) -> dict[str, Any]:
         "acquisition_radius_mm": cell_mm / 2.0,
         "grid_units_per_cm": FRAME_SCALE_MM_PER_CM / side_mm,
     }
+
+    outside = count_outside_box(workspace, cursor)
+    if outside:
+        raise ValueError(
+            f"cursor_bbox_square containment failed for {outside} of {cursor.shape[0]} "
+            f"samples; a non-finite or out-of-box sample would silently clip the replayed "
+            f"trajectory, and a clipped trajectory is fabricated cursor behavior"
+        )
+    return workspace
+
+
+def count_outside_box(workspace: dict[str, Any], points_mm: np.ndarray) -> int:
+    """How many of `points_mm` fall outside `workspace`'s square, inclusive of the edges.
+
+    Used twice: by :func:`workspace_from_cursor` for the pre-registered containment assertion on
+    the track that DEFINED the box, and by `Decoder/scripts/export_replay.py` to check the OTHER
+    track (the x10 finger track) against it. The second use is what makes 10-PREREGISTRATION
+    section 3a's decisive claim executable rather than merely asserted: the recorded-cursor box is
+    the one that contains both tracks.
+
+    Args:
+        workspace: a box as :func:`workspace_from_cursor` returns.
+        points_mm: `(n_samples, 2)` positions in millimetres.
+
+    Returns:
+        The count of samples outside the box. A non-finite sample counts as outside, because every
+        comparison against it is false.
+
+    Raises:
+        ValueError: if `points_mm` is not `(n, 2)`.
+    """
+    points = np.asarray(points_mm, dtype=np.float64)
+    if points.ndim != 2 or points.shape[1] != 2:
+        raise ValueError(f"points_mm must be 2-D (n_samples, 2), got shape {points.shape}")
+    contained = (
+        (points[:, 0] >= workspace["x_min_mm"])
+        & (points[:, 0] <= workspace["x_max_mm"])
+        & (points[:, 1] >= workspace["y_min_mm"])
+        & (points[:, 1] <= workspace["y_max_mm"])
+    )
+    return int(points.shape[0] - int(np.count_nonzero(contained)))
 
 
 def build_sidecar(
