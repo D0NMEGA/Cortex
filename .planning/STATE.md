@@ -3,9 +3,9 @@ donny_state_version: 1.0
 milestone: v1.0
 milestone_name: Real-Data Decoding
 status: executing
-stopped_at: Phase 10 planned (17 plans, 14 waves), ready to execute
-last_updated: "2026-09-05T16:01:56.159Z"
-last_activity: 2026-09-05 -- Phase 10 planning complete
+stopped_at: Phase 10 context gathered
+last_updated: "2026-09-05T21:27:39.893Z"
+last_activity: 2026-09-05 -- Phase 10 execution started
 progress:
   total_phases: 10
   completed_phases: 9
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** A real-neural-data decoder running end-to-end under 25ms, reproducibly — NDT1 decoding real primate M1 spikes (O'Doherty/Makin Indy, Zenodo 3854034) through the sub-25ms software-timed pipeline. *Re-pointed 2026-08-28: the photodiode-instrumented "24.7 ± 1.3 ms" claim is RETIRED to Future work (hardware-gated); it stays a spec target and may not be cited as achieved.*
-**Current focus:** Phase 10 — v1-real-data-closed-loop-launch (context gathered, ready for planning)
+**Current focus:** Phase 10 — v1-real-data-closed-loop-launch
 
 **Re-plan 2026-08-28 (user-directed).** Phases 9-10 were the photodiode rig build + 10k-trial campaign. Both are retired to ROADMAP "Future work" (LAT-01..08 preserved, not deleted) — hardware-gated on the ~$110 BOM plus the provisioned iPad Pro M4 that already deferred three Phase-8 HUMAN-UAT gates. Replaced by real-data work, because the repo's largest credibility hole is that **every decoder number was produced on a synthetic Poisson fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"), so co-bps 0.3804, ReFIT 0.374-vs-0.161 and 1.953 BPS are all synthetic-data numbers. New requirements RD-01..RD-10. Infrastructure is already in place and unused: `download_indy.py` works, `data.py` is a real h5py v7.3 loader, the manifest lists 4 sessions with `sha256: "PENDING"`, and Zenodo is live (verified 2026-08-28: HTTP 200, ~1.5 GB total). Known blocker for Phase 10: `Tools/scripts/readme-policy.sh` **requires** the tokens `photodiode` and `24.7` in the README and its `--self-test` proves the gate bites when they are stripped — retiring the claim means rewriting the gate and its negative controls in lockstep (RD-10).
 
 ## Current Position
 
-Phase: 10 (v1-real-data-closed-loop-launch) — CONTEXT GATHERED
-Plan: 0 of TBD (not yet planned)
-Status: Ready to execute
-Last activity: 2026-09-05 -- Phase 10 planning complete
+Phase: 10 (v1-real-data-closed-loop-launch) — EXECUTING
+Plan: 1 of 17
+Status: Executing Phase 10
+Last activity: 2026-09-05 -- Phase 10 execution started
 
 Progress: Phase 9 [██████████] 100% (11/11 plans executed) · Project [█████████░] 9/10 phases
 
