@@ -210,7 +210,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 numbers (RD-07, RD-08); waves 6-10 republish and gate them (RD-09, RD-10); waves 11-13 are the D-18
 lint remediation and the first push, which arms `swiftlint --strict` for the first time in the project's
 history. Every measurement convention is pre-registered in Wave 0 before any number exists.
-- [ ] 10-01-PLAN.md - 10-PREREGISTRATION.md (R units, workspace box, dual-N, the fourth arm, the two seams, all three artifact schemas) + the true-cursor webgrid ceiling script, run and published (RD-07, RD-08) [Wave 0]
+- [x] 10-01-PLAN.md - 10-PREREGISTRATION.md (R units, workspace box, dual-N, the fourth arm, the two seams, all three artifact schemas) + the true-cursor webgrid ceiling script, run and published (RD-07, RD-08) [Wave 0]
 - [ ] 10-02-PLAN.md - `target_pos` through `load_session` (last-sample-per-bin, membership-asserted) + the D-06 export writer/sidecar + the committed synthetic fixture + the real export materialized (RD-07, RD-08) [Wave 1]
 - [ ] 10-03-PLAN.md - implement `fit_kalman_gain.py`'s residual path (both branches returned `default_noise`), regenerate `KalmanConstants.swift` to `noise source = indy-heldout`, arm the header test (RD-07) [Wave 1]
 - [ ] 10-04-PLAN.md - `CortexCore.ReplayExport` + the `SpikeWindowSource` seam + `RecordedSpikeSource` + model-backed tick counting + `CortexDemoBench --real` (Seam A) (RD-08) [Wave 2]
@@ -248,7 +248,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
 | 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
-| 10. v1 Real-Data Closed Loop & Launch | v1 | 0/17 | Planned (17 plans, 14 waves) | - |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 1/17 | In Progress|  |
 
 ---
 
