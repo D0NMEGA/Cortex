@@ -225,6 +225,11 @@ def build_sidecar(
 ) -> dict[str, Any]:
     """Assemble a sidecar carrying exactly :data:`SIDECAR_KEYS`.
 
+    `source_sha256` is the session's committed digest, copied VERBATIM from the entry in
+    `Decoder/manifests/indy_sessions.json` that `manifest_path` names. It is never recomputed here:
+    the manifest is the reproducibility record, and a digest computed at export time would attest
+    to whatever bytes happened to be on disk rather than to the bytes the project pinned.
+
     `binary_sha256` is left empty here and filled by :func:`write_export` from the bytes it
     actually wrote, so the digest can never describe a file that was never written. `env` is read
     at call time and is never hardcoded.
