@@ -1,12 +1,55 @@
 # Phase 10 RD-07 evidence: the ReFIT-Kalman gain, re-fit on the real held-out residual
 
-**Date:** 2026-09-05 (Plan 10-03). The measurement conventions were fixed in
-`10-PREREGISTRATION.md` sections 3, 4 and 5, committed before this run and before any number in this
-file existed.
-**Result:** `R = diag(0.15152282, 0.08984564)` and `sigma_jerk_sq = 6092.058703`, both in
+**Date:** 2026-09-05 (Plan 10-03), **re-fit the same day** on the amended workspace box (see the
+banner below). The measurement conventions were fixed in `10-PREREGISTRATION.md` sections 3, 4 and
+5, committed before the first run and before any number in this file existed.
+**Result:** `R = diag(0.15044900, 0.08920892)` and `sigma_jerk_sq = 6048.884948`, both in
 grid-units per second, fit from 14,600 held-out 20 ms bins of `indy_20160630_01`. The generated
 `KalmanConstants.swift` provenance header now reads `noise source = indy-heldout`; it read
 `noise source = default` in every commit before this one. Measured on an Apple M5 Pro, CPU only.
+
+## Re-fit 2026-09-05: the corrected workspace box
+
+**Why it was re-fit.** `10-PREREGISTRATION` section 3 defined the workspace box by the line
+`cursor_mm = 10.0 * planar_cm`, and this fit implemented that literally. Plan 10-01, which authored
+section 3, had boxed the session's RECORDED `cursor_pos` track instead and published its reference
+number on that box. The two are different boxes, and the user resolved the conflict on 2026-09-05 in
+favour of the recorded track, which is the only one of the two that contains BOTH tracks: 13 of the
+session's 365,809 recorded cursor samples fall outside the finger-derived box, and 0 fall outside the
+recorded-cursor box. Section 3a records the amendment. This fit was re-run on the corrected box, so
+that `k` here and `acquisition_radius_mm` in every other Phase-10 artifact describe the same square.
+
+**What moved.** `side_mm` 171.0725351294064 to **171.68196243849025**, so
+`k = 10 / side_mm` moved by 0.35 percent and every grid-unit quantity moved by `k^2`, which is
+**-0.7087 percent** exactly.
+
+| Quantity | First fit (superseded box) | Re-fit (recorded-cursor box) |
+|---|---|---|
+| `side_mm` | 171.0725351294064 | **171.68196243849025** |
+| `grid_units_per_cm` (`k`) | 0.05845474 | **0.05824724** |
+| `R[0,0]`, (grid-units/s)^2 | 0.15152282 | **0.15044900** |
+| `R[1,1]`, (grid-units/s)^2 | 0.08984564 | **0.08920892** |
+| `R` off-diagonal | -0.03168725 | **-0.03146268** |
+| `sigma_jerk_sq` | 6092.058703 | **6048.884948** |
+| Residual RMS, grid-units/s | 0.389284, 0.299734 | **0.387902, 0.298670** |
+| Closed-loop spectral radius | 0.818794 | **0.818794** (unchanged) |
+| `K`, as `Float` | see below | **bit-identical** |
+
+**What did NOT move, and why that is not a coincidence.** `R` and `Q` both scale by exactly `k^2`,
+and the steady-state Kalman gain is invariant under a common positive scaling of the pair: `P` scales
+by `k^2` and it cancels in `K = P H'(H P H' + R)^-1`. So the re-fit changed `K` only in the last one
+or two digits of its float64 decimal repr, and all four non-zero entries round to the SAME `Float`
+(`0.32957715`, `0.36582625`, `3.2835786`, `4.147321`, verified bitwise). The shipped filter's runtime
+behavior is therefore unchanged by the re-fit, `rho` is unchanged, and the two synthetic
+byte-identity gates Plan 10-05 owns are exactly as red as Plan 10-03 left them, no more.
+
+Every physical quantity is likewise unchanged, because a cm/s number does not depend on the box: the
+residual RMS is 6.6596 and 5.1276 cm/s before and after, the residual correlation is -0.2716 before
+and after, and the held-out R2 is +0.144602 before and after.
+
+**Nothing was tuned.** The re-fit is the same code, the same seed, the same checkpoints and the same
+14,600 rows, with one input constant corrected. The direction of the change was fixed by arithmetic
+before the run: `k^2` had to be 0.99291311, and R had to fall by 0.7087 percent. It did.
 
 **What this is not.** It is not a performance claim. A gain fit from real residuals is a gain fit
 from real residuals; whether it decodes better is measured in Plans 10-05 and 10-07, and the
@@ -17,13 +60,13 @@ pre-registered rules there allow that answer to be negative.
 | Quantity | Re-fit on real residuals | Phase-7 documented default |
 |---|---|---|
 | Provenance header line | `noise source = indy-heldout   seed = 0` | `noise source = default   seed = 0` |
-| `R[0,0]` (vx), grid-units/s squared | **0.15152282** | 0.25 |
-| `R[1,1]` (vy), grid-units/s squared | **0.08984564** | 0.25 |
-| `R` off-diagonal, reported and NOT used | **-0.03168725** (correlation -0.2716) | 0 by construction |
-| Residual RMS, grid-units/s | **0.389284** (vx), **0.299734** (vy) | not applicable |
+| `R[0,0]` (vx), grid-units/s squared | **0.15044900** | 0.25 |
+| `R[1,1]` (vy), grid-units/s squared | **0.08920892** | 0.25 |
+| `R` off-diagonal, reported and NOT used | **-0.03146268** (correlation -0.2716) | 0 by construction |
+| Residual RMS, grid-units/s | **0.387902** (vx), **0.298670** (vy) | not applicable |
 | Residual RMS, cm/s | **6.6596** (vx), **5.1276** (vy) | not applicable |
-| Residual mean, grid-units/s | -0.005428 (vx), +0.000949 (vy) | not applicable |
-| `sigma_jerk_sq`, grid-units/s cubed, squared | **6092.058703** | 1.0 |
+| Residual mean, grid-units/s | -0.005409 (vx), +0.000946 (vy) | not applicable |
+| `sigma_jerk_sq`, grid-units/s cubed, squared | **6048.884948** | 1.0 |
 | Closed-loop spectral radius on the observable block | **0.818794** | 0.980199 |
 | `K` velocity rows (vx, vy) | **0.32957716, 0.36582624** | 0.03920992, 0.03920992 |
 | `K` acceleration rows (ax, ay) | **3.28357857, 4.14732106** | 0.03920796, 0.03920796 |
@@ -82,11 +125,11 @@ After:
 ```
 //   dt          = 0.02  (20 ms tick, CONTEXT D-01)
 //   noise source = indy-heldout   seed = 0
-//   session=indy_20160630_01 sha256=2ca8f6b7fcfc n_heldout=14600 lag_bins=1 lambda=0.1 side_mm=171.0725
-//   grid_units_per_cm=0.05845474 sigma_jerk_sq=6092.058703 R=diag(0.15152282,0.08984564) R_offdiag=-0.03168725
-//   rho_closed_loop=0.818794 resid_rms_grid_s=(0.389284,0.299734) encoder_sha=f95b257bf247
-//   velocity_sha=9d542cb51d4a resid_mean_grid_s=(-0.005428,+0.000949) heldout_r2_pooled=+0.144602
-//   readout=shipped_pooled_ridge side_mm_source=10-PREREGISTRATION-section-3 (ndt1.replay_export not importable)
+//   session=indy_20160630_01 sha256=2ca8f6b7fcfc n_heldout=14600 lag_bins=1 lambda=0.1 side_mm=171.6820
+//   grid_units_per_cm=0.05824724 sigma_jerk_sq=6048.884948 R=diag(0.15044900,0.08920892) R_offdiag=-0.03146268
+//   rho_closed_loop=0.818794 resid_rms_grid_s=(0.387902,0.298670) encoder_sha=f95b257bf247
+//   velocity_sha=9d542cb51d4a resid_mean_grid_s=(-0.005409,+0.000946) heldout_r2_pooled=+0.144602
+//   readout=shipped_pooled_ridge side_mm_source=ndt1.replay_export.workspace_from_cursor+section-3a-cross-check
 //   grid normalisation: R and Q are fit in GRID-UNITS/s using grid_units_per_cm = 10.0 / side_mm
 //   (10-PREREGISTRATION section 4, pre-registered before the fit ran). A residual fit in cm/s and
 //   normalised afterwards differs by grid_units_per_cm^2, which is large.
@@ -113,10 +156,10 @@ The procedure is 10-PREREGISTRATION section 4, restated with the numbers this ru
    `0.14460174271291293` for the same session and the same null. The agreement to six decimals is
    what establishes that the residual comes from the same pipeline as the published R2 rather than
    from a re-implementation of it. It is recorded, not asserted: nothing in CI compares them.
-4. **The units.** `side_mm = 171.0725`, so `grid_units_per_cm = 10.0 / side_mm = 0.05845474`. The
-   residual is converted to grid-units/s BEFORE the covariance is taken. This is the whole of open
-   question 3, and it matters: fitting in cm/s and normalising afterwards would be wrong by
-   `grid_units_per_cm^2 = 0.00341696`, a factor of 293.
+4. **The units.** `side_mm = 171.68196243849025`, so `grid_units_per_cm = 10.0 / side_mm =
+   0.05824724`. The residual is converted to grid-units/s BEFORE the covariance is taken. This is the
+   whole of open question 3, and it matters: fitting in cm/s and normalising afterwards would be
+   wrong by `grid_units_per_cm^2 = 0.00339274`, a factor of 295.
 5. **R.** `R_full = cov(resid_grid)`, then `R = diag(R_full[0,0], R_full[1,1])`. The filter's
    measurement model is per-axis, so the diagonal is what it can use; the off-diagonal is recorded
    below and in the header, and is not used.
@@ -126,22 +169,26 @@ The procedure is 10-PREREGISTRATION section 4, restated with the numbers this ru
 7. **The gain.** `steady_state_gain(q_obs, r)` is called inside `fit_noise`, before anything is
    written, and its raise is not caught.
 
-The `side_mm` note. 10-PREREGISTRATION section 3 expected "about 171.7" and explicitly said the
-script computes the value rather than asserting it. The computed 171.0725 mm is the bounding box of
-`10 * planar_cm`; the 171.7 in 10-RESEARCH was measured on the session's own `cursor_pos` array,
-which differs from `10 * planar_cm` by the fitted slope 10.005 and a sub-0.03 mm offset. Both are
-recorded, neither is adjusted toward the other, and the one the fit used is in the header.
+The `side_mm` note, as resolved. The first run of this fit computed 171.0725 mm, the bounding box of
+`10 * planar_cm`, which is what section 3's literal text said. Section 3's own expected value ("about
+171.7"), 10-RESEARCH, and Plan 10-01's published reference had all used the session's own recorded
+`cursor_pos` array, which differs by the fitted slope 10.005 and a sub-0.03 mm offset. That is a real
+conflict, not a rounding difference, and it was escalated rather than absorbed: the user resolved it
+on 2026-09-05 in favour of the recorded cursor track, section 3a records the amendment and the
+containment argument behind it, and this fit was re-run. The value the shipped fit used,
+171.68196243849025, is in the header, and `side_mm_source=` names the one authoritative
+implementation it came from.
 
 ## Results
 
 | Quantity | Value | Phase-7 default | Ratio |
 |---|---|---|---|
-| `R[0,0]`, (grid-units/s) squared | 0.15152282 | 0.25 | 0.606 |
-| `R[1,1]`, (grid-units/s) squared | 0.08984564 | 0.25 | 0.359 |
-| `R` off-diagonal | -0.03168725 | 0 | reported, not used |
-| Residual sd, vx | 0.389259 grid-units/s = 6.6596 cm/s | 0.5 grid-units/s = 8.5536 cm/s | 0.78 |
-| Residual sd, vy | 0.299743 grid-units/s = 5.1276 cm/s | 0.5 grid-units/s = 8.5536 cm/s | 0.60 |
-| `sigma_jerk_sq` | 6092.058703 | 1.0 | 6092 |
+| `R[0,0]`, (grid-units/s) squared | 0.15044900 | 0.25 | 0.602 |
+| `R[1,1]`, (grid-units/s) squared | 0.08920892 | 0.25 | 0.357 |
+| `R` off-diagonal | -0.03146268 | 0 | reported, not used |
+| Residual sd, vx | 0.387878 grid-units/s = 6.6592 cm/s | 0.5 grid-units/s = 8.5841 cm/s | 0.78 |
+| Residual sd, vy | 0.298679 grid-units/s = 5.1278 cm/s | 0.5 grid-units/s = 8.5841 cm/s | 0.60 |
+| `sigma_jerk_sq` | 6048.884948 | 1.0 | 6049 |
 | `K` row 2 (vx) | 0.32957716 | 0.03920992 | 8.41 |
 | `K` row 3 (vy) | 0.36582624 | 0.03920992 | 9.33 |
 | `K` row 4 (ax) | 3.28357857 | 0.03920796 | 83.7 |
@@ -149,18 +196,22 @@ recorded, neither is adjusted toward the other, and the one the fit used is in t
 | `K` rows 0, 1 (px, py) | exactly zero | exactly zero | unchanged |
 | Closed-loop spectral radius | 0.818794 | 0.980199 | more damped |
 
+The `sd` rows convert `sqrt(R)` to cm/s; the at-a-glance table's RMS rows convert the header's
+`resid_rms_grid_s`. The two differ in the fourth decimal because the residual mean is not zero, which
+is the same reason both are reported.
+
 Three observations, stated without inflating them.
 
 **The real measurement noise is smaller than the documented floor, and it is anisotropic.** The
-Phase-7 default assumed 0.25 on both axes; the measured values are 0.152 and 0.090. The vy residual
+Phase-7 default assumed 0.25 on both axes; the measured values are 0.150 and 0.089. The vy residual
 is the smaller one, consistent with the decoder's per-axis held-out R2 on this session (vx +0.0586,
 vy +0.2589): the axis it decodes better is the axis whose residual is smaller. The default was a
 documented stand-in, so its being off by 40 to 64 percent is expected rather than surprising.
 
 **The fitted jerk is six thousand times the default.** `sigma_jerk_sq = 1.0` was a placeholder in
 units nobody had measured. Real 20 ms binned finger velocity, expressed in grid-units/s, has second
-differences whose implied jerk variance is 6092. Because the gain depends on the RATIO of process to
-measurement noise, this is the dominant change: Q went up by 6092 and R came down, so the filter now
+differences whose implied jerk variance is 6049. Because the gain depends on the RATIO of process to
+measurement noise, this is the dominant change: Q went up by 6049 and R came down, so the filter now
 trusts the measurement far more and smooths far less. That is why `K`'s velocity rows are 8 to 9
 times larger and its acceleration rows are 84 to 106 times larger.
 
@@ -170,7 +221,7 @@ faster because it weights each measurement more.
 
 ## The off-diagonal, published rather than discarded
 
-`R_full[0,1] = -0.03168725`, which against diagonal entries of 0.1515 and 0.0898 is a residual
+`R_full[0,1] = -0.03146268`, which against diagonal entries of 0.1504 and 0.0892 is a residual
 correlation of **-0.2716**. That is not negligible, and it is the one place where the measurement is
 in tension with the model: a filter that used the full 2x2 R would treat the two axes' errors as
 coupled, and this one does not.
@@ -184,7 +235,7 @@ licence to change the invariant after seeing the number.
 
 Two smaller disclosures, in the same spirit. R is a covariance about the mean, per the
 pre-registration, so the decoder's small velocity bias does not enter it; the bias is
-`(-0.005428, +0.000949)` grid-units/s, which is `(-0.0929, +0.0162)` cm/s, and folding it in would
+`(-0.005409, +0.000946)` grid-units/s, which is `(-0.0929, +0.0162)` cm/s, and folding it in would
 change R by 0.02 percent and 0.001 percent respectively. And Q is isotropic by construction, so the
 single `sigma_jerk_sq` is the mean of the two per-axis jerk variances rather than a claim that the
 axes agree.
@@ -230,10 +281,18 @@ Read this section before quoting any number above.
 
 ## Downstream effect on the two synthetic byte-identity fixtures
 
-The gain changed, so `CortexReFITBench --smoke` produces different numbers, and both committed
-synthetic fixtures stop matching. This was anticipated: Plan 10-05 exists to freeze a
-`phase7BaselineK` for the smoke path so the synthetic regression fixture keeps guarding the FILTER
-CODE, which is what it was always for.
+The gain changed relative to the Phase-7 DEFAULT, so `CortexReFITBench --smoke` produces different
+numbers and both committed synthetic fixtures stop matching. This was anticipated: Plan 10-05 exists
+to freeze a `phase7BaselineK` for the smoke path so the synthetic regression fixture keeps guarding
+the FILTER CODE, which is what it was always for.
+
+**The 2026-09-05 re-fit did not add to that, and this was measured rather than inferred.** `K` is
+invariant under the common `k^2` scaling of Q and R (see the re-fit banner) and all four non-zero
+entries round to the same `Float`, so `CortexReFITBench --smoke` was re-run on the re-fit constants
+and reproduced the same values Plan 10-03 recorded, to every digit: `refit_bps`
+0.37439506338290895 to **1.1950503004699202**, `kalman_only_bps` 0.15545586433053596 to
+**0.0966477777818005**, `raw_bps` unchanged at 0.16089860247386525, and the synthetic
+`refit_webgrid_bps` at **8.004715490389097**. Plan 10-05's repair is exactly the size it was.
 
 | Gate | Before | After this plan |
 |---|---|---|
@@ -271,12 +330,37 @@ Result: exit **1**, failing test `Provenance header records a real-data noise fi
 `session=indy_20160630_01` absent, `R_offdiag=` absent. Restoring the real file gave exit **0** with
 28 tests passing in 5 suites, and the restored file's sha256 matched the copy byte for byte.
 
+**Re-executed after the 2026-09-05 re-fit**, on the shipped file, with the same outcome: 4 failed
+expectations at `KalmanConstantsTests.swift:130`, `:131`, `:133` and `:135`, then exit 0 with 28
+tests passing once restored. The shipped file's sha256 is
+`428306fca56e018414e7676d56ac0265b0766a90a35482bfeb0534da14b2e9ea` both before and after the control,
+so the control left nothing behind.
+
 **Control 2, the stability check.** Scale every `K` row of a scratch copy by 10 and run the suite.
 
 Result: exit **1**, failing test `The shipped closed-loop gain is Schur-stable on the observable
 block` (`shippedGainIsSchurStable`), reporting `norm(M^64) = 1.4147763163776544e+34` and a
 non-finite `M^4096`. Only that test failed; the provenance header test still passed, because the
 header was untouched. The perturbed file was restored and never committed.
+
+Control 2 was **not** re-executed after the re-fit, and the reason is recorded rather than glossed:
+the re-fit left `K` bit-identical as `Float`, so the matrix that control perturbs is the same matrix
+it was perturbing on the first run. Re-running it would re-derive the same transcript from the same
+inputs.
+
+**Control 3, the box cross-check (added 2026-09-05).** `_resolve_side_mm` compares the authoritative
+`ndt1.replay_export.workspace_from_cursor` against this script's own section-3 restatement and raises
+above 1e-6 mm. It was observed firing for real, mid-reconciliation, with the exporter already on the
+recorded-cursor box and this script still on `10 x planar_cm`:
+
+```
+ValueError: ndt1.replay_export.workspace_from_cursor reports side_mm=17.17 but the
+10-PREREGISTRATION section 3 arithmetic gives 171.7; the two definitions of the
+cursor_bbox_square box have diverged and R would be normalised by the wrong constant
+```
+
+`Decoder/tests/test_kalman_residual.py::test_resolve_side_mm_raises_when_the_two_implementations_disagree`
+pins it, driving the trap with the finger-derived 171.0725351294064 as the wrong value.
 
 ## Runbook
 
