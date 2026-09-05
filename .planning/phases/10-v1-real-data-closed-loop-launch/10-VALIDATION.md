@@ -64,14 +64,24 @@ exists to prevent. It remains runnable on demand as an evidence-producing run; i
 
 ## Per-Task Verification Map
 
-Reconciled against the plan set on 2026-09-05. 17 plans, 46 tasks, 14 waves; every task carries an
-`<automated>` verify and every task carries `<read_first>` and `<acceptance_criteria>`. The Wave-0
-column now names the plan that CREATES each missing artifact rather than a bare cross mark.
+Reconciled against the plan set on 2026-09-05, then **re-reconciled the same day after the
+`10-REVIEWS.md` revision** (17 plans, 47 tasks - Plan 10-10 gained a third task, the SC#2 disposition
+checkpoint - 14 waves). Every task carries an `<automated>` verify, `<read_first>` and
+`<acceptance_criteria>`. The Wave-0 column names the plan that CREATES each missing artifact.
+
+**What the review changed in this table.** The `readme-policy.sh` control count is **12**, not 14
+(review D-2), and its `--self-test` now prints **19** `PASS [` lines because it also runs an eight-case
+adversarial corpus. The Seam B smoke is no longer a clean-clone skip: it consumes the committed
+synthetic fixture and is asserted non-vacuous (review D-7). Four rows are new: the Schur-stability
+check on the regenerated constants (SC#1h), the frame-cadence and renderer/HID delivery accounting
+(SC#2g, SC#2h), the BPS non-comparability disclosure (SC#3d), and the ADR retirement-rationale check
+(SC#5d).
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | Created by | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|------------|--------|
 | 10-03 T1/T2 (SC#1a) | 10-03 | 1 | RD-07 | T-10-03-01 | Gains fit from real residuals, not defaults | unit | `swift test --package-path Packages/CortexReFIT` (KalmanConstantsTests asserts header `noise source = indy-heldout`) | 10-03 | ⬜ pending |
-| 10-03 T2 (SC#1b) | 10-03 | 1 | RD-07 | T-10-03-03 | Re-fit gain Schur-stable, zero position rows preserved | unit | `swift test --package-path Packages/CortexReFIT` (existing invariants) | existing | ⬜ pending |
+| 10-03 T2 (SC#1b) | 10-03 | 1 | RD-07 | T-10-03-03 | Zero position rows preserved; R stays DIAGONAL (10-PREREGISTRATION s4 resolves the review D-7 conflict with `KalmanConstantsTests.swift:74-76`) | unit | `swift test --package-path Packages/CortexReFIT` (existing invariants, unchanged) | existing | ⬜ pending |
+| 10-03 T2 (SC#1h) | 10-03 | 1 | RD-07 | T-10-03-06 | The SHIPPED gain is Schur-stable on the observable block - a real eigen-decay check, not a header string (review D-7) | unit | `swift test --package-path Packages/CortexReFIT` (`shippedGainIsSchurStable`); `rho_closed_loop` recorded in the generated header | 10-03 | ⬜ pending |
 | 10-09 T1 (SC#1c) | 10-09 | 6 | RD-07 | T-10-09-01 | Real-data ablation artifact is provenance-bound; **no assertion on sign or magnitude (D-09)** | gate | `./Tools/scripts/refit-real-policy.sh && ./Tools/scripts/refit-real-policy.sh --self-test` | 10-09 | ⬜ pending |
 | 10-09 T2 (SC#1d) | 10-09 | 6 | RD-07 | T-10-09-03 | Gain and smoothing reported per arm (Willett confound) | schema | `uv run --project Decoder pytest Decoder/tests/test_real_replay_schema.py -q` | 10-09 | ⬜ pending |
 | 10-05 T1 (SC#1e) | 10-05 | 3 | RD-07 | T-10-05-01 | Synthetic Phase-7 invariant still guards filter code, immune to the re-fit | gate | byte-diff `refit_bps.json` after `--smoke`; `python3 Tools/scripts/check_refit_uplift.py` | existing | ⬜ pending |
@@ -79,24 +89,31 @@ column now names the plan that CREATES each missing artifact rather than a bare 
 | 10-07 T1/T2 (SC#1g) | 10-07 | 4 | RD-07 | T-10-07-01 | The measured four-arm real-data ablation numbers | evidence | human-run; `10-refit-real.json` schema-verified by 10-09 | 10-07 | ⬜ pending |
 | 10-04 T2 (SC#2a) | 10-04 | 2 | RD-08 | T-10-04-03 | NDT1 genuinely in the loop; no silent decode fallback | unit | `swift test --package-path Packages/CortexDemo` (seqLen from source; modelBackedTicks; lastDecodeFailure) | 10-04 | ⬜ pending |
 | 10-01 T3 + 10-08 T1 (SC#2b) | 10-01, 10-08 | 0, 5 | RD-08 | T-10-08-03 | A webgrid hit reported against the PRE-REGISTERED true-cursor ceiling | evidence | `10-ceiling.json` committed before any decoded run; `ceiling_hits` asserted equal in 10-09's gate | 10-01 | ⬜ pending |
-| 10-09 T2 (SC#2c) | 10-09 | 6 | RD-08 | T-10-08-03 | Hit-independent proxy present so a zero is interpretable (D-11) | schema | `uv run --project Decoder pytest Decoder/tests/test_real_replay_schema.py -q` | 10-09 | ⬜ pending |
+| 10-09 T2 (SC#2c) | 10-09 | 6 | RD-08 | T-10-08-03 | The cursor-to-target distance proxy is RD-08's **primary** observable and is present whatever the hit count is; the decomposition carries FIVE factors including `velocity_amplitude_shrinkage`. Presence and shape only, never a value (D-09) | schema | `uv run --project Decoder pytest Decoder/tests/test_real_replay_schema.py -q` | 10-09 | ⬜ pending |
+| 10-10 T3 + 10-09 T2 (SC#2i) | 10-10, 10-09 | 6 | RD-08 | T-10-10-10, T-10-01-08 | The RD-08/SC#2 hit contract is resolved BEFORE measurement (10-PREREGISTRATION s15) and the row is confirmed by the USER, never by an agent; `sc2_disposition` presence and membership asserted, value never asserted (D-09) | schema + checkpoint | `test_sc2_disposition_present_but_unasserted`; Plan 10-10 Task 3 is `checkpoint:decision`, `gate="blocking"` | 10-01 | ⬜ pending |
 | 10-08 T1 (SC#2d) | 10-08 | 5 | RD-08 | T-10-08-05 | Seam A p99 like-for-like with Phase 8 (one variable changed) | evidence | `CortexDemoBench --real` at the unchanged Phase-8 geometry | 10-04 | ⬜ pending |
-| 10-06 T3 (SC#2e) | 10-06 | 4 | RD-08 | T-10-06-01 | Seam B decrypts, decodes and orders every frame; fails closed on tamper | smoke | `swift run --package-path Packages/CortexDemo CortexSeamBSmoke` (exit 0 skip when export absent); `--tamper` exits non-zero | 10-06 | ⬜ pending |
+| 10-04 T3 (SC#2g) | 10-04 | 2 | RD-08 | T-10-04-08, T-10-04-09 | **No real-data latency is judged against the 25 ms PERF-04 bar** (review D-3), and the 120 Hz cadence is recorded as MODELLED (review D-7) | gate | `python3 -c` asserts `passed` and `budget_ns` are ABSENT from `.bench/glass_to_glass_real.json`; `frame_period_ns == 8333333`; `--real` exits 0 whatever the p99 | 10-04 | ⬜ pending |
+| 10-06 T3 (SC#2h) | 10-06 | 4 | RD-08 | T-10-06-08 | Seam B accounting continues past the decode through cursor integration and HID pointer-report encode, so SC#2's renderer and HID legs are counted (review D-7) | smoke | `cursor_updates == pointer_reports_encoded == windows_completed` in `.bench/seam_b.json` | 10-06 | ⬜ pending |
+| 10-06 T3 (SC#2e) | 10-06 | 4 | RD-08 | T-10-06-01, T-10-06-08 | Seam B decrypts, decodes and orders every frame; fails closed on tamper; **non-vacuous in CI** - with no export configured it runs the committed synthetic fixture rather than skipping (review D-7) | smoke | `swift run --package-path Packages/CortexDemo CortexSeamBSmoke` runs 256 frames / 225 windows on `tiny_replay.json` and exits 0; `--frames 8` FAILS the anti-vacuity precondition; `--tamper` exits non-zero | 10-06 | ⬜ pending |
 | 10-09 T2 (SC#2f) | 10-09 | 6 | RD-08 | T-10-08-01 | Two seams distinctly labeled; Seam B not presented as the Phase-8 number | schema | `uv run --project Decoder pytest Decoder/tests/test_real_replay_schema.py -q` | 10-09 | ⬜ pending |
-| 10-14 T1 (SC#3a) | 10-14 | 10 | RD-09 | T-10-14-01 | No synthetic-derived number presented as a real-data result | gate | `./Tools/scripts/honesty-sweep.sh && ./Tools/scripts/honesty-sweep.sh --self-test` | 10-14 | ⬜ pending |
+| 10-14 T1 (SC#3a) | 10-14 | 10 | RD-09 | T-10-14-01 | **Bounded claim (review D-7):** none of the five enumerated superseded tokens appears outside the historical tree unlabeled. NOT a universal proof that no synthetic number anywhere is presented as real - that is carried by the human RD-09 sweep plus the provenance gates | gate | `./Tools/scripts/honesty-sweep.sh && ./Tools/scripts/honesty-sweep.sh --self-test` | 10-14 | ⬜ pending |
+| 10-11 T2 + 10-14 T1 (SC#3d) | 10-11, 10-14 | 7, 10 | RD-09 | T-10-11-08 | The BPS comparison's four non-comparability grounds are stated in the README and the spec; the pinned formula is unchanged (review D-4) | gate | `./Tools/scripts/honesty-sweep.sh` (four fixed tokens per file); `swift test --package-path Packages/CortexReFIT` asserts the constant names all four; `git diff --stat Tools/scripts/bps-policy.sh` empty | 10-11 | ⬜ pending |
 | 10-12 T3 + 10-14 T1 (SC#3b) | 10-12, 10-14 | 8, 10 | RD-09 | T-10-14-02 | Superseded evidence carries a forward banner | gate | `./Tools/scripts/honesty-sweep.sh` | 10-14 | ⬜ pending |
 | 10-11 T1 (SC#3c) | 10-11 | 7 | RD-09 | T-10-11-04 | Methodology label no longer names photodiode as a scheduled phase; prefix pinned | unit | `swift test --package-path Packages/CortexDemo` (GlassToGlassTimerTests verbatim + hasPrefix) | existing | ⬜ pending |
 | 10-13 T1 (SC#4a) | 10-13 | 9 | RD-10 | T-10-13-01 | `photodiode` / flat `24.7` no longer required | gate | `./Tools/scripts/readme-policy.sh --self-test` | 10-13 | ⬜ pending |
-| 10-13 T1 (SC#4b) | 10-13 | 9 | RD-10 | T-10-13-02, T-10-13-03 | Retired-context `24.7` passes; achieved-context `24.7` fails | gate | `./Tools/scripts/readme-policy.sh --self-test` (cases 1f and 1g) | 10-13 | ⬜ pending |
+| 10-13 T1 (SC#4b) | 10-13 | 9 | RD-10 | T-10-13-02, T-10-13-03, T-10-13-08 | **All eight adversarial-corpus strings from `10-REVIEWS.md` D-1 yield the correct verdict**, both directions; each of the three rules (marker / achievement framing / heading scope) bites ALONE | gate | `./Tools/scripts/readme-policy.sh --self-test 2>&1 \| grep 'corpus/'` prints 8 lines, all `PASS [corpus/`, zero `FAIL [corpus/` | 10-13 | ⬜ pending |
 | 10-13 T1 (SC#4c) | 10-13 | 9 | RD-10 | T-10-13-04 | D-14 provenance triple required, three strip controls | gate | `./Tools/scripts/readme-policy.sh --self-test` | 10-13 | ⬜ pending |
-| 10-13 T1 (SC#4d) | 10-13 | 9 | RD-10 | T-10-13-01 | Every surviving control still bites; count 9 -> 12 non-baseline cases | gate | `./Tools/scripts/readme-policy.sh --self-test 2>&1 \| grep -c 'PASS \['` >= 12, **and** the executor states the arithmetic in the commit body | 10-13 | ⬜ pending |
+| 10-13 T1 (SC#4d) | 10-13 | 9 | RD-10 | T-10-13-01 | Every surviving control still bites. **Control count 12** (9 - 2 removed + 5 added; one addition is a POSITIVE control) - **not 14** (review D-2). PASS-line count is a different quantity: **19** = 1 baseline + 7 retained + 3 D-14 + 8 corpus | gate | `./Tools/scripts/readme-policy.sh --self-test 2>&1 \| grep -c 'PASS \['` >= 19, **and** the executor states BOTH arithmetics separately in the commit body | 10-13 | ⬜ pending |
 | 10-14 T1 (SC#5a) | 10-14 | 10 | RD-10 | T-10-14-03 | LAT-01..LAT-08 preserved verbatim in ROADMAP and REQUIREMENTS | gate | `./Tools/scripts/honesty-sweep.sh` | 10-14 | ⬜ pending |
 | 10-13 T2 + 10-14 T1 (SC#5b) | 10-13, 10-14 | 9, 10 | RD-10 | T-10-14-04 | ADR-0003 exists, four headings, Status line, indexed | gate | `./Tools/scripts/honesty-sweep.sh` | 10-13 | ⬜ pending |
+| 10-13 T2 + 10-14 T1 (SC#5d) | 10-13, 10-14 | 9, 10 | RD-10 | T-10-13-09 | ADR-0003 records the retirement RATIONALE, not only the headings: the literals `hardware-gated` and `largest credibility hole` are present (review D-7) | gate | `./Tools/scripts/honesty-sweep.sh` control 6 removes `hardware-gated` with every heading intact and the gate still bites | 10-13 | ⬜ pending |
 | 10-12 T1 (SC#5c) | 10-12 | 8 | RD-10 | T-10-12-02 | Honest-gates table reflects the new boundary | gate | `./Tools/scripts/readme-policy.sh --self-test` | 10-12 | ⬜ pending |
 | 10-15 T1 (D-18) | 10-15 | 11 | RD-09 | T-10-15-01 | Lint toolchain version drift fails loudly | gate | `./Tools/scripts/toolchain-policy.sh && ./Tools/scripts/toolchain-policy.sh --self-test` | 10-15 | ⬜ pending |
 | 10-15 T3 (D-18) | 10-15 | 11 | RD-09 | T-10-15-02 | `swiftformat --lint .` clean, no gate disarmed | gate | `swiftformat --lint .` plus the eleven policy gates and their self-tests | existing | ⬜ pending |
 | 10-16 T2 (D-18) | 10-16 | 12 | RD-09 | T-10-16-01 | `identifier_name` clear with every JSON key byte-identical | gate | `swiftlint --strict`; byte-diff `refit_bps.json` and `webgrid_bps.json` | existing | ⬜ pending |
 | 10-17 T1/T3 (D-18) | 10-17 | 13 | RD-09 | T-10-17-01, T-10-17-05 | Nothing secret or licence-encumbered is published; the CI claim matches the real run | gate + evidence | pre-push audit greps; `gh api .../actions/runs`; `./Tools/scripts/readme-policy.sh --self-test` | 10-17 | ⬜ pending |
+| 10-17 T2 (D-18) | 10-17 | 13 | RD-09 | T-10-17-08, T-10-17-09 | Repository visibility is a SEPARATE user decision from the push; the repo is private today and stays private unless the user chooses otherwise | checkpoint | `checkpoint:decision`, `gate="blocking"`; the audit records `isPrivate` before and after as two lines; under `private-push` no `gh repo edit` runs at all | 10-17 | ⬜ pending |
+| 10-10 T2 (D-16) | 10-10 | 6 | RD-08 | T-10-10-07, T-10-10-08 | CortexMac builds and runs under the free Personal team via a signing-only `CODE_SIGN_ENTITLEMENTS` override, with every committed entitlements file and `project.yml` byte-identical | gate + evidence | `xcodebuild ... CODE_SIGN_ENTITLEMENTS=Tools/capture/CortexMac.capture.entitlements` reaches BUILD SUCCEEDED; `git diff --stat` over the three entitlements files and `project.yml` is EMPTY; `./Tools/scripts/hid-surface-policy.sh --self-test` exits 0 | 10-10 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -111,8 +128,9 @@ Test infrastructure exists on both sides. The gaps are fixtures, gates, and one 
 - [ ] (Plan 10-09) `Decoder/tests/test_real_replay_schema.py`, copying `test_metrics_schema.py`'s guard-split-marker self-check verbatim so the module cannot grow a measured-value assertion - SC#1d, SC#2c, SC#2f
 - [ ] (Plan 10-02) A committed **synthetic** export fixture (few hundred bins, correct dtypes + sidecar) so the Swift reader and schema test run on a clean clone with no dataset. The D-20 `tiny_v73.mat` pattern applied to the export. **Without it every export-touching test is dataset-gated and CI covers none of it.**
 - [ ] (Plan 10-06) The rolling 32-bin window accumulator between the IPC consumer and `SpikeInputBuffer`, with its own unit test
-- [ ] (Plan 10-13) `readme-policy.sh`'s new `require_marker_on_matching_lines` helper + 5 new self-test cases + updated `write_clean_readme`
-- [ ] (Plan 10-09 + 10-14) Three new `ci.yml` steps: real-data provenance gate, honesty sweep, Seam B smoke - each with its `--self-test` alongside, matching the existing seven policy-gate steps
+- [ ] (Plan 10-13) `readme-policy.sh`'s four new helpers (`needle_lines_lc`, `require_marker_on_matching_lines`, `forbid_achievement_framing`, `require_needle_under_heading`) + 3 D-14 strip controls + the 8-case adversarial corpus + a `write_clean_readme` that carries a `## Future work` heading. **Control count 12, PASS lines 19.**
+- [ ] (Plan 10-10) `Tools/capture/CortexMac.capture.entitlements` + `Tools/capture/README.md` - without them CortexMac does not build under the free Personal team at all, so the D-16 capture is unreachable
+- [ ] (Plan 10-06 + 10-09 + 10-14) Three new `ci.yml` steps: the Seam B fixture smoke (wired by 10-06, verified by 10-09 - one step only, and it must be the fixture variant, not the vacuous clean-clone-skip variant), the real-data provenance gate (10-09), the honesty sweep (10-14) - each gate with its `--self-test` alongside, matching the existing seven policy-gate steps
 - [ ] (Plan 10-10) `10-HUMAN-UAT.md` from the `09-HUMAN-UAT.md` template, for the iPad-M4 rows carried forward
 - [ ] (Plan 10-01) The committed true-cursor ceiling script, run and its number published **before** the decoded run is scored
 
@@ -128,7 +146,7 @@ coverage gap.
 | Kalman R fit from real residuals | RD-07 | Needs the 1.77 GB dataset and an encoder forward pass | `uv sync --project Decoder --extra dev`; materialize data; run the fit; commit regenerated `KalmanConstants.swift` + residual statistics into `10-refit-real-evidence.md` |
 | Every real-data ablation number | RD-07 | Needs the export; D-09 forbids asserting result direction anywhere | Run the four arms; transcribe into the evidence artifact and metrics JSON |
 | True-cursor webgrid ceiling | RD-08 | Reads `Decoder/data/*.mat` directly | Run the committed ceiling script; commit its output **before** the decoded run |
-| Webgrid hit demonstration + recorded capture (D-16) | RD-08 | Needs a GUI session on the M5 Pro and the free-team GUI signing path | Run CortexMac from Xcode with `MTL_HUD_ENABLED=1`; capture recording; store as RD-08 evidence |
+| Webgrid hit demonstration + recorded capture (D-16) | RD-08 | Needs a GUI session on the M5 Pro. **CortexMac does not build without a signing-only entitlements override** - the free Personal team cannot provision `com.apple.developer.hid.virtual.device`; verified 2026-09-05 | Build with `CODE_SIGN_ENTITLEMENTS=Tools/capture/CortexMac.capture.entitlements`, run with `MTL_HUD_ENABLED=1`, record the six named SC#2 observations, store as ILLUSTRATION. RD-08's evidentiary basis is the five headless committed artifacts listed in Plan 10-10 Task 3a, not this recording |
 | Seam A and Seam B p99 | RD-08 | Latency values are never asserted against a bar in CI | `CortexDemoBench --full` with export and model wired; device-annotate as corroborating |
 | iPad Pro M4 canonical captures (6 gates: Phase-8 latency, TestFlight, HID registration, Phase-9 decoder p99, Phase-10 Seam A p99, Phase-10 webgrid demo) | RD-08, RD-10 | Hardware absent / enrollment absent / entitlement request-gated | `10-HUMAN-UAT.md` (Plan 10-10), **never auto-approved**, all value fields `not measured` |
 | M5-Pro recorded demo capture (D-16) | RD-08 | Needs a GUI session on the free Personal team | Plan 10-10 Task 2; `10-demo-capture-evidence.md` |
@@ -144,7 +162,9 @@ coverage gap.
 - [x] No watch-mode flags
 - [x] Feedback latency < 30s (quick) / < 4min (full)
 - [x] Every new gate ships its `--self-test` in the same commit (refit-real, honesty-sweep, toolchain, and the readme-policy rewrite)
-- [x] No gate asserts the sign or magnitude of a real-data result (D-09; enforced by a marker comment plus an acceptance grep in 10-09 and 10-14)
+- [x] No gate asserts the sign or magnitude of a real-data result (D-09; enforced by a marker comment plus an acceptance grep in 10-09 and 10-14). **Reinforced after review D-3:** `CortexDemoBench --real` applies no PERF-04 verdict and emits no `passed`/`budget_ns`, so the 25 ms synthetic gate is never inherited by a real-data measurement; `sc2_disposition`'s VALUE is never asserted, only its presence and membership
+- [x] No required suite includes `Decoder/tests/test_heldout_cobps.py` (review D-3; the full-suite command above deselects it and no plan re-adds it)
+- [x] The Seam B CI step is non-vacuous: it consumes the committed synthetic fixture and fails if it resolves a source and completes zero windows (review D-7)
 - [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** planner-reconciled 2026-09-05 against the 17-plan set. Execution status stays `pending` until `/donny-validate-phase` runs post-execution.
