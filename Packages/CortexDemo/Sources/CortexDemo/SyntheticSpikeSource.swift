@@ -23,7 +23,7 @@ import simd
 /// `nonisolated` + `Sendable`: a pure value type holding only its immutable shape + seed. It can be
 /// produced/read from any context (the pipeline drives it on the main actor alongside the UI; the bench
 /// drives it inline) under the package's `.defaultIsolation(MainActor.self)` posture.
-public nonisolated struct SyntheticSpikeSource: Sendable {
+public nonisolated struct SyntheticSpikeSource: SpikeWindowSource {
   /// Number of recording channels per window — the NDT1 `(1, channels, 1, S)` contract (96 — DEC-02).
   public let channels: Int
   /// Number of 20ms time bins in one decode window (the NDT1 sequence length S).

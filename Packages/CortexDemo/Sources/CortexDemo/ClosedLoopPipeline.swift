@@ -74,8 +74,11 @@ public final class ClosedLoopPipeline {
 
   // MARK: - Stages
 
-  /// The deterministic synthetic spike stream (the post-IPC frame stand-in, D-10).
-  public let spikeSource: SyntheticSpikeSource
+  /// The INJECTED spike-window seam (Phase 10, RD-08). `SyntheticSpikeSource` is the deterministic v0
+  /// stand-in for the post-IPC frame (D-10); `RecordedSpikeSource` replays the real D-06 export bins.
+  /// Injecting it is what lets the real path change exactly ONE variable while decode, filter,
+  /// integrate and webgrid stay byte-identical (10-PREREGISTRATION section 9, Seam A).
+  public let spikeSource: any SpikeWindowSource
   /// The optional NDT1 decoder. Non-nil ⇒ NDT1 GENUINELY in the loop (CORTEX_MODEL_URL set + loaded);
   /// nil ⇒ the deterministic synthetic decoded-velocity fallback runs (clean clone / CI).
   private let decoder: NeuralDecoder?
@@ -97,12 +100,40 @@ public final class ClosedLoopPipeline {
   /// The monotonic streaming tick index (drives the deterministic synthetic decode).
   private var tickIndex: Int = 0
 
+  // MARK: - Model-in-loop accounting (Phase 10, RD-08 — the Pattern-2 mitigation)
+
+  /// Ticks whose velocity came from `NeuralDecoder.decode`.
+  public private(set) var modelBackedTicks = 0
+  /// Every `tick()` this pipeline has run.
+  public private(set) var totalTicks = 0
+  /// True only if EVERY tick ran the model. A run where this is false must NOT publish a real-data
+  /// number (10-PREREGISTRATION section 10): its numbers came from the synthetic fallback.
+  public var allTicksModelBacked: Bool {
+    totalTicks > 0 && modelBackedTicks == totalTicks
+  }
+
+  /// The FIRST reason a decode could not run, naming both shapes. Nil until a decode is attempted and
+  /// fails. This is the whole point of the Pattern-2 repair: the fallback BEHAVIOUR is unchanged, but
+  /// the reason is now recoverable instead of discarded.
+  public private(set) var lastDecodeFailure: String?
+
+  /// The window length the `SpikeInputBuffer` was sized to, i.e. the injected source's `numBins`.
+  /// THE TRAP, stated in one property: the shipped real model's `spikes` input is `(1, 96, 1, 32)`, so
+  /// it wants 32, while `SyntheticSpikeSource`'s default is 8. `decodeWithModel` used to swallow the
+  /// resulting mismatch into the synthetic fallback, so the loop kept running and its numbers stopped
+  /// being real. Assert this against the model's S before publishing anything.
+  public var sourceSeqLen: Int {
+    spikeSource.numBins
+  }
+
   // MARK: - Init
 
-  /// Build the closed loop.
+  /// Build the closed loop over an INJECTED spike source (the Phase-10 designated init).
   ///
   /// - Parameters:
-  ///   - seed: the determinism seed for the synthetic spike source + synthetic decode fallback.
+  ///   - source: the spike-window seam. `RecordedSpikeSource` replays the real D-06 export;
+  ///     `SyntheticSpikeSource` is the deterministic v0 stand-in.
+  ///   - seed: the determinism seed for the synthetic decode fallback.
   ///   - start: the initial cursor position (default grid center).
   ///   - target: the active target cell center the streaming `tick()` loop steers toward.
   ///   - modelURL: an optional compiled `.mlmodelc`/`.mlpackage`. When provided AND it loads AND a
@@ -110,6 +141,7 @@ public final class ClosedLoopPipeline {
   ///     through `NeuralDecoder.decode` — NDT1 GENUINELY in the loop (D-10). Resolve it from
   ///     `CORTEX_MODEL_URL` via ``modelURLFromEnvironment()`` on a clean clone (absent ⇒ synthetic).
   public init(
+    source: any SpikeWindowSource,
     seed: UInt64,
     start: SIMD2<Float> = SIMD2<Float>(0.5, 0.5),
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
@@ -117,25 +149,40 @@ public final class ClosedLoopPipeline {
   ) {
     self.seed = seed
     self.target = target
-    spikeSource = SyntheticSpikeSource(seed: seed)
+    spikeSource = source
 
     // Wire the model-backed decode path when a model URL is supplied AND the model + a shared-surface
     // spike buffer can be created. This is the D-10 NDT1-genuinely-in-loop path; it is PRESENT +
     // COMPILED regardless (the call site lives in `decodeWithModel`), and ACTIVE only with a real model.
+    //
+    // The failure is RECORDED rather than dropped. A run whose model never loaded degrades to the
+    // synthetic fallback exactly as before, but `lastDecodeFailure` then names why — otherwise the
+    // RD-08 assertion would report "none recorded" for the commonest cause of a fallback run.
     var loadedDecoder: NeuralDecoder?
     var loadedBuffer: SpikeInputBuffer?
-    if let modelURL, let device = MTLCreateSystemDefaultDevice() {
-      // Typed-throws on both fallible loads: a missing/corrupt model or a surface-create failure
-      // degrades to the synthetic fallback rather than crashing the demo (never force-unwrapped).
-      if let d = try? NeuralDecoder(modelURL: modelURL),
-         let b = try? SpikeInputBuffer(device: device, seqLen: spikeSource.numBins, channels: spikeSource.channels)
-      {
-        loadedDecoder = d
-        loadedBuffer = b
+    var setupFailure: String?
+    if let modelURL {
+      if let device = MTLCreateSystemDefaultDevice() {
+        do {
+          // Typed-throws on both fallible loads: a missing/corrupt model or a surface-create failure
+          // degrades to the synthetic fallback rather than crashing the demo (never force-unwrapped).
+          let d = try NeuralDecoder(modelURL: modelURL)
+          let b = try SpikeInputBuffer(device: device, seqLen: spikeSource.numBins, channels: spikeSource.channels)
+          loadedDecoder = d
+          loadedBuffer = b
+        } catch {
+          setupFailure = "the model-backed decode path could not be wired: \(error) "
+            + "(requested SpikeInputBuffer seqLen \(spikeSource.numBins) x channels \(spikeSource.channels); "
+            + "the shipped real model wants seqLen 32 for its (1, 96, 1, 32) spikes input)"
+        }
+      } else {
+        setupFailure = "no Metal device is available, so the model-backed decode path could not be wired "
+          + "(requested SpikeInputBuffer seqLen \(spikeSource.numBins) x channels \(spikeSource.channels))"
       }
     }
     decoder = loadedDecoder
     spikeBuffer = loadedBuffer
+    lastDecodeFailure = setupFailure
 
     filter = KalmanFilter()
     filter.setState([start.x, start.y, 0, 0, 0, 0])
@@ -146,6 +193,23 @@ public final class ClosedLoopPipeline {
       acquisitionRadius: Self.acquisitionRadius,
       timeoutSeconds: 5.0,
       dt: Self.dt
+    )
+  }
+
+  /// The v0 closed loop over the deterministic `SyntheticSpikeSource` (the Phase-8 call shape, kept
+  /// byte-identical so every existing call site and test compiles and behaves unchanged).
+  public convenience init(
+    seed: UInt64,
+    start: SIMD2<Float> = SIMD2<Float>(0.5, 0.5),
+    target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
+    modelURL: URL? = nil
+  ) {
+    self.init(
+      source: SyntheticSpikeSource(seed: seed),
+      seed: seed,
+      start: start,
+      target: target,
+      modelURL: modelURL
     )
   }
 
@@ -171,30 +235,76 @@ public final class ClosedLoopPipeline {
   /// deterministic synthetic decoded-velocity. The `NeuralDecoder.decode` call site is PRESENT +
   /// COMPILED here (D-10) — `decodeWithModel` is only EXERCISED when a real model + shared buffer exist.
   private func decode(window: [Float16], tick: Int, cursor: SIMD2<Float>) -> (velocity: SIMD2<Float>, byModel: Bool) {
+    var modelVelocity: SIMD2<Float>?
     if let decoder, let spikeBuffer {
-      if let v = decodeWithModel(decoder: decoder, buffer: spikeBuffer, window: window) {
-        return (v, true) // NDT1 GENUINELY in the loop (D-10).
-      }
+      modelVelocity = decodeWithModel(decoder: decoder, buffer: spikeBuffer, window: window)
     }
-    // Deterministic synthetic decoded-velocity (the CortexReFITBench idiom): a closed-form noisy
-    // readout pointing toward the target, so raw scatters and the Kalman/rotation arm recovers it.
-    return (Self.syntheticDecodedVelocity(seed: seed, tick: tick, cursor: cursor, target: target), false)
+    // NDT1 GENUINELY in the loop (D-10) when the model produced a velocity; otherwise the deterministic
+    // synthetic decoded-velocity (the CortexReFITBench idiom): a closed-form noisy readout pointing
+    // toward the target, so raw scatters and the Kalman/rotation arm recovers it.
+    let velocity = modelVelocity
+      ?? Self.syntheticDecodedVelocity(seed: seed, tick: tick, cursor: cursor, target: target)
+    let byModel = modelVelocity != nil
+
+    // The single place a decode resolves, so the counters cannot drift from the ticks (RD-08). Integer
+    // increments in tick order — the D-13 determinism contract is untouched.
+    totalTicks += 1
+    if byModel { modelBackedTicks += 1 }
+    return (velocity, byModel)
   }
 
-  /// Route a synthetic spike window through `NeuralDecoder.decode` (NDT1 GENUINELY in the loop, D-10).
-  /// Writes the `(numBins, 96)` fp16 window into the shared-surface `SpikeInputBuffer` (the zero-copy
-  /// decode input), then calls `decoder.decode(buffer)` → (vx,vy). Returns nil on any fallible step so
-  /// the caller degrades to the synthetic fallback (never crashes the demo).
+  /// Route a spike window through `NeuralDecoder.decode` (NDT1 GENUINELY in the loop, D-10). Writes the
+  /// `(numBins, 96)` fp16 window into the shared-surface `SpikeInputBuffer` (the zero-copy decode
+  /// input), then calls `decoder.decode(buffer)` → (vx,vy). Returns nil on any fallible step so the
+  /// caller degrades to the synthetic fallback (never crashes the demo).
+  ///
+  /// ## The Pattern-2 mitigation (Phase 10, RD-08)
+  /// The FALLBACK BEHAVIOUR IS UNCHANGED: a failure still returns nil and the loop still keeps running
+  /// on the synthetic decode. What changed is that the reason is RECORDED into ``lastDecodeFailure``
+  /// instead of being discarded by a `try?`. Both shapes are named, because the commonest failure here
+  /// is a shape mismatch: the shipped real model's `spikes` input is `(1, 96, 1, 32)` while
+  /// `SyntheticSpikeSource`'s default `numBins` is 8, and the old code turned that into a running loop
+  /// whose numbers were synthetic under a real-data label. A run whose ``allTicksModelBacked`` is false
+  /// MUST NOT publish a real-data number (10-PREREGISTRATION section 10).
   private func decodeWithModel(decoder: NeuralDecoder, buffer: SpikeInputBuffer, window: [Float16]) -> SIMD2<Float>? {
+    // A source whose window is not (numBins x channels) would index out of bounds below. Refuse it as
+    // a legible fallback rather than trapping mid-run.
+    let expected = spikeSource.numBins * spikeSource.channels
+    guard window.count == expected else {
+      recordDecodeFailure(reason: "the source returned \(window.count) values, expected \(expected)")
+      return nil
+    }
     // Write the window into the shared surface (bin-major), respecting the buffer's bounds.
     for bin in 0 ..< spikeSource.numBins {
       for channel in 0 ..< spikeSource.channels {
         let value = window[bin * spikeSource.channels + channel]
-        if (try? buffer.write(value, channel: channel, bin: bin)) == nil { return nil }
+        do {
+          try buffer.write(value, channel: channel, bin: bin)
+        } catch {
+          recordDecodeFailure(reason: "SpikeInputBuffer.write(channel: \(channel), bin: \(bin)) threw \(error)")
+          return nil
+        }
       }
     }
-    // NDT1 inference — the CoreML decode call site (D-10). Typed-throws: nil ⇒ synthetic fallback.
-    return try? decoder.decode(buffer)
+    // NDT1 inference — the CoreML decode call site (D-10). A throw ⇒ the synthetic fallback, WITH the
+    // reason kept.
+    do {
+      return try decoder.decode(buffer)
+    } catch {
+      recordDecodeFailure(reason: "NeuralDecoder.decode threw \(error)")
+      return nil
+    }
+  }
+
+  /// Record the FIRST decode failure, naming the buffer's shape and the source's shape so a mismatch is
+  /// legible from the string alone. Later failures are dropped: the first one is the diagnosis, and a
+  /// 10,000-tick run must not accumulate 10,000 copies of it.
+  private func recordDecodeFailure(reason: String) {
+    guard lastDecodeFailure == nil else { return }
+    let bufferShape = spikeBuffer.map { "seqLen \($0.seqLen) x channels \($0.channels)" } ?? "no buffer"
+    lastDecodeFailure = "\(reason) [buffer \(bufferShape); "
+      + "source numBins \(spikeSource.numBins) x channels \(spikeSource.channels)]. "
+      + "The shipped real model wants seqLen 32 for its (1, 96, 1, 32) spikes input."
   }
 
   /// The deterministic synthetic decoded-velocity (grid-units/second). Closed-form, seed/index-driven

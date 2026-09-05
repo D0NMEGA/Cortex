@@ -71,7 +71,13 @@ let package = Package(
     ),
     .testTarget(
       name: "CortexDemoTests",
-      dependencies: ["CortexDemo"]
+      dependencies: [
+        "CortexDemo",
+        // RecordedSpikeSourceTests opens the committed replay-export fixture through
+        // CortexCore.ReplayExport, so the module is a DECLARED dependency rather than one the test
+        // target happens to reach transitively through CortexDemo.
+        .product(name: "CortexCore", package: "CortexCore")
+      ]
     )
   ]
 )
