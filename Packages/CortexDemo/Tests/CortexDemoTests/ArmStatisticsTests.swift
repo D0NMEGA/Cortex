@@ -6,10 +6,9 @@
 // statistic propagating into a committed JSON is the failure mode these functions exist to prevent
 // (T-10-05-05), and an empty or zero-denominator arm is exactly what a floored real-data run
 // produces.
-import Testing
-import simd
-
 @testable import CortexDemo
+import simd
+import Testing
 
 @Suite("RD-07: ArmStatistics - realized gain and realized smoothing")
 struct ArmStatisticsTests {
