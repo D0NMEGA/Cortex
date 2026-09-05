@@ -12,6 +12,8 @@
 //   rho_closed_loop=0.818794 resid_rms_grid_s=(0.387902,0.298670) encoder_sha=f95b257bf247
 //   velocity_sha=9d542cb51d4a resid_mean_grid_s=(-0.005409,+0.000946) heldout_r2_pooled=+0.144602
 //   readout=shipped_pooled_ridge side_mm_source=ndt1.replay_export.workspace_from_cursor+section-3a-cross-check
+//   two gains: K SHIPS (fit from the noise source above); phase7BaselineK is FROZEN on the
+//   documented default Q/R and is read by the SYNTHETIC regression fixture only (Phase-10 D-09).
 //   grid normalisation: R and Q are fit in GRID-UNITS/s using grid_units_per_cm = 10.0 / side_mm
 //   (10-PREREGISTRATION section 4, pre-registered before the fit ran). A residual fit in cm/s and
 //   normalised afterwards differs by grid_units_per_cm^2, which is large.
@@ -62,6 +64,7 @@ public nonisolated enum KalmanConstants {
   ]
 
   /// 6x2 steady-state Kalman gain K with ZERO position rows (rows 0,1); 6 rows of (kx,ky).
+  /// This is the SHIPPED gain — every runtime filter uses it.
   public static let K: [SIMD2<Float>] = [
     SIMD2<Float>(0.0, 0.0),
     SIMD2<Float>(0.0, 0.0),
@@ -69,6 +72,22 @@ public nonisolated enum KalmanConstants {
     SIMD2<Float>(0.0, 0.365826239915465),
     SIMD2<Float>(3.283578568566595, 0.0),
     SIMD2<Float>(0.0, 4.147321059692328)
+  ]
+
+  /// The FROZEN Phase-7 baseline gain: the gain the documented DEFAULT Q/R produces
+  /// (sigma_jerk^2 = 1.0, R = diag(0.25) in grid-units/s). It exists so the SYNTHETIC
+  /// regression fixture (`CortexReFITBench --smoke` -> `refit_bps.json`) keeps guarding the FILTER
+  /// CODE with the gain HELD FIXED, and is therefore immune to a real-data re-fit of `K`. Phase-10
+  /// D-09 requires that fixture to stay byte-identical, because a red build on a real-data finding
+  /// is pressure to tune. The SHIPPED gain is `K` above; this constant is used by the synthetic
+  /// fixture ONLY.
+  public static let phase7BaselineK: [SIMD2<Float>] = [
+    SIMD2<Float>(0.0, 0.0),
+    SIMD2<Float>(0.0, 0.0),
+    SIMD2<Float>(0.0392099203499935, 0.0),
+    SIMD2<Float>(0.0, 0.03920992034999153),
+    SIMD2<Float>(0.039207960001001047, 0.0),
+    SIMD2<Float>(0.0, 0.03920796000099885)
   ]
 
   /// 4x4 process-noise covariance Q on the observable [vx,vy,ax,ay] block (provenance; 4 rows).

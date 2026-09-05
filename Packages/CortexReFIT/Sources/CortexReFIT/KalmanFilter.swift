@@ -59,14 +59,30 @@ public nonisolated final class KalmanFilter {
   private let k0: SIMD2<Float>, k1: SIMD2<Float>, k2: SIMD2<Float>
   private let k3: SIMD2<Float>, k4: SIMD2<Float>, k5: SIMD2<Float>
 
-  /// Create a filter with a zero initial state. The committed constants are snapshotted into stored
-  /// rows here (a one-time setup cost — not on the hot path); `step` then reads only instance storage.
-  public init() {
+  /// Create a filter with a zero initial state on the SHIPPED gain ``KalmanConstants/K``. The
+  /// committed constants are snapshotted into stored rows here (a one-time setup cost — not on the
+  /// hot path); `step` then reads only instance storage.
+  public convenience init() {
+    self.init(gain: KalmanConstants.K)
+  }
+
+  /// Build the filter on an EXPLICIT gain rather than the shipped `KalmanConstants.K`. The only
+  /// caller is the synthetic regression fixture, which passes `KalmanConstants.phase7BaselineK` so
+  /// its bytes are immune to a real-data re-fit (Phase-10 D-09). `A` and `H` are structural and are
+  /// always taken from `KalmanConstants`.
+  ///
+  /// This is the ONE unpacking implementation; `init()` forwards to it, so a second gain source can
+  /// never drift from the first (`KalmanFilterTests` Test 6 pins that equivalence).
+  ///
+  /// - Parameter k: 6 rows of `(kx, ky)` in the `KalmanConstants.K` layout. Rows 0 and 1 are the
+  ///   position block and are expected to be zero (position is unobservable from a velocity
+  ///   measurement); a shorter array traps here rather than mis-indexing on the hot path.
+  public init(gain k: [SIMD2<Float>]) {
+    precondition(k.count == 6, "KalmanFilter requires a 6-row gain; got \(k.count)")
     state = SIMD8<Float>(repeating: 0)
 
     let a = KalmanConstants.A
     let h = KalmanConstants.H
-    let k = KalmanConstants.K
     a0 = a[0]; a1 = a[1]; a2 = a[2]; a3 = a[3]; a4 = a[4]; a5 = a[5]
     h0 = h[0]; h1 = h[1]
     k0 = k[0]; k1 = k[1]; k2 = k[2]; k3 = k[3]; k4 = k[4]; k5 = k[5]

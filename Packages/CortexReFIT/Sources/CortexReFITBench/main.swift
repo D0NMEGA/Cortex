@@ -87,9 +87,12 @@ SC#3 filter-step tail-latency bench.
 
     swift run --package-path Packages/CortexReFIT CortexReFITBench --smoke
 
-  Run on a real held-out Indy replay (decoded-velocity + reach-target sequence):
+  There is NO real-data mode here. This bench is the SYNTHETIC regression fixture and its output is
+  a byte-identity build gate (D-09). Setting CORTEX_REFIT_REPLAY_URL to an existing path exits 1
+  rather than labelling synthetic numbers with a real session id (RD-09). The real-data four-arm
+  ablation over the D-06 export lives in a separate executable:
 
-    CORTEX_REFIT_REPLAY_URL=/path/to/replay swift run --package-path Packages/CortexReFIT CortexReFITBench
+    swift run --package-path Packages/CortexDemo CortexReplayBench --export <sidecar.json> --model <model.mlpackage>
 
   Measure the SC#3 filter-step tail latency over \(latencyTicks) ticks (add --latency):
 
@@ -304,7 +307,14 @@ func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> ArmResult {
 
   // ONE warm Kalman filter carried across all reaches for this arm (the continuous closed loop —
   // never reset mid-session; only the position block is re-synced per reach inside simulateReach).
-  let filter = KalmanFilter()
+  //
+  // D-09: the SYNTHETIC regression fixture holds the gain FIXED at the frozen Phase-7 baseline ON
+  // PURPOSE. This bench's output is a build gate (`refit_bps.json` byte-identity at ci.yml:378-388,
+  // `webgrid_bps.json` in bps-policy.sh), and a gate that moved with a real-data re-fit of
+  // `KalmanConstants.K` would turn a real-data finding into a red build — which is pressure to tune.
+  // Frozen, the fixture keeps guarding what it was always for: the FILTER CODE. The re-fit gain is
+  // exercised by `CortexReplayBench` over the real export instead.
+  let filter = KalmanFilter(gain: KalmanConstants.phase7BaselineK)
   filter.setState([reaches.first?.start.x ?? 0.5, reaches.first?.start.y ?? 0.5, 0, 0, 0, 0])
 
   // Bin reaches into amplitude conditions (S&M aggregates per target-amplitude). 6 bins over the
@@ -416,7 +426,11 @@ func writeWebgridJSON(_ payload: WebgridBPSReport, to url: URL) throws {
 /// simulation. The deviceAnnotation marks this a CORROBORATING Mac/CPU number, NOT the canonical
 /// iPad-M4 tail (Manual-Only, 07-VALIDATION); the bench asserts nothing on the value.
 func runLatencyBench(seed: UInt64) -> LatencyHistogram {
-  let filter = KalmanFilter()
+  // D-09: the same frozen Phase-7 baseline gain the ablation runs on, so the two paths of this bench
+  // measure the same filter and neither moves with a real-data re-fit of `KalmanConstants.K`. The
+  // step cost is a fixed count of simd dot products either way, so the gain's VALUE does not change
+  // what is being timed; using the same constant keeps the bench internally consistent.
+  let filter = KalmanFilter(gain: KalmanConstants.phase7BaselineK)
   filter.setState([0.5, 0.5, 0, 0, 0, 0])
   let target = SIMD2<Float>(0.9, 0.8)
   let clock = ContinuousClock()
@@ -460,18 +474,31 @@ if replayURL == nil, !isSmoke {
   exit(0)
 }
 
-let seed = defaultSeed
-let source: String
+// RD-09 (Phase 10): a PRESENT replay path is now REFUSED rather than half-honoured. It used to set
+// `source = "indy-replay (...) + seed-locked synthetic perturbation"` and then run the synthetic
+// reaches anyway, so the transcript named a real session while every number in it was synthetic —
+// the exact mislabelling defect RD-09 exists to remove, sitting inside the harness RD-07 uses. There
+// has never been a loader behind this hook. The hook is KEPT (it is discoverable, and an operator who
+// sets it clearly wants real data) but it now exits non-zero and names the real-data entry point.
+// The `--smoke` path is untouched: with no env var and no non-flag argv, `replayURL` is nil.
 if let replayURL, FileManager.default.fileExists(atPath: replayURL.path) {
-  // A real replay path was provided and exists. (Loading the held-out Indy decoded-velocity + target
-  // sequence is the on-device/R&D path; the synthetic seed-locked model is used otherwise. The data
-  // format loader is intentionally minimal here — absent in this environment, the synthetic path
-  // below runs.) For now, treat a present path as "run the deterministic model anyway" so the bench
-  // is reproducible regardless; a real loader is a follow-on (the gitignored data is not here).
-  source = "indy-replay (\(replayURL.lastPathComponent)) + seed-locked synthetic perturbation"
-} else {
-  source = "deterministic synthetic seed-locked replay (--smoke; no gitignored Indy data present)"
+  print("CortexReFITBench: refusing to run against \(replayURL.lastPathComponent).")
+  print("  This bench has NO real-data loader and never had one. It runs a deterministic seed-locked")
+  print("  SYNTHETIC replay, and honouring this path would label synthetic numbers with a real")
+  print("  session id. Its output is also a byte-identity build gate that must not move (D-09).")
+  print("")
+  print("  The real-data four-arm ablation over the D-06 export is a SEPARATE executable:")
+  print("")
+  print("    swift run --package-path Packages/CortexDemo CortexReplayBench \\")
+  print("      --export Decoder/exports/<session>.replay.json \\")
+  print("      --model  Decoder/checkpoints/<model>.mlpackage")
+  print("")
+  print("  For the synthetic regression fixture, unset CORTEX_REFIT_REPLAY_URL and pass --smoke.")
+  exit(1)
 }
+
+let seed = defaultSeed
+let source = "deterministic synthetic seed-locked replay (--smoke; no gitignored Indy data present)"
 
 let reaches = makeReaches(seed: seed, count: trialsPerCondition)
 // Each arm now returns BOTH metrics (ArmResult): the S&M-2004 Fitts-TP (.fittsTP — the Phase-7 number,

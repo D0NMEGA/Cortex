@@ -733,9 +733,22 @@ def render_swift(
     as 2 ``SIMD2<Float>`` rows. Foundation-free (``import simd`` only) — it lands on the hot path
     (Plan 02), so it must pass ``hotpath-policy.sh``.
 
+    TWO gains are emitted (Phase 10, RD-07 / D-09). ``K`` is the SHIPPED gain, solved from whatever
+    ``fit`` this run produced. ``phase7BaselineK`` is the FROZEN gain the documented DEFAULT Q/R
+    produces, solved here unconditionally so it is emitted by the SAME generator through the SAME
+    :func:`~ndt1.kalman_gain.steady_state_gain` rather than transcribed. The synthetic regression
+    fixture runs on the frozen one, which is what makes ``refit_bps.json`` immune to a real-data
+    re-fit of ``K`` — a red build on a real-data finding is pressure to tune
+    (10-PREREGISTRATION §13).
+
     Returns:
         The full Swift source as a string.
     """
+    # The FROZEN Phase-7 baseline: the documented default Q/R through the same solver. Computed
+    # here, never copied, so it cannot drift from what `default_noise` actually means.
+    baseline = default_noise(fit.seed)
+    k_baseline = steady_state_gain(baseline.q_obs, baseline.r)
+    baseline_qr = f"sigma_jerk^2 = {_DEFAULT_SIGMA_JERK_SQ}, R = diag({_DEFAULT_R_VAR})"
     header = "// KalmanConstants.swift — steady-state ReFIT-Kalman matrices (REFIT-01, D-15)."
     # Pre-wrap the provenance note into `//   ` comment lines under swiftformat's --maxwidth 120
     # (emitted swiftformat-clean by construction — no post-hoc wrapSingleLineComments needed).
@@ -754,6 +767,8 @@ def render_swift(
 //   dt          = {DT}  (20 ms tick, CONTEXT D-01)
 //   noise source = {fit.source}   seed = {fit.seed}
 {note_block}
+//   two gains: K SHIPS (fit from the noise source above); phase7BaselineK is FROZEN on the
+//   documented default Q/R and is read by the SYNTHETIC regression fixture only (Phase-10 D-09).
 //   grid normalisation: R and Q are fit in GRID-UNITS/s using grid_units_per_cm = 10.0 / side_mm
 //   (10-PREREGISTRATION section 4, pre-registered before the fit ran). A residual fit in cm/s and
 //   normalised afterwards differs by grid_units_per_cm^2, which is large.
@@ -798,8 +813,20 @@ public nonisolated enum KalmanConstants {{
   ]
 
   /// 6x2 steady-state Kalman gain K with ZERO position rows (rows 0,1); 6 rows of (kx,ky).
+  /// This is the SHIPPED gain — every runtime filter uses it.
   public static let K: [SIMD2<Float>] = [
 {_simd_rows(k, 2)}
+  ]
+
+  /// The FROZEN Phase-7 baseline gain: the gain the documented DEFAULT Q/R produces
+  /// ({baseline_qr} in grid-units/s). It exists so the SYNTHETIC
+  /// regression fixture (`CortexReFITBench --smoke` -> `refit_bps.json`) keeps guarding the FILTER
+  /// CODE with the gain HELD FIXED, and is therefore immune to a real-data re-fit of `K`. Phase-10
+  /// D-09 requires that fixture to stay byte-identical, because a red build on a real-data finding
+  /// is pressure to tune. The SHIPPED gain is `K` above; this constant is used by the synthetic
+  /// fixture ONLY.
+  public static let phase7BaselineK: [SIMD2<Float>] = [
+{_simd_rows(k_baseline, 2)}
   ]
 
   /// 4x4 process-noise covariance Q on the observable [vx,vy,ax,ay] block (provenance; 4 rows).
