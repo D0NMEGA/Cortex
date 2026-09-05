@@ -132,4 +132,61 @@ struct ClosedLoopPipelineTests {
     let other = SyntheticSpikeSource(seed: Self.testSeed ^ 0xFF)
     #expect(other.window(0) != window0, "a different seed yields a different (but reproducible) stream")
   }
+
+  // MARK: Test 6 — Phase 10 (RD-08): the buffer's seqLen follows the INJECTED source.
+
+  @Test("Test 6: sourceSeqLen follows the injected source (the Pattern-2 trap made observable)")
+  func sourceSeqLenFollowsTheInjectedSource() {
+    // The v0 convenience init still builds an 8-bin SyntheticSpikeSource, and 8 is exactly the trap:
+    // the shipped real model wants 32, and a mismatch used to become synthetic numbers in silence.
+    let synthetic = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    #expect(synthetic.sourceSeqLen == 8)
+    #expect(synthetic.spikeSource.numBins == 8)
+    #expect(synthetic.spikeSource.channels == 96)
+
+    // Injecting a source with the model's window length moves the buffer with it.
+    let injected = ClosedLoopPipeline(
+      source: SyntheticSpikeSource(numBins: 32, seed: Self.testSeed),
+      seed: Self.testSeed,
+      target: Self.reachableTarget
+    )
+    #expect(injected.sourceSeqLen == 32)
+  }
+
+  // MARK: Test 7 — Phase 10 (RD-08): every tick is counted, so a fallback run cannot be assumed away.
+
+  @Test("Test 7: modelBackedTicks / totalTicks / allTicksModelBacked count the synthetic run honestly")
+  func modelBackedTickCounters() {
+    let pipeline = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    #expect(pipeline.totalTicks == 0)
+    #expect(pipeline.modelBackedTicks == 0)
+    #expect(!pipeline.allTicksModelBacked, "zero ticks is not a model-backed run")
+
+    for _ in 0 ..< 9 {
+      _ = pipeline.tick()
+    }
+    #expect(pipeline.totalTicks == 9)
+    #expect(pipeline.modelBackedTicks == 0, "no model present ⇒ every tick used the synthetic fallback")
+    #expect(!pipeline.allTicksModelBacked)
+  }
+
+  // MARK: Test 8 — Phase 10 (RD-08): a decode that cannot be wired records WHY (it used to be discarded).
+
+  @Test("Test 8: lastDecodeFailure is nil with no model and non-nil, naming the shapes, when one fails")
+  func lastDecodeFailureIsRecoverable() throws {
+    let clean = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    for _ in 0 ..< 3 {
+      _ = clean.tick()
+    }
+    #expect(clean.lastDecodeFailure == nil, "no decode was attempted, so there is nothing to report")
+
+    // A model URL that cannot load exercises the failure path with no gitignored .mlpackage present.
+    let absent = FileManager.default.temporaryDirectory
+      .appendingPathComponent("cortex-no-such-model-\(UUID().uuidString).mlpackage")
+    let broken = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget, modelURL: absent)
+    #expect(!broken.isModelBacked)
+    let reason = try #require(broken.lastDecodeFailure)
+    #expect(reason.contains("8"), "the reason names the source's window length")
+    #expect(reason.contains("96"), "the reason names the channel count")
+  }
 }
