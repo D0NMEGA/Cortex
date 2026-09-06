@@ -1,0 +1,362 @@
+{
+  "cadence_provenance": "MODELLED 120 Hz present boundary arithmetic, not a CAMetalDisplayLink reading; the measured display cadence is the Plan 10-10 GUI capture and the deferred iPad-M4 gate",
+  "data_source": "real",
+  "decomposition": {
+    "decode_r2": {
+      "not_reconciled": "0.1446 and 0.1523 are different measurements on different splits, not two attempts at one number. Both are recorded with their method and neither is adjusted toward the other (10-PREREGISTRATION section 1).",
+      "phase9_per_session": 0.14460174271291293,
+      "phase9_per_session_method": "09-decoder-metrics.json velocity.per_session[indy_20160630_01].pooled, produced by the pooled Phase-9 split, null = this session's own train-split mean velocity per axis, n = 14600. vx 0.05855656761357275, vy 0.2588613876111545",
+      "pre_execution_remeasurement": 0.1523,
+      "pre_execution_remeasurement_method": "10-PREREGISTRATION section 1, 2026-09-05: an independent decode on a CHRONOLOGICAL TAIL split of this one session (73,161 bins by 96 channels, split at bin 58,529, 14,601 held-out rows) scored against the train-split mean null using this repo's own fit_velocity_real._build_design and kinematics.heldout_r2. vx 0.0671, vy 0.2653, pooled 0.1523",
+      "session_not_switched": "indy_20160630_01 is the WEAKEST of the four sessions by held-out velocity R2. D-08 chose it in advance, before any Phase-10 outcome was known, and section 15 rule 0 keeps it locked. Choosing a stronger session after seeing that would be selection on the outcome. The weakness is disclosed, not corrected.",
+      "session_range_across_four": [
+        0.14460174271291293,
+        0.5069382162958781
+      ]
+    },
+    "dwell_and_timeout": {
+      "dwell_s": 0.3,
+      "not_relaxed": true,
+      "semantics": "continuous dwell: the counter RESETS on any excursion outside the acquisition radius, so a hit requires 0.30 s held continuously inside 2.8614 mm within a 5.0 s trial",
+      "statement": "Radius, dwell and timeout are the pre-registered values and were NOT relaxed. D-11 and section 15 rule 1 bind every row of the disposition table: a zero is never converted into a hit by widening the acceptance zone.",
+      "timeout_s": 5.0
+    },
+    "open_loop_no_error_correction": {
+      "disclosure": "open-loop replay of a recorded session; the subject was not in the loop",
+      "statement": "D-03: 'closed loop' refers to the SOFTWARE path being closed end to end (decode -> filter -> integrate -> render -> HID), never to the subject being in the loop. A recorded session's spikes cannot respond to a cursor we drive, so the subject cannot correct an error the decoder makes, which closed-loop control would allow. That asymmetry is the honest explanation for a low open-loop rate, and it means no claim about closed-loop control follows from any number in this artifact."
+    },
+    "velocity_amplitude_shrinkage": {
+      "convention": "decoded speed is |v| straight off NeuralDecoder.decode in cm/s; true speed is the export's own binned cursor velocity magnitude for the SAME bin, in the cm/s the sidecar declares. mean_ratio is mean(decoded)/mean(true) and p95_ratio is p95(decoded)/p95(true) - RATIOS OF SUMMARIES, not summaries of a per-window quotient, because that quotient diverges at every reach reversal where the true speed passes through zero. A ratio below 1 is amplitude shrinkage toward the mean. Empty (n = 0) when no model was supplied.",
+      "decoded_mean_speed_cm_s": 4.27580994115854,
+      "decoded_p95_speed_cm_s": 8.928604125976562,
+      "effect": "The decoder tracks reach TIMING well but systematically UNDER-SCALES amplitude, which is ordinary ridge/MSE shrinkage toward the mean rather than a defect, and it is the factor that most directly produces a zero, because an under-scaled velocity does not carry the cursor into a 2.8614 mm acquisition radius within a 0.30 s continuous dwell. The measurement confirms the mechanism pre-registered in section 14 before the run: the true speed distribution reaches 25.71 cm/s at p95 while the decoded output reaches 8.93 cm/s, so the decoded cursor moves at 34.7 percent of the true speed exactly where the reaches are fastest, and at 71.8 percent on the mean.",
+      "mean_ratio": 0.7176711451802436,
+      "measured_on": "the same replay, from the run itself: CortexSeamBSmoke over the full export with the shipped ndt1_real_vel_sweep_fp16.mlpackage, n = 73128 completed windows, byte-identical across five runs",
+      "p95_ratio": 0.34732619592792213,
+      "true_mean_speed_cm_s": 5.957895855050252,
+      "true_p95_speed_cm_s": 25.706682164075655
+    },
+    "workspace_to_grid_scale": {
+      "acquisition_radius_mm": 2.8613660406415042,
+      "cell_mm": 5.7227320812830085,
+      "grid_cols": 30,
+      "grid_rows": 30,
+      "normalisation": "cursor_bbox_square",
+      "side_mm": 171.68196243849025,
+      "statement": "The 30x30 re-grid over the session's own cursor bounding-box square makes one cell 5.7227 mm and the half-cell acquisition radius 2.8614 mm. The recorded task's own target pitch is 15.0 mm, so its implied acceptance zone is 7.50 mm, about 2.6x this radius: on that reading the recorded task is effectively a 14x14 grid over the field, not a 30x30 one. D-02 locks the 30x30 re-grid and this artifact reports the consequence rather than changing the decision."
+    }
+  },
+  "disclosure": "open-loop replay of a recorded session; the subject was not in the loop",
+  "distance_to_target_mm": {
+    "arm": "refit",
+    "by_arm": {
+      "kalman_only": {
+        "p1": 16.6158398960518,
+        "p25": 69.38208933165045,
+        "p5": 35.7229830338868,
+        "p50": 97.79412639843716,
+        "p90": 144.2109712990366
+      },
+      "raw": {
+        "p1": 16.581960850974045,
+        "p25": 69.65709211271806,
+        "p5": 35.97656805724158,
+        "p50": 97.97953889341981,
+        "p90": 144.38376645275795
+      },
+      "refit": {
+        "p1": 0.8298502511096792,
+        "p25": 3.4726353778576353,
+        "p5": 1.7802773999952892,
+        "p50": 24.11094608957263,
+        "p90": 72.73559546744713
+      },
+      "refit_reversed_target": {
+        "p1": 3.9084929510956052,
+        "p25": 35.16119156518409,
+        "p5": 14.475449422882063,
+        "p50": 53.579145694007956,
+        "p90": 90.14862134358592
+      }
+    },
+    "caveat": "These five percentiles are the refit arm's, transcribed as this plan directs. They are target-determined by construction (see hits_by_arm.note) and are NOT the decoding proxy. The attributable proxy is the raw and kalman_only rows in by_arm: their 1st-percentile approach is 16.58 mm and 16.62 mm against a 2.8614 mm acquisition radius, i.e. 5.8 acquisition radii, so the zero on those arms is not a near miss.",
+    "p1": 0.8298502511096792,
+    "p25": 3.4726353778576353,
+    "p5": 1.7802773999952892,
+    "p50": 24.11094608957263,
+    "p90": 72.73559546744713,
+    "percentiles_of": "cursor-to-target distance over every tick of the replay",
+    "units": "mm"
+  },
+  "env": {
+    "arch": "arm64",
+    "device_label_discipline": "Every number here is an M5 Pro number, status corroborating. It is not an iPad-Pro-M4 number, and the canonical iPad-M4 capture remains a never-auto-approved gate.",
+    "encoder_checkpoint_sha256": "f95b257bf2479b49102a2d8afee3c46d9008c51ba754d42a60a26762b7d3af8e",
+    "machine": "Apple M5 Pro",
+    "manifest_path": "Decoder/manifests/indy_sessions.json",
+    "model": "Decoder/checkpoints/ndt1_real_vel_sweep_fp16.mlpackage",
+    "os": "macOS 26.5 (25F71)",
+    "seam_a_binary": "CortexDemoBench --real",
+    "seam_a_runs": "5 debug + 5 release",
+    "seam_b_binary": "CortexSeamBSmoke --frames 73159",
+    "seam_b_runs": 5,
+    "seed": "0xC0FFEE (CortexDemoBench pipeline seed; the replay itself is deterministic)",
+    "stale_bench_deleted_before_the_run": "rm -rf Packages/CortexReFIT/.bench Packages/CortexDemo/.bench Packages/CortexDecoder/.bench",
+    "swift": "6.2.4 (swiftlang-6.2.4.1.4 clang-1700.6.4.2)",
+    "swiftformat": "0.61.1",
+    "velocity_checkpoint_sha256": "9d542cb51d4af4811f324fbc6bda0b503da7b15aafc98b5e1340e1a7f49cce65",
+    "xcode": "26.3 (17C529)"
+  },
+  "export_sidecar_sha256": "a452ed69ef82d9c6f86d312e12defdadca843513a05092b0c1db1b9eb6dec4e3",
+  "frame_period_ns": 8333333,
+  "hits": 70,
+  "hits_by_arm": {
+    "kalman_only": {
+      "distance_to_target_mm": {
+        "p1": 16.6158398960518,
+        "p25": 69.38208933165045,
+        "p5": 35.7229830338868,
+        "p50": 97.79412639843716,
+        "p90": 144.2109712990366
+      },
+      "hits": 0,
+      "rotation_target_source": "none"
+    },
+    "note": "10-PREREGISTRATION section 7, pre-registered before any number existed: IntentRotation.rotate returns (speed / dist) * d, replacing the decoded DIRECTION with the direction to the known target and keeping only the decoded speed. The refit and refit_reversed_target arms' cursor heading is therefore TARGET-DETERMINED BY CONSTRUCTION, and their hit counts are not attributable to the decode. raw and kalman_only never see a target and are the only arms whose result is attributable to the decode. Both scored 0 of 1025.",
+    "raw": {
+      "distance_to_target_mm": {
+        "p1": 16.581960850974045,
+        "p25": 69.65709211271806,
+        "p5": 35.97656805724158,
+        "p50": 97.97953889341981,
+        "p90": 144.38376645275795
+      },
+      "hits": 0,
+      "rotation_target_source": "none"
+    },
+    "refit": {
+      "distance_to_target_mm": {
+        "p1": 0.8298502511096792,
+        "p25": 3.4726353778576353,
+        "p5": 1.7802773999952892,
+        "p50": 24.11094608957263,
+        "p90": 72.73559546744713
+      },
+      "hits": 70,
+      "rotation_target_source": "true_track"
+    },
+    "refit_reversed_target": {
+      "distance_to_target_mm": {
+        "p1": 3.9084929510956052,
+        "p25": 35.16119156518409,
+        "p5": 14.475449422882063,
+        "p50": 53.579145694007956,
+        "p90": 90.14862134358592
+      },
+      "hits": 2,
+      "rotation_target_source": "reversed_track"
+    }
+  },
+  "replay_reference_hits": 147,
+  "replay_reference_ref": {
+    "artifact": "10-ceiling.json",
+    "canonical_dwell_s": 0.3,
+    "canonical_hits": 147,
+    "canonical_radius_mm": 2.8613660406415042,
+    "committed_in": "864259b, before any decoded number existed in this phase",
+    "note": "open-loop replay of a recorded session; the subject was not in the loop",
+    "trials": 1025,
+    "what_it_is": "The hit count obtained by replaying the animal's OWN recorded cursor track through this repo's dwell-to-select rule at this radius and this dwell. A property of ONE recorded trajectory under ONE acceptance rule. It is NOT a bound on what a decoder can achieve: a decoder producing different trajectories, with straighter approaches or longer holds inside the radius, can exceed it (10-PREREGISTRATION section 16)."
+  },
+  "sc2_adjudication": {
+    "determination_presented_for_confirmation": "SC#2 asks for a 30x30 webgrid hit demonstrated. On the arms whose result is attributable to the neural decode, the outcome is 0 of 1025 against a recorded-cursor replay reference of 147, which is row B's shape and disposition not_met. The refit arm's 70 hits satisfy the table's literal first column, row A, but they are target-determined by construction and publishing them as SC#2 met would present target knowledge as a decoding result.",
+    "measured_inputs": {
+      "acquisition_radius_mm": 2.8613660406415042,
+      "dwell_s": 0.3,
+      "hits_all_arms": {
+        "kalman_only": 0,
+        "raw": 0,
+        "refit": 70,
+        "refit_reversed_target": 2
+      },
+      "recorded_cursor_replay_reference_hits": 147,
+      "refit_arm_hits": 70,
+      "trials": 1025
+    },
+    "resolution": "The two pre-registered sections select different rows on this data, and section 15 rule 2 says in writing that no agent amends a success criterion. The enum values sc2_disposition and sc2_rule are therefore ABSENT from this artifact and are written by Plan 10-10 Task 3b, a BLOCKING checkpoint:decision that section 15 row B's own action column routes to and that instructs the executor not to choose a row on the user's behalf. This object records the full adjudication so the user's decision is a confirmation of measured facts and not an open question.",
+    "row_on_the_arms_section_7_makes_attributable": {
+      "condition": "hits == 0 with the recorded-cursor replay reference >= 1",
+      "holds": true,
+      "not_literally_row_B": "Row B as written requires hits == 0 on ALL FOUR arms. Two arms are non-zero (refit 70, refit_reversed_target 2), so row B's literal condition does not hold either. The conflict is between section 15's first column, which names the refit arm, and section 7, which pre-registers that the refit arm's heading is target-determined and that only raw and kalman_only are attributable to the decode.",
+      "row": "B",
+      "why": "raw and kalman_only, the only two arms that never see a target, both scored 0 of 1025 while the recorded-cursor replay reference is 147, which is >= 1. Row C is therefore ruled out at this geometry, exactly as 10-ceiling-evidence.md fixed before the measurement."
+    },
+    "row_on_the_tables_literal_first_column": {
+      "condition": "hits >= 1 on the refit arm",
+      "holds": true,
+      "row": "A",
+      "why": "the refit arm scored 70 of 1025"
+    },
+    "sc2_disposition_written_by": "Plan 10-10 Task 3b (blocking checkpoint:decision)",
+    "table": "10-PREREGISTRATION section 15, committed in Wave 0 before any hit count existed"
+  },
+  "schema_version": 1,
+  "seams": [
+    {
+      "boundary": "intent emission (mach_absolute_time) to a MODELLED 120 Hz present boundary; in-process; no IPC leg; identical to the Phase-8 geometry except the spike source and the decode",
+      "build_configuration": "debug",
+      "build_configuration_note": "The Phase-8 number this seam is reported beside was measured with `swift run --package-path Packages/CortexDemo CortexDemoBench --full` (08-03-SUMMARY.md), with no `-c release`, and SwiftPM's default configuration is debug. 08-03-SUMMARY.md records the command but never the word debug, so BOTH configurations were run five times each and both are reported. The headline is the debug one because that is what makes the comparison to 8318256 ns like-for-like; the release distribution is in distribution.release and is about 5 percent faster at p99.",
+      "count": 2286,
+      "data_source": "real",
+      "device": "Apple M5 Pro",
+      "distribution": {
+        "debug": {
+          "max_ns_largest_observed": 9175382,
+          "max_ns_per_run": [
+            9006873,
+            8924636,
+            8925764,
+            8909258,
+            9175382
+          ],
+          "p50_ns_median": 4753046,
+          "p50_ns_per_run": [
+            4753064,
+            4753046,
+            4699261,
+            4715805,
+            4759723
+          ],
+          "p99_ns_max": 8845550,
+          "p99_ns_median": 8831017,
+          "p99_ns_min": 8823556,
+          "p99_ns_per_run": [
+            8831017,
+            8845550,
+            8824918,
+            8823556,
+            8831823
+          ],
+          "p99_run_to_run_spread_pct": 0.249,
+          "runs": 5
+        },
+        "release": {
+          "max_ns_largest_observed": 8598101,
+          "max_ns_per_run": [
+            8598101,
+            8468777,
+            8471197,
+            8472169,
+            8495390
+          ],
+          "p50_ns_median": 4302424,
+          "p50_ns_per_run": [
+            4231055,
+            4292569,
+            4307991,
+            4302424,
+            4325804
+          ],
+          "p99_ns_max": 8403407,
+          "p99_ns_median": 8386219,
+          "p99_ns_min": 8370943,
+          "p99_ns_per_run": [
+            8380106,
+            8370943,
+            8403407,
+            8400671,
+            8386219
+          ],
+          "p99_run_to_run_spread_pct": 0.388,
+          "runs": 5
+        }
+      },
+      "distribution_convention": "A single invocation is not publishable: the pipeline cost is real work on a live machine, so the percentiles move run to run. The headline p50_ns and p99_ns are the MEDIAN across the runs listed here and max_ns is the LARGEST single sample observed across all of them, which is why max_ns is not the median of the per-run maxima. Every per-run value is carried so a reader can recompute any other summary.",
+      "max_ns": 9175382,
+      "methodology": "software-timed pipeline latency \u2014 excludes the compositor's 1-3 frames of scanout, which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies",
+      "n_note": "count is 2286, not the 10,000 the Phase-8 full run used: the export holds 73,160 bins, which at the model's 32-bin window yields 2,286 whole windows, and the bench takes min(10000, windowCount). ticks_total is 2294 because 8 warmup ticks precede the measured ones and the source clamps at its last whole window.",
+      "p50_ns": 4753046,
+      "p99_ns": 8831017,
+      "phase8_reference_note": "8318256 ns is the Phase-8 SYNTHETIC-path p99 (n = 10,000). It is quoted here, beside Seam A only, because Seam A is that measurement geometry with the spike source and the decode changed and nothing else. It is NOT quoted beside Seam B, which is a wider boundary. The Phase-8 run had no IPC leg and was not model-backed (10-RESEARCH Correction 2).",
+      "phase8_reference_p99_ns": 8318256,
+      "seam": "A",
+      "software_timed": true,
+      "software_timed_note": "SOFTWARE-TIMED, on a Mac. The present time is MODELLED 120 Hz arithmetic, not a CAMetalDisplayLink reading, and the measurement excludes the compositor's scanout. This is not a photodiode number and the retired 24.7 ms spec target is not claimed as achieved anywhere in this artifact.",
+      "status": "corroborating"
+    },
+    {
+      "boundary": "export read to decode return, across the daemon -> AES-GCM -> shm ring -> consumer -> rolling 32-bin window -> SpikeInputBuffer chain; strictly wider than Seam A and NOT comparable to the Phase-8 number",
+      "build_configuration": "release",
+      "count": 73128,
+      "counters": {
+        "cursor_updates": 73128,
+        "decodes_succeeded": 73128,
+        "doorbell_wakes": 73159,
+        "frames_accepted": 73159,
+        "frames_dropped": 0,
+        "model_backed": true,
+        "pointer_reports_encoded": 73128,
+        "spike_buffer_backed": true,
+        "windows_completed": 73128,
+        "windows_filled": 73128
+      },
+      "data_source": "real",
+      "device": "Apple M5 Pro",
+      "distribution": {
+        "max_ns_largest_observed": 13380292,
+        "max_ns_per_run": [
+          964542,
+          990375,
+          13380292,
+          8598625,
+          3030959
+        ],
+        "p50_ns_median": 136167,
+        "p50_ns_per_run": [
+          136583,
+          136167,
+          136292,
+          136167,
+          135833
+        ],
+        "p99_ns_max": 245584,
+        "p99_ns_median": 160958,
+        "p99_ns_min": 154958,
+        "p99_ns_per_run": [
+          172125,
+          159916,
+          245584,
+          160958,
+          154958
+        ],
+        "p99_run_to_run_spread_pct": 58.484,
+        "runs": 5
+      },
+      "distribution_convention": "A single invocation is not publishable: the pipeline cost is real work on a live machine, so the percentiles move run to run. The headline p50_ns and p99_ns are the MEDIAN across the runs listed here and max_ns is the LARGEST single sample observed across all of them, which is why max_ns is not the median of the per-run maxima. Every per-run value is carried so a reader can recompute any other summary.",
+      "distribution_note": "p50 is stable to 0.55 percent across five runs. p99 is NOT: it spans 154958 to 245584 ns, a 58.5 percent spread, and max_ns spans 964542 to 13380292 ns. The tail is dominated by OS scheduling on a live machine, not by the chain: max_ns is ONE sample out of 365640 and should be read as an outlier bound, not as a chain property. Only p50 is a stable statistic here.",
+      "frames_note": "--frames 73159, not 73160: CortexSeamBSmoke maps seq to export bin as seq % binCount with seq starting at 1, so frame 73160 would wrap back to bin 0. 73159 frames therefore replay bins 1..73159 and complete 73128 windows, one fewer than the ablation's 73129 decoded ticks, because the window ending at bin 31 needs bin 0 and bin 0 is never sent.",
+      "latency_boundary": "one completed decode window, timed from the top of the producer iteration (immediately BEFORE the export bin is read) to the instant the NDT1 decode RETURNS on the consumer side. Spans export read -> AES-GCM seal -> shm ring write -> doorbell -> poll -> decrypt -> FlatBuffers decode -> ordering -> 32-bin accumulation -> SpikeInputBuffer fill -> NDT1 decode. Excludes the cursor integration and the HID encode that follow.",
+      "latency_caveat": "SINGLE-PROCESS LOCK-STEP. Both clock reads are Time.machAbsoluteNanoseconds() on the same mach_absolute_time timebase in the same thread, so the arithmetic is sound, but no cross-process wakeup, context switch or scheduling delay is included because there is no second process (process_boundary = in_process). Read this as a FLOOR on what the same chain would cost across a real process boundary, never as an estimate of it. It is not comparable to Seam A and not comparable to the Phase-8 number.",
+      "max_ns": 13380292,
+      "methodology": "per-completed-window chain latency, nearest-rank percentiles over LatencyHistogram - the same percentile helper Seam A reaches through GlassToGlassTimer.histogram, so the two seams differ by the boundary they span and not by how the percentile was taken. Both clock reads are Time.machAbsoluteNanoseconds() on one mach_absolute_time timebase in one thread.",
+      "not_comparable_to": "the Phase-8 glass-to-glass p99 and the Plan 10-04 Seam A p99. Seam B is a strictly WIDER boundary (10-PREREGISTRATION section 9), and the Phase-8 number had no IPC leg and was not model-backed (10-RESEARCH Correction 2).",
+      "p50_ns": 136167,
+      "p99_ns": 160958,
+      "payload_integrity": "the newest bin of the first completed window matched the export bin the producer read for the seq that closed it, to Float16 precision, on all 96 channels",
+      "process_boundary": "in_process",
+      "process_boundary_note": "in_process. Plan 10-06 measured the daemon's two-process rendezvous failing BEFORE any Phase-10 change (child returns MACH_SEND_INVALID_DEST, identically with and without a replay export; Phase 2 already XCTSkip-guards it), so this chain runs producer/consumer lock-step in one process over a real shm_open'ed ShmRing, a real Doorbell socketpair, real AES-GCM and the real FlatBuffers codec. The Mach rendezvous, the FDChannel fileport handoff and the SessionKeyChannel key delivery are therefore NOT covered by this number.",
+      "seam": "B",
+      "status": "corroborating",
+      "tamper_control": {
+        "exit_code": 1,
+        "invocation": "CortexSeamBSmoke --tamper",
+        "result": "one flipped AES-GCM tag byte on frame 256; the consumer failed closed with authenticationFailure, the accumulator accepted 255 of 256 produced frames, windows_completed stopped at 224, and the tampered frame never decrypted, never decoded and never entered a decode window"
+      }
+    }
+  ],
+  "session_id": "indy_20160630_01",
+  "source_sha256": "2ca8f6b7fcfc5837bfbedd5aae16ee599872337fed099d300487d183003ef6a8",
+  "ticks_model_backed": 2294,
+  "ticks_total": 2294,
+  "trials": 1025
+}
