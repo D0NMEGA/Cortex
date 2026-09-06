@@ -229,6 +229,31 @@ var decodesSucceeded = 0
 var cursorUpdates = 0
 var pointerReportsEncoded = 0
 var doorbellWakes = 0
+/// Per-completed-window Seam B chain latency in ns (Plan 10-08). A MEASUREMENT INSTRUMENT ONLY: it
+/// adds two `Time.machAbsoluteNanoseconds()` reads per iteration and changes no frame byte, no crypto
+/// step and no counter. The interval starts at the top of the producer iteration, immediately before
+/// the export bin is read, and ends the instant the NDT1 decode returns on the consumer side - so it
+/// spans export read -> seal -> ring write -> doorbell -> poll -> decrypt -> FlatBuffers decode ->
+/// ordering -> 32-bin accumulation -> SpikeInputBuffer fill -> decode. It EXCLUDES the cursor
+/// integration and the HID encode that follow, which is where the `boundary` string above ends for
+/// the counters but NOT for this number; `latency_boundary` below states the narrower span verbatim.
+///
+/// It is NOT comparable to Seam A or to the Phase-8 number, and it carries one further caveat that
+/// `latency_caveat` states in the artifact: this run is single-process lock-step, so no cross-process
+/// wakeup or scheduling delay is included. Both halves read the SAME `mach_absolute_time` timebase in
+/// the same thread, which is why the arithmetic is trustworthy and why the number is a floor on what
+/// a real two-process chain would cost, never an estimate of it.
+var chainLatenciesNs = [UInt64]()
+/// Plan 10-08 / 10-PREREGISTRATION section 14, `velocity_amplitude_shrinkage`. Per completed window,
+/// the DECODED speed |v| in cm/s straight off `NeuralDecoder.decode` and the export's own TRUE binned
+/// speed for the same bin, in the same cm/s units the sidecar declares (`units.velocity = "cm/s"`).
+/// Pairing follows the repo's existing alignment convention, the one the payload-integrity check
+/// already uses: the window ENDING at a bin pairs with that bin. Populated only when a model is
+/// supplied - with no decoder the decoded velocity is structurally zero and a ratio would be a
+/// fabricated number rather than a measured one. Another measurement instrument: no frame byte, no
+/// crypto step and no counter changes.
+var decodedSpeedsCmPerS = [Double]()
+var trueSpeedsCmPerS = [Double]()
 /// The bin-major values of the FIRST completed window, and the seq that completed it, kept for the
 /// end-to-end payload-integrity check below.
 var firstWindow: [Float16] = []
@@ -258,6 +283,10 @@ extension Float {
 }
 
 for _ in 0 ..< frameCount {
+  // Seam B latency clock starts HERE (Plan 10-08), before the export bin is read. Same
+  // `mach_absolute_time` timebase as the consumer-side read below.
+  let chainStartNs = Time.machAbsoluteNanoseconds()
+
   // ---- Producer half: one export bin -> FlatBuffers Sample -> AES-GCM seal -> ring slot -> doorbell.
   let seq = ring.loadProducerSeq() &+ 1
   let bin: [Float16]
@@ -403,6 +432,21 @@ for _ in 0 ..< frameCount {
       }
     }
 
+    // Seam B latency clock ENDS here (Plan 10-08): the instant the decode returned. Recording it
+    // inside `isFull` is what makes this a PER-COMPLETED-WINDOW number rather than a per-frame one.
+    let chainEndNs = Time.machAbsoluteNanoseconds()
+    chainLatenciesNs.append(chainEndNs >= chainStartNs ? chainEndNs - chainStartNs : 0)
+
+    // The amplitude-shrinkage pair for this window, AFTER the latency clock stopped so the extra
+    // export read is not charged to the chain latency (Plan 10-08).
+    if decoder != nil {
+      let trueVelocity = (try? export.velocity(at: exportBin(forSeq: observed))) ?? SIMD2<Double>(0, 0)
+      decodedSpeedsCmPerS.append(Double((decodedVelocity.x * decodedVelocity.x
+          + decodedVelocity.y * decodedVelocity.y).squareRoot()))
+      trueSpeedsCmPerS.append((trueVelocity.x * trueVelocity.x + trueVelocity.y * trueVelocity.y)
+        .squareRoot())
+    }
+
     // The renderer's integration seam (review D-7, SC#2). With no model the velocity is zero, so the
     // cursor holds - the leg still RAN, which is what is being counted.
     let velocity = CursorVelocity(
@@ -530,6 +574,18 @@ struct SeamBReport: Encodable {
   let cursor_updates: Int
   let pointer_reports_encoded: Int
   let doorbell_wakes: Int
+  /// Plan 10-08: the per-completed-window chain latency distribution, nearest-rank over
+  /// `LatencyHistogram` - the SAME percentile math Seam A uses, so the two numbers differ only by the
+  /// boundary they span and not by how the percentile was taken. `count` is `windows_completed`.
+  let p50_ns: UInt64
+  let p99_ns: UInt64
+  let max_ns: UInt64
+  let count: Int
+  let latency_boundary: String
+  let latency_caveat: String
+  /// Plan 10-08: the `velocity_amplitude_shrinkage` inputs and both ratio conventions, in cm/s.
+  let velocity_amplitude: [String: Double]
+  let velocity_amplitude_note: String
   let model_backed: Bool
   let spike_buffer_backed: Bool
   let aes_gcm: String
@@ -539,6 +595,47 @@ struct SeamBReport: Encodable {
   let disclosure: String
   let not_comparable_to: String
 }
+
+// MARK: - The amplitude-shrinkage measurement (Plan 10-08, 10-PREREGISTRATION section 14)
+
+/// Nearest-rank percentile over Doubles: `rank = ceil(p * n)` clamped to `[1, n]`, the SAME convention
+/// `LatencyHistogram` uses, so the two distributions in this artifact are summarised the same way.
+func percentile(_ samples: [Double], _ p: Double) -> Double {
+  guard !samples.isEmpty else { return 0 }
+  let sorted = samples.sorted()
+  let clamped = Swift.min(1.0, Swift.max(0.0, p))
+  let rank = Int((clamped * Double(sorted.count)).rounded(.up))
+  return sorted[Swift.min(sorted.count - 1, Swift.max(0, rank - 1))]
+}
+
+func mean(_ samples: [Double]) -> Double {
+  samples.isEmpty ? 0 : samples.reduce(0, +) / Double(samples.count)
+}
+
+let decodedMeanSpeed = mean(decodedSpeedsCmPerS)
+let trueMeanSpeed = mean(trueSpeedsCmPerS)
+let decodedP95Speed = percentile(decodedSpeedsCmPerS, 0.95)
+let trueP95Speed = percentile(trueSpeedsCmPerS, 0.95)
+// RATIO OF MEANS and RATIO OF P95s, not the mean/p95 of a per-window quotient. Stated because the two
+// conventions differ and the choice must not be inferable only from the code: a per-window quotient
+// diverges whenever the true speed passes through zero, which it does at every reach reversal, so its
+// mean is dominated by near-zero denominators and measures nothing about amplitude. `realized_gain` in
+// 10-refit-real.json takes the ratio of means for the same reason.
+let amplitudeMeanRatio = trueMeanSpeed > 0 ? decodedMeanSpeed / trueMeanSpeed : 0
+let amplitudeP95Ratio = trueP95Speed > 0 ? decodedP95Speed / trueP95Speed : 0
+
+/// Plan 10-08: reuse the CortexDecoder nearest-rank percentile math rather than duplicating it, which
+/// is the same helper Seam A reaches through `GlassToGlassTimer.histogram`. The device annotation names
+/// the seam so a stray copy of this histogram cannot be mistaken for a glass-to-glass number.
+let chainHistogram = LatencyHistogram(
+  samplesNs: chainLatenciesNs,
+  deviceAnnotation: "M5-Pro-seam-B-in-process-corroborating"
+)
+precondition(
+  chainHistogram.count == windowsCompleted,
+  "the Seam B latency sample count \(chainHistogram.count) != windows_completed \(windowsCompleted): "
+    + "every completed window must contribute exactly one sample"
+)
 
 let sidecarDigest: String
 do {
@@ -574,6 +671,36 @@ let payload = SeamBReport(
   cursor_updates: cursorUpdates,
   pointer_reports_encoded: pointerReportsEncoded,
   doorbell_wakes: doorbellWakes,
+  p50_ns: chainHistogram.p50,
+  p99_ns: chainHistogram.p99,
+  max_ns: chainHistogram.max,
+  count: chainHistogram.count,
+  latency_boundary: "one completed decode window, timed from the top of the producer iteration "
+    + "(immediately BEFORE the export bin is read) to the instant the NDT1 decode RETURNS on the "
+    + "consumer side. Spans export read -> AES-GCM seal -> shm ring write -> doorbell -> poll -> "
+    + "decrypt -> FlatBuffers decode -> ordering -> 32-bin accumulation -> SpikeInputBuffer fill -> "
+    + "NDT1 decode. Excludes the cursor integration and the HID encode that follow.",
+  latency_caveat: "SINGLE-PROCESS LOCK-STEP. Both clock reads are Time.machAbsoluteNanoseconds() on "
+    + "the same mach_absolute_time timebase in the same thread, so the arithmetic is sound, but no "
+    + "cross-process wakeup, context switch or scheduling delay is included because there is no "
+    + "second process (process_boundary = in_process). Read this as a FLOOR on what the same chain "
+    + "would cost across a real process boundary, never as an estimate of it. It is not comparable "
+    + "to Seam A and not comparable to the Phase-8 number.",
+  velocity_amplitude: [
+    "n": Double(decodedSpeedsCmPerS.count),
+    "decoded_mean_speed_cm_s": decodedMeanSpeed,
+    "true_mean_speed_cm_s": trueMeanSpeed,
+    "decoded_p95_speed_cm_s": decodedP95Speed,
+    "true_p95_speed_cm_s": trueP95Speed,
+    "mean_ratio": amplitudeMeanRatio,
+    "p95_ratio": amplitudeP95Ratio
+  ],
+  velocity_amplitude_note: "decoded speed is |v| straight off NeuralDecoder.decode in cm/s; true "
+    + "speed is the export's own binned cursor velocity magnitude for the SAME bin, in the cm/s the "
+    + "sidecar declares. mean_ratio is mean(decoded)/mean(true) and p95_ratio is p95(decoded)/"
+    + "p95(true) - RATIOS OF SUMMARIES, not summaries of a per-window quotient, because that quotient "
+    + "diverges at every reach reversal where the true speed passes through zero. A ratio below 1 is "
+    + "amplitude shrinkage toward the mean. Empty (n = 0) when no model was supplied.",
   model_backed: decoder != nil,
   spike_buffer_backed: spikeBuffer != nil,
   aes_gcm: "applied to every frame; no bypass path exists",
@@ -623,6 +750,20 @@ print("  payload integrity       = the newest bin of the first window matches ex
   + "\(exportBin(forSeq: firstWindowClosingSeq)) exactly")
 print("  AES-GCM                 = applied to every frame; there is no bypass path")
 print("")
+print("  Seam B chain latency, per completed window (Plan 10-08), n = \(chainHistogram.count):")
+print("    p50 = \(chainHistogram.p50) ns  (\(String(format: "%.3f", Double(chainHistogram.p50) / 1_000_000)) ms)")
+print("    p99 = \(chainHistogram.p99) ns  (\(String(format: "%.3f", Double(chainHistogram.p99) / 1_000_000)) ms)")
+print("    max = \(chainHistogram.max) ns  (\(String(format: "%.3f", Double(chainHistogram.max) / 1_000_000)) ms)")
+print("    \(payload.latency_caveat)")
+print("")
+if decoder != nil {
+  print("  Velocity amplitude, decoded vs true, over \(decodedSpeedsCmPerS.count) windows (cm/s):")
+  print("    mean:  decoded \(decodedMeanSpeed)   true \(trueMeanSpeed)   ratio \(amplitudeMeanRatio)")
+  print("    p95:   decoded \(decodedP95Speed)   true \(trueP95Speed)   ratio \(amplitudeP95Ratio)")
+  print("    \(payload.velocity_amplitude_note)")
+  print("")
+}
+
 print("  data_source: \(source.kind.rawValue)")
 print("  disclosure: \(payload.disclosure)")
 print("  \(payload.not_comparable_to)")
