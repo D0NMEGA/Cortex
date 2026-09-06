@@ -59,7 +59,18 @@ struct ClosedLoopPipelineTests {
     guard let modelURL = ClosedLoopPipeline.modelURLFromEnvironment() else {
       return // model artifact not built — export CORTEX_MODEL_URL to exercise the NDT1-in-loop path.
     }
-    let pipeline = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget, modelURL: modelURL)
+    // The source is built at the SHIPPED model's window length, not the `SyntheticSpikeSource`
+    // default of 8. This case asserts NDT1 genuinely ran; the shipped model's `spikes` input is
+    // `(1, 96, 1, 32)`, so an 8-bin buffer is rejected on every tick and the pipeline falls back to
+    // the synthetic decode. The case could therefore never pass under the condition it was written
+    // for, and it looked green only because it returns early when no model is present. Proven
+    // pre-existing at commit `5bb164d` and carried in from Plan 10-04's deferred-items.md.
+    let pipeline = ClosedLoopPipeline(
+      source: SyntheticSpikeSource(numBins: RecordedSpikeSource.modelSeqLen, seed: Self.testSeed),
+      seed: Self.testSeed,
+      target: Self.reachableTarget,
+      modelURL: modelURL
+    )
     #expect(pipeline.isModelBacked, "with a real CORTEX_MODEL_URL the pipeline routes spikes through NDT1 (D-10)")
     // Drive a few ticks through the model-backed loop; the decode must report it ran NDT1.
     var anyModelTick = false
