@@ -42,7 +42,12 @@ let package = Package(
     // the real-data path inside the frozen fixture. Separating them means the fixture keeps guarding
     // the filter code on the frozen Phase-7 gain while this executable exercises the shipped re-fit
     // gain on real spikes (RESEARCH Pitfall 6).
-    .executable(name: "CortexReplayBench", targets: ["CortexReplayBench"])
+    .executable(name: "CortexReplayBench", targets: ["CortexReplayBench"]),
+    // The RD-08 Seam B chain smoke (Phase 10, Plan 10-06): the D-05 chain end to end — export bin,
+    // AES-GCM seal, shm ring, doorbell, decrypt, ordering, 32-bin accumulation, SpikeInputBuffer fill,
+    // decode, cursor integration, HID pointer-report encode. A SwiftPM executable rather than a mode
+    // on CortexDaemon because `Apps/` is built by xcodebuild, and a CI step has to be `swift run`.
+    .executable(name: "CortexSeamBSmoke", targets: ["CortexSeamBSmoke"])
   ],
   dependencies: [
     // The decoder/filter/render seam the pipeline assembles (already built in Phases 5/6/7).
@@ -50,7 +55,17 @@ let package = Package(
     .package(path: "../CortexReFIT"), // KalmanFilter.step (the ReFIT-Kalman stage) + WebgridAcquisition.
     .package(path: "../CortexRender"), // CursorIntegrator + CursorVelocity + VelocityRing + WebgridView.
     .package(path: "../CortexBCIHID"), // ScanInfoRoundTrip — the SYS-03/04 instrumented round trip the GUI surfaces.
-    .package(path: "../CortexCore") // Time.machAbsoluteNanoseconds — the intent-emission clock (PERF-04).
+    .package(path: "../CortexCore"), // Time.machAbsoluteNanoseconds — the intent-emission clock (PERF-04).
+    // Phase 10 (Plan 10-06): the Phase-2 transport + session layer, reached ONLY by CortexSeamBSmoke.
+    //
+    // NOTE the naming asymmetry, and which name goes where, because it is easy to get backwards.
+    // Plan 02-01 split the bare CortexIPC product in two and named the MANIFEST `CortexIPCPackage`
+    // while the DIRECTORY stayed `CortexIPC`. For a local path dependency SwiftPM derives the package
+    // IDENTITY from the directory, not from the manifest's `name:`, so BOTH `.package(path:)` and
+    // `.product(package:)` below take `CortexIPC`. Writing `.product(package: "CortexIPCPackage")`
+    // fails to resolve with "unknown package 'CortexIPCPackage'" - measured, not assumed; this is the
+    // first SwiftPM consumer of that package, so nothing in the repo had pinned the answer before.
+    .package(path: "../CortexIPC")
   ],
   targets: [
     .target(
@@ -89,6 +104,23 @@ let package = Package(
         .product(name: "CortexReFIT", package: "CortexReFIT"),
         .product(name: "CortexRender", package: "CortexRender"),
         .product(name: "CortexCore", package: "CortexCore")
+      ]
+    ),
+    // The RD-08 Seam B chain smoke (Plan 10-06). The IPC products are declared HERE ONLY: the
+    // `CortexDemo` library stays exactly as it was, with no CortexIPC edge, so the app-side assembly
+    // does not silently acquire a transport dependency it does not use (10-RESEARCH Correction 2).
+    .executableTarget(
+      name: "CortexSeamBSmoke",
+      dependencies: [
+        "CortexDemo", // RollingSpikeWindow + RecordedSpikeSource.modelSeqLen.
+        .product(name: "CortexDecoder", package: "CortexDecoder"), // SpikeInputBuffer + NeuralDecoder.
+        .product(name: "CortexRender", package: "CortexRender"), // CursorIntegrator - the [0,1] clamp seam.
+        .product(name: "CortexBCIHID", package: "CortexBCIHID"), // BCIInputPointerReport.encode().
+        .product(name: "CortexCore", package: "CortexCore"), // ReplayExport - the ONE D-06 reader.
+        // `package:` is the DIRECTORY-derived identity `CortexIPC`, NOT the manifest's
+        // `CortexIPCPackage` (see the dependencies note above).
+        .product(name: "CortexIPCSession", package: "CortexIPC"),
+        .product(name: "CortexIPCTransport", package: "CortexIPC")
       ]
     ),
     .testTarget(

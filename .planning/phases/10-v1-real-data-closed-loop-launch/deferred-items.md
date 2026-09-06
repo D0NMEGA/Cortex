@@ -66,3 +66,88 @@ ground for the new code and skips cleanly when no model is present.
 **Who should pick it up.** Any later Phase-10 plan that runs the CortexDemo suite with
 `CORTEX_MODEL_URL` set (10-06 and 10-09 are the likely ones) will see a red suite from this case
 alone. Fix it in the same commit that first needs a model-wired green suite.
+
+---
+
+## From Plan 10-06 (2026-09-05): five out-of-scope findings
+
+### 1. RESOLVED, not deferred: the model-wired CortexDemo suite is green
+
+The item immediately above predicted that "10-06 and 10-09 are the likely ones" to see a red
+`ClosedLoopPipelineTests` suite once `CORTEX_MODEL_URL` is set. Measured in this plan:
+
+```
+CORTEX_MODEL_URL=<repo>/Decoder/checkpoints/ndt1_real_vel_sweep_fp16.mlpackage \
+  swift test --package-path Packages/CortexDemo
+# -> Test run with 44 tests in 5 suites passed
+```
+
+The Plan 10-05 repair at `b18c6fa` held. Nothing is owed here; this note exists so the prediction
+above is not read as still open.
+
+### 2. `xcodegen generate` STRIPS hand-added Info.plist keys (not fixed, reverted)
+
+Running `xcodegen generate` deletes four hand-added SYS-05 keys from two TRACKED files:
+
+- `Apps/CortexMac/Info.plist` and `Apps/CortexiOS/Info.plist` each lose
+  `CortexBCIHIDProtocolVersion` (`may-2025`) and `NSAccessibilityUsageDescription`, plus the comment
+  block documenting why they are there.
+
+Those keys are not declared in `project.yml`'s `info.properties`, so XcodeGen regenerates the plists
+without them. Plan 10-06 had to run `xcodegen` for the daemon build and reverted both files with
+`git checkout --`; nothing was committed. Any future plan that runs `xcodegen` will hit this and must
+do the same, or the SYS-05 HID-provider surface silently disappears from the shipped bundles.
+
+**Fix when someone owns it:** move the four keys into `project.yml` under each target's
+`info.properties`, so regeneration is idempotent. That is a `project.yml` edit with a bundle-content
+consequence, which is why it was not done inside a plan scoped to the daemon producer.
+
+### 3. `ci.yml` names a `Cortex.xcworkspace` that nothing generates
+
+Three CI steps invoke `xcodebuild -workspace Cortex.xcworkspace` (`ci.yml:435`, `:451`, `:467`), and
+`project.yml:1` describes itself as generating "Cortex.xcodeproj and Cortex.xcworkspace". After
+`xcodegen generate` only `Cortex.xcodeproj` exists, in this worktree AND in the canonical checkout;
+`xcodebuild -workspace Cortex.xcworkspace` fails with "'Cortex.xcworkspace' does not exist". Plan
+10-06 built the daemon with `-project Cortex.xcodeproj` instead and reached `BUILD SUCCEEDED`.
+
+This has never been noticed because CI has never executed (see `cortex-ci-lint-gate-never-ran`). The
+first real CI run trips it. Either add a `workspace:` section to `project.yml` or change the three
+steps to `-project Cortex.xcodeproj`.
+
+### 4. The Float16-on-macOS deferred item did NOT reproduce under Xcode 26.3
+
+`STATE.md`'s Deferred Items row "xcodebuild of the CortexDaemon Xcode target fails on `'Float16' is
+unavailable in macOS`" (deferred 2026-06-20, Plan 02-05) did not reproduce. With Xcode 26.3:
+
+```
+xcodegen generate
+xcodebuild build -project Cortex.xcodeproj -scheme CortexDaemon -configuration Debug \
+  CODE_SIGNING_ALLOWED=NO
+# -> ** BUILD SUCCEEDED **
+```
+
+The daemon binary runs, and its `bench` mode (Option A in `sc1-evidence.md`) is now reachable. That
+row is a candidate for closure by whoever owns STATE.md; Plan 10-06 does not write STATE.md.
+
+### 5. A fresh worktree cannot run `xcodebuild` until the Rust xcframework exists
+
+`Packages/CortexRing/CortexRingFFI.xcframework` is a gitignored build artifact. Without it the whole
+package graph fails to resolve ("local binary target 'CortexRingFFI' ... does not contain a binary
+artifact"), so EVERY `xcodebuild` invocation fails in a fresh worktree regardless of what changed.
+Run `Tools/scripts/build-rust.sh`, or symlink the artifact from the canonical checkout as Plan 10-06
+did for `Decoder/exports` and `Decoder/data`. Worth one line in the worktree setup notes.
+
+### 6. swiftformat/swiftlint are repo-wide non-compliant (unchanged by this plan)
+
+Confirming `cortex-ci-lint-gate-never-ran` with fresh numbers. `swiftformat --lint` reports
+`swiftTestingTestCaseNames` on every existing CortexDemo test file (`ClosedLoopPipelineTests` 16,
+`ArmStatisticsTests` 24, `GlassToGlassTimerTests` 8) and `fileHeader` on every line of files such as
+`Packages/CortexRender/Sources/CortexRender/CursorIntegrator.swift`. `swiftlint` reports 40
+`identifier_name` violations in `Sources/CortexReplayBench/main.swift` alone, from the snake_case
+`Encodable` fields that ARE the emitted JSON keys.
+
+Plan 10-06 left every new file at or below the sibling baseline and added no new violation class:
+`Apps/CortexDaemon/{Producer,main}.swift` measured 9 swiftlint findings before the change and 9
+after; `RollingSpikeWindow.swift` and the new smoke are clean under both tools apart from the same
+snake_case-JSON-key and file-length idioms `CortexReplayBench` already established. The repo-wide
+sweep is still owed before the first PR.

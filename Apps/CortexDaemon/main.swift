@@ -48,6 +48,14 @@ do {
           result.framesVerified, result.allAcked ? "true" : "false")
     exit(result.allAcked && result.framesVerified == result.framesSent ? 0 : 1)
   default:
+    // Phase 10 (RD-08, D-05): name the payload source before producing anything. A run that was asked
+    // for a real replay and quietly emitted the Phase-2 pattern would be indistinguishable in the log
+    // otherwise, and that is exactly the confusion the D-05 seam exists to make impossible. This
+    // resolves the SAME env seam the producer's `isReplayBacked` / `replaySessionId` report, but
+    // side-effect-free, so it cannot collide with the ring and Keychain entry runParent's producer
+    // creates. It throws on a set-but-unloadable export, so the banner states a fact, not an intent.
+    NSLog("Cortex daemon payload source: %@", try Producer.configuredPayloadSourceDescription())
+
     // Parent path: prepare rendezvous, posix_spawn self with "consume", hand off, produce, reap child.
     let status = try Harness.runParent(frameCount: 1000)
     NSLog("Cortex daemon producer done: child exit status=%d", status)
