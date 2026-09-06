@@ -32,7 +32,17 @@ let package = Package(
     // The headless software-timed latency bench (PERF-04, M5-Pro corroborating). Mirrors the
     // CortexReFITBench / CortexDecoderBench executable entry — a dedicated bench, not a swift-test
     // timing gate (D-18 precedent: keeps a flaky latency assertion out of CI).
-    .executable(name: "CortexDemoBench", targets: ["CortexDemoBench"])
+    .executable(name: "CortexDemoBench", targets: ["CortexDemoBench"]),
+    // The RD-07 four-arm real-data ablation over the D-06 replay export (Phase 10, Plan 10-05).
+    //
+    // A SEPARATE executable rather than a fourth `Arm` case in CortexReFITBench, on purpose. That
+    // bench's `--smoke` output is a byte-identity build gate in two places - the refit_bps.json diff
+    // at ci.yml:378-388 and the committed-webgrid_bps.json leg of bps-policy.sh - and D-09 requires
+    // those bytes to hold so a real-data finding can never redden the build. A fourth case would put
+    // the real-data path inside the frozen fixture. Separating them means the fixture keeps guarding
+    // the filter code on the frozen Phase-7 gain while this executable exercises the shipped re-fit
+    // gain on real spikes (RESEARCH Pitfall 6).
+    .executable(name: "CortexReplayBench", targets: ["CortexReplayBench"])
   ],
   dependencies: [
     // The decoder/filter/render seam the pipeline assembles (already built in Phases 5/6/7).
@@ -61,6 +71,18 @@ let package = Package(
     // prints the verbatim D-07 methodology label. Exits 0 with usage when no flag (clean-clone skip).
     .executableTarget(
       name: "CortexDemoBench",
+      dependencies: [
+        "CortexDemo",
+        .product(name: "CortexDecoder", package: "CortexDecoder"),
+        .product(name: "CortexReFIT", package: "CortexReFIT"),
+        .product(name: "CortexRender", package: "CortexRender"),
+        .product(name: "CortexCore", package: "CortexCore")
+      ]
+    ),
+    // The RD-07 four-arm real-data ablation (Plan 10-05). Same dependency list as CortexDemoBench:
+    // CortexDemo already depends on everything it needs, so the new target adds no package edge.
+    .executableTarget(
+      name: "CortexReplayBench",
       dependencies: [
         "CortexDemo",
         .product(name: "CortexDecoder", package: "CortexDecoder"),
