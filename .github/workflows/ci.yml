@@ -419,6 +419,16 @@ jobs:
       - name: Run CortexDemo tests (SYS-06/PERF-04)
         run: swift test --package-path Packages/CortexDemo
 
+      # --- Phase 10 (RD-08): Seam B chain smoke over the COMMITTED SYNTHETIC FIXTURE ---
+      # Runs the whole D-05 chain -- seal, shm ring, doorbell, decrypt, ordering, 32-bin accumulation,
+      # SpikeInputBuffer fill, cursor integration, HID pointer-report encode -- on the 256-bin synthetic
+      # fixture, because the D-07 tier split keeps the real dataset off the runner. This is NOT a
+      # real-data result and the binary labels it `data_source: synthetic_fixture`. The CoreML decode is
+      # skipped when no model is present; every other leg executes. The smoke fails if it resolves a
+      # source and completes zero windows, so it cannot pass vacuously.
+      - name: Seam B chain smoke on the synthetic fixture (RD-08)
+        run: swift run --package-path Packages/CortexDemo CortexSeamBSmoke
+
       # --- Phase 8 (PERF-04, Plan 08-03): software-timed glass-to-glass bench SMOKE (M5 corroborating) ---
       # Proves the bench RUNS + the PERF-04 assertion path is live (p99 < 25ms on the CI runner's
       # software-timed pipeline) + the verbatim methodology label is printed. This is correctness/smoke
