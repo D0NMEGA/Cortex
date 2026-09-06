@@ -1,0 +1,169 @@
+{
+  "arms" : [
+    {
+      "bps_n64" : 0,
+      "bps_n64_label" : "the recorded task's information rate",
+      "bps_n900" : 0,
+      "bps_n900_label" : "counterfactual 30x30 grid score; the recorded task presented 64 targets (6.0 bits), whose rate is N=64",
+      "correct" : 0,
+      "distance_to_target_mm" : {
+        "p1" : 16.581960850974045,
+        "p25" : 69.65709211271806,
+        "p5" : 35.97656805724158,
+        "p50" : 97.97953889341981,
+        "p90" : 144.38376645275795
+      },
+      "fitts_tp" : 0.35633985317879746,
+      "incorrect" : 0,
+      "incorrect_model" : "none - single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
+      "name" : "raw",
+      "realized_gain" : 1,
+      "realized_smoothing" : 0.5990227782859924,
+      "rotation_target_source" : "none",
+      "seconds" : 1440.259999999999
+    },
+    {
+      "bps_n64" : 0,
+      "bps_n64_label" : "the recorded task's information rate",
+      "bps_n900" : 0,
+      "bps_n900_label" : "counterfactual 30x30 grid score; the recorded task presented 64 targets (6.0 bits), whose rate is N=64",
+      "correct" : 0,
+      "distance_to_target_mm" : {
+        "p1" : 16.6158398960518,
+        "p25" : 69.38208933165045,
+        "p5" : 35.7229830338868,
+        "p50" : 97.79412639843716,
+        "p90" : 144.2109712990366
+      },
+      "fitts_tp" : 0.35556893592912375,
+      "incorrect" : 0,
+      "incorrect_model" : "none - single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
+      "name" : "kalman_only",
+      "realized_gain" : 0.9235813543578141,
+      "realized_smoothing" : 0.9429371798329478,
+      "rotation_target_source" : "none",
+      "seconds" : 1440.259999999999
+    },
+    {
+      "bps_n64" : 0.29834630902994863,
+      "bps_n64_label" : "the recorded task's information rate",
+      "bps_n900" : 0.4879842326711893,
+      "bps_n900_label" : "counterfactual 30x30 grid score; the recorded task presented 64 targets (6.0 bits), whose rate is N=64",
+      "correct" : 70,
+      "distance_to_target_mm" : {
+        "p1" : 0.8298502511096792,
+        "p25" : 3.4726353778576353,
+        "p5" : 1.7802773999952892,
+        "p50" : 24.11094608957263,
+        "p90" : 72.73559546744713
+      },
+      "fitts_tp" : 0.6728824763633123,
+      "incorrect" : 0,
+      "incorrect_model" : "none - single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
+      "name" : "refit",
+      "realized_gain" : 0.9098011600664915,
+      "realized_smoothing" : 0.9238483284881621,
+      "rotation_target_source" : "true_track",
+      "seconds" : 1407.7599999999984
+    },
+    {
+      "bps_n64" : 0.008336459505647958,
+      "bps_n64_label" : "the recorded task's information rate",
+      "bps_n900" : 0.013635364916311735,
+      "bps_n900_label" : "counterfactual 30x30 grid score; the recorded task presented 64 targets (6.0 bits), whose rate is N=64",
+      "correct" : 2,
+      "distance_to_target_mm" : {
+        "p1" : 3.9084929510956052,
+        "p25" : 35.16119156518409,
+        "p5" : 14.475449422882063,
+        "p50" : 53.579145694007956,
+        "p90" : 90.14862134358592
+      },
+      "fitts_tp" : 0.3478549059169072,
+      "incorrect" : 0,
+      "incorrect_model" : "none - single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
+      "name" : "refit_reversed_target",
+      "realized_gain" : 0.8841935821651777,
+      "realized_smoothing" : 0.9001339403308999,
+      "rotation_target_source" : "reversed_track",
+      "seconds" : 1439.459999999999
+    }
+  ],
+  "ceiling_ref" : {
+    "artifact" : "10-ceiling.json",
+    "canonical_dwell_s" : 0.3,
+    "canonical_hits" : 147,
+    "canonical_radius_mm" : 2.8613660406415042,
+    "note" : "The recorded-cursor replay reference: the hit count obtained by replaying the animal's OWN recorded cursor track through this repo's dwell-to-select rule at this radius and this dwell. It is a property of ONE recorded trajectory under ONE acceptance rule, not a bound on what a decoder can achieve - a decoder producing different trajectories can exceed it (10-PREREGISTRATION section 16). The key name mirrors the committed artifact's filename, which predates that framing decision; 10-replay.json names the same quantity replay_reference_hits per section 11.",
+    "trials" : 1025
+  },
+  "data_source" : "real",
+  "deltas" : {
+    "note" : "refit_minus_kalman_only is the ATTRIBUTABLE number: the rotation with the Kalman's gain and smoothing held fixed. refit_minus_raw is the headline comparison and CONFLATES the rotation with the Kalman's gain and smoothing, which is why realized_gain and realized_smoothing are reported per arm (10-PREREGISTRATION section 8).",
+    "refit_minus_kalman_only" : {
+      "bps_n64" : 0.29834630902994863,
+      "bps_n900" : 0.4879842326711893,
+      "fitts_tp" : 0.3173135404341886
+    },
+    "refit_minus_raw" : {
+      "bps_n64" : 0.29834630902994863,
+      "bps_n900" : 0.4879842326711893,
+      "fitts_tp" : 0.31654262318451487
+    },
+    "refit_minus_reversed" : {
+      "bps_n64" : 0.29000984952430064,
+      "bps_n900" : 0.47434886775487756,
+      "fitts_tp" : 0.3250275704464051
+    }
+  },
+  "device" : {
+    "label" : "Apple M5 Pro (arm64)",
+    "status" : "corroborating"
+  },
+  "disclosure" : "open-loop replay of a recorded session; the subject was not in the loop",
+  "encoder_checkpoint_sha256" : "f95b257bf2479b49102a2d8afee3c46d9008c51ba754d42a60a26762b7d3af8e",
+  "env" : {
+    "acquisition_radius_mm" : "2.8613660406415042",
+    "bin_ms" : "20.0",
+    "dwell_s" : "0.3",
+    "lag_bins" : "1",
+    "normalisation" : "cursor_bbox_square",
+    "os" : "Version 26.5 (Build 25F71)",
+    "seq_len" : "32",
+    "swift_compiler" : ">=6.2",
+    "ticks" : "73129",
+    "ticks_model_backed" : "73129",
+    "ticks_total" : "73129",
+    "timeout_s" : "5.0",
+    "trials" : "1025"
+  },
+  "export_sidecar_sha256" : "a452ed69ef82d9c6f86d312e12defdadca843513a05092b0c1db1b9eb6dec4e3",
+  "manifest_path" : "Decoder/manifests/indy_sessions.json",
+  "phase9_bounds" : {
+    "loso_cobps_mean" : -0.3498,
+    "note" : "the replayed session was chosen in advance (D-08) and is the weakest of the four",
+    "pooled_heldout_velocity_r2" : 0.4238,
+    "session_heldout_velocity_r2" : 0.1446,
+    "session_rank_of_four" : "weakest"
+  },
+  "references" : {
+    "braingate_6x6_t5_bps" : 3.7,
+    "braingate_dense_9x9_bps" : 4.16,
+    "neuralink_p1_cited_peak_bps" : 8.5,
+    "note" : "4.16 is Pandarinath et al. 2017 (eLife 18554) measured with T5 on a DENSE 9x9 grid over 8 evaluation blocks, NOT the 6x6 grid; the 6x6 figures in the same paper are T6 2.2, T5 3.7, T7 1.4, so braingate_6x6_t5_bps is the like-for-like 6x6 number. 8.5 is the figure this repo has cited for Neuralink P1 and is kept per D-17, dated: as of 2026-09-05 neuralink.com/webgrid states 'over 10 BPS'. phase8_synthetic_refit_bps_n900 is this repo's own Phase-8 SYNTHETIC seed-locked replay figure. None of these is like-for-like with the numbers in this file: the formula differs (log2(N) here versus log2(N-1) in eLife 18554), the grid differs, and this harness makes incorrect selections structurally zero so Si is always 0.",
+    "phase8_synthetic_refit_bps_n900" : 1.953047883714651
+  },
+  "schema_version" : 1,
+  "session_id" : "indy_20160630_01",
+  "source_sha256" : "2ca8f6b7fcfc5837bfbedd5aae16ee599872337fed099d300487d183003ef6a8",
+  "superseded_synthetic" : {
+    "kalman_only_fitts_tp" : 0.15545586433053596,
+    "kalman_only_webgrid_bps" : 1.183000907045892,
+    "note" : "The Phase-8 SYNTHETIC seed-locked replay triple, carried here so the before-and-after is in the artifact itself (D-12). Copied verbatim from the committed webgrid_bps.json (Phase 8) and refit_bps.json (Phase 7). On that synthetic data kalman_only is BELOW raw on both metrics, so none of the synthetic uplift was attributable to the Kalman's gain and smoothing; that is precisely what the per-arm gain and smoothing statistics exist to establish on real data too.",
+    "raw_fitts_tp" : 0.16089860247386525,
+    "raw_webgrid_bps" : 1.292123144105848,
+    "refit_fitts_tp" : 0.37439506338290895,
+    "refit_webgrid_bps" : 1.953047883714651
+  },
+  "velocity_checkpoint_sha256" : "9d542cb51d4af4811f324fbc6bda0b503da7b15aafc98b5e1340e1a7f49cce65"
+}
