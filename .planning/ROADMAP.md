@@ -214,7 +214,7 @@ history. Every measurement convention is pre-registered in Wave 0 before any num
 - [x] 10-02-PLAN.md - `target_pos` through `load_session` (last-sample-per-bin, membership-asserted) + the D-06 export writer/sidecar + the committed synthetic fixture + the real export materialized (RD-07, RD-08) [Wave 1]
 - [x] 10-03-PLAN.md - implement `fit_kalman_gain.py`'s residual path (both branches returned `default_noise`), regenerate `KalmanConstants.swift` to `noise source = indy-heldout`, arm the header test (RD-07) [Wave 1]
 - [x] 10-04-PLAN.md - `CortexCore.ReplayExport` + the `SpikeWindowSource` seam + `RecordedSpikeSource` + model-backed tick counting + `CortexDemoBench --real` (Seam A) (RD-08) [Wave 2]
-- [ ] 10-05-PLAN.md - freeze the Phase-7 gain for the synthetic fixture (D-09 byte-identity) + `ArmStatistics` + `CortexReplayBench`, the four-arm real-data ablation (RD-07) [Wave 3]
+- [x] 10-05-PLAN.md - freeze the Phase-7 gain for the synthetic fixture (D-09 byte-identity) + `ArmStatistics` + `CortexReplayBench`, the four-arm real-data ablation (RD-07) [Wave 3]
 - [ ] 10-06-PLAN.md - Seam B: the daemon replay producer + `RollingSpikeWindow` + `CortexSeamBSmoke` with an AES-GCM tamper control (RD-08) [Wave 4]
 - [ ] 10-07-PLAN.md - run the four-arm ablation on real spikes; `10-refit-real.json` + `10-refit-real-evidence.md` (RD-07) [Wave 4]
 - [ ] 10-08-PLAN.md - measure Seam A and Seam B; `10-replay.json` + `10-replay-evidence.md` with the D-11 decomposition (RD-08) [Wave 5]
@@ -248,7 +248,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
 | 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
-| 10. v1 Real-Data Closed Loop & Launch | v1 | 5/17 | In Progress|  |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 6/17 | In Progress|  |
 
 ---
 
