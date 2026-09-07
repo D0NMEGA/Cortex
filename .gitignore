@@ -106,6 +106,9 @@ Decoder/**/__pycache__/
 Decoder/.pytest_cache/
 Decoder/.ruff_cache/
 
-# Agent worktrees and session scratch. These are live git checkouts of other
-# branches; committing them as gitlinks would publish dangling submodule pointers.
-.agent/
+# Agent worktrees and session scratch. These are live git checkouts of OTHER branches; a
+# `git add -A` stages them as gitlinks and publishes dangling submodule pointers. Matched by
+# shape rather than by a tool-specific directory name, so it holds whichever harness is in use.
+# The harness's own top-level directory is additionally ignored in .git/info/exclude, which is
+# local and uncommitted.
+.*/worktrees/

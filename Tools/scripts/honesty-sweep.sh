@@ -221,16 +221,17 @@ is_excluded() {
 
 # ---- sweep_files: every regular file under SWEEP_ROOT, build and VCS noise pruned. ------------
 # `find` rather than `git ls-files` so the self-test's temp tree walks identically to the real one
-# `.agent` is pruned because `.agent/worktrees/` holds full checkouts of OTHER branches. Without
-# the prune this gate reports findings from whatever branch happens to be checked out there and its
-# verdict depends on untracked local state: on 2026-09-07 three agent worktrees produced 655 findings
-# against a clean tree. It cannot be caught from inside a worktree (nested worktrees do not exist
-# there) or in CI (fresh checkout), which is exactly why it is pruned rather than left to chance.
+# Any directory named `worktrees` is pruned because an agent harness keeps its scratch checkouts of
+# OTHER branches under one. Without the prune this gate reports findings from whatever branch happens
+# to be checked out there and its verdict depends on untracked local state: on 2026-09-07 three such
+# worktrees produced 655 findings against a clean tree. It cannot be caught from inside a worktree
+# (nested worktrees do not exist there) or in CI (fresh checkout), which is exactly why it is pruned
+# rather than left to chance. Matched by shape, not by a tool-specific parent directory name.
 # and the gate has no VCS dependency. `grep -I` below skips anything binary that survives the prune.
 sweep_files() {
   find "$SWEEP_ROOT" \
     \( -name '.git' \
-       -o -name '.agent' \
+       -o -name 'worktrees' \
        -o -name '.build' \
        -o -name 'build' \
        -o -name 'DerivedData' \
