@@ -1,5 +1,16 @@
 # Phase 5 DEC-06 Evidence — ANE op-eligibility of the compiled 4-bit `(vx,vy)` model
 
+> **SUPERSEDED FOR THE OP TALLY (Phase 9, 2026-09-02).** The 226/226 count below was read from a
+> stale compiled artifact: `compile_model` nested each new `.mlmodelc` inside the existing destination
+> due to a `shutil.move` defect, so every MLComputePlan scan since 2026-06-21 read the same
+> zero-weight graph. Isolating each compile under `tmp_path` fixed it. The trained real-data graph
+> carries 12 `batch_norm` ops and one extra `add` that a zero-initialized `pos_encoding` folds away.
+> The corrected tally is **239/239 ANE-eligible, 0 CPU-only ops**, re-measured on the trained
+> real-data graph. See
+> [`09-coreml-evidence.md`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-coreml-evidence.md).
+> The eligibility verdict (100% ANE-eligible) survives the correction; only the count changes.
+>
+
 **Date:** 2026-06-21
 **Result:** ✅ **PASS** — DEC-06 closed. Every schedulable op of the **compiled 4-bit palettized**
 `(vx, vy)` Core ML model is **ANE-ELIGIBLE** (`neuralEngine ∈ supported_compute_devices`), with

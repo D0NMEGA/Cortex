@@ -33,8 +33,9 @@ into a claim.
 **3. The photodiode gap was not the project's largest credibility hole.** The larger hole was that
 every decoder number the repo published had been produced on a synthetic Poisson fallback.
 `04-training-evidence.md` records it in those words: "No real `.mat` was present under
-`Decoder/data/`". So co-bps 0.3804, the ReFIT 0.374-versus-0.161 Fitts ablation and the 1.953
-Webgrid BPS were all synthetic-data numbers wearing real-sounding labels. A photodiode measures the
+`Decoder/data/`". So every decoder number was synthetic: co-bps 0.3804, the ReFIT
+0.374-versus-0.161 Fitts ablation and the 1.953 Webgrid BPS were synthetic-data numbers wearing
+real-sounding labels. A photodiode measures the
 scanout delta of a pipeline; it says nothing about whether the decoder in that pipeline has ever
 seen a spike from an animal. Buying a latency instrument while every decoder number was synthetic
 would have been optimising the wrong claim, and saying so plainly is the decision's actual reason.

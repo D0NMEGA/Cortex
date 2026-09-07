@@ -45,7 +45,7 @@ BATCH_SIZE: int = 16
 # The pooled held-out co-bps measured on the four real Indy M1 sessions under the corrected
 # objective, with gradient clipping, the linearized Poisson NLL, and NO stopping rule -- 200 epochs
 # to a pre-registered cap -- is 0.4096 bits/spike against the train-split mean-rate null, and 0.054
-# is 13.1% of that: the fraction Phase 4 used when it set 0.05 against an observed 0.3804, applied
+# is 13.1% of that: the fraction Phase 4 used when it set 0.05 against the synthetic 0.3804, applied
 # unchanged so that the observation is the only input to the derivation. The RULE has never moved
 # across four re-derivations; only the observation it reads has.
 #

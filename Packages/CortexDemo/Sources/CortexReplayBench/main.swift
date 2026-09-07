@@ -617,10 +617,10 @@ let references = References(
 let supersededSynthetic = SupersededSynthetic(
   raw_webgrid_bps: 1.292123144105848,
   kalman_only_webgrid_bps: 1.183000907045892,
-  refit_webgrid_bps: 1.953047883714651,
+  refit_webgrid_bps: 1.953047883714651, // superseded synthetic (Phase 8)
   raw_fitts_tp: 0.16089860247386525,
   kalman_only_fitts_tp: 0.15545586433053596,
-  refit_fitts_tp: 0.37439506338290895,
+  refit_fitts_tp: 0.37439506338290895, // superseded synthetic (Phase 7)
   note: "The Phase-8 SYNTHETIC seed-locked replay triple, carried here so the before-and-after is in "
     + "the artifact itself (D-12). Copied verbatim from the committed webgrid_bps.json (Phase 8) and "
     + "refit_bps.json (Phase 7). On that synthetic data kalman_only is BELOW raw on both metrics, so "
