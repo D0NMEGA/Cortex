@@ -143,8 +143,22 @@ jobs:
       - name: Generate Xcode project from project.yml
         run: xcodegen
 
+      # FOUND-04 clean-clone proof: every package must resolve its dependencies from a fresh
+      # checkout. Resolved PER PACKAGE because there is no Package.swift at the repo root -- the
+      # eight packages live under Packages/*/. The original form ran `swift package resolve` from
+      # the root and could never have passed: it fails with "Could not find Package.swift in this
+      # directory or any of its parent directories" on any machine, including locally. It went
+      # unnoticed from Phase 1 to 2026-09-07 because CI had never executed; the repo's first run
+      # is what surfaced it.
       - name: Resolve SwiftPM (FOUND-04 clean-clone proof)
-        run: swift package resolve
+        run: |
+          set -euo pipefail
+          for pkg in Packages/*/; do
+            [ -f "${pkg}Package.swift" ] || continue
+            echo "--- resolving ${pkg}"
+            swift package --package-path "$pkg" resolve
+          done
+          echo "OK: all SwiftPM packages resolve from a clean clone"
 
       - name: Per-package SwiftPM build smoke
         run: |
