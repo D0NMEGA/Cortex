@@ -54,6 +54,10 @@
     private let targets: TargetChannel?
     /// The dwell-to-select progress channel, read once per frame alongside the target.
     private let dwell: DwellChannel?
+    /// Re-anchor events for the renderer's own integrator (see `AnchorChannel`).
+    private let anchors: AnchorChannel?
+    /// The last anchor generation applied, so each one moves the cursor exactly once.
+    private var lastAnchor: UInt32 = 0
     private let log = Logger(subsystem: "app.cortex.render", category: "MacDisplayLinkAdapter")
 
     /// The display link returned by `NSView.displayLink`. `CADisplayLink` is the macOS 14+ AppKit
@@ -70,6 +74,7 @@
     ///   - start: the integrator's initial cursor position (defaults to grid centre).
     ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
     ///   - dwell: the dwell-to-select progress channel; `nil` draws the cursor at its resting size.
+    ///   - anchors: cursor re-anchor events; `nil` leaves the cursor free-running.
     /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline / command queue cannot be built.
     public init(
       layer: CAMetalLayer,
@@ -77,7 +82,8 @@
       ring: VelocityRing,
       start: CursorPosition = .init(x: 0.5, y: 0.5),
       targets: TargetChannel? = nil,
-      dwell: DwellChannel? = nil
+      dwell: DwellChannel? = nil,
+      anchors: AnchorChannel? = nil
     ) throws {
       self.layer = layer
       encoder = try WebgridFrameEncoder(device: device)
@@ -90,6 +96,7 @@
       self.ring = ring
       self.targets = targets
       self.dwell = dwell
+      self.anchors = anchors
       super.init()
     }
 
@@ -145,6 +152,12 @@
         }
 
         // 5. Integrate velocity → clamped, always-finite position (D-04 / T-06-02-01).
+        // A pending re-anchor moves the cursor before this frame integrates, so the
+        // frame renders from the anchor rather than one tick past it.
+        if let anchor = anchors?.take(after: lastAnchor) {
+          integrator.reset(to: CursorPosition(x: anchor.x, y: anchor.y))
+          lastAnchor = anchor.generation
+        }
         let pos = integrator.integrate(latest: latest, dt: dt)
 
         // 6. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).

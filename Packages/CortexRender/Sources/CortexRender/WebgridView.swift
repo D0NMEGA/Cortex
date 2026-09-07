@@ -61,14 +61,21 @@ import SwiftUI
     private let ring: VelocityRing
     private let targets: TargetChannel?
     private let dwell: DwellChannel?
+    private let anchors: AnchorChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
     ///   callback (consumer) pops it each frame.
-    public init(ring: VelocityRing, targets: TargetChannel? = nil, dwell: DwellChannel? = nil) {
+    public init(
+      ring: VelocityRing,
+      targets: TargetChannel? = nil,
+      dwell: DwellChannel? = nil,
+      anchors: AnchorChannel? = nil
+    ) {
       self.ring = ring
       self.targets = targets
       self.dwell = dwell
+      self.anchors = anchors
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -89,7 +96,8 @@ import SwiftUI
           device: device,
           ring: ring,
           targets: targets,
-          dwell: dwell
+          dwell: dwell,
+          anchors: anchors
         )
         adapter.start()
         context.coordinator.adapter = adapter
@@ -180,14 +188,21 @@ import SwiftUI
     private let ring: VelocityRing
     private let targets: TargetChannel?
     private let dwell: DwellChannel?
+    private let anchors: AnchorChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
     ///   callback (consumer) pops it each frame.
-    public init(ring: VelocityRing, targets: TargetChannel? = nil, dwell: DwellChannel? = nil) {
+    public init(
+      ring: VelocityRing,
+      targets: TargetChannel? = nil,
+      dwell: DwellChannel? = nil,
+      anchors: AnchorChannel? = nil
+    ) {
       self.ring = ring
       self.targets = targets
       self.dwell = dwell
+      self.anchors = anchors
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -208,7 +223,8 @@ import SwiftUI
           device: device,
           ring: ring,
           targets: targets,
-          dwell: dwell
+          dwell: dwell,
+          anchors: anchors
         )
         adapter.start(in: view)
         context.coordinator.adapter = adapter

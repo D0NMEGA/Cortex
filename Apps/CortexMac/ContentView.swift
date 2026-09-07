@@ -41,6 +41,22 @@ struct ContentView: View {
         )
       }
 
+      // The re-anchoring disclosure. It sits ABOVE the arm captions and outside either pane because
+      // it qualifies BOTH tracks, and because a viewer who reads nothing else must not walk away
+      // believing this is a free-running decoded cursor. The published hit counts in the captions
+      // above come from the free-running scored replay, NOT from what is on screen here.
+      Text("Cursor RE-ANCHORED to the previous target at each trial start; motion within a trial is "
+        + "decoded. Open-loop integration drifts ~26 cells of a 30-cell grid in 30 s and a replay "
+        + "cannot correct it, so a free-running track shows accumulated error rather than the "
+        + "decode. The hit counts below are from the free-running scored replay, not from this view.")
+        .font(.system(size: 9, design: .monospaced))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(.black)
+        .foregroundStyle(.orange)
+        .fixedSize(horizontal: false, vertical: true)
+
       // The honest instrumentation strip (D-07/D-09): source label, the SYS-03/04 round-trip line and
       // the latest software-timed glass-to-glass sample WITH the methodology label (no over-claim).
       VStack(alignment: .leading, spacing: 4) {
@@ -73,8 +89,13 @@ struct ContentView: View {
   private func arm(driver: ClosedLoopDriver, title: String, caption: String) -> some View {
     VStack(spacing: 0) {
       // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
-      WebgridView(ring: driver.ring, targets: driver.targets, dwell: driver.dwell)
-        .frame(minWidth: 360, minHeight: 360)
+      WebgridView(
+        ring: driver.ring,
+        targets: driver.targets,
+        dwell: driver.dwell,
+        anchors: driver.anchors
+      )
+      .frame(minWidth: 360, minHeight: 360)
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
           .font(.system(.caption, design: .monospaced).bold())
@@ -131,12 +152,24 @@ final class ClosedLoopDriver {
   let targets = TargetChannel()
   /// Dwell-to-select progress, published to the renderer once per tick (latest-value, lock-free).
   let dwell = DwellChannel()
+  /// Cursor re-anchor events. The RENDERER owns the integrator that draws the cursor, so a
+  /// re-anchor has to be published to it as well as applied to the pipeline's own integrator.
+  let anchors = AnchorChannel()
   /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
   /// `nil` on the synthetic path, where the task has no recorded target to show.
   private let recordedSource: RecordedSpikeSource?
   /// The pre-registered workspace square, used to map a target in mm onto a grid cell.
   private let boxOriginMm: SIMD2<Double>
   private let boxSideMm: Double
+  /// The normalised target published on the previous tick, or `nil` before the first one.
+  ///
+  /// A CHANGE in this value is the trial boundary, and its OLD value is where the subject's hand was
+  /// when the new target appeared -- which is what the cursor re-anchors onto. The task structure is
+  /// what makes that sound: a trial ends by acquiring its target, so the hand is at the target it
+  /// just left. Measured on this session, at the 1024 target changes the recorded hand sits a median
+  /// 5.19 mm from the target it just left (77% within half the 15 mm task pitch) against 61.45 mm
+  /// from the one that just appeared.
+  private var previousTarget: SIMD2<Float>?
 
   /// Whether this driver runs the ReFIT rotation (the target-determined arm) or not.
   let rotationEnabled: Bool
@@ -238,19 +271,34 @@ final class ClosedLoopDriver {
   private func publishTarget(forWindow windowIndex: Int) {
     guard let recordedSource, windowIndex >= 0, boxSideMm > 0 else {
       targets.clear()
+      previousTarget = nil
       return
     }
     let targetMm = recordedSource.target(forWindow: windowIndex)
     let normalised = (targetMm - boxOriginMm) / boxSideMm
     guard normalised.x >= 0, normalised.x < 1, normalised.y >= 0, normalised.y < 1 else {
+      // No target on screen means no trial, so there is nothing to re-anchor onto when one returns.
       targets.clear()
+      previousTarget = nil
       return
     }
     let grid = Double(ClosedLoopDriver.gridSide)
     targets.store(column: Int(normalised.x * grid), row: Int(normalised.y * grid))
+    let current = SIMD2<Float>(Float(normalised.x), Float(normalised.y))
+
+    // A new target is a new trial. Re-anchor the cursor onto the target just left before steering at
+    // the new one, so what the viewer sees is the decode's within-trial behaviour rather than 24
+    // minutes of accumulated open-loop integration error. See `ClosedLoopPipeline.reanchor(to:)` for
+    // why a replay cannot close that loop on its own, and the on-screen caption that says so.
+    if let previous = previousTarget, previous != current {
+      pipeline.reanchor(to: previous)
+      anchors.store(x: previous.x, y: previous.y)
+    }
+    previousTarget = current
+
     // Steer the loop at the SAME target the square draws. Without this the ReFIT arm rotates toward
     // the stale init-time centre cell while the viewer sees a square somewhere else entirely.
-    pipeline.setTarget(SIMD2<Float>(Float(normalised.x), Float(normalised.y)))
+    pipeline.setTarget(current)
   }
 
   /// The 30x30 webgrid substrate (D-01), matching `WebgridParams.grid30x30`.

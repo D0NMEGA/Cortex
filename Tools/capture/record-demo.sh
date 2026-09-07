@@ -84,9 +84,29 @@ if [[ "$DO_BUILD" == "1" ]]; then
     || die "build failed. Run the same xcodebuild without the >/dev/null to see why."
 fi
 
-APP="$(find ~/Library/Developer/Xcode/DerivedData -name 'CortexMac.app' -type d 2>/dev/null | head -1)"
+# NEWEST wins. `xcodegen generate` can change the project's identity hash, which makes Xcode start a
+# fresh DerivedData directory, so several CortexMac.app bundles accumulate over a project's life and
+# `find | head -1` returns whichever the filesystem happens to yield first. That silently records a
+# stale build -- it happened while this script was being written, and the recording showed code from
+# twelve hours earlier.
+# Stat the EXECUTABLE, not the .app directory: a bundle directory's mtime does not track relinking,
+# so the bundle holding the newest binary here was dated three months older than a stale sibling.
+# Bundles with no executable at all (an abandoned build) are skipped.
+APP="$(find ~/Library/Developer/Xcode/DerivedData -name 'CortexMac.app' -type d 2>/dev/null \
+  | while read -r bundle; do
+      exe="$bundle/Contents/MacOS/CortexMac"
+      [[ -f "$exe" ]] && printf '%s %s\n' "$(stat -f %m "$exe")" "$bundle"
+    done | sort -rn | head -1 | cut -d' ' -f2-)"
 [[ -n "$APP" ]] || die "CortexMac.app not found in DerivedData"
 log "app: $APP"
+log "built: $(stat -f '%Sm' "$APP/Contents/MacOS/CortexMac" 2>/dev/null || echo unknown)"
+if [[ "$DO_BUILD" == "1" ]]; then
+  # The build just ran, so anything older than a couple of minutes means the freshly built bundle is
+  # not the one about to be launched.
+  age=$(( $(date +%s) - $(stat -f %m "$APP/Contents/MacOS/CortexMac" 2>/dev/null || echo 0) ))
+  [[ "$age" -lt 300 ]] || die "the newest CortexMac.app is ${age}s old but a build just succeeded; \
+refusing to record a stale binary. Check for multiple DerivedData directories."
+fi
 
 # --- Launch, then frame the window ---------------------------------------------------------------
 pkill -x CortexMac 2>/dev/null || true
@@ -120,7 +140,10 @@ OSA
 # height for the two-pane layout (about 884 pt), so asking for 680 yields a taller window and a
 # capture rect computed from the REQUESTED size clips off everything below the fold -- which is the
 # arm captions and the instrumentation strip, the part that says what the demo is.
-FRAME="$(osascript -e 'tell application "System Events" to tell process "CortexMac" to get {item 1 of position, item 2 of position, item 1 of size, item 2 of size} of window 1' 2>/dev/null | tr -d ' ')"
+# `{position, size}` flattens to "x, y, w, h". Addressing the items individually does NOT work here
+# -- System Events cannot coerce `item 1 of position` and the whole call fails, silently leaving the
+# requested framing in place.
+FRAME="$(osascript -e 'tell application "System Events" to tell process "CortexMac" to get {position, size} of window 1' 2>/dev/null | tr -d ' ')"
 if [[ "$FRAME" =~ ^-?[0-9]+,-?[0-9]+,[0-9]+,[0-9]+$ ]]; then
   IFS=, read -r WIN_X WIN_Y WIN_W WIN_H <<<"$FRAME"
   log "window frame: ${WIN_W}x${WIN_H} at ${WIN_X},${WIN_Y}"

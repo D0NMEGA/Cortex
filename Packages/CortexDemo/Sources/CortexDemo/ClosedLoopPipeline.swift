@@ -442,29 +442,6 @@ public final class ClosedLoopPipeline {
     return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
   }
 
-  /// Advance the streaming dwell counter for one tick.
-  ///
-  /// Same rule as `WebgridAcquisition.runTrial`: the counter increments while the cursor is inside
-  /// the radius and RESETS on any tick it is outside, so the hold must be continuous. On reaching
-  /// `dwellTicks` a selection is committed and the counter restarts, which is what makes the
-  /// on-screen cursor pop back to full size the instant it commits.
-  private func updateDwell(onTarget: Bool) {
-    guard onTarget else {
-      continuousOnTarget = 0
-      dwellProgress = 0
-      return
-    }
-    continuousOnTarget += 1
-    let required = acquisition.dwellTicks
-    if continuousOnTarget >= required {
-      selectionCount += 1
-      continuousOnTarget = 0
-      dwellProgress = 0
-    } else {
-      dwellProgress = Float(continuousOnTarget) / Float(required)
-    }
-  }
-
   // MARK: - Deterministic batch run (the test + bench path)
 
   /// The outcome of one deterministic closed-loop run: the sampled trajectory, whether a webgrid
@@ -542,5 +519,62 @@ public final class ClosedLoopPipeline {
     // Ticks to the HIT (1-based elapsed-tick count from the movement time), or the full budget on miss.
     let ticks = Int((trial.movementTime / ClosedLoopPipeline.dt).rounded())
     return RunOutcome(positions: positions, hit: trial.acquired, ticks: ticks)
+  }
+}
+
+// MARK: - Display-only cursor state
+
+///
+/// Re-anchoring and the dwell readout exist so a VIEWER can see what the loop is doing. Neither
+/// feeds the loop, and no published number is computed from either, so they live outside the
+/// class body that carries the decode/filter/integrate path.
+extension ClosedLoopPipeline {
+  /// Move the cursor to `position` and re-seat the filter's position state on it.
+  ///
+  /// TRIAL RE-ANCHORING. The streaming loop integrates decoded velocity open-loop: nothing observes
+  /// where the cursor actually is, so decode error accumulates without bound. On this dataset the
+  /// free-running cursor is about 26 cells from the recorded hand after 30 s and a median 96 cells
+  /// over the test split, on a grid 30 cells wide -- past the first minute its absolute position
+  /// carries no information and it sits on the `[0,1]` clamp. A live subject closes that loop by
+  /// watching the cursor and correcting; a replay of recorded spikes cannot, because the subject was
+  /// watching its own hand and never saw this cursor.
+  ///
+  /// Re-anchoring at each trial boundary bounds the error to one trial, so what the viewer sees is
+  /// the decode's WITHIN-TRIAL behaviour rather than accumulated integration error. The velocity
+  /// state is deliberately left warm: only position is being corrected, and the velocity estimate is
+  /// what is under test.
+  ///
+  /// This changes what the displayed track means, so a caller must label it. It is a DISPLAY path:
+  /// `runToHit` and `CortexReplayBench` do not use it, and no published number comes from it.
+  public func reanchor(to position: SIMD2<Float>) {
+    guard position.x.isFinite, position.y.isFinite else { return }
+    integrator.reset(to: CursorPosition(x: position.x, y: position.y))
+    let clamped = SIMD2<Float>(integrator.position.x, integrator.position.y)
+    filter.setCursorPosition(clamped)
+    continuousOnTarget = 0
+    dwellProgress = 0
+  }
+
+  /// Advance the streaming dwell counter for one tick.
+  ///
+  /// Same rule as `WebgridAcquisition.runTrial`: the counter increments while the cursor is inside
+  /// the radius and RESETS on any tick it is outside, so the hold must be continuous. On reaching
+  /// `dwellTicks` a selection is committed and the counter restarts, which is what makes the
+  /// on-screen cursor pop back to full size the instant it commits.
+  private func updateDwell(onTarget: Bool) {
+    guard onTarget else {
+      continuousOnTarget = 0
+      dwellProgress = 0
+      return
+    }
+    continuousOnTarget += 1
+    let required = acquisition.dwellTicks
+    if continuousOnTarget >= required {
+      selectionCount += 1
+      continuousOnTarget = 0
+      dwellProgress = 0
+    } else {
+      dwellProgress = Float(continuousOnTarget) / Float(required)
+    }
   }
 }

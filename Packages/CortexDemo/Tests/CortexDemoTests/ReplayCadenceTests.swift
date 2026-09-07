@@ -116,3 +116,63 @@ struct ReplayCadenceTests {
     #expect(pipeline.selectionCount >= 0)
   }
 }
+
+@Suite("Trial re-anchoring")
+@MainActor
+struct ReanchorTests {
+  static func loadFixture() throws -> ReplayExport {
+    try ReplayExport(sidecarURL: RecordedSpikeSourceTests.fixtureSidecar)
+  }
+
+  @Test("reanchor moves the cursor and the filter agrees with the integrator")
+  func reanchorMovesTheCursor() throws {
+    let pipeline = try ClosedLoopPipeline(
+      source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
+      seed: 0xC0FFEE
+    )
+    for _ in 0 ..< 20 {
+      pipeline.tick()
+    }
+
+    pipeline.reanchor(to: SIMD2<Float>(0.25, 0.75))
+    // The next tick integrates FROM the re-anchored position, so it lands within one tick's travel
+    // of it rather than back where the free-running cursor had drifted to.
+    let after = pipeline.tick()
+    #expect(abs(after.position.x - 0.25) < 0.2)
+    #expect(abs(after.position.y - 0.75) < 0.2)
+  }
+
+  @Test("reanchor clamps to the grid and refuses a non-finite position")
+  func reanchorClampsAndRefuses() throws {
+    let pipeline = try ClosedLoopPipeline(
+      source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
+      seed: 0xC0FFEE
+    )
+    pipeline.reanchor(to: SIMD2<Float>(5.0, -3.0))
+    var state = pipeline.tick()
+    #expect(state.position.x >= 0 && state.position.x <= 1)
+    #expect(state.position.y >= 0 && state.position.y <= 1)
+
+    // A non-finite anchor must be REFUSED outright, not clamped to a bound: clamping would silently
+    // park the cursor in a corner and call it a re-anchor.
+    pipeline.reanchor(to: SIMD2<Float>(0.4, 0.6))
+    pipeline.reanchor(to: SIMD2<Float>(.nan, 0.6))
+    state = pipeline.tick()
+    #expect(state.position.x.isFinite && state.position.y.isFinite)
+    #expect(abs(state.position.x - 0.4) < 0.2, "the NaN anchor left the 0.4 anchor in place")
+  }
+
+  @Test("reanchor clears any dwell in progress")
+  func reanchorClearsDwell() throws {
+    let pipeline = try ClosedLoopPipeline(
+      source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
+      seed: 0xC0FFEE
+    )
+    for _ in 0 ..< 10 {
+      pipeline.tick()
+    }
+    // A hold cannot survive being teleported: the dwell must be CONTINUOUS on one target.
+    pipeline.reanchor(to: SIMD2<Float>(0.5, 0.5))
+    #expect(pipeline.dwellProgress == 0)
+  }
+}

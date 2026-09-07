@@ -55,6 +55,24 @@ public final nonisolated class CursorIntegrator {
     )
   }
 
+  /// Move the cursor to `position` without integrating, under the same clamp `integrate` applies.
+  ///
+  /// The one way the cursor's position changes other than by integrating decoded velocity. It exists
+  /// for TRIAL RE-ANCHORING: open-loop integration has no position feedback, so decode error
+  /// accumulates without bound (measured on this dataset: ~26 cells of a 30-cell grid after 30 s),
+  /// and a replay cannot correct it the way a live subject would by watching the cursor. Re-anchoring
+  /// at a known task landmark bounds that error to one trial.
+  ///
+  /// A caller that uses this owes the viewer a label saying so: the resulting track is decoded
+  /// WITHIN each trial and re-anchored BETWEEN trials, which is not the same claim as a free-running
+  /// decoded track.
+  public func reset(to position: CursorPosition) {
+    self.position = CursorPosition(
+      x: Self.clampFinite(position.x),
+      y: Self.clampFinite(position.y)
+    )
+  }
+
   /// Advance the cursor by `latest * dt`, then clamp to `[0, 1]`. Returns (and stores) the new
   /// position.
   ///

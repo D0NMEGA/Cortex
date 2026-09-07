@@ -99,3 +99,62 @@ struct CursorIntegratorTests {
     #expect(v.vy == Float16(-0.25))
   }
 }
+
+@Suite("AnchorChannel: re-anchor events reach the renderer exactly once")
+struct AnchorChannelTests {
+  @Test("nothing published means nothing to apply")
+  func emptyChannelYieldsNil() {
+    #expect(AnchorChannel().take(after: 0) == nil)
+  }
+
+  @Test("an anchor is delivered once, then not again")
+  func anchorAppliesExactlyOnce() {
+    let channel = AnchorChannel()
+    channel.store(x: 0.25, y: 0.75)
+
+    guard let first = channel.take(after: 0) else {
+      Issue.record("a published anchor must be delivered")
+      return
+    }
+    #expect(abs(first.x - 0.25) < 1e-4)
+    #expect(abs(first.y - 0.75) < 1e-4)
+    // Polling again with the generation just seen must yield nothing: an anchor is an event, and
+    // re-applying it every frame would pin the cursor on it instead of letting it integrate away.
+    #expect(channel.take(after: first.generation) == nil)
+
+    channel.store(x: 0.1, y: 0.9)
+    guard let second = channel.take(after: first.generation) else {
+      Issue.record("a second anchor must be delivered")
+      return
+    }
+    #expect(second.generation != first.generation)
+    #expect(abs(second.x - 0.1) < 1e-4)
+  }
+
+  @Test("out-of-range clamps and non-finite is refused")
+  func anchorClampsAndRefuses() {
+    let channel = AnchorChannel()
+    channel.store(x: 2.0, y: -1.0)
+    let clamped = channel.take(after: 0)
+    #expect(clamped?.x == 1.0)
+    #expect(clamped?.y == 0.0)
+
+    // A NaN must not publish AT ALL. Clamping it to a bound would teleport the cursor to a corner
+    // and present that as a re-anchor.
+    let seen = clamped?.generation ?? 0
+    channel.store(x: .nan, y: 0.5)
+    #expect(channel.take(after: seen) == nil)
+  }
+
+  @Test("integrator reset moves the cursor under the same clamp as integrate")
+  func integratorResetClamps() {
+    let integrator = CursorIntegrator(start: .init(x: 0.5, y: 0.5))
+    integrator.reset(to: .init(x: 0.2, y: 0.8))
+    #expect(integrator.position.x == 0.2)
+    #expect(integrator.position.y == 0.8)
+
+    integrator.reset(to: .init(x: 3.0, y: -2.0))
+    #expect(integrator.position.x == 1.0)
+    #expect(integrator.position.y == 0.0)
+  }
+}
