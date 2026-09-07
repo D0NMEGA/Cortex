@@ -1,5 +1,19 @@
 # Phase 5 DEC-08 Evidence — ANE *eligibility* (confirmed on-device) + runtime *placement* (measured) of the 4-bit `(vx,vy)` model
 
+> **SUPERSEDED FOR THE OP TALLY (Phase 9, 2026-09-02).** The 226/226 count below was read from a
+> stale compiled artifact: `compile_model` nested each new `.mlmodelc` inside the existing destination
+> due to a `shutil.move` defect, so every MLComputePlan scan since 2026-06-21 read the same
+> zero-weight graph. Isolating each compile under `tmp_path` fixed it. The trained real-data graph
+> carries 12 `batch_norm` ops and one extra `add` that a zero-initialized `pos_encoding` folds away.
+> The corrected tally is **239/239 ANE-eligible, 0 CPU-only ops**, re-measured on the trained
+> real-data graph. See
+> [`09-coreml-evidence.md`](../09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-coreml-evidence.md).
+> The eligibility verdict (100% ANE-eligible) survives the correction; only the count changes.
+>
+> **Phase 10 (2026-09-07).** The shipped fp16 model (`9d542cb51d4a`) used the 239/239 tally.
+> This file is **NOT retroactively edited**. The 226/226 tally remains as measured on the zero-weight
+> graph; it is cited only in the historical context. Cite 239/239 for all real-data references.
+
 **Date:** 2026-06-21 (disposition + staging authored; the iPad-M4 placement capture is the human step at the Plan-05-05 checkpoint — see "Capture status" below)
 **Result:** ✅ **CAPTURED (M2-corroborating) + SC#1/DEC-08 reframed.** Measured 2026-06-21 on **iPad Air 11-inch (M2), iPadOS 18.7.8** (Xcode Core ML Performance Report). **ANE-eligibility: 226/226 ops `neuralEngine ∈ supported` — confirmed on real iPad silicon** (independently reproduces the Plan-02 Mac `MLComputePlan` verdict). **Runtime placement: 226/226 `preferred == cpu` (0 ANE, 0 GPU)** — the 1.29M-param model CPU-placed under `computeUnits=.all`: the Risk-#1 scale trap, now reproduced on a real iPad, **measured not assumed**. Per the honest-fallback narrative below, **DEC-08/SC#1 is reframed** from "100% runtime ANE placement" to the measured truth: *100% ANE-**eligible** + CPU-scheduled-at-this-scale + **<2ms p99 regardless** (p99 ≈ 0.51ms M2)*. Canonical iPad-M4 capture stays an optional future datapoint (M4's iPadOS-26 scheduler *might* differ, but the scale trap is consistent across M5 Pro + M2). Artifacts: `05-perf-report-ipad-m2.json` + `runtime_plan_ipad.json`.
 

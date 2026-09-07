@@ -25,6 +25,10 @@
 >
 > This file is **NOT retroactively edited**. It remains a true record of what Phase 4 measured on a
 > randomly-initialized graph. Cite the Phase-9 values for any real-data claim.
+>
+> **Phase 10 (2026-09-07).** The fp16 model (checkpoint `9d542cb51d4a`) was the shipped model in the
+> v1 closed-loop run. 4-bit is **not used** in v1 per the Phase-9 finding above.
+> See [`10-refit-real-evidence.md`](../10-v1-real-data-closed-loop-launch/10-refit-real-evidence.md).
 
 **Date:** 2026-06-21
 **Result:** ✅ **PASS** — the NDT1 encoder→rates graph converts to an `mlprogram` `.mlpackage`,

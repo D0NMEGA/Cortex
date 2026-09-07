@@ -1,5 +1,15 @@
 # Phase 8 PERF-01/02/03 Evidence — Webgrid information-rate BPS on synthetic Indy replay
 
+> **SUPERSEDED AS HEADLINE (Phase 10, 2026-09-07).** The 1.953 BPS figure below is a
+> **synthetic seed-locked replay** number, produced with no trained model in the loop. It is
+> superseded as the project's headline BPS by the real-data four-arm ablation in
+> [`10-refit-real-evidence.md`](../10-v1-real-data-closed-loop-launch/10-refit-real-evidence.md)
+> (Phase 10, `indy_20160630_01`, decode-attributable arms: **0.000000 BPS**).
+>
+> **Retained per D-12 as the before-and-after.** The synthetic 1.953 triple (raw 1.292 / kalman-only
+> 1.183 / refit 1.953) and the Phase-10 real-data table must appear side by side in the README so
+> the reader sees the gap in one glance. This file is **NOT retroactively edited**.
+
 ## Amendment (2026-09-07, Phase 10 / RD-09)
 
 Plan 10-11 (Task 2) corrected a factual mislabel in the Pandarinath 2017 reference condition:
