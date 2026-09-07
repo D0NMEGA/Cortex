@@ -56,6 +56,21 @@ public nonisolated enum SessionKeychain {
   /// key over the secure mach_msg channel — this constant must NOT be added to `baseQuery()` in Phase 2.
   public static let deferredAccessGroup = "Y4A54395NZ.group.com.donovansantine.cortex.shared"
 
+  /// CoreFoundation's `kCFBooleanTrue`, bound once as a non-optional.
+  ///
+  /// The Security framework needs the CFBoolean singleton here, not Swift `true` (CF#8: a Swift Bool
+  /// yields errSecParam -50). CoreFoundation imports the global as implicitly unwrapped, so every use
+  /// site otherwise reads `kCFBooleanTrue!`. Binding it once to a `CFBoolean`-typed constant unwraps
+  /// it in one place instead of at each query, with the SAME semantics: the constant is a CF
+  /// singleton that is never nil, and a nil would trap here exactly as the `!` did.
+  ///
+  /// Computed, not stored: `CFBoolean` is not `Sendable`, so a `static let` of it is a Swift 6
+  /// global-mutable-state error. A computed property has no storage to race on and needs no
+  /// `nonisolated(unsafe)` escape hatch.
+  private static var cfTrue: CFBoolean {
+    kCFBooleanTrue
+  }
+
   /// Which keychain the query targets. Production is `.dataProtection` (IPC-06); `.legacyFile` exists
   /// ONLY so the unit test can round-trip on the unentitled swift-test host (see the CF#1 corollary
   /// in the file header). `.legacyFile` does NOT honor `AfterFirstUnlockThisDeviceOnly` and must never
@@ -88,7 +103,7 @@ public nonisolated enum SessionKeychain {
     switch backend {
     case .dataProtection:
       // CF#8: kCFBooleanTrue, NOT Swift `true` (which yields errSecParam -50 here).
-      q[kSecUseDataProtectionKeychain as String] = kCFBooleanTrue!
+      q[kSecUseDataProtectionKeychain as String] = cfTrue
       q[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
     case .legacyFile:
       // Test-only: the legacy file keychain round-trips on the unentitled host. No data-protection
@@ -118,7 +133,7 @@ public nonisolated enum SessionKeychain {
   /// Load the session secret. Throws `copy(errSecItemNotFound)` (fail-closed) when absent.
   public static func load(backend: Backend = .dataProtection) throws -> SymmetricKey {
     var query = baseQuery(backend: backend)
-    query[kSecReturnData as String] = kCFBooleanTrue!
+    query[kSecReturnData as String] = Self.cfTrue
     query[kSecMatchLimit as String] = kSecMatchLimitOne
     var out: CFTypeRef?
     let status = SecItemCopyMatching(query as CFDictionary, &out)

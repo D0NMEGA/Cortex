@@ -144,13 +144,16 @@ public final class ShmRing {
       }
     }
 
-    let mapped = mmap(nil, layout.ringBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
-    if mapped == MAP_FAILED || mapped == nil {
+    // `mmap` is imported as an implicitly-unwrapped optional, so the nil check and the failure
+    // check fold into one `guard let` -- same two conditions, same throw, no `!`.
+    guard let mapped = mmap(nil, layout.ringBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0),
+          mapped != MAP_FAILED
+    else {
       let e = errno
       close(fd)
       throw .map(e)
     }
-    base = mapped!
+    base = mapped
     ownedFD = fd
   }
 
@@ -169,11 +172,14 @@ public final class ShmRing {
       }
     }
 
-    let mapped = mmap(nil, layout.ringBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0)
-    if mapped == MAP_FAILED || mapped == nil {
+    // Same fold as the owning initializer above: one `guard let` covers both the nil and the
+    // MAP_FAILED case, and throws the identical `.map(errno)`.
+    guard let mapped = mmap(nil, layout.ringBytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0),
+          mapped != MAP_FAILED
+    else {
       throw .map(errno)
     }
-    base = mapped!
+    base = mapped
     ownedFD = -1 // borrowed: do not close the adopted fd in deinit
   }
 
