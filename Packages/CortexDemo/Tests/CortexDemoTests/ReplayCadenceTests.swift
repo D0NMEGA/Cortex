@@ -78,25 +78,31 @@ struct ReplayCadenceTests {
 
   // MARK: The dwell readout
 
-  @Test("the selection channel clamps both fields and resolves non-finite input to idle")
+  @Test("the selection channel clamps every field and resolves non-finite input to idle")
   func selectionChannelClampsAndRoundTrips() {
     let channel = SelectionChannel()
-    #expect(channel.load() == .idle, "a fresh channel reads as no hold and no flash")
+    #expect(channel.load() == .idle, "a fresh channel reads as no hold and nothing acquired")
 
-    channel.store(dwell: 0.5, flash: 0.25)
-    #expect(channel.load() == SelectionState(dwell: 0.5, flash: 0.25))
+    // The fractions cross as 16-bit fixed point, so they come back within 1/65535 rather than
+    // bit-exact. That is finer than the ring radius or the colour blend they drive can resolve; the
+    // three values sharing ONE atomic word is what matters, so a frame can never draw a green
+    // target beside a stale dwell.
+    channel.store(dwell: 0.5, acquired: true, swell: 0.25)
+    let mid = channel.load()
+    #expect(abs(mid.dwell - 0.5) < 1e-4)
+    #expect(abs(mid.swell - 0.25) < 1e-4)
+    #expect(mid.acquired)
 
-    // The two fields share one atomic word, so a store must never leave one updated beside the
-    // other stale: a full-size cursor next to a flash from the selection that just released it.
-    channel.store(dwell: 0, flash: 1)
-    #expect(channel.load() == SelectionState(dwell: 0, flash: 1))
+    // 0 and 1 are the values the shader branches on, and both must survive exactly.
+    channel.store(dwell: 0, acquired: false, swell: 1)
+    #expect(channel.load() == SelectionState(dwell: 0, acquired: false, swell: 1))
 
     // Out of range clamps; non-finite resolves to 0, NOT to 1. A garbage value must draw a resting
-    // cursor and an unflashed target rather than a completed selection, since both are read as
+    // cursor and an unacquired target rather than a completed selection, since both are read as
     // evidence that an acquisition happened.
-    channel.store(dwell: 2.0, flash: -1.0)
-    #expect(channel.load() == SelectionState(dwell: 1, flash: 0))
-    channel.store(dwell: .nan, flash: .infinity)
+    channel.store(dwell: 2.0, acquired: false, swell: -1.0)
+    #expect(channel.load() == SelectionState(dwell: 1, acquired: false, swell: 0))
+    channel.store(dwell: .nan, acquired: false, swell: .infinity)
     #expect(channel.load() == .idle)
   }
 
@@ -178,7 +184,7 @@ struct ReanchorTests {
   }
 }
 
-@Suite("Selection commit: the counter and the flash")
+@Suite("Selection commit: one per trial, the counter and the latch")
 @MainActor
 struct SelectionCommitTests {
   private func freshPipeline() throws -> ReplayPipeline {
@@ -205,55 +211,90 @@ struct SelectionCommitTests {
     // 0.30 s at 20 ms is 15 ticks; 14 is one short, and the threshold must be a threshold.
     holdOnTarget(pipeline, ticks: 14)
     #expect(pipeline.selectionCount == 0)
-    #expect(pipeline.selectionFlash == 0)
+    #expect(!pipeline.acquired)
+    #expect(pipeline.selectionSwell == 0)
     #expect(pipeline.dwellProgress > 0, "a partial hold shows partial progress")
   }
 
-  @Test("a satisfied dwell commits once and lights the flash")
+  @Test("a satisfied dwell commits once, latches acquired and lights the swell")
   func dwellCommitsOnce() throws {
     let pipeline = try freshPipeline()
     holdOnTarget(pipeline, ticks: 15)
     #expect(pipeline.selectionCount == 1, "15 continuous on-target ticks is exactly one commit")
-    #expect(pipeline.selectionFlash == 1, "a commit lights the flash fully")
+    #expect(pipeline.acquired, "the commit latches the target green for the rest of the trial")
+    #expect(pipeline.selectionSwell == 1, "a commit lights the swell fully")
     #expect(pipeline.dwellProgress == 0, "the counter restarts after committing")
   }
 
-  @Test("the hold must be re-earned: a sustained hold commits again, never continuously")
-  func holdMustBeReEarned() throws {
+  @Test("one acquisition per trial: parking on the target never banks a second")
+  func oneAcquisitionPerTrial() throws {
     let pipeline = try freshPipeline()
-    holdOnTarget(pipeline, ticks: 30)
-    #expect(pipeline.selectionCount == 2, "30 ticks is two 15-tick holds, not 16 commits")
+    // Six times the 15-tick requirement, parked on the same target the whole time. This used to
+    // bank a fresh selection every 15 ticks, so a single 1.3 s trial could contribute four counts
+    // for one square and the tally's numerator could pass its denominator.
+    holdOnTarget(pipeline, ticks: 90)
+    #expect(pipeline.selectionCount == 1, "a square cannot be selected twice in one trial")
+    #expect(pipeline.acquired)
+    #expect(pipeline.dwellProgress == 0, "no partial hold accumulates after the trial is acquired")
   }
 
-  @Test("the flash decays to zero and does not re-arm on its own")
-  func flashDecays() throws {
+  @Test("the next trial re-arms the dwell, so a second trial can be acquired")
+  func nextTrialReArms() throws {
     let pipeline = try freshPipeline()
     holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.selectionFlash == 1)
+    #expect(pipeline.selectionCount == 1)
+    pipeline.beginTrial()
+    #expect(!pipeline.acquired, "a new trial releases the latch")
+    holdOnTarget(pipeline, ticks: 15)
+    #expect(pipeline.selectionCount == 2, "the second trial commits on its own 15-tick hold")
+  }
 
-    // Break the hold and watch the flash fall, over the ticks immediately after the commit: a fresh
-    // commit needs 15 more on-target ticks and cannot re-arm inside that window. Running for a long
-    // time with a "far" target is NOT safe here -- the cursor drifts into the [0,1] clamp, and a
-    // corner target then sits inside the radius forever and re-commits.
+  @Test("the swell decays to zero while the acquired latch holds")
+  func swellDecaysButGreenHolds() throws {
+    let pipeline = try freshPipeline()
+    holdOnTarget(pipeline, ticks: 15)
+    #expect(pipeline.selectionSwell == 1)
+
+    // Break the hold and watch the swell fall. The latch must NOT fall with it: the square stays
+    // green until the next trial, which is the only unambiguous "that one counted" on screen.
     let committed = pipeline.selectionCount
     pipeline.setTarget(SIMD2<Float>(0.99, 0.01))
-    var previous = pipeline.selectionFlash
+    var previous = pipeline.selectionSwell
     for _ in 0 ..< 10 {
       pipeline.tick()
-      #expect(pipeline.selectionFlash < previous, "flash did not fall: \(pipeline.selectionFlash)")
-      previous = pipeline.selectionFlash
+      #expect(pipeline.selectionSwell < previous, "swell did not fall: \(pipeline.selectionSwell)")
+      previous = pipeline.selectionSwell
     }
-    #expect(pipeline.selectionCount == committed, "no commit inside the dwell window")
-    #expect(previous < 1, "the flash is still at full brightness")
+    #expect(pipeline.selectionCount == committed, "no second commit inside the trial")
+    #expect(pipeline.acquired, "the target stays green for the rest of the trial")
+    #expect(previous < 1, "the swell is still at full size")
   }
 
-  @Test("a re-anchor clears a flash so it cannot bleed into the next trial")
-  func reanchorClearsFlash() throws {
+  @Test("a re-anchor releases the latch so green cannot bleed into the next trial")
+  func reanchorClearsAcquired() throws {
     let pipeline = try freshPipeline()
     holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.selectionFlash == 1)
+    #expect(pipeline.acquired)
     pipeline.reanchor(to: SIMD2<Float>(0.5, 0.5))
-    #expect(pipeline.selectionFlash == 0)
+    #expect(!pipeline.acquired)
+    #expect(pipeline.selectionSwell == 0)
     #expect(pipeline.dwellProgress == 0)
+  }
+
+  @Test("a target that is not on screen is not scored")
+  func hiddenTargetIsNotScored() throws {
+    let pipeline = try freshPipeline()
+    holdOnTarget(pipeline, ticks: 14)
+    #expect(pipeline.dwellProgress > 0)
+    // The task can put a target outside the pre-registered workspace box, and the GUI draws nothing
+    // for it. A hold must not keep banking against a square the viewer cannot see.
+    pipeline.clearTarget()
+    #expect(pipeline.dwellProgress == 0, "clearing the target drops the partial hold")
+    let target = pipeline.target
+    for _ in 0 ..< 60 {
+      pipeline.tick()
+    }
+    #expect(pipeline.selectionCount == 0, "no acquisition while no target is on screen")
+    #expect(pipeline.target == target, "the steering target is left alone; only scoring stops")
   }
 }

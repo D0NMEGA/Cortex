@@ -102,12 +102,16 @@ here is an upper bound, and Neuralink's published score adds a click-type term t
 single-click-type harness omits.
 
 **The runnable demo scores against a different radius, and says so.** `CortexMac` uses half the
-task's own 15 mm target pitch, 7.50 mm, and draws the target square at exactly that size on a grid
-ruled at the task's pitch, so what a viewer sees inside the square is what the dwell criterion
-accepts. The published table above is unchanged and remains at the Webgrid half-cell; the two are
-different rules and the demo names which one is in force on screen. Measured over all 1,024 trials
-with per-trial re-anchoring, the target-assisted arm acquires 275 (26.9%) at 7.50 mm against 39
-(3.8%) at 2.861 mm. The decode-only arm acquires none at either.
+task's own 15 mm target pitch, 7.50 mm, on a grid ruled at the task's pitch. The criterion is a
+distance, so the drawn square is INSCRIBED in the 7.50 mm circle and the circle is outlined beside
+it: every point inside the square satisfies the criterion, and the tolerance the criterion actually
+uses is visible rather than implied. Drawing the square at half-extent 7.50 mm instead put 19.3% of
+its area outside that circle, so roughly one tick in five with the cursor visibly inside the red
+square was scored as a miss with nothing on screen to explain it. A target is acquired at most once
+per trial and stays green for the rest of it. The published table above is unchanged and remains at
+the Webgrid half-cell; the two are different rules and the demo names which one is in force on
+screen. Measured over all 1,024 trials with per-trial re-anchoring, the target-assisted arm acquires
+275 (26.9%) at 7.50 mm against 39 (3.8%) at 2.861 mm. The decode-only arm acquires none at either.
 
 ## Why the acquisition count is zero
 

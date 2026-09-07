@@ -92,11 +92,15 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   public var targetX: Float
   /// Active target Y in grid-normalised `[0, 1]`, meaningful only when ``hasTarget`` is 1.
   public var targetY: Float
-  /// Half-extent of the drawn target square, in the same units as ``cursorRadius``.
+  /// The ACQUISITION RADIUS, in the same units as ``cursorRadius``.
   ///
-  /// Set to the ACQUISITION RADIUS, so the square a viewer sees is the region the dwell criterion
-  /// tests. Drawing it at any other size, or at a quantised grid cell, means the cursor can look
-  /// like it landed while the criterion disagrees, with nothing on screen to explain why.
+  /// The criterion is `distance(cursor, target) <= targetRadius`: a CIRCLE. The kernel draws the
+  /// square INSCRIBED in that circle and outlines the circle itself, so every point inside the
+  /// square satisfies the criterion. Drawing a square of half-extent `targetRadius` instead put
+  /// 19.3% of the drawn area outside the scored circle -- measured, not estimated: a rounded box of
+  /// half-extent R with corner 0.35R reaches 1.269R at its corners -- so roughly one in five ticks
+  /// with the cursor visibly inside the red square was scored as a miss, with nothing on screen to
+  /// explain it.
   public var targetRadius: Float
   /// 1 when a target is active, 0 when none is. A scalar rather than a sentinel so every field
   /// stays a 4-byte value and the Swift/MSL byte mirror stays trivial.
@@ -119,8 +123,14 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   /// The standard webgrid selection affordance: holding on a target contracts the ring, and
   /// committing the selection releases it back to full size. 0 draws the resting cursor.
   public var dwellProgress: Float
-  /// Selection flash in `[0, 1]`, decaying after a commit; greens and swells the active target.
-  public var targetFlash: Float
+  /// 1 once this trial's target has been acquired, 0 before. Greens the target and HOLDS it green.
+  ///
+  /// A latch rather than a fading value, because the cursor ring releases to full size both on a
+  /// commit and on a broken hold: green is the only thing on screen that distinguishes them, and a
+  /// viewer scrubbing a recording has to be able to see which trials were acquired.
+  public var targetAcquired: Float
+  /// How recently the acquisition happened, decaying `1 → 0`. Swells the target briefly.
+  public var targetSwell: Float
 
   /// Memberwise initializer (explicit so the public API is stable across the FFI/MSL mirror).
   public init(
@@ -145,7 +155,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     gridPhaseX: Float = 0,
     gridPhaseY: Float = 0,
     dwellProgress: Float = 0,
-    targetFlash: Float = 0
+    targetAcquired: Float = 0,
+    targetSwell: Float = 0
   ) {
     self.gridColumns = gridColumns
     self.gridRows = gridRows
@@ -168,7 +179,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.gridPhaseX = gridPhaseX
     self.gridPhaseY = gridPhaseY
     self.dwellProgress = dwellProgress
-    self.targetFlash = targetFlash
+    self.targetAcquired = targetAcquired
+    self.targetSwell = targetSwell
   }
 
   /// The modern 30×30 webgrid (D-01) — 900 cells, NOT the rejected 6×6 (REQUIREMENTS Out-of-Scope).
@@ -191,7 +203,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     lattice: GridLattice = .uniform30,
     targetRadius: Float = 0.5 / 30.0,
     dwellProgress: Float = 0,
-    targetFlash: Float = 0
+    targetAcquired: Float = 0,
+    targetSwell: Float = 0
   ) -> WebgridParams {
     WebgridParams(
       gridColumns: 30,
@@ -215,7 +228,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       gridPhaseX: lattice.phaseX,
       gridPhaseY: lattice.phaseY,
       dwellProgress: dwellProgress,
-      targetFlash: targetFlash
+      targetAcquired: targetAcquired,
+      targetSwell: targetSwell
     )
   }
 }

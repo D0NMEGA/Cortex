@@ -103,9 +103,11 @@ struct ContentView: View {
   /// capture as the session result.
   private func scoreBadge(driver: ReplayDriver) -> some View {
     VStack(alignment: .trailing, spacing: 1) {
+      // Green while THIS trial's square is green, white again on the next one, so the tally reads
+      // as "that one counted" at the moment it counts rather than staying green all run.
       Text("\(driver.selectionCount) / \(driver.trialCount)")
         .font(.system(size: 15, design: .monospaced).bold())
-        .foregroundStyle(driver.selectionCount > 0 ? .green : .white)
+        .foregroundStyle(driver.acquired ? .green : .white)
       Text("acquired / trials, this run")
         .font(.system(size: 8, design: .monospaced))
         .foregroundStyle(.secondary)
@@ -201,7 +203,7 @@ final class ReplayDriver {
   private(set) var sourceLabel: String
   /// The active task target, published to the renderer once per tick (latest-value, lock-free).
   let targets = TargetChannel()
-  /// Dwell progress + selection flash, published to the renderer once per tick (lock-free).
+  /// Dwell progress + acquisition state, published to the renderer once per tick (lock-free).
   let selection = SelectionChannel()
   /// The pipeline's authoritative cursor position, republished every tick.
   ///
@@ -217,6 +219,8 @@ final class ReplayDriver {
   private(set) var selectionCount = 0
   /// Longest continuous hold reached, as a fraction of the 0.30 s requirement.
   private(set) var peakDwell: Float = 0
+  /// Whether the CURRENT trial's target has been acquired. Drives the tally's colour.
+  private(set) var acquired = false
   /// The ruled lattice the renderer draws.
   ///
   /// The TASK's target lattice when a real export is replaying, not the uniform 30x30 substrate.
@@ -257,8 +261,13 @@ final class ReplayDriver {
   /// 5.19 mm from the target it just left (77% within half the 15 mm task pitch) against 61.45 mm
   /// from the one that just appeared.
   private var previousTarget: SIMD2<Float>?
-  /// Trials seen since launch: one per target change. The DENOMINATOR of the live counter, and not
-  /// the session's 1,025 -- a capture shows a couple of minutes of a 24-minute replay.
+  /// Trials STARTED since launch. The DENOMINATOR of the live counter, and not the session's 1,025
+  /// -- a capture shows a couple of minutes of a 24-minute replay.
+  ///
+  /// Started, not completed: counting only target CHANGES skipped the first trial, so a run that
+  /// acquired its opening target could report 1 of 0. The numerator is now bounded by the
+  /// denominator by construction, because a trial is opened before it can be acquired and can only
+  /// be acquired once.
   private(set) var trialCount = 0
 
   /// Whether this driver runs the ReFIT rotation (the target-determined arm) or not.
@@ -277,6 +286,174 @@ final class ReplayDriver {
     boxSideMm = setup.geometry.sideMm
   }
 
+  /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
+  private let roundTrip = ScanInfoRoundTrip()
+  /// The 120Hz present boundary (the beam-raced present) the software-timed sample snaps to.
+  private static let framePeriodNs: UInt64 = 8_333_333
+
+  private var timer: Timer?
+  private var seq: UInt64 = 0
+
+  func start() {
+    guard timer == nil else { return }
+    // The 20ms decode cadence on the main actor (the producer). `.common` so it keeps firing during
+    // window interaction. The display-link consumer pops the ring on its own callback at 120Hz.
+    let timer = Timer(timeInterval: ReplayPipeline.dt, repeats: true) { [weak self] _ in
+      MainActor.assumeIsolated { self?.step() }
+    }
+    RunLoop.main.add(timer, forMode: .common)
+    self.timer = timer
+  }
+
+  func stop() {
+    timer?.invalidate()
+    timer = nil
+  }
+
+  /// Map the recorded target (mm) for `windowIndex` onto a grid cell and publish it to the renderer.
+  ///
+  /// Uses the SAME `cursor_bbox_square` normalisation the phase pre-registered, so the square the
+  /// viewer sees is the square the hit criterion is scored in. A target outside the box, or a
+  /// synthetic run with no recorded task, publishes nothing rather than a clamped cell that would
+  /// misrepresent where the animal was reaching.
+  private func publishTarget(forWindow windowIndex: Int) {
+    guard let recordedSource, windowIndex >= 0, boxSideMm > 0 else {
+      targets.clear()
+      pipeline.clearTarget()
+      previousTarget = nil
+      return
+    }
+    let targetMm = recordedSource.target(forWindow: windowIndex)
+    let normalised = (targetMm - boxOriginMm) / boxSideMm
+    guard normalised.x >= 0, normalised.x < 1, normalised.y >= 0, normalised.y < 1 else {
+      // No target on screen means no trial, so there is nothing to re-anchor onto when one returns.
+      // Scoring stops with the drawing: a dwell banked against a target the viewer cannot see is a
+      // hit they have no way to anticipate or check.
+      targets.clear()
+      pipeline.clearTarget()
+      previousTarget = nil
+      return
+    }
+    let current = SIMD2<Float>(Float(normalised.x), Float(normalised.y))
+    // Publish the target WHERE IT IS, not the grid cell containing it. The dwell criterion tests
+    // distance to this exact point; drawing the cell instead put the square a median 2.26 mm away
+    // against a 2.86 mm radius, so a cursor centred in the square was scored as a miss.
+    targets.store(x: current.x, y: current.y)
+
+    // A new target is a new trial. Re-anchor the cursor onto the target just left before steering at
+    // the new one, so what the viewer sees is the decode's within-trial behaviour rather than 24
+    // minutes of accumulated open-loop integration error. See `ReplayPipeline.reanchor(to:)` for
+    // why a replay cannot close that loop on its own, and the on-screen caption that says so.
+    if let previous = previousTarget {
+      if previous != current {
+        pipeline.reanchor(to: previous)
+        trialCount += 1
+      }
+    } else {
+      // The first target of the run, or the first after one left the workspace box. There is no
+      // preceding target to re-anchor onto, but the trial still has to be OPENED: the acquired
+      // latch has to be released and the trial has to enter the denominator.
+      pipeline.beginTrial()
+      trialCount += 1
+    }
+    previousTarget = current
+
+    // Steer the loop at the SAME target the square draws. Without this the ReFIT arm rotates toward
+    // the stale init-time centre cell while the viewer sees a square somewhere else entirely.
+    pipeline.setTarget(current)
+  }
+
+  /// Decode provenance, refreshed live. A shortfall names itself rather than being inferred from a
+  /// cursor that looks plausible either way.
+  private func decodeProvenance() -> String {
+    let backed = pipeline.modelBackedTicks
+    let total = pipeline.totalTicks
+    let name = switch pipeline.decoderKind {
+    case .ridge: "ridge (linear, 32 bins x 96 ch, held-out R2 0.4616)"
+    case .ndt1: "NDT1 CoreML (held-out R2 0.4238)"
+    }
+    let counted = "decode: \(name) on \(backed)/\(total) ticks"
+    guard total == 0 || backed != total, let reason = pipeline.lastDecodeFailure else {
+      return counted
+    }
+    return "\(counted) - SYNTHETIC FALLBACK: \(reason)"
+  }
+
+  /// One 20ms producer tick: decode → filter → integrate, push the velocity, drive the round trip,
+  /// and refresh the overlay's software-timed glass-to-glass line.
+  private func step() {
+    // Intent emission clock (the same mach clock as the BCI HID report timestamp, §1.3).
+    let intentEmissionNs = Time.machAbsoluteNanoseconds()
+
+    // Publish the RECORDED task target for the window this tick is ABOUT to consume, so the tick is
+    // scored against its own trial's target. `tick()` reads window `tickIndex`, which is
+    // `totalTicks` before the tick runs. Published FIRST, not after: a trial boundary has to
+    // re-anchor the cursor BEFORE the first decoded tick of the new trial, and the last tick of the
+    // old trial has to be scored against the target that was actually on screen for it.
+    publishTarget(forWindow: pipeline.totalTicks)
+
+    // ONE real decode → filter → integrate tick (decoder + Kalman GENUINELY in the loop, D-10).
+    let state = pipeline.tick()
+
+    // Publish the dwell the cursor has accumulated and whether this trial has been acquired, so the
+    // ring contracts as a selection is committed and the target greens and STAYS green when it does.
+    // Same 0.30 s continuous-hold criterion the run is scored with.
+    let authoritative = pipeline.cursorPosition
+    cursorPositions.store(x: authoritative.x, y: authoritative.y)
+
+    selection.store(
+      dwell: pipeline.dwellProgress,
+      acquired: pipeline.acquired,
+      swell: pipeline.selectionSwell
+    )
+    selectionCount = pipeline.selectionCount
+    peakDwell = pipeline.peakDwell
+    acquired = pipeline.acquired
+
+    // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
+    _ = ring.push(CursorVelocity(
+      tsNs: intentEmissionNs,
+      seq: seq,
+      vx: Float16(state.velocity.x),
+      vy: Float16(state.velocity.y)
+    ))
+
+    // Drive one SYS-03/04 BCI-HID Scan-Info round trip (instrumented log — the SC#2 evidence).
+    let scanInfo = BCIOutputScanInfoReport(
+      selectedItem: UInt8(seq & 0x07),
+      numberOfItems: 9,
+      seed: UInt8(seq & 0xFF),
+      itemControlType: 0,
+      uiScanningLatencyInt: 0,
+      uiScanningLatencyFrac: 0
+    )
+    _ = roundTrip.respond(to: scanInfo)
+    roundTripLine = roundTrip.log.formattedLastLine()
+
+    decodeLine = decodeProvenance()
+
+    // Software-timed glass-to-glass sample (D-07): present = next 120Hz boundary after the tick.
+    let afterTickNs = Time.machAbsoluteNanoseconds()
+    let framesElapsed = afterTickNs / Self.framePeriodNs
+    let presentNs = (framesElapsed + 1) * Self.framePeriodNs
+    let latencyNs = GlassToGlassTimer.sample(
+      intentEmissionNs: intentEmissionNs,
+      presentTimestampSeconds: Double(presentNs) / 1_000_000_000
+    )
+    let latMs = Double(latencyNs) / 1_000_000
+    latencyLine = "software-timed glass-to-glass: \(String(format: "%.2f", latMs)) ms (M5-Pro corroborating)"
+
+    seq &+= 1
+  }
+}
+
+// MARK: - Resolving the run from the environment
+
+///
+/// Which spike source, which decoder and which task geometry this driver runs, all read from the
+/// environment before any stored property exists. Setup, not the loop: it happens once at init and
+/// nothing here runs per tick.
+private extension ReplayDriver {
   /// Everything the driver needs, resolved from the environment before any property is stored.
   private struct Setup {
     let pipeline: ReplayPipeline
@@ -443,146 +620,5 @@ final class ReplayDriver {
       missing.append("CORTEX_MODEL_URL")
     }
     return "spike source: synthetic (unset: \(missing.joined(separator: ", ")))"
-  }
-
-  /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
-  private let roundTrip = ScanInfoRoundTrip()
-  /// The 120Hz present boundary (the beam-raced present) the software-timed sample snaps to.
-  private static let framePeriodNs: UInt64 = 8_333_333
-
-  private var timer: Timer?
-  private var seq: UInt64 = 0
-
-  func start() {
-    guard timer == nil else { return }
-    // The 20ms decode cadence on the main actor (the producer). `.common` so it keeps firing during
-    // window interaction. The display-link consumer pops the ring on its own callback at 120Hz.
-    let timer = Timer(timeInterval: ReplayPipeline.dt, repeats: true) { [weak self] _ in
-      MainActor.assumeIsolated { self?.step() }
-    }
-    RunLoop.main.add(timer, forMode: .common)
-    self.timer = timer
-  }
-
-  func stop() {
-    timer?.invalidate()
-    timer = nil
-  }
-
-  /// Map the recorded target (mm) for `windowIndex` onto a grid cell and publish it to the renderer.
-  ///
-  /// Uses the SAME `cursor_bbox_square` normalisation the phase pre-registered, so the square the
-  /// viewer sees is the square the hit criterion is scored in. A target outside the box, or a
-  /// synthetic run with no recorded task, publishes nothing rather than a clamped cell that would
-  /// misrepresent where the animal was reaching.
-  private func publishTarget(forWindow windowIndex: Int) {
-    guard let recordedSource, windowIndex >= 0, boxSideMm > 0 else {
-      targets.clear()
-      previousTarget = nil
-      return
-    }
-    let targetMm = recordedSource.target(forWindow: windowIndex)
-    let normalised = (targetMm - boxOriginMm) / boxSideMm
-    guard normalised.x >= 0, normalised.x < 1, normalised.y >= 0, normalised.y < 1 else {
-      // No target on screen means no trial, so there is nothing to re-anchor onto when one returns.
-      targets.clear()
-      previousTarget = nil
-      return
-    }
-    let current = SIMD2<Float>(Float(normalised.x), Float(normalised.y))
-    // Publish the target WHERE IT IS, not the grid cell containing it. The dwell criterion tests
-    // distance to this exact point; drawing the cell instead put the square a median 2.26 mm away
-    // against a 2.86 mm radius, so a cursor centred in the square was scored as a miss.
-    targets.store(x: current.x, y: current.y)
-
-    // A new target is a new trial. Re-anchor the cursor onto the target just left before steering at
-    // the new one, so what the viewer sees is the decode's within-trial behaviour rather than 24
-    // minutes of accumulated open-loop integration error. See `ReplayPipeline.reanchor(to:)` for
-    // why a replay cannot close that loop on its own, and the on-screen caption that says so.
-    if let previous = previousTarget, previous != current {
-      pipeline.reanchor(to: previous)
-      trialCount += 1
-    }
-    previousTarget = current
-
-    // Steer the loop at the SAME target the square draws. Without this the ReFIT arm rotates toward
-    // the stale init-time centre cell while the viewer sees a square somewhere else entirely.
-    pipeline.setTarget(current)
-  }
-
-  /// One 20ms producer tick: decode → filter → integrate, push the velocity, drive the round trip,
-  /// and refresh the overlay's software-timed glass-to-glass line.
-  private func step() {
-    // Intent emission clock (the same mach clock as the BCI HID report timestamp, §1.3).
-    let intentEmissionNs = Time.machAbsoluteNanoseconds()
-
-    // ONE real decode → filter → integrate tick (decoder + Kalman GENUINELY in the loop, D-10).
-    let state = pipeline.tick()
-
-    // Publish the RECORDED task target for the window that tick just consumed, so the red selection
-    // square tracks the animal's actual per-trial target rather than a decoration. `tick()` reads
-    // window `tickIndex` then increments, so the window just consumed is `totalTicks - 1`.
-    publishTarget(forWindow: pipeline.totalTicks - 1)
-
-    // Publish the dwell the cursor has accumulated and any selection flash, so the ring contracts
-    // as a selection is committed and the target greens when it does. Same 0.30 s continuous-hold
-    // criterion the run is scored with.
-    // Publish the authoritative position AFTER `publishTarget`, so a tick that re-anchored sends the
-    // re-anchored position rather than the one the tick integrated to just before it.
-    let authoritative = pipeline.cursorPosition
-    cursorPositions.store(x: authoritative.x, y: authoritative.y)
-
-    selection.store(dwell: pipeline.dwellProgress, flash: pipeline.selectionFlash)
-    selectionCount = pipeline.selectionCount
-    peakDwell = pipeline.peakDwell
-
-    // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
-    _ = ring.push(CursorVelocity(
-      tsNs: intentEmissionNs,
-      seq: seq,
-      vx: Float16(state.velocity.x),
-      vy: Float16(state.velocity.y)
-    ))
-
-    // Drive one SYS-03/04 BCI-HID Scan-Info round trip (instrumented log — the SC#2 evidence).
-    let scanInfo = BCIOutputScanInfoReport(
-      selectedItem: UInt8(seq & 0x07),
-      numberOfItems: 9,
-      seed: UInt8(seq & 0xFF),
-      itemControlType: 0,
-      uiScanningLatencyInt: 0,
-      uiScanningLatencyFrac: 0
-    )
-    _ = roundTrip.respond(to: scanInfo)
-    roundTripLine = roundTrip.log.formattedLastLine()
-
-    // Decode provenance, refreshed live. A shortfall names itself rather than being inferred from a
-    // cursor that looks plausible either way.
-    let backed = pipeline.modelBackedTicks
-    let total = pipeline.totalTicks
-    let name = switch pipeline.decoderKind {
-    case .ridge: "ridge (linear, 32 bins x 96 ch, held-out R2 0.4616)"
-    case .ndt1: "NDT1 CoreML (held-out R2 0.4238)"
-    }
-    if total > 0, backed == total {
-      decodeLine = "decode: \(name) on \(backed)/\(total) ticks"
-    } else if let reason = pipeline.lastDecodeFailure {
-      decodeLine = "decode: \(name) on \(backed)/\(total) ticks - SYNTHETIC FALLBACK: \(reason)"
-    } else {
-      decodeLine = "decode: \(name) on \(backed)/\(total) ticks"
-    }
-
-    // Software-timed glass-to-glass sample (D-07): present = next 120Hz boundary after the tick.
-    let afterTickNs = Time.machAbsoluteNanoseconds()
-    let framesElapsed = afterTickNs / Self.framePeriodNs
-    let presentNs = (framesElapsed + 1) * Self.framePeriodNs
-    let latencyNs = GlassToGlassTimer.sample(
-      intentEmissionNs: intentEmissionNs,
-      presentTimestampSeconds: Double(presentNs) / 1_000_000_000
-    )
-    let latMs = Double(latencyNs) / 1_000_000
-    latencyLine = "software-timed glass-to-glass: \(String(format: "%.2f", latMs)) ms (M5-Pro corroborating)"
-
-    seq &+= 1
   }
 }

@@ -113,6 +113,14 @@ public final class ReplayPipeline {
 
   /// The active target cell center (grid-normalised [0,1]) the streaming loop steers toward.
   public private(set) var target: SIMD2<Float>
+  /// Whether a target is actually on screen for the viewer.
+  ///
+  /// The recorded task can put a target outside the pre-registered workspace box, and the GUI then
+  /// draws nothing. Scoring must stop with it: a dwell accumulated against a target no one can see
+  /// is a hit the viewer has no way to anticipate or verify. It does not arise on this session (all
+  /// 73,129 replayed targets are inside the box) but the gate is what makes that a measurement
+  /// rather than an assumption.
+  public private(set) var targetVisible = true
   /// The deterministic seed driving the synthetic decode fallback.
   public let seed: UInt64
   /// Grid-units per centimetre, applied to the MODEL's decoded velocity only.
@@ -153,13 +161,20 @@ public final class ReplayPipeline {
   /// A LIVE count over however much of the session has replayed. It is not the published per-session
   /// hit count and must not be presented as one.
   public private(set) var selectionCount = 0
-  /// How recently a selection committed, decaying `1 → 0` over `Self.flashTicks` ticks.
+  /// Whether THIS trial's target has already been acquired.
   ///
-  /// Display state, like `dwellProgress`. It exists because a selection is a 300 ms event on a grid
-  /// the cursor crosses constantly: without a marked commit a viewer cannot tell an acquisition from
-  /// the cursor happening to pass over the target cell, and at 12 fps in a GIF the moment is gone in
-  /// three frames.
-  public private(set) var selectionFlash: Float = 0
+  /// A latch, not a timer. It does two things a decaying flash could not. It holds the target green
+  /// for the rest of the trial, so a viewer scrubbing a recording can see which trials were acquired
+  /// rather than having to catch a 600 ms event; and it stops the dwell re-committing, because a
+  /// cursor parked inside the radius used to bank another selection every 15 ticks and a 1.3 s trial
+  /// could contribute four counts for one square. Cleared by ``beginTrial()``.
+  public private(set) var acquired = false
+  /// The commit "splash": 1 on the acquiring tick, decaying to 0 over ``swellTicks``.
+  ///
+  /// Separate from ``acquired`` because they answer different questions. The latch says the trial
+  /// was acquired; the swell says it happened JUST NOW, which is what makes the moment legible in a
+  /// recording. The square stays green either way.
+  public private(set) var selectionSwell: Float = 0
   /// The longest continuous hold reached so far, as a fraction of the dwell requirement.
   ///
   /// A run that reports 0 acquisitions is ambiguous on its own: the cursor may never reach the
@@ -177,12 +192,11 @@ public final class ReplayPipeline {
     SIMD2<Float>(integrator.position.x, integrator.position.y)
   }
 
-  /// Ticks the selection flash takes to decay. 30 at 20 ms is 600 ms.
+  /// Ticks the commit swell takes to decay. 15 at 20 ms is 300 ms.
   ///
-  /// Measured off a capture rather than guessed: at 360 ms the flash read as roughly 0.15 s of
-  /// visible green, which is two frames of a 12 fps GIF and easy to miss entirely. 600 ms is still
-  /// under half the 1.3 s median trial, so it has faded well before the next target appears.
-  private static let flashTicks = 30
+  /// Shorter than the 600 ms this was when the green itself decayed, because the green no longer
+  /// does: ``acquired`` holds it for the trial, so the swell only has to mark the instant.
+  private static let swellTicks = 15
 
   // MARK: - Model-in-loop accounting (Phase 10, RD-08 — the Pattern-2 mitigation)
 
@@ -471,6 +485,18 @@ public final class ReplayPipeline {
   /// test, but it does NOT steer the cursor.
   public func setTarget(_ newTarget: SIMD2<Float>) {
     target = newTarget
+    targetVisible = true
+  }
+
+  /// Stop scoring: the task has no target on screen for the viewer right now.
+  ///
+  /// The steering target is deliberately left where it was rather than zeroed, so the synthetic
+  /// fallback keeps a sane heading; only the hit test is suspended. Any partial dwell is dropped,
+  /// because a hold interrupted by the target disappearing is not a continuous hold.
+  public func clearTarget() {
+    targetVisible = false
+    continuousOnTarget = 0
+    dwellProgress = 0
   }
 
   /// Advance the continuous replay loop by ONE 20ms tick and return the new `CursorState`. The GUI
@@ -500,89 +526,10 @@ public final class ReplayPipeline {
     let position = SIMD2<Float>(pos.x, pos.y)
 
     tickIndex &+= 1
-    let onTarget = simd_distance(position, target) <= scoringRadius
-    decayFlash()
+    let onTarget = targetVisible && simd_distance(position, target) <= scoringRadius
+    decaySwell()
     updateDwell(onTarget: onTarget)
     return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
-  }
-
-  // MARK: - Deterministic batch run (the test + bench path)
-
-  /// The outcome of one deterministic replay run: the sampled trajectory, whether a webgrid
-  /// HIT registered, and how many 20 ms ticks it took.
-  ///
-  /// A named struct rather than a 3-member tuple return (SwiftLint `large_tuple` caps tuples at 2).
-  /// The shape is returned by BOTH `runToHit` and `simulate`, so naming it removes a duplicated
-  /// signature rather than adding noise. Member names are unchanged from the tuple labels, so every
-  /// `.positions` / `.hit` / `.ticks` access at the four call sites is source-identical.
-  public struct RunOutcome {
-    /// Every sampled cursor position, one per tick, already `[0,1]`-clamped by the integrator.
-    public let positions: [SIMD2<Float>]
-    /// Whether the dwell-to-select acquisition registered a HIT before the timeout.
-    public let hit: Bool
-    /// How many ticks the run consumed.
-    public let ticks: Int
-  }
-
-  /// Run the replay loop deterministically from a fresh cursor at the grid center toward `target` and
-  /// report whether it reaches a webgrid HIT (dwell-to-select), the cursor trajectory, and the tick
-  /// count. Byte-identical across two runs on the same seed (D-13).
-  ///
-  /// This builds its OWN fresh filter + integrator (it does NOT disturb the streaming `tick()` state),
-  /// running the SAME decode → filter → integrate → webgrid assembly with the ReFIT (rotation-on) arm.
-  /// - Parameters:
-  ///   - seed: the determinism seed (overrides the streaming seed for an isolated, reproducible run).
-  ///   - target: the target cell center to reach.
-  /// - Returns: a ``RunOutcome``: the sampled positions, whether a HIT registered, and the tick count.
-  public func runToHit(seed: UInt64, target: SIMD2<Float>) -> RunOutcome {
-    let result = Self.simulate(seed: seed, target: target, arm: .refit)
-    return RunOutcome(positions: result.positions, hit: result.hit, ticks: result.ticks)
-  }
-
-  /// Which filter arm a deterministic simulation uses (mirrors CortexReFITBench's ablation arms).
-  enum Arm {
-    case raw // no filter — decoded velocity straight to the integrator.
-    case refit // KalmanFilter.step with the active target + acquisition radius (rotation on).
-  }
-
-  /// The deterministic per-arm simulation backing `runToHit` + the Test-4 ablation. Pure: no RNG, no
-  /// clock — fully determined by (seed, target, arm). A fresh warm filter + integrator per call.
-  static func simulate(seed: UInt64, target: SIMD2<Float>, arm: Arm) -> RunOutcome {
-    let start = SIMD2<Float>(0.5, 0.5)
-    let acquisition = WebgridAcquisition(
-      dwellSeconds: 0.30,
-      acquisitionRadius: ReplayPipeline.acquisitionRadius,
-      timeoutSeconds: 5.0,
-      dt: ReplayPipeline.dt
-    )
-    let filter = KalmanFilter()
-    filter.setState([start.x, start.y, 0, 0, 0, 0])
-    filter.setCursorPosition(start)
-    let integrator = CursorIntegrator(start: .init(x: start.x, y: start.y))
-
-    let maxTicks = acquisition.timeoutTicks
-    var positions = [SIMD2<Float>]()
-    positions.reserveCapacity(maxTicks)
-
-    for tick in 0 ..< maxTicks {
-      let cursor = SIMD2<Float>(integrator.position.x, integrator.position.y)
-      filter.setCursorPosition(cursor)
-      let decoded = syntheticDecodedVelocity(seed: seed, tick: tick, cursor: cursor, target: target)
-      let refined: SIMD2<Float> = switch arm {
-      case .raw:
-        decoded // no filter — the bypass arm (Test-4 baseline).
-      case .refit:
-        filter.step(measurement: decoded, target: target, acquisitionRadius: ReplayPipeline.acquisitionRadius)
-      }
-      let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
-      let pos = integrator.integrate(latest: velocity, dt: ReplayPipeline.dt)
-      positions.append(SIMD2<Float>(pos.x, pos.y))
-    }
-
-    let trial = acquisition.runTrial(positions: positions, target: target)
-    // Ticks to the HIT (1-based elapsed-tick count from the movement time), or the full budget on miss.
-    let ticks = Int((trial.movementTime / ReplayPipeline.dt).rounded())
-    return RunOutcome(positions: positions, hit: trial.acquired, ticks: ticks)
   }
 }
 
@@ -630,9 +577,20 @@ public extension ReplayPipeline {
     integrator.reset(to: CursorPosition(x: position.x, y: position.y))
     let clamped = SIMD2<Float>(integrator.position.x, integrator.position.y)
     filter.setCursorPosition(clamped)
+    beginTrial()
+  }
+
+  /// Start a new trial: drop any partial hold and release the acquired latch.
+  ///
+  /// Separate from ``reanchor(to:)`` because the FIRST trial of a run has no preceding target to
+  /// re-anchor onto and would otherwise never be opened, leaving the tally's denominator one short
+  /// of the trials it is counting acquisitions over. Position is untouched here; this is only the
+  /// per-trial scoring state.
+  func beginTrial() {
     continuousOnTarget = 0
     dwellProgress = 0
-    selectionFlash = 0
+    acquired = false
+    selectionSwell = 0
   }
 
   /// Advance the streaming dwell counter for one tick.
@@ -642,6 +600,9 @@ public extension ReplayPipeline {
   /// `dwellTicks` a selection is committed and the counter restarts, which is what makes the
   /// on-screen cursor pop back to full size the instant it commits.
   private func updateDwell(onTarget: Bool) {
+    // One acquisition per trial. The cursor is not asked to leave and come back to stop counting:
+    // it cannot select the same square twice, the way a real selection task consumes its target.
+    guard !acquired else { return }
     guard onTarget else {
       continuousOnTarget = 0
       dwellProgress = 0
@@ -652,7 +613,8 @@ public extension ReplayPipeline {
     if continuousOnTarget >= required {
       peakDwell = 1
       selectionCount += 1
-      selectionFlash = 1
+      acquired = true
+      selectionSwell = 1
       continuousOnTarget = 0
       dwellProgress = 0
     } else {
@@ -661,11 +623,11 @@ public extension ReplayPipeline {
     peakDwell = max(peakDwell, dwellProgress)
   }
 
-  /// Decay the selection flash by one tick. Linear, so the on-screen duration is exactly
-  /// `flashTicks * dt` rather than an exponential tail that never quite reaches zero.
-  private func decayFlash() {
-    guard selectionFlash > 0 else { return }
-    selectionFlash = max(0, selectionFlash - 1.0 / Float(Self.flashTicks))
+  /// Decay the commit swell by one tick. Linear, so the on-screen duration is exactly
+  /// `swellTicks * dt` rather than an exponential tail that never quite reaches zero.
+  private func decaySwell() {
+    guard selectionSwell > 0 else { return }
+    selectionSwell = max(0, selectionSwell - 1.0 / Float(Self.swellTicks))
   }
 }
 
@@ -720,5 +682,91 @@ public extension ReplayPipeline {
       return fallback
     }
     return Decoder(rawValue: raw) ?? fallback
+  }
+}
+
+// MARK: - Deterministic batch run (the test + bench path)
+
+///
+/// `runToHit` and `simulate` build their OWN filter + integrator and never touch the streaming
+/// state, so they sit beside the class rather than inside a body that already carries the decode,
+/// filter, integrate and per-trial scoring path. Their behaviour is unchanged: `CortexReplayBench`
+/// and every published number read the same code.
+public extension ReplayPipeline {
+  /// The outcome of one deterministic replay run: the sampled trajectory, whether a webgrid
+  /// HIT registered, and how many 20 ms ticks it took.
+  ///
+  /// A named struct rather than a 3-member tuple return (SwiftLint `large_tuple` caps tuples at 2).
+  /// The shape is returned by BOTH `runToHit` and `simulate`, so naming it removes a duplicated
+  /// signature rather than adding noise. Member names are unchanged from the tuple labels, so every
+  /// `.positions` / `.hit` / `.ticks` access at the four call sites is source-identical.
+  struct RunOutcome {
+    /// Every sampled cursor position, one per tick, already `[0,1]`-clamped by the integrator.
+    public let positions: [SIMD2<Float>]
+    /// Whether the dwell-to-select acquisition registered a HIT before the timeout.
+    public let hit: Bool
+    /// How many ticks the run consumed.
+    public let ticks: Int
+  }
+
+  /// Run the replay loop deterministically from a fresh cursor at the grid center toward `target` and
+  /// report whether it reaches a webgrid HIT (dwell-to-select), the cursor trajectory, and the tick
+  /// count. Byte-identical across two runs on the same seed (D-13).
+  ///
+  /// This builds its OWN fresh filter + integrator (it does NOT disturb the streaming `tick()` state),
+  /// running the SAME decode → filter → integrate → webgrid assembly with the ReFIT (rotation-on) arm.
+  /// - Parameters:
+  ///   - seed: the determinism seed (overrides the streaming seed for an isolated, reproducible run).
+  ///   - target: the target cell center to reach.
+  /// - Returns: a ``RunOutcome``: the sampled positions, whether a HIT registered, and the tick count.
+  func runToHit(seed: UInt64, target: SIMD2<Float>) -> RunOutcome {
+    let result = Self.simulate(seed: seed, target: target, arm: .refit)
+    return RunOutcome(positions: result.positions, hit: result.hit, ticks: result.ticks)
+  }
+
+  /// Which filter arm a deterministic simulation uses (mirrors CortexReFITBench's ablation arms).
+  enum Arm {
+    case raw // no filter — decoded velocity straight to the integrator.
+    case refit // KalmanFilter.step with the active target + acquisition radius (rotation on).
+  }
+
+  /// The deterministic per-arm simulation backing `runToHit` + the Test-4 ablation. Pure: no RNG, no
+  /// clock — fully determined by (seed, target, arm). A fresh warm filter + integrator per call.
+  static func simulate(seed: UInt64, target: SIMD2<Float>, arm: Arm) -> RunOutcome {
+    let start = SIMD2<Float>(0.5, 0.5)
+    let acquisition = WebgridAcquisition(
+      dwellSeconds: 0.30,
+      acquisitionRadius: ReplayPipeline.acquisitionRadius,
+      timeoutSeconds: 5.0,
+      dt: ReplayPipeline.dt
+    )
+    let filter = KalmanFilter()
+    filter.setState([start.x, start.y, 0, 0, 0, 0])
+    filter.setCursorPosition(start)
+    let integrator = CursorIntegrator(start: .init(x: start.x, y: start.y))
+
+    let maxTicks = acquisition.timeoutTicks
+    var positions = [SIMD2<Float>]()
+    positions.reserveCapacity(maxTicks)
+
+    for tick in 0 ..< maxTicks {
+      let cursor = SIMD2<Float>(integrator.position.x, integrator.position.y)
+      filter.setCursorPosition(cursor)
+      let decoded = syntheticDecodedVelocity(seed: seed, tick: tick, cursor: cursor, target: target)
+      let refined: SIMD2<Float> = switch arm {
+      case .raw:
+        decoded // no filter — the bypass arm (Test-4 baseline).
+      case .refit:
+        filter.step(measurement: decoded, target: target, acquisitionRadius: ReplayPipeline.acquisitionRadius)
+      }
+      let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
+      let pos = integrator.integrate(latest: velocity, dt: ReplayPipeline.dt)
+      positions.append(SIMD2<Float>(pos.x, pos.y))
+    }
+
+    let trial = acquisition.runTrial(positions: positions, target: target)
+    // Ticks to the HIT (1-based elapsed-tick count from the movement time), or the full budget on miss.
+    let ticks = Int((trial.movementTime / ReplayPipeline.dt).rounded())
+    return RunOutcome(positions: positions, hit: trial.acquired, ticks: ticks)
   }
 }

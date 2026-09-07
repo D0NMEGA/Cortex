@@ -41,7 +41,7 @@
     private let ring: VelocityRing
     /// The active task target, latest-value (see `TargetChannel`). `nil` when the host sets none.
     private let targets: TargetChannel?
-    /// Dwell progress and selection flash, read once per frame alongside the target.
+    /// Dwell progress, acquisition and the commit swell, read once per frame with the target.
     private let selection: SelectionChannel?
     /// Re-anchor events for the renderer's own integrator (see `CursorPositionChannel`).
     private let cursorPositions: CursorPositionChannel?
@@ -68,7 +68,7 @@
     ///   - ring: the SPSC velocity ring this adapter pops on the callback thread (consumer end).
     ///   - start: the integrator's initial cursor position (defaults to grid centre).
     ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
-    ///   - selection: dwell + flash state; `nil` draws a resting cursor and an unflashed target.
+    ///   - selection: dwell + acquisition state; `nil` draws a resting cursor and an unacquired target.
     ///   - cursorPositions: the producer's authoritative position; `nil` free-runs the render integrator.
     /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline cannot be built, or an error if
     ///   the command queue cannot be created.
@@ -176,11 +176,19 @@
       //    20 ms per tick while this loop advances real frame time, so without this the drawn
       //    cursor and the cursor the dwell criterion scores drift apart, and a viewer sees a
       //    closed ring over a target that never registers.
+      var reseated = false
       if let authoritative = cursorPositions?.take(after: lastCursorGeneration) {
         integrator.resync(to: CursorPosition(x: authoritative.x, y: authoritative.y))
         lastCursorGeneration = authoritative.generation
+        reseated = true
       }
-      let pos = integrator.integrateHoldingVelocity(latest: latest, dt: dt)
+      // A frame that just re-seated draws the producer's position EXACTLY: it integrates 0, not a
+      // full frame. Adding dt here put the drawn cursor a frame of travel ahead of the scored one on
+      // every resync frame (median 5.6% of the acquisition radius, p95 13.2%, measured on this
+      // session) and then snapped it back, so the extrapolation ran ahead and rewound at 50 Hz. The
+      // frames BETWEEN re-seats still advance dt each, which is the correct extrapolation from the
+      // last known position.
+      let pos = integrator.integrateHoldingVelocity(latest: latest, dt: reseated ? 0 : dt)
 
       // 5. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).
       let drawable = update.drawable
@@ -196,7 +204,8 @@
         lattice: lattice,
         targetRadius: targetRadius,
         dwellProgress: sel.dwell,
-        targetFlash: sel.flash
+        targetAcquired: sel.acquired ? 1 : 0,
+        targetSwell: sel.swell
       )
 
       // 6. Encode one compute pass into the vended drawable.
