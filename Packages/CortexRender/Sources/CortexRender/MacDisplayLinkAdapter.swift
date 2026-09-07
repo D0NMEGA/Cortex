@@ -60,7 +60,7 @@
     private let lattice: GridLattice
     /// Half-extent of the drawn target = the radius the run is SCORED at, so what a viewer
     /// sees inside the square is what the dwell criterion accepts.
-    private let targetRadius: Float
+    private let targetHalfExtent: Float
     /// The last anchor generation applied, so each one moves the cursor exactly once.
     private var lastCursorGeneration: UInt32 = 0
     private let log = Logger(subsystem: "app.cortex.render", category: "MacDisplayLinkAdapter")
@@ -90,7 +90,7 @@
       selection: SelectionChannel? = nil,
       cursorPositions: CursorPositionChannel? = nil,
       lattice: GridLattice = .uniform30,
-      targetRadius: Float = 0.5 / 30.0
+      targetHalfExtent: Float = 0.5 / 30.0
     ) throws {
       self.layer = layer
       encoder = try WebgridFrameEncoder(device: device)
@@ -105,7 +105,7 @@
       self.selection = selection
       self.cursorPositions = cursorPositions
       self.lattice = lattice
-      self.targetRadius = targetRadius
+      self.targetHalfExtent = targetHalfExtent
       super.init()
     }
 
@@ -193,7 +193,7 @@
           viewportHeight: UInt32(drawable.texture.height),
           target: target,
           lattice: lattice,
-          targetRadius: targetRadius,
+          targetHalfExtent: targetHalfExtent,
           dwellProgress: sel.dwell,
           targetAcquired: sel.acquired ? 1 : 0,
           targetSwell: sel.swell

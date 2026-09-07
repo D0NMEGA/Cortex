@@ -101,17 +101,17 @@ harness makes incorrect selections **structurally zero** so the error term is al
 here is an upper bound, and Neuralink's published score adds a click-type term that this
 single-click-type harness omits.
 
-**The runnable demo scores against a different radius, and says so.** `CortexMac` uses half the
-task's own 15 mm target pitch, 7.50 mm, on a grid ruled at the task's pitch. The criterion is a
-distance, so the drawn square is INSCRIBED in the 7.50 mm circle and the circle is outlined beside
-it: every point inside the square satisfies the criterion, and the tolerance the criterion actually
-uses is visible rather than implied. Drawing the square at half-extent 7.50 mm instead put 19.3% of
-its area outside that circle, so roughly one tick in five with the cursor visibly inside the red
-square was scored as a miss with nothing on screen to explain it. A target is acquired at most once
-per trial and stays green for the rest of it. The published table above is unchanged and remains at
-the Webgrid half-cell; the two are different rules and the demo names which one is in force on
-screen. Measured over all 1,024 trials with per-trial re-anchoring, the target-assisted arm acquires
-275 (26.9%) at 7.50 mm against 39 (3.8%) at 2.861 mm. The decode-only arm acquires none at either.
+**The runnable demo scores a different rule, and says so.** `CortexMac` makes the CELL the target,
+the way Webgrid does: the grid is ruled at the task's own 15 mm target pitch, and a selection is the
+cursor's centre held inside that cell for 0.30 s. The square drawn on screen is that cell exactly --
+same edge, no inset, no separate tolerance shape -- so any selection can be settled by looking at
+where the dot is. A target is acquired at most once per trial and stays green for the rest of it.
+
+The published table above is a different rule and is unchanged: a 2.861 mm RADIUS, the 30x30 Webgrid
+half-cell, with no re-anchoring. The demo names which rule is in force on screen beside its tally.
+Under the demo's rule, over all 1,025 trials with per-trial re-anchoring, the target-assisted arm
+acquires 405 (39.5%) and the decode-only arm 41 (4.0%). The decode-only arm reaches the cell on 103
+trials and holds it on 41 of those, which is the distinction a bare zero cannot make.
 
 ## Why the acquisition count is zero
 

@@ -27,7 +27,11 @@ struct ContentView: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      HStack(spacing: 1) {
+      // A real gutter, not a hairline. Each pane letterboxes and rules its OWN lattice, so butted
+      // together with a 1 pt gap the two boards read as a single grid with one doubled line at the
+      // join -- measured: the left board's last rule and the right board's first sat 50 px apart
+      // against a uniform 98 px pitch.
+      HStack(spacing: 10) {
         arm(
           driver: blind,
           title: "kalman_only - heading from the decode",
@@ -136,7 +140,7 @@ struct ContentView: View {
         selection: driver.selection,
         cursorPositions: driver.cursorPositions,
         lattice: driver.lattice,
-        targetRadius: driver.scoringRadius
+        targetHalfExtent: driver.scoringHalfExtent
       )
       .frame(minWidth: 360, minHeight: 360)
       .overlay(alignment: .topTrailing) { scoreBadge(driver: driver) }
@@ -230,20 +234,20 @@ final class ReplayDriver {
   /// them off the point the dwell criterion scores.
   let lattice: GridLattice
   /// The acquisition tolerance this run scores with, grid-normalised, and the same in millimetres.
-  let scoringRadius: Float
-  let scoringRadiusMm: Double
+  let scoringHalfExtent: Float
+  let scoringHalfExtentMm: Double
 
   /// Names the rule in force, because the tally means nothing without it.
   ///
-  /// The published 0-of-1025 and 70-of-1025 are scored at the 30x30 Webgrid half-cell, 2.861 mm on
-  /// this session. That is a convention from a different task, and the animal's OWN recorded hand
-  /// satisfies it on only 14.3% of trials, so a decoder scored against it is largely being told
-  /// about the rule. This run uses half the task's own 15 mm target pitch instead, which the
-  /// animal's track satisfies on 92.8%.
+  /// The published 0-of-1025 and 70-of-1025 are scored at the 30x30 Webgrid half-cell, a 2.861 mm
+  /// RADIUS on this session. That is a convention from a different task, and the animal's OWN
+  /// recorded hand satisfies it on only 14.3% of trials, so a decoder scored against it is largely
+  /// being told about the rule. This run scores the task's own cell instead: the cursor's centre
+  /// inside a square of the task's 15 mm target pitch, which is what the viewer sees drawn.
   var radiusLabel: String {
-    scoringRadiusMm > 0
-      ? String(format: "radius %.2f mm = half the task pitch", scoringRadiusMm)
-      : "radius = 30x30 Webgrid half-cell"
+    scoringHalfExtentMm > 0
+      ? String(format: "cell %.2f mm = the task's target pitch", scoringHalfExtentMm * 2)
+      : "cell = one 30x30 Webgrid cell"
   }
 
   /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
@@ -280,8 +284,8 @@ final class ReplayDriver {
     sourceLabel = setup.sourceLabel
     recordedSource = setup.recordedSource
     lattice = setup.geometry.lattice
-    scoringRadius = setup.geometry.scoringRadius
-    scoringRadiusMm = setup.geometry.scoringRadiusMm
+    scoringHalfExtent = setup.geometry.scoringHalfExtent
+    scoringHalfExtentMm = setup.geometry.scoringHalfExtentMm
     boxOriginMm = setup.geometry.originMm
     boxSideMm = setup.geometry.sideMm
   }
@@ -505,7 +509,7 @@ private extension ReplayDriver {
         modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm),
         rotationEnabled: rotationEnabled,
         decoderKind: kind,
-        scoringRadius: geometry.scoringRadius
+        scoringHalfExtent: geometry.scoringHalfExtent
       )
       return Setup(
         pipeline: pipeline,
@@ -534,8 +538,8 @@ private extension ReplayDriver {
     originMm: .zero,
     sideMm: 1,
     lattice: .uniform30,
-    scoringRadius: ReplayPipeline.acquisitionRadius,
-    scoringRadiusMm: 0
+    scoringHalfExtent: ReplayPipeline.acquisitionRadius,
+    scoringHalfExtentMm: 0
   )
 
   /// The workspace box and the ruled lattice, both derived from the export's own sidecar.
@@ -547,9 +551,9 @@ private extension ReplayDriver {
     let sideMm: Double
     let lattice: GridLattice
     /// Half the task's own target pitch, grid-normalised: the tolerance the TASK defines.
-    let scoringRadius: Float
+    let scoringHalfExtent: Float
     /// The same radius in millimetres, for the on-screen label.
-    let scoringRadiusMm: Double
+    let scoringHalfExtentMm: Double
   }
 
   private static func geometry(export: ReplayExport, source: RecordedSpikeSource) -> Geometry {
@@ -567,17 +571,17 @@ private extension ReplayDriver {
       boxSideMm: workspace.sideMm
     )
     // Half the task's own 15 mm target pitch, so the drawn square exactly fills its cell on the
-    // lattice above and the tolerance is one the task defines rather than one imported from a
-    // different task. Falls back to the Webgrid half-cell if the sidecar has no usable pitch.
+    // lattice above: the cell IS the target, and the region scored is the region drawn. Falls back
+    // to one 30x30 Webgrid cell if the sidecar has no usable pitch.
     let pitchMm = export.sidecar.targetGrid.pitchMm
     let usable = pitchMm > 0 && pitchMm < workspace.sideMm && workspace.sideMm > 0
-    let radiusMm = usable ? pitchMm / 2.0 : Double(ReplayPipeline.acquisitionRadius) * workspace.sideMm
+    let halfMm = usable ? pitchMm / 2.0 : Double(ReplayPipeline.acquisitionRadius) * workspace.sideMm
     return Geometry(
       originMm: origin,
       sideMm: workspace.sideMm,
       lattice: lattice,
-      scoringRadius: Float(radiusMm / workspace.sideMm),
-      scoringRadiusMm: radiusMm
+      scoringHalfExtent: Float(halfMm / workspace.sideMm),
+      scoringHalfExtentMm: halfMm
     )
   }
 

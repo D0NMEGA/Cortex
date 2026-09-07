@@ -92,16 +92,14 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   public var targetX: Float
   /// Active target Y in grid-normalised `[0, 1]`, meaningful only when ``hasTarget`` is 1.
   public var targetY: Float
-  /// The ACQUISITION RADIUS, in the same units as ``cursorRadius``.
+  /// Half the side of the target CELL, in the same units as ``cursorRadius``.
   ///
-  /// The criterion is `distance(cursor, target) <= targetRadius`: a CIRCLE. The kernel draws the
-  /// square INSCRIBED in that circle and outlines the circle itself, so every point inside the
-  /// square satisfies the criterion. Drawing a square of half-extent `targetRadius` instead put
-  /// 19.3% of the drawn area outside the scored circle -- measured, not estimated: a rounded box of
-  /// half-extent R with corner 0.35R reaches 1.269R at its corners -- so roughly one in five ticks
-  /// with the cursor visibly inside the red square was scored as a miss, with nothing on screen to
-  /// explain it.
-  public var targetRadius: Float
+  /// The criterion is `max(|dx|, |dy|) <= targetHalfExtent`: the cursor's centre is inside the cell.
+  /// The kernel draws that square, sharp-edged, with no inset and no separate tolerance shape, so
+  /// the drawn edge and the scored edge are the same line and a viewer can check any selection by
+  /// looking at it. Calling it a radius was the source of a real defect: a circular rule drawn as a
+  /// square left 19.3% of what a viewer saw as the target outside the region being scored.
+  public var targetHalfExtent: Float
   /// 1 when a target is active, 0 when none is. A scalar rather than a sentinel so every field
   /// stays a 4-byte value and the Swift/MSL byte mirror stays trivial.
   public var hasTarget: UInt32
@@ -148,7 +146,7 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     cursorRingWidth: Float = 0.0035,
     targetX: Float = 0,
     targetY: Float = 0,
-    targetRadius: Float = 0.5 / 30.0,
+    targetHalfExtent: Float = 0.5 / 30.0,
     hasTarget: UInt32 = 0,
     gridPitchX: Float = 1.0 / 30.0,
     gridPitchY: Float = 1.0 / 30.0,
@@ -172,7 +170,7 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.cursorRingWidth = cursorRingWidth
     self.targetX = targetX
     self.targetY = targetY
-    self.targetRadius = targetRadius
+    self.targetHalfExtent = targetHalfExtent
     self.hasTarget = hasTarget
     self.gridPitchX = gridPitchX
     self.gridPitchY = gridPitchY
@@ -201,7 +199,7 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     viewportHeight: UInt32,
     target: ActiveTarget? = nil,
     lattice: GridLattice = .uniform30,
-    targetRadius: Float = 0.5 / 30.0,
+    targetHalfExtent: Float = 0.5 / 30.0,
     dwellProgress: Float = 0,
     targetAcquired: Float = 0,
     targetSwell: Float = 0
@@ -221,7 +219,7 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       cursorRingWidth: 0.0035,
       targetX: target?.x ?? 0,
       targetY: target?.y ?? 0,
-      targetRadius: targetRadius,
+      targetHalfExtent: targetHalfExtent,
       hasTarget: target == nil ? 0 : 1,
       gridPitchX: lattice.pitchX,
       gridPitchY: lattice.pitchY,

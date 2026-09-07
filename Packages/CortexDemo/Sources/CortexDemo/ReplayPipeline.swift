@@ -78,13 +78,16 @@ public final class ReplayPipeline {
   /// Scoring a decoder against a rule the subject itself mostly fails measures the rule.
   public static let acquisitionRadius: Float = 0.5 / 30.0
 
-  /// The radius this pipeline scores with, in grid-normalised units.
+  /// Half the side of the target CELL this pipeline scores with, in grid-normalised units.
   ///
-  /// An instance value so a caller replaying a real session can pass the tolerance the TASK
-  /// defines -- half its own target pitch -- rather than the imported one. Defaults to
-  /// ``acquisitionRadius`` so the synthetic path, `runToHit` and every existing caller are
-  /// unchanged. `CortexReplayBench` keeps its own constant and its published numbers do not move.
-  public let scoringRadius: Float
+  /// An instance value so a caller replaying a real session can pass the cell the TASK defines --
+  /// its own 15 mm target pitch -- rather than the imported one. Defaults to ``acquisitionRadius``,
+  /// which as a cell half-side is exactly one cell of the 30x30 substrate.
+  ///
+  /// This is a HALF-EXTENT, not a radius: ``isOnTarget(_:)`` tests whether the cursor's centre is
+  /// inside the square cell. `CortexReplayBench` and `runToHit` keep the radial
+  /// `WebgridAcquisition` rule and their published numbers do not move.
+  public let scoringHalfExtent: Float
 
   // MARK: - Stages
 
@@ -259,10 +262,10 @@ public final class ReplayPipeline {
     modelVelocityGridUnitsPerCm: Float = 1.0,
     rotationEnabled: Bool = true,
     decoderKind: Decoder = .ndt1,
-    scoringRadius: Float = ReplayPipeline.acquisitionRadius
+    scoringHalfExtent: Float = ReplayPipeline.acquisitionRadius
   ) {
-    self.scoringRadius = scoringRadius.isFinite && scoringRadius > 0
-      ? scoringRadius
+    self.scoringHalfExtent = scoringHalfExtent.isFinite && scoringHalfExtent > 0
+      ? scoringHalfExtent
       : ReplayPipeline.acquisitionRadius
     self.seed = seed
     self.target = target
@@ -313,7 +316,7 @@ public final class ReplayPipeline {
     integrator = CursorIntegrator(start: .init(x: start.x, y: start.y))
     acquisition = WebgridAcquisition(
       dwellSeconds: 0.30,
-      acquisitionRadius: scoringRadius,
+      acquisitionRadius: scoringHalfExtent,
       timeoutSeconds: 5.0,
       dt: Self.dt
     )
@@ -328,7 +331,7 @@ public final class ReplayPipeline {
     modelURL: URL? = nil,
     rotationEnabled: Bool = true,
     decoderKind: Decoder = .ndt1,
-    scoringRadius: Float = ReplayPipeline.acquisitionRadius
+    scoringHalfExtent: Float = ReplayPipeline.acquisitionRadius
   ) {
     self.init(
       source: SyntheticSpikeSource(seed: seed),
@@ -338,7 +341,7 @@ public final class ReplayPipeline {
       modelURL: modelURL,
       rotationEnabled: rotationEnabled,
       decoderKind: decoderKind,
-      scoringRadius: scoringRadius
+      scoringHalfExtent: scoringHalfExtent
     )
   }
 
@@ -517,7 +520,7 @@ public final class ReplayPipeline {
     let refined = filter.step(
       measurement: decoded,
       target: rotationEnabled ? target : nil,
-      acquisitionRadius: scoringRadius
+      acquisitionRadius: scoringHalfExtent
     )
 
     // Integrate via the renderer-owned integrator (the single [0,1] clamp + non-finite reject seam).
@@ -526,7 +529,7 @@ public final class ReplayPipeline {
     let position = SIMD2<Float>(pos.x, pos.y)
 
     tickIndex &+= 1
-    let onTarget = targetVisible && simd_distance(position, target) <= scoringRadius
+    let onTarget = isOnTarget(position)
     decaySwell()
     updateDwell(onTarget: onTarget)
     return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
@@ -578,6 +581,21 @@ public extension ReplayPipeline {
     let clamped = SIMD2<Float>(integrator.position.x, integrator.position.y)
     filter.setCursorPosition(clamped)
     beginTrial()
+  }
+
+  /// Whether the cursor's centre is inside the target CELL.
+  ///
+  /// The cell is the target and the square drawn on screen IS this region, so a viewer can settle
+  /// any selection by looking at where the white dot is. That is what a max-norm test buys over a
+  /// distance: a distance rule cannot be drawn as a square without one of them being wrong at the
+  /// corners, and the version that was wrong scored 19.3% of the drawn area as outside.
+  ///
+  /// This is the DEMO's rule. `WebgridAcquisition` keeps its radial one and every published number
+  /// still comes from it.
+  func isOnTarget(_ position: SIMD2<Float>) -> Bool {
+    guard targetVisible else { return false }
+    let d = abs(position - target)
+    return max(d.x, d.y) <= scoringHalfExtent
   }
 
   /// Start a new trial: drop any partial hold and release the acquired latch.

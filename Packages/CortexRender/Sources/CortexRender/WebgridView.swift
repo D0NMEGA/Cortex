@@ -65,7 +65,7 @@ import SwiftUI
     private let lattice: GridLattice
     /// Half-extent of the drawn target = the radius the run is SCORED at, so what a viewer
     /// sees inside the square is what the dwell criterion accepts.
-    private let targetRadius: Float
+    private let targetHalfExtent: Float
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
@@ -76,14 +76,14 @@ import SwiftUI
       selection: SelectionChannel? = nil,
       cursorPositions: CursorPositionChannel? = nil,
       lattice: GridLattice = .uniform30,
-      targetRadius: Float = 0.5 / 30.0
+      targetHalfExtent: Float = 0.5 / 30.0
     ) {
       self.ring = ring
       self.targets = targets
       self.selection = selection
       self.cursorPositions = cursorPositions
       self.lattice = lattice
-      self.targetRadius = targetRadius
+      self.targetHalfExtent = targetHalfExtent
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -107,7 +107,7 @@ import SwiftUI
           selection: selection,
           cursorPositions: cursorPositions,
           lattice: lattice,
-          targetRadius: targetRadius
+          targetHalfExtent: targetHalfExtent
         )
         adapter.start()
         context.coordinator.adapter = adapter
@@ -202,7 +202,7 @@ import SwiftUI
     private let lattice: GridLattice
     /// Half-extent of the drawn target = the radius the run is SCORED at, so what a viewer
     /// sees inside the square is what the dwell criterion accepts.
-    private let targetRadius: Float
+    private let targetHalfExtent: Float
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
@@ -213,14 +213,14 @@ import SwiftUI
       selection: SelectionChannel? = nil,
       cursorPositions: CursorPositionChannel? = nil,
       lattice: GridLattice = .uniform30,
-      targetRadius: Float = 0.5 / 30.0
+      targetHalfExtent: Float = 0.5 / 30.0
     ) {
       self.ring = ring
       self.targets = targets
       self.selection = selection
       self.cursorPositions = cursorPositions
       self.lattice = lattice
-      self.targetRadius = targetRadius
+      self.targetHalfExtent = targetHalfExtent
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -244,7 +244,7 @@ import SwiftUI
           selection: selection,
           cursorPositions: cursorPositions,
           lattice: lattice,
-          targetRadius: targetRadius
+          targetHalfExtent: targetHalfExtent
         )
         adapter.start(in: view)
         context.coordinator.adapter = adapter

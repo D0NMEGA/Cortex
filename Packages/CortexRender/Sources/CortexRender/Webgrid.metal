@@ -27,7 +27,7 @@ struct WebgridParams {
   float cursorRingWidth;  // ring stroke width, same units
   float targetX;          // active target X, grid-normalised [0,1]
   float targetY;          // active target Y, grid-normalised [0,1]
-  float targetRadius;     // the ACQUISITION RADIUS (a circle); the square is inscribed in it
+  float targetHalfExtent; // HALF-EXTENT of the target cell: the region the criterion tests
   uint  hasTarget;        // 1 when a target is active, 0 when none is
   float gridPitchX;       // rule spacing, grid-normalised
   float gridPitchY;
@@ -114,43 +114,27 @@ kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
       color = mix(color, kGridLineColor, saturate(lineMask * lineAlpha));
     }
 
-    // (6) The active target, drawn AT ITS ACTUAL POSITION and sized to the acquisition radius --
-    //     NOT snapped to a grid cell. The criterion tests distance to this point, so quantising the
-    //     drawing to a cell put the square a median 2.26 mm from the scored point against a 2.86 mm
-    //     radius, and a cursor centred in the square was scored as a miss with nothing on screen to
-    //     explain it. `hasTarget == 0` draws nothing, so an absent target is a visual no-op.
+    // `hasTarget == 0` draws nothing, so an absent target is a visual no-op.
     if (p.hasTarget != 0u) {
-      // Acquiring the target greens it and HOLDS it green for the rest of the trial; the swell is a
-      // brief splash marking the instant. Green is the only unambiguous signal on screen, because
-      // the cursor ring releases to full size both when a selection commits and when a hold breaks.
+      // (6) The target CELL, drawn as exactly the region the criterion tests. The criterion is
+      //     `max(|dx|, |dy|) <= targetHalfExtent`: the cursor's centre is inside the cell. So the
+      //     square IS the rule -- no rounding, no inset, no separate tolerance shape. Whatever a
+      //     viewer sees the white dot sitting inside is what counts, which is the only version of
+      //     this a viewer can check.
+      //
+      //     Acquiring it turns the square green and HOLDS it green for the rest of the trial. Red
+      //     means not yet selected, green means selected; that is the whole of the colour rule. The
+      //     brief swell marks the instant, because the cursor ring releases to full size both on a
+      //     commit and on a broken hold and so cannot say on its own that anything counted.
       const float acquired = clamp(p.targetAcquired, 0.0, 1.0);
       const float swell = clamp(p.targetSwell, 0.0, 1.0);
       const float4 faceColor = mix(kTargetColor, kAcquiredColor, acquired);
       const float2 fromCenter = g - float2(p.targetX, p.targetY);
-      const float radius = max(p.targetRadius, 1e-5);
+      const float extent = max(p.targetHalfExtent, 1e-5) * (1.0 + 0.12 * swell);
       const float aaT = max(pixelInGrid.x, pixelInGrid.y);
-
-      // (a) The tolerance the criterion ACTUALLY uses: `distance(cursor, target) <= targetRadius`,
-      //     a circle. Outlined faintly so a selection committed with the cursor just outside the
-      //     square is explained on screen rather than looking like a phantom count.
-      const float toleranceEdge = abs(length(fromCenter) - radius);
-      const float toleranceHalf = max(aaT, radius * 0.025);
-      const float toleranceMask = 1.0 - smoothstep(toleranceHalf, toleranceHalf + aaT, toleranceEdge);
-      color = mix(color, faceColor, saturate(toleranceMask * 0.5));
-
-      // (b) The square, INSCRIBED in that circle: half-extent R/sqrt(2), so its corners touch the
-      //     circle and EVERY point inside it satisfies the criterion. Drawn at half-extent R
-      //     instead, a rounded box reaches 1.269R at its corners and 19.3% of what the viewer sees
-      //     as the target is outside the scored circle -- which is why a cursor centred in the red
-      //     square could be scored as a miss with nothing on screen to explain it.
-      //     NOT named `half`: that is the reserved 16-bit float type in MSL, the same trap
-      //     `rounded_box_sdf`'s `halfExtent` parameter is named around.
-      //     The swell grows past the inscription, but only ever on an ALREADY-acquired target, so
-      //     it cannot make an unscored region look scored.
-      const float targetExtent = radius * 0.70710678 * (1.0 + 0.45 * swell);
-      const float2 targetHalf = float2(targetExtent);
-      const float corner = 0.35 * targetExtent;
-      const float dT = rounded_box_sdf(fromCenter, targetHalf, corner);
+      // A sharp box, so the drawn edge and the scored edge are the same line. `rounded_box_sdf`
+      // with a zero corner radius is the plain box SDF.
+      const float dT = rounded_box_sdf(fromCenter, float2(extent), 0.0);
       const float targetMask = 1.0 - smoothstep(-aaT, aaT, dT);
       color = mix(color, faceColor, targetMask);
     }

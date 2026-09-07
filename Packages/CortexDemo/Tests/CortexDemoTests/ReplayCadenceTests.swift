@@ -281,6 +281,20 @@ struct SelectionCommitTests {
     #expect(pipeline.dwellProgress == 0)
   }
 
+  @Test("the cell is the target: a cursor in a corner of the square counts")
+  func cornerOfTheCellCounts() throws {
+    let pipeline = try freshPipeline()
+    // 99% of the way to a corner of the cell. Its distance from the centre is 1.4x the half-side,
+    // so the old radial rule scored this as a miss while the viewer saw the dot inside the square.
+    let half = pipeline.scoringHalfExtent
+    let target = pipeline.target
+    let corner = target + SIMD2<Float>(half * 0.99, half * 0.99)
+    #expect(pipeline.isOnTarget(corner), "a point inside the drawn square must count")
+    #expect(simd_distance(corner, target) > half, "and it is outside the radius that used to score")
+    // Just outside the cell on one axis is a miss, so the square's edge really is the rule.
+    #expect(!pipeline.isOnTarget(target + SIMD2<Float>(half * 1.01, 0)))
+  }
+
   @Test("a target that is not on screen is not scored")
   func hiddenTargetIsNotScored() throws {
     let pipeline = try freshPipeline()

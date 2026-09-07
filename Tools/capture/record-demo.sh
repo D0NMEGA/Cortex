@@ -197,6 +197,26 @@ if [[ "$SCREEN_H" =~ ^[0-9]+$ ]] && [[ "$WIN_H" -gt "$SCREEN_H" ]]; then
   die "the window reports ${WIN_W}x${WIN_H} pt but the screen is only ${SCREEN_H} pt tall. \
 That is a layout failure, not a framing one; recording it would capture empty desktop."
 fi
+# The window caps at its own ideal height, which can exceed what was requested -- a caption that
+# wraps one line further makes the layout taller, and the frame read back is then taller than
+# WIN_H. If its BOTTOM now runs off the screen, the capture rect runs off with it and records the
+# Dock instead of the instrumentation strip. That happened. Lift the window and re-read rather than
+# recording a frame that is partly desktop.
+if [[ "$SCREEN_H" =~ ^[0-9]+$ ]] && [[ $((WIN_Y + WIN_H)) -gt "$SCREEN_H" ]]; then
+  NEW_Y=$(( SCREEN_H - WIN_H ))
+  [[ "$NEW_Y" -lt 32 ]] && NEW_Y=32
+  log "window bottom ${WIN_Y}+${WIN_H} runs past the ${SCREEN_H} pt screen; lifting to y=${NEW_Y}"
+  osascript -e "tell application \"System Events\" to tell process \"CortexMac\" to set position of window 1 to {${WIN_X}, ${NEW_Y}}" >/dev/null 2>&1 || true
+  FRAME="$(osascript -e 'tell application "System Events" to tell process "CortexMac" to get {position, size} of window 1' 2>/dev/null | tr -d ' ')"
+  if [[ "$FRAME" =~ ^-?[0-9]+,-?[0-9]+,[0-9]+,[0-9]+$ ]]; then
+    IFS=, read -r WIN_X WIN_Y WIN_W WIN_H <<<"$FRAME"
+    log "window frame: ${WIN_W}x${WIN_H} at ${WIN_X},${WIN_Y}"
+  fi
+  if [[ $((WIN_Y + WIN_H)) -gt "$SCREEN_H" ]]; then
+    die "the window is ${WIN_W}x${WIN_H} pt at y=${WIN_Y} and still runs past the ${SCREEN_H} pt \
+screen. Recording it would capture the desktop below it rather than the demo."
+  fi
+fi
 # Trim only the title bar. The bottom is NOT trimmed: the window caps at its ideal height and the
 # instrumentation strip runs to the last point of it, so trimming there clips the methodology label,
 # which is the line that qualifies the latency number above it. Clearing the Dock is done by placing
