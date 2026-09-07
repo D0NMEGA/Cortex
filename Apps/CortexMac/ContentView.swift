@@ -28,6 +28,10 @@ struct ContentView: View {
       // The honest instrumentation overlay (D-07/D-09): the SYS-03/04 round-trip log line + the latest
       // software-timed glass-to-glass sample WITH the methodology label (no over-claim).
       VStack(alignment: .leading, spacing: 4) {
+        // D-16: name the spike source ON SCREEN. A demo that silently ran synthetic while being
+        // recorded as real-data evidence is the Pattern-2 trap in capture form.
+        Text(driver.sourceLabel)
+          .font(.system(.caption, design: .monospaced))
         Text(driver.roundTripLine)
           .font(.system(.caption, design: .monospaced))
         Text(driver.latencyLine)
@@ -70,10 +74,42 @@ final class ClosedLoopDriver {
   /// The latest software-timed glass-to-glass sample line (surfaced live, WITH the honest framing).
   private(set) var latencyLine = "software-timed glass-to-glass: warming up…"
 
-  /// The real closed loop (D-10): synthetic-spike → NDT1 (or synthetic fallback) → ReFIT → integrate.
+  /// The real closed loop (D-10): spike window → NDT1 (or synthetic fallback) → ReFIT → integrate.
   /// Seeded deterministically so the demo trajectory is reproducible; the model-backed NDT1 path
   /// activates when CORTEX_MODEL_URL points at a built .mlpackage, else the synthetic decode runs.
-  private let pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: ClosedLoopPipeline.modelURLFromEnvironment())
+  private let pipeline: ClosedLoopPipeline
+  /// Which spike source is actually driving the loop, surfaced in the overlay (D-16).
+  private(set) var sourceLabel: String
+
+  init() {
+    // D-16: resolve the recorded export the same way `CortexDemoBench --real` does, so the GUI and
+    // the bench cannot disagree about what "real" means. BOTH inputs are required: a recorded export
+    // with no model would decode synthetically over real spikes and still look real on screen.
+    let modelURL = ClosedLoopPipeline.modelURLFromEnvironment()
+    let exportURL = ReplayExport.sidecarURLFromEnvironment()
+
+    if let exportURL, let modelURL {
+      do {
+        let export = try ReplayExport(sidecarURL: exportURL)
+        let source = RecordedSpikeSource(export: export)
+        pipeline = ClosedLoopPipeline(source: source, seed: 0xC0FFEE, modelURL: modelURL)
+        sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
+        return
+      } catch {
+        // A REFUSED export is reported, never silently downgraded to synthetic while the recording
+        // rolls. The loop still runs so the window is not blank, but the label says what happened.
+        pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL)
+        sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
+        return
+      }
+    }
+
+    pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL)
+    var missing = [String]()
+    if exportURL == nil { missing.append("CORTEX_REPLAY_EXPORT") }
+    if modelURL == nil { missing.append("CORTEX_MODEL_URL") }
+    sourceLabel = "spike source: synthetic (unset: \(missing.joined(separator: ", ")))"
+  }
   /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
   private let roundTrip = ScanInfoRoundTrip()
   /// The 120Hz present boundary (the beam-raced present) the software-timed sample snaps to.

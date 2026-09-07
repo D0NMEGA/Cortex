@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.application-groups</key>
+  <array>
+    <string>group.com.donovansantine.cortex.shared</string>
+  </array>
+  <!-- D-02 / Phase-2 CF#1: declared-but-inert. The runnable demo keeps the single-process Keychain
+       fallback (AfterFirstUnlockThisDeviceOnly + key-over-mach_msg); cross-process access-group
+       sharing activates only under paid signing (free-team entitled binary is AMFI-SIGKILLed). -->
+  <key>keychain-access-groups</key>
+  <array>
+    <string>$(AppIdentifierPrefix)com.donovansantine.cortex.shared</string>
+  </array>
+</dict>
+</plist>
