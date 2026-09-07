@@ -217,7 +217,11 @@ public final nonisolated class ReplayExport: Sendable {
   ///  9. the binary exists
   /// 10. its size on disk equals `n_bins * 424`
   /// 11. ONLY NOW map the bytes
-  public init(sidecarURL: URL) throws(ReplayExportError) {
+  ///
+  /// Every branch below is one of those eleven checks, so the complexity IS the check count.
+  /// Extracting them would scatter a deliberately linear, numbered, auditable sequence across
+  /// helpers and make it harder to confirm that no step was skipped or reordered.
+  public init(sidecarURL: URL) throws(ReplayExportError) { // swiftlint:disable:this function_body_length cyclomatic_complexity
     let manager = FileManager.default
 
     // 1. The sidecar exists. An absent export FAILS CLOSED; it never becomes synthetic data.

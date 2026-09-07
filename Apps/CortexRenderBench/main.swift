@@ -43,6 +43,10 @@ struct BenchArgs {
   }
 }
 
+// One `while` over argv with one `switch` case per accepted flag. The complexity IS the flag
+// count: extracting cases into helpers moves the branches without removing any, and splits a
+// parser that is easiest to audit as one table.
+// swiftlint:disable:next cyclomatic_complexity
 func parseArgs(_ argv: [String]) -> BenchArgs {
   var a = BenchArgs()
   var i = 0
@@ -126,10 +130,7 @@ func runBench(_ args: BenchArgs, date: String) throws {
       bound, verdict, s.p99Ms, bound - s.p99Ms, bound / max(s.p99Ms, 1e-9)
     )
   )
-  try GPUTimeHistogram.writeJSON(
-    to: args.outDir, deviceName: r.deviceName, width: r.width, height: r.height, stats: s,
-    iso8601Date: date
-  )
+  try GPUTimeHistogram.writeJSON(to: args.outDir, run: r, iso8601Date: date)
   print("  wrote       : \(args.outDir.appendingPathComponent("gpu_time_hist.json").path)")
 
   // SC#4 — sustained-throughput soak (optional; --soak). The soak measurement lives in

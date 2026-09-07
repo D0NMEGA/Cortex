@@ -22,7 +22,7 @@ struct VelocityRingTests {
   @Test("push then pop returns the same frame (ts_ns/seq/vx/vy preserved)")
   func pushPopRoundTrip() throws {
     let ring = try #require(VelocityRing(capacity: 8))
-    let v = CursorVelocity(ts_ns: 123, seq: 1, vx: 0.5, vy: -0.25)
+    let v = CursorVelocity(tsNs: 123, seq: 1, vx: 0.5, vy: -0.25)
     #expect(ring.push(v) == true)
     let out = ring.pop()
     #expect(out == v) // full value round-trip
@@ -32,9 +32,9 @@ struct VelocityRingTests {
   @Test("FIFO order — push v1,v2,v3 pops v1,v2,v3 in order")
   func fifoOrder() throws {
     let ring = try #require(VelocityRing(capacity: 8))
-    let v1 = CursorVelocity(ts_ns: 1, seq: 1, vx: 0.1, vy: 0.0)
-    let v2 = CursorVelocity(ts_ns: 2, seq: 2, vx: 0.2, vy: 0.0)
-    let v3 = CursorVelocity(ts_ns: 3, seq: 3, vx: 0.3, vy: 0.0)
+    let v1 = CursorVelocity(tsNs: 1, seq: 1, vx: 0.1, vy: 0.0)
+    let v2 = CursorVelocity(tsNs: 2, seq: 2, vx: 0.2, vy: 0.0)
+    let v3 = CursorVelocity(tsNs: 3, seq: 3, vx: 0.3, vy: 0.0)
     #expect(ring.push(v1) == true)
     #expect(ring.push(v2) == true)
     #expect(ring.push(v3) == true)
@@ -52,7 +52,7 @@ struct VelocityRingTests {
     let ring = try #require(VelocityRing(capacity: 4))
     var accepted: [CursorVelocity] = []
     for i in 0 ..< 16 {
-      let v = CursorVelocity(ts_ns: UInt64(i), seq: UInt64(i), vx: Float16(Float(i)), vy: 0.0)
+      let v = CursorVelocity(tsNs: UInt64(i), seq: UInt64(i), vx: Float16(Float(i)), vy: 0.0)
       if ring.push(v) { accepted.append(v) } else { break }
     }
     #expect(accepted.count >= 1) // some frames fit
@@ -88,7 +88,7 @@ struct VelocityRingTests {
       var i: UInt64 = 0
       while i < total {
         // vx encodes seq so the consumer can detect a torn/mismatched slot (vx must equal seq).
-        let v = CursorVelocity(ts_ns: i, seq: i, vx: Float16(Float(i & 0x3FF)), vy: 0)
+        let v = CursorVelocity(tsNs: i, seq: i, vx: Float16(Float(i & 0x3FF)), vy: 0)
         if ring.push(v) {
           i += 1
         } else {
@@ -156,7 +156,7 @@ struct LissajousProducerTests {
     for i in 0 ..< 600 { // 5 s at 120 Hz
       let v = producer.velocity(at: t)
       let pos = integrator.integrate(
-        latest: CursorVelocity(ts_ns: UInt64(i), seq: UInt64(i), vx: v.vx, vy: v.vy),
+        latest: CursorVelocity(tsNs: UInt64(i), seq: UInt64(i), vx: v.vx, vy: v.vy),
         dt: dt
       )
       #expect(pos.x >= 0.0 && pos.x <= 1.0)

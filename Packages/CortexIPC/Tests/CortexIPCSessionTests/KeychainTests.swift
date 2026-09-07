@@ -89,10 +89,19 @@ struct KeychainTests {
     let dp = q[kSecUseDataProtectionKeychain as String]
     #expect(dp != nil)
     #expect(CFGetTypeID(dp as CFTypeRef) == CFBooleanGetTypeID())
+    // `as?` on a CoreFoundation type is a COMPILE ERROR here ("conditional downcast to
+    // CoreFoundation type 'CFBoolean' will always succeed", measured 2026-09-07), so `as!` is the
+    // only form that builds. .swiftlint.yml's own force_unwrapping note states the policy: "try!
+    // and as! allowed in tests only". The CFTypeID assertion above already fails loudly on a wrong
+    // type, one line before this cast is reached.
+    // swiftlint:disable:next force_cast
     #expect((dp as! CFBoolean) == kCFBooleanTrue)
 
     // Accessibility class is AfterFirstUnlockThisDeviceOnly (IPC-06).
     let accessible = q[kSecAttrAccessible as String]
+    // Same CoreFoundation constraint as above: `as?` to CFString does not compile, and this repo
+    // permits `as!` in tests by written policy.
+    // swiftlint:disable:next force_cast
     #expect((accessible as! CFString) == kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly)
 
     // CF#1 fallback: NO team-prefixed access group in the Phase-2 query (default access group).

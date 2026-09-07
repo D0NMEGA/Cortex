@@ -165,7 +165,7 @@ struct RingTests {
       #expect(dst == src, "the whole slot is visible once its seq is observed (no torn read)")
 
       // ack-bounce (D-02): consumer acks the seq it consumed; producer polls the ack.
-      ring.ack(seq: seen!)
+      try ring.ack(seq: #require(seen, "pollLatest must have returned a seq to ack"))
       let ackSeen = ring.pollAck(lastSeen: 0)
       #expect(ackSeen == seq, "ack-bounce: producer observes the consumer's ack seq")
       #expect(ring.pollAck(lastSeen: seq) == nil, "no new ack after lastSeen == ackSeq")

@@ -18,6 +18,16 @@ import Testing
 @Suite("DEC-09: zero-copy spike input over a shared IOSurface")
 @MainActor
 struct ZeroCopyInputTests {
+  /// One (channel, bin) cell and the fp16 value written into it by a round-trip test.
+  ///
+  /// A named struct rather than a 3-member tuple (SwiftLint `large_tuple` caps tuples at 2). The
+  /// same shape is used by both round-trip tests, so naming it removes a duplicated signature.
+  private struct Probe {
+    let ch: Int
+    let bin: Int
+    let val: Float16
+  }
+
   /// Channels per the Plan-01 contract; a small seqLen keeps the surface tiny.
   private static let channels = 96
   private static let seqLen = 8
@@ -71,8 +81,10 @@ struct ZeroCopyInputTests {
 
     // Write a distinct value to a diagonal of (channel, bin) cells through the typed write helper
     // (which respects bytesPerRow padding, Risk #3).
-    let probes: [(ch: Int, bin: Int, val: Float16)] = [
-      (0, 0, 1.0), (1, 2, 2.5), (5, 7, -3.25), (Self.channels - 1, Self.seqLen - 1, 7.5)
+    let probes: [Probe] = [
+      Probe(ch: 0, bin: 0, val: 1.0), Probe(ch: 1, bin: 2, val: 2.5),
+      Probe(ch: 5, bin: 7, val: -3.25),
+      Probe(ch: Self.channels - 1, bin: Self.seqLen - 1, val: 7.5)
     ]
     for p in probes {
       try buf.write(p.val, channel: p.ch, bin: p.bin)
@@ -113,8 +125,9 @@ struct ZeroCopyInputTests {
   func modelInputMultiArrayRoundTripsPattern() throws {
     guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
 
-    let probes: [(ch: Int, bin: Int, val: Float16)] = [
-      (0, 0, 1.0), (3, 1, 4.5), (Self.channels - 1, Self.seqLen - 1, -2.5)
+    let probes: [Probe] = [
+      Probe(ch: 0, bin: 0, val: 1.0), Probe(ch: 3, bin: 1, val: 4.5),
+      Probe(ch: Self.channels - 1, bin: Self.seqLen - 1, val: -2.5)
     ]
     for p in probes {
       try buf.write(p.val, channel: p.ch, bin: p.bin)

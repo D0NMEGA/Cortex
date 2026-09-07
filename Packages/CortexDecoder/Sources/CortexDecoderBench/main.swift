@@ -230,6 +230,10 @@ func binCounts(_ samples: [UInt64], bins: Int = 50) -> (edges: [UInt64], counts:
 // way to drive that API (matching the Plan-03 @MainActor test suites). A sequential bench has no
 // need for off-actor work; the only async hop is `await MLComputePlan.load` inside deviceAnnotation.
 @MainActor
+// Same shape as the other bench drivers: guard the device, compile the model once outside the
+// timed region, run the measured loop, annotate the device, emit. The branches are the failure
+// guards this bench must not skip, and the length is the sequence, not tangled logic.
+// swiftlint:disable:next function_body_length cyclomatic_complexity
 func runBench() async -> Int32 {
   // Metal device (unified memory) — guard, never force-unwrap (threat T-05-04-03).
   guard let device = MTLCreateSystemDefaultDevice() else {

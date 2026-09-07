@@ -68,6 +68,10 @@ enum FrameSoak {
   /// `@MainActor`: drives the MainActor-isolated `WebgridFrameEncoder` (same reason as
   /// `GPUTimeHistogram.run`); single-threaded on the main thread, so the isolation is free.
   @MainActor
+  // A headless bench driver: acquire device, build the encoder and offscreen target, run the timed
+  // loop, reduce. The steps are sequential and each one's failure mode is local, so extracting them
+  // would hand a reader four helpers to reassemble instead of one readable sequence.
+  // swiftlint:disable:next function_body_length
   static func run(seconds: Double, width: Int, height: Int) throws -> FrameSoakResult {
     guard let device = MTLCreateSystemDefaultDevice() else { throw GPUTimeBenchError.noDevice }
     guard let queue = device.makeCommandQueue() else { throw GPUTimeBenchError.noCommandQueue }
@@ -110,7 +114,7 @@ enum FrameSoak {
     while nowNs() - startNs < durationNs {
       // Real webgrid compute pass for this frame (deterministic drive, D-05).
       let (vx, vy) = producer.velocity(at: simT)
-      let v = CursorVelocity(ts_ns: 0, seq: 0, vx: vx, vy: vy)
+      let v = CursorVelocity(tsNs: 0, seq: 0, vx: vx, vy: vy)
       let pos = integrator.integrate(latest: v, dt: dt)
       let params = WebgridParams.grid30x30(
         cursorX: pos.x, cursorY: pos.y,

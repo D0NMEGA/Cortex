@@ -26,13 +26,18 @@ import SwiftUI
   /// A `UIView` whose backing layer IS a `CAMetalLayer` (via `layerClass`) — the cleanest way to host
   /// a Metal layer at full size with automatic resize, no manual frame syncing.
   public final class WebgridMetalUIView: UIView {
-    override public class var layerClass: AnyClass {
+    override public static var layerClass: AnyClass {
       CAMetalLayer.self
     }
 
     /// The backing `CAMetalLayer` (guaranteed by `layerClass`).
     public var metalLayer: CAMetalLayer {
-      layer as! CAMetalLayer
+      // `layerClass` above returns `CAMetalLayer.self`, so UIKit always makes the backing layer one.
+      // Trap with the reason instead of a bare `as!`.
+      guard let metal = layer as? CAMetalLayer else {
+        preconditionFailure("layerClass returns CAMetalLayer.self, so the backing layer is always one")
+      }
+      return metal
     }
 
     /// Keep `drawableSize` in step with the view's pixel size.
@@ -116,7 +121,12 @@ import SwiftUI
 
     /// The backing `CAMetalLayer` (guaranteed by `makeBackingLayer`).
     public var metalLayer: CAMetalLayer {
-      layer as! CAMetalLayer
+      // `makeBackingLayer` returns a `CAMetalLayer`, so the backing layer is always one. Trap with
+      // the reason instead of a bare `as!`.
+      guard let metal = layer as? CAMetalLayer else {
+        preconditionFailure("makeBackingLayer returns a CAMetalLayer, so the backing layer is always one")
+      }
+      return metal
     }
 
     override public init(frame frameRect: NSRect) {

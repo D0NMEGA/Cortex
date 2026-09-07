@@ -66,7 +66,7 @@ public final nonisolated class VelocityRing: @unchecked Sendable {
     buffer = UnsafeMutableBufferPointer<CursorVelocity>.allocate(capacity: capacity)
     // Zero-initialize every slot so no slot is ever read uninitialized (defensive; the SPSC
     // protocol never reads a slot the producer has not written, but this removes UB entirely).
-    buffer.initialize(repeating: CursorVelocity(ts_ns: 0, seq: 0, vx: 0, vy: 0))
+    buffer.initialize(repeating: CursorVelocity(tsNs: 0, seq: 0, vx: 0, vy: 0))
   }
 
   deinit {

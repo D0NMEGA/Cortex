@@ -47,6 +47,12 @@ public nonisolated struct LatencyHistogram: Codable, Sendable {
     samplesNs.count
   }
 
+  /// Whether the histogram holds no samples. Present so callers can say `isEmpty` rather than
+  /// `count == 0`, which is what SwiftLint's `empty_count` rule asks for at the call site.
+  public var isEmpty: Bool {
+    samplesNs.isEmpty
+  }
+
   // MARK: - Optional (empty-safe) accessors
 
   /// The minimum sample, or nil if empty.
@@ -106,21 +112,34 @@ public nonisolated struct LatencyHistogram: Codable, Sendable {
   /// Snake-case ns fields match the latency_histogram.json artifact the evidence doc transcribes.
   public struct Summary: Codable, Sendable {
     public let count: Int
-    public let p50_ns: UInt64
-    public let p99_ns: UInt64
-    public let min_ns: UInt64
-    public let max_ns: UInt64
+    public let p50Ns: UInt64
+    public let p99Ns: UInt64
+    public let minNs: UInt64
+    public let maxNs: UInt64
     public let deviceAnnotation: String
+
+    /// The JSON keys are snake_case and LOAD-BEARING: this shape is the committed
+    /// `latency_histogram.json` evidence artifact that the Phase-5 evidence doc transcribes. A key rename
+    /// would silently rewrite it. CodingKeys keeps Swift camelCase (SwiftLint identifier_name) and the wire
+    /// format snake_case (byte identity) at the same time. Do not remove.
+    enum CodingKeys: String, CodingKey {
+      case count
+      case p50Ns = "p50_ns"
+      case p99Ns = "p99_ns"
+      case minNs = "min_ns"
+      case maxNs = "max_ns"
+      case deviceAnnotation
+    }
   }
 
   /// The summary snapshot (percentiles computed once).
   public var summary: Summary {
     Summary(
       count: count,
-      p50_ns: p50,
-      p99_ns: p99,
-      min_ns: min,
-      max_ns: max,
+      p50Ns: p50,
+      p99Ns: p99,
+      minNs: min,
+      maxNs: max,
       deviceAnnotation: deviceAnnotation
     )
   }

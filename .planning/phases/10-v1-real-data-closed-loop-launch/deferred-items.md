@@ -205,3 +205,33 @@ own negative control in the same commit, which is plan work rather than an orche
 up in a v1.1 hardening plan: exclude `.planning/phases/` and `.planning/STATE.md` instead of
 `.planning/`, and add a control that puts an unlabeled superseded number into a root tracking file
 and requires exit 1.
+
+## Plan 10-16 deferred items
+
+### 1. `xcodegen` Info.plist stripping reproduced again (item 2 above, still open)
+
+Plan 10-16's Task-3d battery runs `xcodegen generate`, and it stripped the same four SYS-05 keys from
+`Apps/CortexMac/Info.plist` and `Apps/CortexiOS/Info.plist` that Plan 10-06 documented above. Both
+files were reverted with `git checkout --` and neither appears in any 10-16 commit. Confirming that
+the finding is live and reproducible under Xcode 26.3 / XcodeGen as of 2026-09-07, and that every
+plan running `xcodegen` still has to revert by hand. 10-16 could not fix it: its execution boundary
+forbids editing `project.yml`, which is where the fix belongs.
+
+Also re-confirmed: item 5 above. This worktree could not run any `xcodebuild` until
+`Tools/scripts/build-rust.sh` produced `Packages/CortexRing/CortexRingFFI.xcframework`, failing with
+the exact "does not contain a binary artifact" error quoted there.
+
+### 2. SwiftLint prints two config warnings on every invocation
+
+`unused_declaration` and `unused_import` are listed in BOTH `opt_in_rules` and `analyzer_rules` in
+`.swiftlint.yml`. Every `swiftlint` run therefore emits to stderr:
+
+```
+warning: 'unused_declaration' should be listed in the 'analyzer_rules' configuration section for more clarity as it is only run by 'swiftlint analyze'.
+warning: 'unused_import' should be listed in the 'analyzer_rules' configuration section for more clarity as it is only run by 'swiftlint analyze'.
+```
+
+Exit code is unaffected and no violation is reported, so `--strict` still passes. Not fixed in 10-16:
+deleting the two `opt_in_rules` entries is behaviour-neutral but unrelated to clearing the roster,
+and 10-16's `.swiftlint.yml` diff has to be read line by line for its deliberate exceptions. These
+two lines will appear in 10-17's first CI log and are cosmetic.

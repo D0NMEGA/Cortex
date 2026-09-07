@@ -409,7 +409,7 @@ public final class ClosedLoopPipeline {
     )
 
     // Integrate via the renderer-owned integrator (the single [0,1] clamp + non-finite reject seam).
-    let velocity = CursorVelocity(ts_ns: 0, seq: UInt64(tickIndex), vx: Float16(refined.x), vy: Float16(refined.y))
+    let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tickIndex), vx: Float16(refined.x), vy: Float16(refined.y))
     let pos = integrator.integrate(latest: velocity, dt: Self.dt)
     let position = SIMD2<Float>(pos.x, pos.y)
 
@@ -420,6 +420,22 @@ public final class ClosedLoopPipeline {
 
   // MARK: - Deterministic batch run (the test + bench path)
 
+  /// The outcome of one deterministic closed-loop run: the sampled trajectory, whether a webgrid
+  /// HIT registered, and how many 20 ms ticks it took.
+  ///
+  /// A named struct rather than a 3-member tuple return (SwiftLint `large_tuple` caps tuples at 2).
+  /// The shape is returned by BOTH `runToHit` and `simulate`, so naming it removes a duplicated
+  /// signature rather than adding noise. Member names are unchanged from the tuple labels, so every
+  /// `.positions` / `.hit` / `.ticks` access at the four call sites is source-identical.
+  public struct RunOutcome {
+    /// Every sampled cursor position, one per tick, already `[0,1]`-clamped by the integrator.
+    public let positions: [SIMD2<Float>]
+    /// Whether the dwell-to-select acquisition registered a HIT before the timeout.
+    public let hit: Bool
+    /// How many ticks the run consumed.
+    public let ticks: Int
+  }
+
   /// Run the closed loop deterministically from a fresh cursor at the grid center toward `target` and
   /// report whether it reaches a webgrid HIT (dwell-to-select), the cursor trajectory, and the tick
   /// count. Byte-identical across two runs on the same seed (D-13).
@@ -429,10 +445,10 @@ public final class ClosedLoopPipeline {
   /// - Parameters:
   ///   - seed: the determinism seed (overrides the streaming seed for an isolated, reproducible run).
   ///   - target: the target cell center to reach.
-  /// - Returns: the sampled positions, whether a HIT registered, and the tick count.
-  public func runToHit(seed: UInt64, target: SIMD2<Float>) -> (positions: [SIMD2<Float>], hit: Bool, ticks: Int) {
+  /// - Returns: a ``RunOutcome``: the sampled positions, whether a HIT registered, and the tick count.
+  public func runToHit(seed: UInt64, target: SIMD2<Float>) -> RunOutcome {
     let result = Self.simulate(seed: seed, target: target, arm: .refit)
-    return (result.positions, result.hit, result.ticks)
+    return RunOutcome(positions: result.positions, hit: result.hit, ticks: result.ticks)
   }
 
   /// Which filter arm a deterministic simulation uses (mirrors CortexReFITBench's ablation arms).
@@ -443,9 +459,7 @@ public final class ClosedLoopPipeline {
 
   /// The deterministic per-arm simulation backing `runToHit` + the Test-4 ablation. Pure: no RNG, no
   /// clock — fully determined by (seed, target, arm). A fresh warm filter + integrator per call.
-  static func simulate(seed: UInt64, target: SIMD2<Float>,
-                       arm: Arm) -> (positions: [SIMD2<Float>], hit: Bool, ticks: Int)
-  {
+  static func simulate(seed: UInt64, target: SIMD2<Float>, arm: Arm) -> RunOutcome {
     let start = SIMD2<Float>(0.5, 0.5)
     let acquisition = WebgridAcquisition(
       dwellSeconds: 0.30,
@@ -472,7 +486,7 @@ public final class ClosedLoopPipeline {
       case .refit:
         filter.step(measurement: decoded, target: target, acquisitionRadius: ClosedLoopPipeline.acquisitionRadius)
       }
-      let velocity = CursorVelocity(ts_ns: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
+      let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
       let pos = integrator.integrate(latest: velocity, dt: ClosedLoopPipeline.dt)
       positions.append(SIMD2<Float>(pos.x, pos.y))
     }
@@ -480,6 +494,6 @@ public final class ClosedLoopPipeline {
     let trial = acquisition.runTrial(positions: positions, target: target)
     // Ticks to the HIT (1-based elapsed-tick count from the movement time), or the full budget on miss.
     let ticks = Int((trial.movementTime / ClosedLoopPipeline.dt).rounded())
-    return (positions, trial.acquired, ticks)
+    return RunOutcome(positions: positions, hit: trial.acquired, ticks: ticks)
   }
 }

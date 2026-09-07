@@ -27,8 +27,16 @@ struct ContentView: View {
 @MainActor
 final class WebgridDriver {
   /// 4096-slot ring (power-of-two; ample for a 50Hz producer vs a 120Hz consumer). `init?` only
-  /// fails for a non-power-of-two/zero capacity, so this force-unwrap is total.
-  let ring = VelocityRing(capacity: 4096)!
+  /// fails for a non-power-of-two/zero capacity, so 4096 can never fail; the trap is unreachable and
+  /// says why, rather than being a bare `!`.
+  let ring: VelocityRing = {
+    guard let ring = VelocityRing(capacity: 4096) else {
+      preconditionFailure("VelocityRing(capacity:) only returns nil for a zero or non-power-of-two "
+        + "capacity; 4096 is neither")
+    }
+    return ring
+  }()
+
   private let producer = LissajousProducer()
   private var thread: Thread?
 
@@ -44,7 +52,7 @@ final class WebgridDriver {
       var simTime = 0.0
       while !Thread.current.isCancelled {
         let (vx, vy) = producer.velocity(at: simTime)
-        _ = ring.push(CursorVelocity(ts_ns: UInt64(seq) &* 20_000_000, seq: seq, vx: vx, vy: vy))
+        _ = ring.push(CursorVelocity(tsNs: UInt64(seq) &* 20_000_000, seq: seq, vx: vx, vy: vy))
         seq &+= 1
         simTime += stepSeconds
         Thread.sleep(forTimeInterval: stepSeconds)

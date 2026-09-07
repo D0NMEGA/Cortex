@@ -1,3 +1,9 @@
+// 617 code lines. A top-level `main.swift` bench driver: Swift only allows top-level statements in a
+// file with this name, so the run sequence cannot move to a sibling file, and the ten Codable report
+// shapes below carry the snake_case wire keys of `10-refit-real.json`, which is committed and read
+// back by Decoder/tests/test_real_replay_schema.py. Splitting the file for a length rule would put a
+// byte-identical artifact at risk for no behavioural gain (Phase 10 / D-18).
+// swiftlint:disable file_length
 // CortexReplayBench - the RD-07 four-arm ablation over REAL Indy spikes (Phase 10, Plan 10-05).
 //
 // ## What it is
@@ -306,6 +312,11 @@ let acquisition = WebgridAcquisition(
 )
 
 @MainActor
+// One arm of the four-arm ablation, start to finish: warm filter, warm integrator, the per-trial
+// replay loop, then the per-arm reduction. It is deliberately ONE function so all four arms
+// provably run identical code, and this file's JSON output is byte-diffed against a committed
+// artifact, so splitting it for a length rule trades a real risk for a style number.
+// swiftlint:disable:next function_body_length
 func runArm(_ arm: ReplayArm) -> ArmRun {
   // ONE warm filter carried across all trials, on the SHIPPED re-fit gain. This bench is where the
   // Plan 10-03 re-fit is exercised; the synthetic fixture runs on the frozen Phase-7 baseline (D-09).
@@ -372,7 +383,7 @@ func runArm(_ arm: ReplayArm) -> ArmRun {
       // The renderer-owned integrator is the SINGLE [0,1] clamp and non-finite reject point. No
       // second clamp is added here (07-RESEARCH pitfall 5).
       let velocity = CursorVelocity(
-        ts_ns: 0,
+        tsNs: 0,
         seq: UInt64(tick),
         vx: Float16(filtered.x),
         vy: Float16(filtered.y)
@@ -443,50 +454,123 @@ struct DistancePercentiles: Codable {
 
 struct ArmReport: Codable {
   let name: String
-  let rotation_target_source: String
+  let rotationTargetSource: String
   let correct: Int
   let incorrect: Int
-  let incorrect_model: String
+  let incorrectModel: String
   let seconds: Double
-  let bps_n900: Double
-  let bps_n900_label: String
-  let bps_n64: Double
-  let bps_n64_label: String
-  let fitts_tp: Double
-  let realized_gain: Double
-  let realized_smoothing: Double
-  let distance_to_target_mm: DistancePercentiles
+  let bpsN900: Double
+  let bpsN900Label: String
+  let bpsN64: Double
+  let bpsN64Label: String
+  let fittsTp: Double
+  let realizedGain: Double
+  let realizedSmoothing: Double
+  let distanceToTargetMm: DistancePercentiles
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `10-replay.json` and `10-refit-real.json` are read
+  /// back by `Decoder/tests/test_real_replay_schema.py` and by `Tools/scripts/refit-real-policy.sh`,
+  /// which match the key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase
+  /// (SwiftLint identifier_name) and the wire format snake_case (byte identity) at the same time.
+  /// Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case name
+    case rotationTargetSource = "rotation_target_source"
+    case correct
+    case incorrect
+    case incorrectModel = "incorrect_model"
+    case seconds
+    case bpsN900 = "bps_n900"
+    case bpsN900Label = "bps_n900_label"
+    case bpsN64 = "bps_n64"
+    case bpsN64Label = "bps_n64_label"
+    case fittsTp = "fitts_tp"
+    case realizedGain = "realized_gain"
+    case realizedSmoothing = "realized_smoothing"
+    case distanceToTargetMm = "distance_to_target_mm"
+  }
 }
 
 struct DeltaTriple: Codable {
-  let bps_n900: Double
-  let bps_n64: Double
-  let fitts_tp: Double
+  let bpsN900: Double
+  let bpsN64: Double
+  let fittsTp: Double
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `10-replay.json` and `10-refit-real.json` are read
+  /// back by `Decoder/tests/test_real_replay_schema.py` and by `Tools/scripts/refit-real-policy.sh`,
+  /// which match the key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase
+  /// (SwiftLint identifier_name) and the wire format snake_case (byte identity) at the same time.
+  /// Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case bpsN900 = "bps_n900"
+    case bpsN64 = "bps_n64"
+    case fittsTp = "fitts_tp"
+  }
 }
 
 struct Deltas: Codable {
-  let refit_minus_kalman_only: DeltaTriple
-  let refit_minus_raw: DeltaTriple
-  let refit_minus_reversed: DeltaTriple
+  let refitMinusKalmanOnly: DeltaTriple
+  let refitMinusRaw: DeltaTriple
+  let refitMinusReversed: DeltaTriple
   let note: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `10-replay.json` and `10-refit-real.json` are read
+  /// back by `Decoder/tests/test_real_replay_schema.py` and by `Tools/scripts/refit-real-policy.sh`,
+  /// which match the key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase
+  /// (SwiftLint identifier_name) and the wire format snake_case (byte identity) at the same time.
+  /// Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case refitMinusKalmanOnly = "refit_minus_kalman_only"
+    case refitMinusRaw = "refit_minus_raw"
+    case refitMinusReversed = "refit_minus_reversed"
+    case note
+  }
 }
 
 struct References: Codable {
-  let braingate_dense_9x9_bps: Double
-  let braingate_6x6_t5_bps: Double
-  let neuralink_p1_cited_peak_bps: Double
-  let phase8_synthetic_refit_bps_n900: Double
+  let braingateDense9x9Bps: Double
+  let braingate6x6T5Bps: Double
+  let neuralinkP1CitedPeakBps: Double
+  let phase8SyntheticRefitBpsN900: Double
   let note: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `10-replay.json` and `10-refit-real.json` are read
+  /// back by `Decoder/tests/test_real_replay_schema.py` and by `Tools/scripts/refit-real-policy.sh`,
+  /// which match the key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase
+  /// (SwiftLint identifier_name) and the wire format snake_case (byte identity) at the same time.
+  /// Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case braingateDense9x9Bps = "braingate_dense_9x9_bps"
+    case braingate6x6T5Bps = "braingate_6x6_t5_bps"
+    case neuralinkP1CitedPeakBps = "neuralink_p1_cited_peak_bps"
+    case phase8SyntheticRefitBpsN900 = "phase8_synthetic_refit_bps_n900"
+    case note
+  }
 }
 
 struct SupersededSynthetic: Codable {
-  let raw_webgrid_bps: Double
-  let kalman_only_webgrid_bps: Double
-  let refit_webgrid_bps: Double
-  let raw_fitts_tp: Double
-  let kalman_only_fitts_tp: Double
-  let refit_fitts_tp: Double
+  let rawWebgridBps: Double
+  let kalmanOnlyWebgridBps: Double
+  let refitWebgridBps: Double
+  let rawFittsTp: Double
+  let kalmanOnlyFittsTp: Double
+  let refitFittsTp: Double
   let note: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `10-replay.json` and `10-refit-real.json` are read
+  /// back by `Decoder/tests/test_real_replay_schema.py` and by `Tools/scripts/refit-real-policy.sh`,
+  /// which match the key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase
+  /// (SwiftLint identifier_name) and the wire format snake_case (byte identity) at the same time.
+  /// Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case rawWebgridBps = "raw_webgrid_bps"
+    case kalmanOnlyWebgridBps = "kalman_only_webgrid_bps"
+    case refitWebgridBps = "refit_webgrid_bps"
+    case rawFittsTp = "raw_fitts_tp"
+    case kalmanOnlyFittsTp = "kalman_only_fitts_tp"
+    case refitFittsTp = "refit_fitts_tp"
+    case note
+  }
 }
 
 struct DeviceLabel: Codable {
@@ -495,21 +579,44 @@ struct DeviceLabel: Codable {
 }
 
 struct RefitRealReport: Codable {
-  let schema_version: Int
-  let data_source: String
-  let session_id: String
-  let source_sha256: String
-  let manifest_path: String
-  let export_sidecar_sha256: String
-  let encoder_checkpoint_sha256: String
-  let velocity_checkpoint_sha256: String
+  let schemaVersion: Int
+  let dataSource: String
+  let sessionId: String
+  let sourceSha256: String
+  let manifestPath: String
+  let exportSidecarSha256: String
+  let encoderCheckpointSha256: String
+  let velocityCheckpointSha256: String
   let arms: [ArmReport]
   let deltas: Deltas
   let references: References
   let device: DeviceLabel
   let env: [String: String]
   let disclosure: String
-  let superseded_synthetic: SupersededSynthetic
+  let supersededSynthetic: SupersededSynthetic
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `10-replay.json` and `10-refit-real.json` are read
+  /// back by `Decoder/tests/test_real_replay_schema.py` and by `Tools/scripts/refit-real-policy.sh`,
+  /// which match the key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase
+  /// (SwiftLint identifier_name) and the wire format snake_case (byte identity) at the same time.
+  /// Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case schemaVersion = "schema_version"
+    case dataSource = "data_source"
+    case sessionId = "session_id"
+    case sourceSha256 = "source_sha256"
+    case manifestPath = "manifest_path"
+    case exportSidecarSha256 = "export_sidecar_sha256"
+    case encoderCheckpointSha256 = "encoder_checkpoint_sha256"
+    case velocityCheckpointSha256 = "velocity_checkpoint_sha256"
+    case arms
+    case deltas
+    case references
+    case device
+    case env
+    case disclosure
+    case supersededSynthetic = "superseded_synthetic"
+  }
 }
 
 // MARK: - Run the arms and assemble
@@ -544,19 +651,19 @@ func report(for arm: ReplayArm) -> ArmReport {
   let sortedDistances = run.distancesMm.sorted()
   return ArmReport(
     name: arm.rawValue,
-    rotation_target_source: arm.rotationTargetSource.rawValue,
+    rotationTargetSource: arm.rotationTargetSource.rawValue,
     correct: run.correct,
     incorrect: incorrect,
-    incorrect_model: "none - single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
+    incorrectModel: "none - single-target dwell-to-select; Si structurally 0; BPS is upper-bound",
     seconds: run.seconds,
-    bps_n900: n900,
-    bps_n900_label: bpsN900Label,
-    bps_n64: n64,
-    bps_n64_label: bpsN64Label,
-    fitts_tp: fittsThroughput(run),
-    realized_gain: ArmStatistics.realizedGain(inputs: decoded, outputs: run.outputs),
-    realized_smoothing: ArmStatistics.realizedSmoothing(outputs: run.outputs),
-    distance_to_target_mm: DistancePercentiles(
+    bpsN900: n900,
+    bpsN900Label: bpsN900Label,
+    bpsN64: n64,
+    bpsN64Label: bpsN64Label,
+    fittsTp: fittsThroughput(run),
+    realizedGain: ArmStatistics.realizedGain(inputs: decoded, outputs: run.outputs),
+    realizedSmoothing: ArmStatistics.realizedSmoothing(outputs: run.outputs),
+    distanceToTargetMm: DistancePercentiles(
       p1: percentile(sortedDistances, 1),
       p5: percentile(sortedDistances, 5),
       p25: percentile(sortedDistances, 25),
@@ -583,16 +690,16 @@ let reversedReport = armReport(.refitReversedTarget)
 
 func delta(_ lhs: ArmReport, _ rhs: ArmReport) -> DeltaTriple {
   DeltaTriple(
-    bps_n900: lhs.bps_n900 - rhs.bps_n900,
-    bps_n64: lhs.bps_n64 - rhs.bps_n64,
-    fitts_tp: lhs.fitts_tp - rhs.fitts_tp
+    bpsN900: lhs.bpsN900 - rhs.bpsN900,
+    bpsN64: lhs.bpsN64 - rhs.bpsN64,
+    fittsTp: lhs.fittsTp - rhs.fittsTp
   )
 }
 
 let deltas = Deltas(
-  refit_minus_kalman_only: delta(refitReport, kalmanOnlyReport),
-  refit_minus_raw: delta(refitReport, rawReport),
-  refit_minus_reversed: delta(refitReport, reversedReport),
+  refitMinusKalmanOnly: delta(refitReport, kalmanOnlyReport),
+  refitMinusRaw: delta(refitReport, rawReport),
+  refitMinusReversed: delta(refitReport, reversedReport),
   note: "refit_minus_kalman_only is the ATTRIBUTABLE number: the rotation with the Kalman's gain and "
     + "smoothing held fixed. refit_minus_raw is the headline comparison and CONFLATES the rotation "
     + "with the Kalman's gain and smoothing, which is why realized_gain and realized_smoothing are "
@@ -600,10 +707,14 @@ let deltas = Deltas(
 )
 
 let references = References(
-  braingate_dense_9x9_bps: 4.16, // Pandarinath 2017 eLife 18554: T5 on a DENSE 9x9 grid, not the 6x6.
-  braingate_6x6_t5_bps: 3.7,
-  neuralink_p1_cited_peak_bps: 8.5,
-  phase8_synthetic_refit_bps_n900: 1.953047883714651,
+  braingateDense9x9Bps: 4.16, // Pandarinath 2017 eLife 18554: T5 on a DENSE 9x9 grid, not the 6x6.
+  braingate6x6T5Bps: 3.7,
+  neuralinkP1CitedPeakBps: 8.5,
+  // The label lives in this comment, not in the property name: before Plan 10-16 camelCased the
+  // field, `phase8_synthetic_refit_bps_n900` carried the lowercase token `synthetic` that
+  // honesty-sweep.sh's line-scoped label check reads, and `Synthetic` does not match it. Saying
+  // what the number is beats relying on an identifier's spelling to say it.
+  phase8SyntheticRefitBpsN900: 1.953047883714651, // synthetic Phase-8 seed-locked replay, superseded
   note: "4.16 is Pandarinath et al. 2017 (eLife 18554) measured with T5 on a DENSE 9x9 grid over 8 "
     + "evaluation blocks, NOT the 6x6 grid; the 6x6 figures in the same paper are T6 2.2, T5 3.7, "
     + "T7 1.4, so braingate_6x6_t5_bps is the like-for-like 6x6 number. 8.5 is the figure this repo "
@@ -615,12 +726,12 @@ let references = References(
 )
 
 let supersededSynthetic = SupersededSynthetic(
-  raw_webgrid_bps: 1.292123144105848,
-  kalman_only_webgrid_bps: 1.183000907045892,
-  refit_webgrid_bps: 1.953047883714651, // superseded synthetic (Phase 8)
-  raw_fitts_tp: 0.16089860247386525,
-  kalman_only_fitts_tp: 0.15545586433053596,
-  refit_fitts_tp: 0.37439506338290895, // superseded synthetic (Phase 7)
+  rawWebgridBps: 1.292123144105848,
+  kalmanOnlyWebgridBps: 1.183000907045892,
+  refitWebgridBps: 1.953047883714651, // superseded synthetic (Phase 8)
+  rawFittsTp: 0.16089860247386525,
+  kalmanOnlyFittsTp: 0.15545586433053596,
+  refitFittsTp: 0.37439506338290895, // superseded synthetic (Phase 7)
   note: "The Phase-8 SYNTHETIC seed-locked replay triple, carried here so the before-and-after is in "
     + "the artifact itself (D-12). Copied verbatim from the committed webgrid_bps.json (Phase 8) and "
     + "refit_bps.json (Phase 7). On that synthetic data kalman_only is BELOW raw on both metrics, so "
@@ -645,14 +756,14 @@ do {
 #endif
 
 let payload = RefitRealReport(
-  schema_version: 1,
-  data_source: "real",
-  session_id: export.sidecar.sessionId,
-  source_sha256: export.sidecar.sourceSha256,
-  manifest_path: export.sidecar.manifestPath,
-  export_sidecar_sha256: sidecarDigest,
-  encoder_checkpoint_sha256: export.sidecar.encoderCheckpointSha256,
-  velocity_checkpoint_sha256: export.sidecar.velocityCheckpointSha256,
+  schemaVersion: 1,
+  dataSource: "real",
+  sessionId: export.sidecar.sessionId,
+  sourceSha256: export.sidecar.sourceSha256,
+  manifestPath: export.sidecar.manifestPath,
+  exportSidecarSha256: sidecarDigest,
+  encoderCheckpointSha256: export.sidecar.encoderCheckpointSha256,
+  velocityCheckpointSha256: export.sidecar.velocityCheckpointSha256,
   arms: armReports,
   deltas: deltas,
   references: references,
@@ -671,7 +782,7 @@ let payload = RefitRealReport(
     "trials": String(trials.count)
   ],
   disclosure: openLoopDisclosure,
-  superseded_synthetic: supersededSynthetic
+  supersededSynthetic: supersededSynthetic
 )
 
 try? FileManager.default.createDirectory(
@@ -700,32 +811,32 @@ print("  dwell = \(dwellSeconds) s, timeout = \(timeoutSeconds) s, r_acq = 0.5/3
 print("  decode failures = \(decodeFailures) of \(tickCount) (the run aborts above if this is not 0)")
 print("")
 for arm in armReports {
-  print("  \(arm.name)  [rotation target: \(arm.rotation_target_source)]")
-  print("    hits = \(arm.correct)  (Si = \(arm.incorrect), \(arm.incorrect_model))")
+  print("  \(arm.name)  [rotation target: \(arm.rotationTargetSource)]")
+  print("    hits = \(arm.correct)  (Si = \(arm.incorrect), \(arm.incorrectModel))")
   print("    seconds = \(arm.seconds)")
-  print("    bps_n900 = \(arm.bps_n900)   [\(arm.bps_n900_label)]")
-  print("    bps_n64  = \(arm.bps_n64)   [\(arm.bps_n64_label)]")
-  print("    fitts_tp = \(arm.fitts_tp)")
-  print("    realized_gain = \(arm.realized_gain)   realized_smoothing = \(arm.realized_smoothing)")
+  print("    bps_n900 = \(arm.bpsN900)   [\(arm.bpsN900Label)]")
+  print("    bps_n64  = \(arm.bpsN64)   [\(arm.bpsN64Label)]")
+  print("    fitts_tp = \(arm.fittsTp)")
+  print("    realized_gain = \(arm.realizedGain)   realized_smoothing = \(arm.realizedSmoothing)")
   print("    distance_to_target_mm p1/p5/p25/p50/p90 = "
-    + "\(arm.distance_to_target_mm.p1) / \(arm.distance_to_target_mm.p5) / "
-    + "\(arm.distance_to_target_mm.p25) / \(arm.distance_to_target_mm.p50) / "
-    + "\(arm.distance_to_target_mm.p90)")
+    + "\(arm.distanceToTargetMm.p1) / \(arm.distanceToTargetMm.p5) / "
+    + "\(arm.distanceToTargetMm.p25) / \(arm.distanceToTargetMm.p50) / "
+    + "\(arm.distanceToTargetMm.p90)")
 }
 
 print("")
 print("  deltas (refit - kalman_only), the ATTRIBUTABLE number:")
-print("    bps_n900 = \(deltas.refit_minus_kalman_only.bps_n900)  "
-  + "bps_n64 = \(deltas.refit_minus_kalman_only.bps_n64)  "
-  + "fitts_tp = \(deltas.refit_minus_kalman_only.fitts_tp)")
+print("    bps_n900 = \(deltas.refitMinusKalmanOnly.bpsN900)  "
+  + "bps_n64 = \(deltas.refitMinusKalmanOnly.bpsN64)  "
+  + "fitts_tp = \(deltas.refitMinusKalmanOnly.fittsTp)")
 print("  deltas (refit - raw), which conflates the rotation with the Kalman's gain and smoothing:")
-print("    bps_n900 = \(deltas.refit_minus_raw.bps_n900)  "
-  + "bps_n64 = \(deltas.refit_minus_raw.bps_n64)  "
-  + "fitts_tp = \(deltas.refit_minus_raw.fitts_tp)")
+print("    bps_n900 = \(deltas.refitMinusRaw.bpsN900)  "
+  + "bps_n64 = \(deltas.refitMinusRaw.bpsN64)  "
+  + "fitts_tp = \(deltas.refitMinusRaw.fittsTp)")
 print("  deltas (refit - refit_reversed_target), the attribution control:")
-print("    bps_n900 = \(deltas.refit_minus_reversed.bps_n900)  "
-  + "bps_n64 = \(deltas.refit_minus_reversed.bps_n64)  "
-  + "fitts_tp = \(deltas.refit_minus_reversed.fitts_tp)")
+print("    bps_n900 = \(deltas.refitMinusReversed.bpsN900)  "
+  + "bps_n64 = \(deltas.refitMinusReversed.bpsN64)  "
+  + "fitts_tp = \(deltas.refitMinusReversed.fittsTp)")
 print("")
 print("  \(deltas.note)")
 print("  disclosure: \(openLoopDisclosure)")
@@ -736,3 +847,5 @@ print("  D-09: this bench compares nothing against any bar and exits 0 whatever 
 print("  wrote: \(outputURL.path)")
 
 exit(0)
+
+// swiftlint:enable file_length

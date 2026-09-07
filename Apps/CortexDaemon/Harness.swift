@@ -37,7 +37,7 @@ public enum Harness {
 
     // posix_spawnattr_t is an opaque pointer typedef → imported as Optional; init via the C call,
     // then bridge through a non-optional for parentPrepare and copy the mutation back before spawn.
-    var attrOpt: posix_spawnattr_t? = nil
+    var attrOpt: posix_spawnattr_t?
     posix_spawnattr_init(&attrOpt)
     defer { posix_spawnattr_destroy(&attrOpt) }
 

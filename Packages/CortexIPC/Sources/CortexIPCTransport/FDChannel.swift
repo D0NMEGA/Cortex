@@ -59,8 +59,14 @@ public enum FDChannel {
     var slotDepth: UInt32 = 0
     var nameBuf = [CChar](repeating: 0, count: 32)
 
-    let fd = nameBuf.withUnsafeMutableBufferPointer { namePtr in
-      cortex_fdmsg_recv(rcv, &ringBytes, &slotStride, &slotDepth, namePtr.baseAddress!)
+    let fd = nameBuf.withUnsafeMutableBufferPointer { namePtr -> Int32 in
+      // `nameBuf` is a fixed 32-element array, so `baseAddress` is never nil. Trap with a message
+      // rather than returning a sentinel: a negative return here would be reported as `.recv(code)`
+      // and would be indistinguishable from a real recv failure.
+      guard let nameBase = namePtr.baseAddress else {
+        preconditionFailure("nameBuf is a fixed 32-element array; its baseAddress is never nil")
+      }
+      return cortex_fdmsg_recv(rcv, &ringBytes, &slotStride, &slotDepth, nameBase)
     }
     if fd < 0 { throw .recv(fd) }
 

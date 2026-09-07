@@ -1,3 +1,7 @@
+// 587 code lines. Same reasoning as CortexReplayBench/main.swift: a top-level `main.swift` whose run
+// sequence cannot move to a sibling file, emitting a committed artifact whose 31 snake_case keys are
+// asserted elsewhere (Phase 10 / D-18).
+// swiftlint:disable file_length
 // CortexSeamBSmoke - the RD-08 Seam B chain smoke (Phase 10, Plan 10-06).
 //
 // ## What Seam B is, verbatim from 10-PREREGISTRATION section 9
@@ -450,7 +454,7 @@ for _ in 0 ..< frameCount {
     // The renderer's integration seam (review D-7, SC#2). With no model the velocity is zero, so the
     // cursor holds - the leg still RAN, which is what is being counted.
     let velocity = CursorVelocity(
-      ts_ns: sample.tsNs,
+      tsNs: sample.tsNs,
       seq: observed,
       vx: Float16(decodedVelocity.x),
       vy: Float16(decodedVelocity.y)
@@ -559,41 +563,79 @@ do {
 // MARK: - Output
 
 struct SeamBReport: Encodable {
-  let schema_version: Int
+  let schemaVersion: Int
   let seam: String
   let boundary: String
-  let process_boundary: String
-  let data_source: String
-  let session_id: String
-  let export_sidecar_sha256: String
-  let frames_accepted: Int
-  let frames_dropped: Int
-  let windows_completed: Int
-  let windows_filled: Int
-  let decodes_succeeded: Int
-  let cursor_updates: Int
-  let pointer_reports_encoded: Int
-  let doorbell_wakes: Int
+  let processBoundary: String
+  let dataSource: String
+  let sessionId: String
+  let exportSidecarSha256: String
+  let framesAccepted: Int
+  let framesDropped: Int
+  let windowsCompleted: Int
+  let windowsFilled: Int
+  let decodesSucceeded: Int
+  let cursorUpdates: Int
+  let pointerReportsEncoded: Int
+  let doorbellWakes: Int
   /// Plan 10-08: the per-completed-window chain latency distribution, nearest-rank over
   /// `LatencyHistogram` - the SAME percentile math Seam A uses, so the two numbers differ only by the
   /// boundary they span and not by how the percentile was taken. `count` is `windows_completed`.
-  let p50_ns: UInt64
-  let p99_ns: UInt64
-  let max_ns: UInt64
+  let p50Ns: UInt64
+  let p99Ns: UInt64
+  let maxNs: UInt64
   let count: Int
-  let latency_boundary: String
-  let latency_caveat: String
+  let latencyBoundary: String
+  let latencyCaveat: String
   /// Plan 10-08: the `velocity_amplitude_shrinkage` inputs and both ratio conventions, in cm/s.
-  let velocity_amplitude: [String: Double]
-  let velocity_amplitude_note: String
-  let model_backed: Bool
-  let spike_buffer_backed: Bool
-  let aes_gcm: String
+  let velocityAmplitude: [String: Double]
+  let velocityAmplitudeNote: String
+  let modelBacked: Bool
+  let spikeBufferBacked: Bool
+  let aesGcm: String
   let device: String
   let status: String
   let env: [String: String]
   let disclosure: String
-  let not_comparable_to: String
+  let notComparableTo: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: this artifact is read back by
+  /// `Decoder/tests/test_real_replay_schema.py` and by the Tools/scripts policy gates, which match the
+  /// key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase (SwiftLint
+  /// identifier_name) and the wire format snake_case (byte identity) at the same time. Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case schemaVersion = "schema_version"
+    case seam
+    case boundary
+    case processBoundary = "process_boundary"
+    case dataSource = "data_source"
+    case sessionId = "session_id"
+    case exportSidecarSha256 = "export_sidecar_sha256"
+    case framesAccepted = "frames_accepted"
+    case framesDropped = "frames_dropped"
+    case windowsCompleted = "windows_completed"
+    case windowsFilled = "windows_filled"
+    case decodesSucceeded = "decodes_succeeded"
+    case cursorUpdates = "cursor_updates"
+    case pointerReportsEncoded = "pointer_reports_encoded"
+    case doorbellWakes = "doorbell_wakes"
+    case p50Ns = "p50_ns"
+    case p99Ns = "p99_ns"
+    case maxNs = "max_ns"
+    case count
+    case latencyBoundary = "latency_boundary"
+    case latencyCaveat = "latency_caveat"
+    case velocityAmplitude = "velocity_amplitude"
+    case velocityAmplitudeNote = "velocity_amplitude_note"
+    case modelBacked = "model_backed"
+    case spikeBufferBacked = "spike_buffer_backed"
+    case aesGcm = "aes_gcm"
+    case device
+    case status
+    case env
+    case disclosure
+    case notComparableTo = "not_comparable_to"
+  }
 }
 
 // MARK: - The amplitude-shrinkage measurement (Plan 10-08, 10-PREREGISTRATION section 14)
@@ -654,39 +696,39 @@ do {
 #endif
 
 let payload = SeamBReport(
-  schema_version: 1,
+  schemaVersion: 1,
   seam: "B",
   boundary: "export bin -> AES-GCM seal -> shm ring -> doorbell -> decrypt -> ordering -> 32-bin "
     + "accumulation -> SpikeInputBuffer fill -> NDT1 decode -> cursor integration -> HID pointer "
     + "report encode",
-  process_boundary: "in_process",
-  data_source: source.kind.rawValue,
-  session_id: export.sidecar.sessionId,
-  export_sidecar_sha256: sidecarDigest,
-  frames_accepted: framesAccepted,
-  frames_dropped: framesDropped,
-  windows_completed: windowsCompleted,
-  windows_filled: windowsFilled,
-  decodes_succeeded: decodesSucceeded,
-  cursor_updates: cursorUpdates,
-  pointer_reports_encoded: pointerReportsEncoded,
-  doorbell_wakes: doorbellWakes,
-  p50_ns: chainHistogram.p50,
-  p99_ns: chainHistogram.p99,
-  max_ns: chainHistogram.max,
+  processBoundary: "in_process",
+  dataSource: source.kind.rawValue,
+  sessionId: export.sidecar.sessionId,
+  exportSidecarSha256: sidecarDigest,
+  framesAccepted: framesAccepted,
+  framesDropped: framesDropped,
+  windowsCompleted: windowsCompleted,
+  windowsFilled: windowsFilled,
+  decodesSucceeded: decodesSucceeded,
+  cursorUpdates: cursorUpdates,
+  pointerReportsEncoded: pointerReportsEncoded,
+  doorbellWakes: doorbellWakes,
+  p50Ns: chainHistogram.p50,
+  p99Ns: chainHistogram.p99,
+  maxNs: chainHistogram.max,
   count: chainHistogram.count,
-  latency_boundary: "one completed decode window, timed from the top of the producer iteration "
+  latencyBoundary: "one completed decode window, timed from the top of the producer iteration "
     + "(immediately BEFORE the export bin is read) to the instant the NDT1 decode RETURNS on the "
     + "consumer side. Spans export read -> AES-GCM seal -> shm ring write -> doorbell -> poll -> "
     + "decrypt -> FlatBuffers decode -> ordering -> 32-bin accumulation -> SpikeInputBuffer fill -> "
     + "NDT1 decode. Excludes the cursor integration and the HID encode that follow.",
-  latency_caveat: "SINGLE-PROCESS LOCK-STEP. Both clock reads are Time.machAbsoluteNanoseconds() on "
+  latencyCaveat: "SINGLE-PROCESS LOCK-STEP. Both clock reads are Time.machAbsoluteNanoseconds() on "
     + "the same mach_absolute_time timebase in the same thread, so the arithmetic is sound, but no "
     + "cross-process wakeup, context switch or scheduling delay is included because there is no "
     + "second process (process_boundary = in_process). Read this as a FLOOR on what the same chain "
     + "would cost across a real process boundary, never as an estimate of it. It is not comparable "
     + "to Seam A and not comparable to the Phase-8 number.",
-  velocity_amplitude: [
+  velocityAmplitude: [
     "n": Double(decodedSpeedsCmPerS.count),
     "decoded_mean_speed_cm_s": decodedMeanSpeed,
     "true_mean_speed_cm_s": trueMeanSpeed,
@@ -695,15 +737,15 @@ let payload = SeamBReport(
     "mean_ratio": amplitudeMeanRatio,
     "p95_ratio": amplitudeP95Ratio
   ],
-  velocity_amplitude_note: "decoded speed is |v| straight off NeuralDecoder.decode in cm/s; true "
+  velocityAmplitudeNote: "decoded speed is |v| straight off NeuralDecoder.decode in cm/s; true "
     + "speed is the export's own binned cursor velocity magnitude for the SAME bin, in the cm/s the "
     + "sidecar declares. mean_ratio is mean(decoded)/mean(true) and p95_ratio is p95(decoded)/"
     + "p95(true) - RATIOS OF SUMMARIES, not summaries of a per-window quotient, because that quotient "
     + "diverges at every reach reversal where the true speed passes through zero. A ratio below 1 is "
     + "amplitude shrinkage toward the mean. Empty (n = 0) when no model was supplied.",
-  model_backed: decoder != nil,
-  spike_buffer_backed: spikeBuffer != nil,
-  aes_gcm: "applied to every frame; no bypass path exists",
+  modelBacked: decoder != nil,
+  spikeBufferBacked: spikeBuffer != nil,
+  aesGcm: "applied to every frame; no bypass path exists",
   device: "Apple M5 Pro (arm64)",
   status: "corroborating",
   env: [
@@ -722,7 +764,7 @@ let payload = SeamBReport(
   // export gets the pre-registered open-loop string. No number from this file may ever be presented
   // as a real-data result without the `data_source` field beside it.
   disclosure: source.kind == .syntheticFixture ? export.sidecar.disclosure : openLoopDisclosure,
-  not_comparable_to: "the Phase-8 glass-to-glass p99 and the Plan 10-04 Seam A p99. Seam B is a "
+  notComparableTo: "the Phase-8 glass-to-glass p99 and the Plan 10-04 Seam A p99. Seam B is a "
     + "strictly WIDER boundary (10-PREREGISTRATION section 9), and the Phase-8 number had no IPC leg "
     + "and was not model-backed (10-RESEARCH Correction 2)."
 )
@@ -754,21 +796,23 @@ print("  Seam B chain latency, per completed window (Plan 10-08), n = \(chainHis
 print("    p50 = \(chainHistogram.p50) ns  (\(String(format: "%.3f", Double(chainHistogram.p50) / 1_000_000)) ms)")
 print("    p99 = \(chainHistogram.p99) ns  (\(String(format: "%.3f", Double(chainHistogram.p99) / 1_000_000)) ms)")
 print("    max = \(chainHistogram.max) ns  (\(String(format: "%.3f", Double(chainHistogram.max) / 1_000_000)) ms)")
-print("    \(payload.latency_caveat)")
+print("    \(payload.latencyCaveat)")
 print("")
 if decoder != nil {
   print("  Velocity amplitude, decoded vs true, over \(decodedSpeedsCmPerS.count) windows (cm/s):")
   print("    mean:  decoded \(decodedMeanSpeed)   true \(trueMeanSpeed)   ratio \(amplitudeMeanRatio)")
   print("    p95:   decoded \(decodedP95Speed)   true \(trueP95Speed)   ratio \(amplitudeP95Ratio)")
-  print("    \(payload.velocity_amplitude_note)")
+  print("    \(payload.velocityAmplitudeNote)")
   print("")
 }
 
 print("  data_source: \(source.kind.rawValue)")
 print("  disclosure: \(payload.disclosure)")
-print("  \(payload.not_comparable_to)")
+print("  \(payload.notComparableTo)")
 print("  D-09: this smoke asserts STRUCTURE only. It compares nothing against any budget and emits")
 print("  no pass/fail field; a clean run exits 0 whatever the counters are.")
 print("  wrote: \(outputURL.path)")
 
 exit(0)
+
+// swiftlint:enable file_length

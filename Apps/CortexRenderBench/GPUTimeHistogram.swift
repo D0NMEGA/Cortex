@@ -83,6 +83,20 @@ struct GPUTimeStats {
   let meanMs: Double
 }
 
+/// One bench run: the device it ran on, the offscreen extent it ran at, and the percentile stats.
+///
+/// A named struct rather than a 4-member tuple return (SwiftLint `large_tuple` caps tuples at 2).
+/// All four members are load-bearing at the call site -- `main.swift` prints `deviceName` and
+/// `stats`, and passes `deviceName`/`width`/`height`/`stats` straight into `writeJSON`, which emits
+/// the committed `gpu_time_hist.json`. Member names are unchanged from the tuple labels, so every
+/// `.member` access at the call site is source-identical and no emitted key moves.
+struct GPUTimeRun {
+  let deviceName: String
+  let width: Int
+  let height: Int
+  let stats: GPUTimeStats
+}
+
 /// Errors building / running the GPU-time bench.
 enum GPUTimeBenchError: Error, CustomStringConvertible {
   case noDevice
@@ -133,7 +147,7 @@ enum GPUTimeHistogram {
   ///   - frames: number of MEASURED frames (≥10_000 per RENDER-05). Defaults applied by `main`.
   ///   - warmup: discarded warmup frames (pipeline + clock warmup, Phase-5 precedent).
   ///   - width/height: the representative offscreen drawable extent.
-  /// - Returns: the device name, the texture extent, and the percentile stats.
+  /// - Returns: a ``GPUTimeRun``: the device name, the texture extent, and the percentile stats.
   ///
   /// `@MainActor`: `WebgridFrameEncoder` is MainActor-isolated (CortexRender uses
   /// `.defaultIsolation(MainActor.self)`), so its `init` + `encode` must be called on the MainActor.
@@ -141,7 +155,7 @@ enum GPUTimeHistogram {
   @MainActor
   static func run(
     frames: Int, warmup: Int, width: Int, height: Int
-  ) throws -> (deviceName: String, width: Int, height: Int, stats: GPUTimeStats) {
+  ) throws -> GPUTimeRun {
     guard let device = MTLCreateSystemDefaultDevice() else { throw GPUTimeBenchError.noDevice }
     guard let queue = device.makeCommandQueue() else { throw GPUTimeBenchError.noCommandQueue }
 
@@ -160,7 +174,7 @@ enum GPUTimeHistogram {
     /// compute pass's GPU time in milliseconds (gpuEndTime - gpuStartTime, valid post-completion).
     func encodeAndTimeFrame(t: Double) throws -> Double {
       let (vx, vy) = producer.velocity(at: t)
-      let v = CursorVelocity(ts_ns: 0, seq: 0, vx: vx, vy: vy)
+      let v = CursorVelocity(tsNs: 0, seq: 0, vx: vx, vy: vy)
       let pos = integrator.integrate(latest: v, dt: dt)
       let params = WebgridParams.grid30x30(
         cursorX: pos.x, cursorY: pos.y,
@@ -193,7 +207,7 @@ enum GPUTimeHistogram {
     }
 
     let stats = percentiles(of: samples)
-    return (device.name, width, height, stats)
+    return GPUTimeRun(deviceName: device.name, width: width, height: height, stats: stats)
   }
 
   /// Reduce the per-frame millisecond samples to p50/p95/p99 + min/max/mean. Sorts a copy and
@@ -226,10 +240,14 @@ enum GPUTimeHistogram {
   /// Write `gpu_time_hist.json` (raw percentiles + n + device + texture extent) into `dir`. JSON is
   /// the load-bearing artifact; a histogram PNG is an optional nice-to-have (noted in the evidence
   /// doc) — the percentiles fully characterise the distribution against the ≤0.4ms bound.
-  static func writeJSON(
-    to dir: URL, deviceName: String, width: Int, height: Int, stats: GPUTimeStats,
-    iso8601Date: String
-  ) throws {
+  /// Takes the whole ``GPUTimeRun`` rather than its four members spread as arguments: the caller
+  /// already holds one, this mirrors `FrameSoak.writeJSON(to:result:iso8601Date:)` in the sibling
+  /// file, and it brings the signature from 6 parameters to 3. The emitted JSON is unchanged.
+  static func writeJSON(to dir: URL, run: GPUTimeRun, iso8601Date: String) throws {
+    let deviceName = run.deviceName
+    let width = run.width
+    let height = run.height
+    let stats = run.stats
     // Hand-built JSON (key order stable, no Foundation date encoding surprise) — small, auditable.
     let json = """
     {
