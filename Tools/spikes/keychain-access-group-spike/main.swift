@@ -23,7 +23,7 @@ import Darwin
 import Security
 
 // Team prefix of the ACTUAL local signing identity:
-//   "Apple Development: don.mega11@icloud.com (Y4A54395NZ)"  -> TEAM PREFIX Y4A54395NZ.
+//   "Apple Development: <apple-id redacted> (Y4A54395NZ)"  -> TEAM PREFIX Y4A54395NZ.
 // The plan/project memory assumed Team 57YW6M29S7, but the binary is signed under Y4A54395NZ,
 // so the runtime kSecAttrAccessGroup must use Y4A54395NZ. (spike.entitlements declares the group
 // via $(AppIdentifierPrefix), which codesign expands to this same literal team prefix.) Using the

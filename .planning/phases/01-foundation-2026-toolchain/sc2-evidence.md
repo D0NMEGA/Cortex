@@ -2,7 +2,7 @@
 
 **Date:** 2026-06-19
 **Machine:** Apple **M5 Pro**, macOS 26 (`arm64-apple-macosx26.0`), **Xcode 26.3 (17C529)**, Swift 6.2.4
-**Signing:** Personal Team `57YW6M29S7` (Donovan Santine) — cert `Apple Development: don.mega11@icloud.com (Y4A54395NZ)`, no paid enrollment
+**Signing:** Personal Team `57YW6M29S7` (Donovan Santine) — cert `Apple Development: <apple-id redacted> (Y4A54395NZ)`, no paid enrollment
 **Result:** ✅ **PASS**
 
 > **SC#2 (Phase 1 Success Criterion #2):** "App Group container is provisioned and an
@@ -122,7 +122,7 @@ Critical Finding #1).
 **CortexMac.app**
 ```
 Identifier=com.donovansantine.cortex.mac
-Authority=Apple Development: don.mega11@icloud.com (Y4A54395NZ)
+Authority=Apple Development: <apple-id redacted> (Y4A54395NZ)
 Authority=Apple Worldwide Developer Relations Certification Authority
 Authority=Apple Root CA
 TeamIdentifier=57YW6M29S7
@@ -134,7 +134,7 @@ Entitlements:
 **CortexDaemon** (standalone `mh_execute`)
 ```
 Identifier=CortexDaemon
-Authority=Apple Development: don.mega11@icloud.com (Y4A54395NZ)
+Authority=Apple Development: <apple-id redacted> (Y4A54395NZ)
 Authority=Apple Worldwide Developer Relations Certification Authority
 Authority=Apple Root CA
 TeamIdentifier=57YW6M29S7

@@ -24,7 +24,7 @@ codesign --force --sign <IDENTITY-SHA1> \
   `codesign --entitlements` does NOT expand the Xcode build variable `$(AppIdentifierPrefix)` (that
   substitution only happens during an Xcode build). Under an Xcode build the equivalent declaration is
   the access group string prefixed with `$(AppIdentifierPrefix)`. The signing identity is
-  `Apple Development: don.mega11@icloud.com (Y4A54395NZ)`, so the runtime `kSecAttrAccessGroup` in
+  `Apple Development: <apple-id redacted> (Y4A54395NZ)`, so the runtime `kSecAttrAccessGroup` in
   `main.swift` uses the same `Y4A54395NZ.` prefix.
 - **Free team caveat:** `Y4A54395NZ` is very likely a FREE/personal Apple team. Free teams generally
   cannot authorize the App Groups / keychain-access-groups capabilities, so a binary bearing the

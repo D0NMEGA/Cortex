@@ -607,7 +607,7 @@ type("development")  # development | adhoc | enterprise | appstore — Phase 8 s
 ```ruby
 # fastlane/Appfile
 # app_identifier "com.donovansantine.cortex.mac"  # Commented out — no team yet
-# apple_id "donovan.santine@utexas.edu"           # Commented out
+# apple_id "<apple-id redacted>"           # Commented out
 # team_id ""                                       # Populated in Phase 8
 ```
 

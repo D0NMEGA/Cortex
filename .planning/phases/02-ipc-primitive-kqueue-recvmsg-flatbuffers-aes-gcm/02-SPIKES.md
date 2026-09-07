@@ -4,7 +4,7 @@
 **Environment (verified live):**
 - `xcode-select -p` = `/Applications/Xcode-26.3.0.app/Contents/Developer` (Xcode 26.3, NOT CommandLineTools)
 - macOS 26.5 (Darwin 25, build 25F71); Swift 6.2.4; arch `arm64` (Apple Silicon M4)
-- Signing identity: `Apple Development: don.mega11@icloud.com (Y4A54395NZ)` — SHA-1 `10382498625EDD5F29A1518B95A522B39AD047F3`
+- Signing identity: `Apple Development: <apple-id redacted> (Y4A54395NZ)` — SHA-1 `10382498625EDD5F29A1518B95A522B39AD047F3`
 
 Both spikes were executed autonomously by the Plan 02-01 executor (the human-action precondition —
 "a human at a signing-capable dev machine must build+sign+run the spike; CI cannot sign" — is
@@ -13,7 +13,7 @@ codes below are REAL, captured from actual process runs.
 
 > **TEAM-PREFIX DISCREPANCY (must-record):** The plan and project memory (`cortex-build-with-real-xcode`)
 > assume **Team 57YW6M29S7**. The ACTUAL local signing identity is **Team Y4A54395NZ**
-> (`don.mega11@icloud.com`), which is almost certainly a **FREE / personal** Apple team. All spike
+> (`<apple-id redacted>`), which is almost certainly a **FREE / personal** Apple team. All spike
 > signing and the runtime `kSecAttrAccessGroup` use **Y4A54395NZ** so the CF#1 test is MEANINGFUL
 > (a hardcoded 57YW6M29S7 prefix would fail spuriously since the binary is signed under Y4A54395NZ).
 > When paid Apple Developer Program enrollment lands (Phase 8), reconcile the team prefix:
