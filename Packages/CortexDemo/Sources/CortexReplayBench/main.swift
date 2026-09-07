@@ -1,3 +1,9 @@
+// 617 code lines. A top-level `main.swift` bench driver: Swift only allows top-level statements in a
+// file with this name, so the run sequence cannot move to a sibling file, and the ten Codable report
+// shapes below carry the snake_case wire keys of `10-refit-real.json`, which is committed and read
+// back by Decoder/tests/test_real_replay_schema.py. Splitting the file for a length rule would put a
+// byte-identical artifact at risk for no behavioural gain (Phase 10 / D-18).
+// swiftlint:disable file_length
 // CortexReplayBench - the RD-07 four-arm ablation over REAL Indy spikes (Phase 10, Plan 10-05).
 //
 // ## What it is
@@ -306,6 +312,11 @@ let acquisition = WebgridAcquisition(
 )
 
 @MainActor
+// One arm of the four-arm ablation, start to finish: warm filter, warm integrator, the per-trial
+// replay loop, then the per-arm reduction. It is deliberately ONE function so all four arms
+// provably run identical code, and this file's JSON output is byte-diffed against a committed
+// artifact, so splitting it for a length rule trades a real risk for a style number.
+// swiftlint:disable:next function_body_length
 func runArm(_ arm: ReplayArm) -> ArmRun {
   // ONE warm filter carried across all trials, on the SHIPPED re-fit gain. This bench is where the
   // Plan 10-03 re-fit is exercised; the synthetic fixture runs on the frozen Phase-7 baseline (D-09).
@@ -699,7 +710,11 @@ let references = References(
   braingateDense9x9Bps: 4.16, // Pandarinath 2017 eLife 18554: T5 on a DENSE 9x9 grid, not the 6x6.
   braingate6x6T5Bps: 3.7,
   neuralinkP1CitedPeakBps: 8.5,
-  phase8SyntheticRefitBpsN900: 1.953047883714651,
+  // The label lives in this comment, not in the property name: before Plan 10-16 camelCased the
+  // field, `phase8_synthetic_refit_bps_n900` carried the lowercase token `synthetic` that
+  // honesty-sweep.sh's line-scoped label check reads, and `Synthetic` does not match it. Saying
+  // what the number is beats relying on an identifier's spelling to say it.
+  phase8SyntheticRefitBpsN900: 1.953047883714651, // synthetic Phase-8 seed-locked replay, superseded
   note: "4.16 is Pandarinath et al. 2017 (eLife 18554) measured with T5 on a DENSE 9x9 grid over 8 "
     + "evaluation blocks, NOT the 6x6 grid; the 6x6 figures in the same paper are T6 2.2, T5 3.7, "
     + "T7 1.4, so braingate_6x6_t5_bps is the like-for-like 6x6 number. 8.5 is the figure this repo "
@@ -832,3 +847,5 @@ print("  D-09: this bench compares nothing against any bar and exits 0 whatever 
 print("  wrote: \(outputURL.path)")
 
 exit(0)
+
+// swiftlint:enable file_length

@@ -240,10 +240,14 @@ enum GPUTimeHistogram {
   /// Write `gpu_time_hist.json` (raw percentiles + n + device + texture extent) into `dir`. JSON is
   /// the load-bearing artifact; a histogram PNG is an optional nice-to-have (noted in the evidence
   /// doc) — the percentiles fully characterise the distribution against the ≤0.4ms bound.
-  static func writeJSON(
-    to dir: URL, deviceName: String, width: Int, height: Int, stats: GPUTimeStats,
-    iso8601Date: String
-  ) throws {
+  /// Takes the whole ``GPUTimeRun`` rather than its four members spread as arguments: the caller
+  /// already holds one, this mirrors `FrameSoak.writeJSON(to:result:iso8601Date:)` in the sibling
+  /// file, and it brings the signature from 6 parameters to 3. The emitted JSON is unchanged.
+  static func writeJSON(to dir: URL, run: GPUTimeRun, iso8601Date: String) throws {
+    let deviceName = run.deviceName
+    let width = run.width
+    let height = run.height
+    let stats = run.stats
     // Hand-built JSON (key order stable, no Foundation date encoding surprise) — small, auditable.
     let json = """
     {

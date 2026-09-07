@@ -1,3 +1,7 @@
+// 587 code lines. Same reasoning as CortexReplayBench/main.swift: a top-level `main.swift` whose run
+// sequence cannot move to a sibling file, emitting a committed artifact whose 31 snake_case keys are
+// asserted elsewhere (Phase 10 / D-18).
+// swiftlint:disable file_length
 // CortexSeamBSmoke - the RD-08 Seam B chain smoke (Phase 10, Plan 10-06).
 //
 // ## What Seam B is, verbatim from 10-PREREGISTRATION section 9
@@ -810,3 +814,5 @@ print("  no pass/fail field; a clean run exits 0 whatever the counters are.")
 print("  wrote: \(outputURL.path)")
 
 exit(0)
+
+// swiftlint:enable file_length

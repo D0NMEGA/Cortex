@@ -1,3 +1,8 @@
+// 430 code lines, 30 over. A top-level `main.swift`, and the one whose `--smoke` output is
+// byte-diffed against the committed refit_bps.json (ci.yml) and webgrid_bps.json
+// (Tools/scripts/bps-policy.sh). Splitting it for a length rule is exactly the trade this plan is
+// instructed not to make (Phase 10 / D-18).
+// swiftlint:disable file_length
 // CortexReFITBench — the headless deterministic 3-way ablation BPS harness + the SC#3 filter-step
 // tail-latency bench (Plan 07-03, D-07/D-11/D-12, SC#3). Mirrors CortexDecoderBench's pattern.
 //
@@ -239,7 +244,13 @@ struct ArmResult {
 /// its movement time and its last (scattered) position as the endpoint, which is the honest S&M penalty
 /// for a missed target (long MT + wide endpoint scatter -> low throughput) AND is NOT counted as a
 /// Webgrid HIT (Sc). The SAME `acquisition.runTrial` result drives both metrics on the identical replay.
-func simulateReach(
+///
+/// Six genuinely independent inputs: which arm, which reach and its index, the seed, plus the two
+/// pieces of loop-carried state (the warm filter, carried across reaches by the caller, and the
+/// acquisition config). Bundling them into a struct would group values that have no relationship
+/// beyond being arguments here, in a file whose JSON output is byte-diffed against a committed
+/// artifact.
+func simulateReach( // swiftlint:disable:this function_parameter_count
   _ arm: Arm,
   reach: Reach,
   reachIndex: Int,
@@ -682,3 +693,5 @@ if isLatency {
 }
 
 exit(0)
+
+// swiftlint:enable file_length
