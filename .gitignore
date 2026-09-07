@@ -112,3 +112,6 @@ Decoder/.ruff_cache/
 # The harness's own top-level directory is additionally ignored in .git/info/exclude, which is
 # local and uncommitted.
 .*/worktrees/
+
+# Demo capture output. The .mov is large and the .gif is committed deliberately under docs/media/.
+Tools/capture/out/

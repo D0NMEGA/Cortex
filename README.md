@@ -12,7 +12,7 @@ stated with numbers below rather than deferred to a footnote.
 
 | | state |
 |---|---|
-| Offline velocity decoding from real M1 spikes | Works. Pooled held-out R2 **0.4238**. |
+| Offline velocity decoding from real M1 spikes | Works. Pooled held-out R2 **0.4238**, beaten by a linear baseline at **0.4616**. |
 | Within-session generalization | Weak. Held-out R2 **0.1446** on the locked session. |
 | Across-session transfer | Fails. Leave-one-session-out co-bps **-0.3498**, below a mean-rate null. |
 | Closed-loop target acquisition, decode-only | **0 of 1,025** acquisitions. |
@@ -38,6 +38,28 @@ fp16 velocity checkpoint is `9d542cb51d4a`.
 
 The co-bps figure masks random bin/channel entries. The Neural Latents Benchmark withholds whole
 neurons at evaluation, so this number is **not** NLB-comparable and is not offered as one.
+
+**Against a matched linear baseline, the encoder does not win.** A causal ridge decoder on raw binned
+spike counts, fit and scored through the same split, the same 20 ms lag, the same rows and the same
+train-mean null, reaches a higher held-out R2 than the 1.3M-parameter NDT1 encoder:
+
+| decoder | history | pooled held-out R2 |
+|---|---|---|
+| ridge on raw spikes | 20 ms | 0.1280 |
+| ridge on raw spikes | 80 ms | 0.2795 |
+| ridge on raw spikes | 320 ms | 0.4428 |
+| **ridge on raw spikes** | **640 ms (the encoder's own window)** | **0.4616** |
+| **NDT1 encoder + ridge readout** | 640 ms | **0.4238** |
+
+Both are scored on the identical 56,943 held-out rows. The baseline also leads on every session
+individually, including the locked one (0.1832 against 0.1446). The baseline's ridge penalty is
+chosen by a weaker rule than the encoder's, which makes its score a lower bound rather than a
+flattering one.
+
+So on this dataset, under this protocol, the transformer is not earning its parameters. That is a
+finding about this setup, not a general claim about NDT1: a stronger result would need better
+generalization across sessions, which is exactly where this decoder currently fails.
+Reproduce with `uv run --project Decoder python Decoder/scripts/fit_baseline_decoders.py`.
 
 **Closed-loop replay.** This is an `open-loop replay` of a recorded session: the animal was not in the
 loop, and recorded spikes cannot respond to the decoded cursor. Four arms over 1,025 trials:
@@ -172,8 +194,10 @@ synthetic; a number measured on a Mac is never presented as an iPad number.
 - No live human or animal is in the loop. Every result is replay of a recorded session.
 - Physical end-to-end latency is unmeasured. Present timing is modelled, not read from the display link.
 - The decoder does not transfer across sessions (negative leave-one-session-out co-bps).
-- There is no matched simple baseline yet, so the NDT1 decoder's value over a causal Wiener or fitted
-  Kalman decoder on identical splits is **unknown**. This is the most important missing comparison.
+- A matched linear baseline now exists and **beats** the encoder (see above). A fitted Kalman decoder
+  on the same splits has not been run yet.
+- The baseline's ridge penalty is selected by in-sample train R2, which always picks the smallest
+  value in the grid. That makes its reported score a lower bound, not a tuned optimum.
 - On-device iPad and iPhone measurements are not yet collected.
 - The training readout pairs a spike window with the velocity one 20 ms bin later; the replay path
   associates the decode with the window's own last bin. That inconsistency is not yet resolved.
