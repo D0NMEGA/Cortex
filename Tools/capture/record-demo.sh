@@ -10,6 +10,7 @@
 #   Tools/capture/record-demo.sh                 # build, launch, record, encode
 #   Tools/capture/record-demo.sh --seconds 25    # longer capture
 #   Tools/capture/record-demo.sh --no-build      # reuse the existing build
+#   Tools/capture/record-demo.sh --decoder ndt1  # the transformer arm instead of the default ridge
 #
 # One-time setup, and the script checks it for you: recording and window placement both need
 # permission. Grant your terminal both of these in System Settings > Privacy & Security:
@@ -38,6 +39,10 @@ GIF_WIDTH=900       # final GIF width in px
 FPS=12              # 12 is plenty for a cursor demo and roughly halves the size versus 24
 SECONDS_TO_RECORD=20
 DO_BUILD=1
+# The decoder the capture runs. `ridge` is the app's own default and the one that wins the matched
+# held-out R2 comparison; its weights ship in the bundle, so it needs no checkpoint file. `ndt1`
+# additionally requires the .mlpackage below.
+DECODER=ridge
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -45,6 +50,10 @@ while [[ $# -gt 0 ]]; do
     --fps) FPS="$2"; shift 2 ;;
     --width) GIF_WIDTH="$2"; shift 2 ;;
     --no-build) DO_BUILD=0; shift ;;
+    --decoder)
+      DECODER="$2"
+      [[ "$DECODER" == "ridge" || "$DECODER" == "ndt1" ]] || { echo "--decoder takes ridge or ndt1" >&2; exit 2; }
+      shift 2 ;;
     -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
     *) echo "unknown flag: $1" >&2; exit 2 ;;
   esac
@@ -71,7 +80,11 @@ EXPORT_HELP="Run: uv run --project Decoder python Decoder/scripts/download_indy.
 # gitignored and materialized separately, so check the one that actually carries the data.
 EXPORT_BIN="${EXPORT_JSON%.json}.bin"
 [[ -f "$EXPORT_BIN" ]] || die "missing $EXPORT_BIN (the json is only its manifest). $EXPORT_HELP"
-[[ -d "$MODEL" ]] || die "missing $MODEL"
+# Only the transformer arm needs a checkpoint. Demanding one for a ridge capture would block a run
+# that has everything it needs, and would imply the linear decoder came from a file it did not.
+if [[ "$DECODER" == "ndt1" ]]; then
+  [[ -d "$MODEL" ]] || die "missing $MODEL, which --decoder ndt1 requires"
+fi
 
 # --- Build ---------------------------------------------------------------------------------------
 # CODE_SIGN_ENTITLEMENTS is overridden to the capture entitlements: the BCI HID virtual-device
@@ -126,10 +139,12 @@ fi
 # --- Launch, then frame the window ---------------------------------------------------------------
 pkill -x CortexMac 2>/dev/null || true
 
-log "launching with the real replay export"
-CORTEX_REPLAY_EXPORT="$EXPORT_JSON" \
-CORTEX_MODEL_URL="$MODEL" \
-  open -n "$APP"
+log "launching with the real replay export, decoder=$DECODER"
+if [[ "$DECODER" == "ndt1" ]]; then
+  CORTEX_REPLAY_EXPORT="$EXPORT_JSON" CORTEX_DECODER=ndt1 CORTEX_MODEL_URL="$MODEL" open -n "$APP"
+else
+  CORTEX_REPLAY_EXPORT="$EXPORT_JSON" CORTEX_DECODER=ridge open -n "$APP"
+fi
 
 # Wait for the window to exist before touching it. Polling beats a fixed sleep: a cold first launch
 # can take several seconds while CoreML compiles the model.
