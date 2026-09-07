@@ -45,13 +45,16 @@ struct GlassToGlassTimerTests {
   func methodologyLabelEmbedsVerbatimD07Phrases() {
     let label = GlassToGlassTimer.methodologyLabel
     // The three load-bearing phrases the D-07 honesty discipline requires (gate-checkable).
-    #expect(label.contains("software-timed pipeline latency"), "label names the software-timed measurement")
+    // readme-policy.sh:136 requires this prefix byte-identical.
+    #expect(label.hasPrefix("software-timed pipeline latency"), "label must start with the readme-policy.sh:136 required prefix")
     #expect(label.contains("excludes the compositor"), "label discloses the compositor scanout is excluded")
-    #expect(label.contains("photodiode"), "label points at the v1 photodiode rig that quantifies the delta")
+    #expect(label.contains("photodiode"), "label names the photodiode rig that would measure the delta")
+    #expect(label.contains("retired to Future work"), "label records that the photodiode rig is retired (LAT-01..LAT-08)")
+    #expect(!label.contains("Phases 9-10"), "retired phase reference must not appear in the label (RD-09 sweep)")
     // The full verbatim string (the exact D-07 label — no paraphrase drift).
     #expect(
-      label == "software-timed pipeline latency — excludes the compositor's 1-3 frames of scanout, "
-        + "which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies",
+      label == "software-timed pipeline latency - excludes the compositor's 1-3 frames of scanout; "
+        + "measuring that delta needs a photodiode rig, which is retired to Future work (LAT-01..LAT-08) and was never built",
       "the methodology label is the verbatim D-07 string"
     )
   }
