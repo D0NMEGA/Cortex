@@ -29,16 +29,16 @@ public struct DoorbellPair: Sendable {
 /// The result of waiting on the doorbell.
 public enum WakeResult: Sendable, Equatable {
   case woke(seq: UInt64) // a notification arrived; payload is the producer's seq
-  case timeout       // the wait deadline elapsed with no notification
-  case peerClosed    // the producer end closed (EV_EOF / recv returned 0) — fail-closed signal
+  case timeout // the wait deadline elapsed with no notification
+  case peerClosed // the producer end closed (EV_EOF / recv returned 0) — fail-closed signal
 }
 
 /// Errors from doorbell setup (Swift 6 typed throws).
 public enum DoorbellError: Error, Equatable {
   case socketpair(Int32) // socketpair() failed; payload = errno
-  case sockopt(Int32)    // fcntl/setsockopt hardening failed; payload = errno
-  case kqueue(Int32)     // kqueue() failed; payload = errno
-  case kevent(Int32)     // kevent() registration failed; payload = errno
+  case sockopt(Int32) // fcntl/setsockopt hardening failed; payload = errno
+  case kqueue(Int32) // kqueue() failed; payload = errno
+  case kevent(Int32) // kevent() registration failed; payload = errno
 }
 
 /// The socketpair+kqueue doorbell. Owns the two socket fds and (after `arm`) a kqueue fd; `close`
@@ -60,14 +60,15 @@ public final class Doorbell {
     let rc = socketpair(AF_UNIX, SOCK_STREAM, 0, &fds)
     if rc != 0 { throw .socketpair(errno) }
 
-    self.producerFD = fds[0]
-    self.consumerFD = fds[1]
+    producerFD = fds[0]
+    consumerFD = fds[1]
 
     do {
       try Doorbell.harden(fds[0])
       try Doorbell.harden(fds[1])
     } catch {
-      Darwin.close(fds[0]); Darwin.close(fds[1])
+      Darwin.close(fds[0])
+      Darwin.close(fds[1])
       throw error
     }
   }
@@ -89,19 +90,25 @@ public final class Doorbell {
 
   /// Release all fds (idempotent).
   public func close() {
-    if kq >= 0 { Darwin.close(kq); kq = -1 }
+    if kq >= 0 { Darwin.close(kq)
+      kq = -1
+    }
     closeProducer()
     closeConsumer()
   }
 
   /// Close only the producer end (used by tests to simulate a dead peer; idempotent).
   public func closeProducer() {
-    if producerFD >= 0 { Darwin.close(producerFD); producerFD = -1 }
+    if producerFD >= 0 { Darwin.close(producerFD)
+      producerFD = -1
+    }
   }
 
   /// Close only the consumer end (idempotent).
   public func closeConsumer() {
-    if consumerFD >= 0 { Darwin.close(consumerFD); consumerFD = -1 }
+    if consumerFD >= 0 { Darwin.close(consumerFD)
+      consumerFD = -1
+    }
   }
 
   // MARK: - Producer
@@ -141,7 +148,7 @@ public final class Doorbell {
       Darwin.close(q)
       throw .kevent(e)
     }
-    self.kq = q
+    kq = q
   }
 
   /// Block until a notification arrives, the deadline elapses, or the peer closes. On a read-ready
@@ -160,11 +167,11 @@ public final class Doorbell {
       n = kevent(kq, nil, 0, &out, 1, nil)
     }
 
-    if n < 0 { return .timeout }   // interrupted/failed — treat as a non-wake (caller may retry)
-    if n == 0 { return .timeout }  // deadline elapsed, no event
+    if n < 0 { return .timeout } // interrupted/failed — treat as a non-wake (caller may retry)
+    if n == 0 { return .timeout } // deadline elapsed, no event
 
     // EV_EOF means the producer end closed (fail-closed signal, T-02-02-05 path).
-    if (out.flags & UInt16(EV_EOF)) != 0 && out.data == 0 {
+    if (out.flags & UInt16(EV_EOF)) != 0, out.data == 0 {
       return .peerClosed
     }
 
@@ -178,7 +185,7 @@ public final class Doorbell {
         msg.msg_namelen = 0
         msg.msg_iov = iovp
         msg.msg_iovlen = 1
-        msg.msg_control = nil   // explicitly NO control buffer => no rights-transfer path here (SC#2)
+        msg.msg_control = nil // explicitly NO control buffer => no rights-transfer path here (SC#2)
         msg.msg_controllen = 0
         msg.msg_flags = 0
         return recvmsg(consumerFD, &msg, 0)
@@ -186,7 +193,7 @@ public final class Doorbell {
     }
 
     if got == 0 { return .peerClosed } // orderly shutdown
-    if got < 0 { return .timeout }     // EAGAIN/EINTR on a spurious wake — treat as non-wake
+    if got < 0 { return .timeout } // EAGAIN/EINTR on a spurious wake — treat as non-wake
     return .woke(seq: seq)
   }
 }

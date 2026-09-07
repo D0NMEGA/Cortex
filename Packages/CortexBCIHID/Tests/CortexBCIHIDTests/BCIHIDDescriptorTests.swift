@@ -1,3 +1,5 @@
+@testable import CortexBCIHID
+
 // BCIHIDDescriptorTests — Phase 8 (SYS-05): the ported Apple BCI HID report descriptor byte array
 // and the high-level button-action enum. Source of truth:
 //   developer.apple.com/documentation/accessibility/brain-computer-interface-hid-reference-for-connecting-to-apple-platforms
@@ -7,19 +9,17 @@
 // (hid-surface-policy.sh) asserts these same bytes, so a silent regression is caught two ways.
 import Testing
 
-@testable import CortexBCIHID
-
 @Suite("BCIHIDDescriptorTests")
 struct BCIHIDDescriptorTests {
-  // Test 4 — BCIHIDDescriptor.bytes begins with the documented header and is a non-empty [UInt8].
-  // NOTE: the canonical Apple BCIDescriptor[] REPEATS the Usage Page (0x05, 0x60) immediately before
-  // the Signal-Quality usage (0x09, 0x02) — i.e. the verified first 12 bytes are
-  // [0x05,0x60, 0x09,0x01, 0xA1,0x01, 0x05,0x60, 0x09,0x02, 0x85,0x01]. The 08-PLAN header literal
-  // collapsed that repeat; we port Apple's bytes verbatim (the honest source-of-truth) and assert
-  // BOTH load-bearing tokens: the application header (Usage Page + Usage + Collection) and the
-  // documented Signal-Quality usage + Report ID 1. hid-surface-policy.sh asserts the 0x05,0x60 pair.
-  @Test("Descriptor begins with the documented Apple BCI HID header and is non-empty")
-  func descriptorHeader() {
+  /// Test 4 — BCIHIDDescriptor.bytes begins with the documented header and is a non-empty [UInt8].
+  /// NOTE: the canonical Apple BCIDescriptor[] REPEATS the Usage Page (0x05, 0x60) immediately before
+  /// the Signal-Quality usage (0x09, 0x02) — i.e. the verified first 12 bytes are
+  /// [0x05,0x60, 0x09,0x01, 0xA1,0x01, 0x05,0x60, 0x09,0x02, 0x85,0x01]. The 08-PLAN header literal
+  /// collapsed that repeat; we port Apple's bytes verbatim (the honest source-of-truth) and assert
+  /// BOTH load-bearing tokens: the application header (Usage Page + Usage + Collection) and the
+  /// documented Signal-Quality usage + Report ID 1. hid-surface-policy.sh asserts the 0x05,0x60 pair.
+  @Test
+  func `Descriptor begins with the documented Apple BCI HID header and is non-empty`() {
     // The verbatim canonical header, including the repeated Usage Page before Signal Quality.
     let canonicalHeader: [UInt8] = [
       0x05, 0x60, // Usage Page (Brain Control Interface)
@@ -27,7 +27,7 @@ struct BCIHIDDescriptorTests {
       0xA1, 0x01, // Collection (Application)
       0x05, 0x60, // Usage Page (Brain Control Interface) — repeated per Apple's descriptor
       0x09, 0x02, // Usage 2 (Signal Quality)
-      0x85, 0x01, // Report ID (1)
+      0x85, 0x01 // Report ID (1)
     ]
     #expect(!BCIHIDDescriptor.bytes.isEmpty)
     #expect(BCIHIDDescriptor.bytes.count >= canonicalHeader.count)
@@ -37,8 +37,8 @@ struct BCIHIDDescriptorTests {
     #expect(BCIHIDDescriptor.bytes.contains(0x85)) // a Report ID main item is present
   }
 
-  @Test("Descriptor exposes the Usage Page and Usage byte pairs")
-  func descriptorUsageConstants() {
+  @Test
+  func `Descriptor exposes the Usage Page and Usage byte pairs`() {
     #expect(BCIHIDDescriptor.usagePage == [0x05, 0x60]) // Usage Page (Brain Control Interface)
     #expect(BCIHIDDescriptor.usage == [0x09, 0x01]) // Usage 1 (BCI Application)
     // The Usage Page / Usage pairs lead the descriptor.
@@ -46,8 +46,8 @@ struct BCIHIDDescriptorTests {
     #expect(Array(BCIHIDDescriptor.bytes[2 ..< 4]) == BCIHIDDescriptor.usage)
   }
 
-  @Test("Descriptor declares all five report IDs (0x85 0x01..0x04, with RID4 shared)")
-  func descriptorDeclaresReportIDs() {
+  @Test
+  func `Descriptor declares all five report IDs (0x85 0x01..0x04, with RID4 shared)`() {
     // Each report-ID main item is the byte pair 0x85, <id>. The descriptor declares report IDs
     // 1 (signal), 2 (button), 3 (pointer), and 4 (item-selection input + scan-info output share 4).
     let bytes = BCIHIDDescriptor.bytes
@@ -60,15 +60,15 @@ struct BCIHIDDescriptorTests {
     #expect(declaresReportID(0x04))
   }
 
-  // Test 5 — BCIHIDButtonAction enum has exactly the 22 documented cases and the canonical actions
-  // exist with stable rawValues.
-  @Test("BCIHIDButtonAction has exactly 22 documented cases")
-  func buttonActionCount() {
+  /// Test 5 — BCIHIDButtonAction enum has exactly the 22 documented cases and the canonical actions
+  /// exist with stable rawValues.
+  @Test
+  func `BCIHIDButtonAction has exactly 22 documented cases`() {
     #expect(BCIHIDButtonAction.allCases.count == 22)
   }
 
-  @Test("BCIHIDButtonAction canonical cases exist with stable rawValues")
-  func buttonActionCanonicalCases() {
+  @Test
+  func `BCIHIDButtonAction canonical cases exist with stable rawValues`() {
     // The descriptor comment fixes the default button map: 0=select, 1=next, 2=previous, 3=menu.
     #expect(BCIHIDButtonAction.select.rawValue == 0)
     #expect(BCIHIDButtonAction.moveToNextItem.rawValue == 1)

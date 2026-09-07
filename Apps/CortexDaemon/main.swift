@@ -15,10 +15,10 @@
 // (T-02-04-06). The full daemon xcodebuild (this file + Producer.swift) is Plan 02-05's CI job; the
 // SwiftPM package build does not compile this Xcode target.
 
-import Foundation
 import CortexCore
-import CortexIPCTransport
 import CortexIPCSession
+import CortexIPCTransport
+import Foundation
 
 let mode = CommandLine.arguments.dropFirst().first ?? "produce"
 NSLog("Cortex daemon (Phase 2). mode=%@. App Group: %@.", mode, CortexCore.AppGroup.identifier)
@@ -34,7 +34,7 @@ do {
     // numbers are meaningful ONLY on M4 (D-18); CI may smoke this for completion but never asserts it.
     let args = Array(CommandLine.arguments.dropFirst())
     let frames = (args.count > 1 ? Int(args[1]) : nil) ?? 200_000
-    let warmup = (args.count > 2 ? Int(args[2]) : nil) ?? 1_000
+    let warmup = (args.count > 2 ? Int(args[2]) : nil) ?? 1000
     let outPath = args.count > 3 ? args[3] : "sc1-histogram.txt"
     NSLog("Cortex daemon bench: frames=%d warmup=%d out=%@", frames, warmup, outPath)
     let result = Benchmark.runRoundTrip(frames: frames, warmup: warmup)
@@ -54,7 +54,7 @@ do {
     // resolves the SAME env seam the producer's `isReplayBacked` / `replaySessionId` report, but
     // side-effect-free, so it cannot collide with the ring and Keychain entry runParent's producer
     // creates. It throws on a set-but-unloadable export, so the banner states a fact, not an intent.
-    NSLog("Cortex daemon payload source: %@", try Producer.configuredPayloadSourceDescription())
+    try NSLog("Cortex daemon payload source: %@", Producer.configuredPayloadSourceDescription())
 
     // Parent path: prepare rendezvous, posix_spawn self with "consume", hand off, produce, reap child.
     let status = try Harness.runParent(frameCount: 1000)

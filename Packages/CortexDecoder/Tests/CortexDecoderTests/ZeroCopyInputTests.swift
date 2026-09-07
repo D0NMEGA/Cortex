@@ -11,10 +11,9 @@
 // Guarded on `MTLCreateSystemDefaultDevice()`: CI macos-15 runners have a Metal device, but the
 // suite skips cleanly (returns) if one is absent rather than crashing.
 import CoreVideo
+@testable import CortexDecoder
 import Metal
 import Testing
-
-@testable import CortexDecoder
 
 @Suite("DEC-09: zero-copy spike input over a shared IOSurface")
 @MainActor
@@ -29,9 +28,9 @@ struct ZeroCopyInputTests {
     return try SpikeInputBuffer(device: device, seqLen: Self.seqLen, channels: Self.channels)
   }
 
-  @Test("MTLBuffer and CVPixelBuffer share one allocation (write via Metal, read via CV base)")
-  func sharedAllocationIsVisibleAcrossBackings() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `MTLBuffer and CVPixelBuffer share one allocation (write via Metal, read via CV base)`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
 
     // Write a sentinel directly through the MTLBuffer.contents() pointer at (channel 0, bin 0).
     let metalPtr = buf.metalBuffer.contents()
@@ -48,9 +47,9 @@ struct ZeroCopyInputTests {
     #expect(metalPtr == buf.baseAddress)
   }
 
-  @Test("MLMultiArray(pixelBuffer:).dataPointer == surface base address (no host copy)")
-  func multiArrayPointsAtSharedSurface() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `MLMultiArray(pixelBuffer:).dataPointer == surface base address (no host copy)`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
 
     let array = try buf.makeMultiArray()
 
@@ -66,22 +65,24 @@ struct ZeroCopyInputTests {
     #expect(array.dataType == .float16)
   }
 
-  @Test("round-trip a known fp16 pattern: write via MTLBuffer, read back via MLMultiArray")
-  func roundTripPatternThroughMultiArray() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `round-trip a known fp16 pattern: write via MTLBuffer, read back via MLMultiArray`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
 
     // Write a distinct value to a diagonal of (channel, bin) cells through the typed write helper
     // (which respects bytesPerRow padding, Risk #3).
     let probes: [(ch: Int, bin: Int, val: Float16)] = [
-      (0, 0, 1.0), (1, 2, 2.5), (5, 7, -3.25), (Self.channels - 1, Self.seqLen - 1, 7.5),
+      (0, 0, 1.0), (1, 2, 2.5), (5, 7, -3.25), (Self.channels - 1, Self.seqLen - 1, 7.5)
     ]
-    for p in probes { try buf.write(p.val, channel: p.ch, bin: p.bin) }
+    for p in probes {
+      try buf.write(p.val, channel: p.ch, bin: p.bin)
+    }
 
     // Read back through the MLMultiArray using its own strides (it shares the surface, so the
     // padded row stride is reflected in array.strides — element [ch, bin] resolves correctly).
     let array = try buf.makeMultiArray()
     let base = array.dataPointer.assumingMemoryBound(to: Float16.self)
-    let rowStride = array.strides[0].intValue  // elements per row (accounts for bytesPerRow padding)
+    let rowStride = array.strides[0].intValue // elements per row (accounts for bytesPerRow padding)
     let colStride = array.strides[1].intValue
     for p in probes {
       let element = base[p.ch * rowStride + p.bin * colStride]
@@ -89,15 +90,15 @@ struct ZeroCopyInputTests {
     }
   }
 
-  @Test("bytesPerRow is at least the unpadded fp16 row width (Risk #3 surfaced)")
-  func bytesPerRowAccountsForPadding() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `bytesPerRow is at least the unpadded fp16 row width (Risk #3 surfaced)`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
     #expect(buf.bytesPerRow >= Self.seqLen * MemoryLayout<Float16>.stride)
   }
 
-  @Test("rank-4 model-input view: (1,C,1,S) shape, same surface pointer (no host copy)")
-  func modelInputMultiArrayIsRank4AndZeroCopy() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `rank-4 model-input view: (1,C,1,S) shape, same surface pointer (no host copy)`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
 
     let array = try buf.makeModelInputMultiArray()
 
@@ -108,14 +109,16 @@ struct ZeroCopyInputTests {
     #expect(array.dataPointer == buf.baseAddress)
   }
 
-  @Test("rank-4 view round-trips a known fp16 pattern via its (1,C,1,S) strides")
-  func modelInputMultiArrayRoundTripsPattern() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `rank-4 view round-trips a known fp16 pattern via its (1,C,1,S) strides`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
 
     let probes: [(ch: Int, bin: Int, val: Float16)] = [
-      (0, 0, 1.0), (3, 1, 4.5), (Self.channels - 1, Self.seqLen - 1, -2.5),
+      (0, 0, 1.0), (3, 1, 4.5), (Self.channels - 1, Self.seqLen - 1, -2.5)
     ]
-    for p in probes { try buf.write(p.val, channel: p.ch, bin: p.bin) }
+    for p in probes {
+      try buf.write(p.val, channel: p.ch, bin: p.bin)
+    }
 
     // Read back through the rank-4 view's own strides: index [0, ch, 0, bin] resolves via
     // strides[channel] (padded row) + strides[time] (contiguous). Proves the rank-4 view addresses
@@ -130,9 +133,9 @@ struct ZeroCopyInputTests {
     }
   }
 
-  @Test("out-of-range write fails closed (no force-unwrap crash)")
-  func writeOutOfRangeThrows() throws {
-    guard let buf = try makeBuffer() else { return }  // no Metal device — skip cleanly
+  @Test
+  func `out-of-range write fails closed (no force-unwrap crash)`() throws {
+    guard let buf = try makeBuffer() else { return } // no Metal device — skip cleanly
     #expect(throws: ZeroCopyInputError.self) {
       try buf.write(1.0, channel: Self.channels, bin: 0)
     }

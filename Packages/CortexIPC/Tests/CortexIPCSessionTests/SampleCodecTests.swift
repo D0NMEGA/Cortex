@@ -1,21 +1,20 @@
+@testable import CortexIPCSession
+import FlatBuffers
+
 // SampleCodecTests — IPC-04. Proves the FlatBuffers Sample codec round-trips bit-exact, exposes a
 // zero-copy [ubyte]<->Float16 view (D-10), enforces the channel_data.count == CORTEX_CHANNEL_COUNT*2
 // half-pair invariant on BOTH encode and decode, and rejects garbage buffers via getCheckedRoot.
 import Testing
-import FlatBuffers
-
-@testable import CortexIPCSession
 
 @Suite("SampleCodec (IPC-04)")
 struct SampleCodecTests {
-
   /// Deterministic Float16 payload of exactly `cortexChannelCount` distinct values.
   private static func makeChannels() -> [Float16] {
-    (0..<cortexChannelCount).map { Float16($0) - 32.0 }  // mix of negatives + positives
+    (0 ..< cortexChannelCount).map { Float16($0) - 32.0 } // mix of negatives + positives
   }
 
-  @Test("ts_ns, seq, and the Float16 channel array round-trip bit-exact")
-  func roundTripBitExact() throws {
+  @Test
+  func `ts_ns, seq, and the Float16 channel array round-trip bit-exact`() throws {
     let channels = Self.makeChannels()
     let tsNs: UInt64 = 1_234_567_890_123
     let seq: UInt64 = 0xDEAD_BEEF_0000_0042
@@ -29,14 +28,14 @@ struct SampleCodecTests {
     // Bit-exact comparison via the raw bit patterns (avoids NaN/-0.0 equality pitfalls).
     decoded.withChannelF16 { view in
       #expect(view.count == cortexChannelCount)
-      for i in 0..<cortexChannelCount {
+      for i in 0 ..< cortexChannelCount {
         #expect(view[i].bitPattern == channels[i].bitPattern)
       }
     }
   }
 
-  @Test("decode exposes channel_data as a zero-copy Float16 view of count == CORTEX_CHANNEL_COUNT")
-  func zeroCopyFloat16View() throws {
+  @Test
+  func `decode exposes channel_data as a zero-copy Float16 view of count == CORTEX_CHANNEL_COUNT`() throws {
     let channels = Self.makeChannels()
     let bytes = try SampleCodec.encode(tsNs: 7, seq: 9, channels: channels)
     let decoded = try SampleCodec.decode(bytes)
@@ -50,8 +49,8 @@ struct SampleCodecTests {
     #expect(count == cortexChannelCount)
   }
 
-  @Test("encode rejects channel_data whose element count != CORTEX_CHANNEL_COUNT (half-pair invariant, D-10)")
-  func encodeRejectsWrongCount() throws {
+  @Test
+  func `encode rejects channel_data whose element count != CORTEX_CHANNEL_COUNT (half-pair invariant, D-10)`() throws {
     let tooFew = [Float16](repeating: 1.0, count: cortexChannelCount - 1)
     #expect(throws: SampleCodecError.badChannelCount(cortexChannelCount - 1)) {
       _ = try SampleCodec.encode(tsNs: 0, seq: 0, channels: tooFew)
@@ -62,8 +61,8 @@ struct SampleCodecTests {
     }
   }
 
-  @Test("decode rejects a Sample whose channel_data byte length != CORTEX_CHANNEL_COUNT*2 (fail-closed)")
-  func decodeRejectsWrongByteLength() throws {
+  @Test
+  func `decode rejects a Sample whose channel_data byte length != CORTEX_CHANNEL_COUNT*2 (fail-closed)`() throws {
     // Hand-build a well-formed Sample with a too-short channel_data vector (verifier passes, but the
     // half-pair invariant must still reject it on decode).
     var builder = FlatBufferBuilder(initialSize: 64)
@@ -77,8 +76,8 @@ struct SampleCodecTests {
     }
   }
 
-  @Test("decode rejects a truncated/garbage buffer via the FlatBuffers verifier (getCheckedRoot)")
-  func decodeRejectsGarbage() throws {
+  @Test
+  func `decode rejects a truncated/garbage buffer via the FlatBuffers verifier (getCheckedRoot)`() throws {
     // First build a valid frame, then truncate it so the verifier's offsets run past the end.
     let valid = try SampleCodec.encode(tsNs: 1, seq: 1, channels: Self.makeChannels())
     let truncated = Array(valid.prefix(valid.count / 2))

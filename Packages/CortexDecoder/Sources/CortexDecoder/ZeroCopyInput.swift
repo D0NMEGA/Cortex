@@ -63,7 +63,9 @@ public final class SpikeInputBuffer {
   /// Base address of the shared surface — the single physical home of the spike bytes. The
   /// `MLMultiArray.dataPointer`, `metalBuffer.contents()`, and `CVPixelBufferGetBaseAddress`
   /// all resolve to this address (the pointer-identity proof, DEC-09).
-  public var baseAddress: UnsafeMutableRawPointer { IOSurfaceGetBaseAddress(surface) }
+  public var baseAddress: UnsafeMutableRawPointer {
+    IOSurfaceGetBaseAddress(surface)
+  }
 
   /// Creates the shared surface + buffers.
   /// - Parameters:
@@ -95,8 +97,8 @@ public final class SpikeInputBuffer {
     guard let surfaceRef = CVPixelBufferGetIOSurface(pixelBuffer)?.takeUnretainedValue() else {
       throw .missingIOSurface
     }
-    self.surface = surfaceRef
-    self.bytesPerRow = IOSurfaceGetBytesPerRow(surfaceRef)
+    surface = surfaceRef
+    bytesPerRow = IOSurfaceGetBytesPerRow(surfaceRef)
 
     // 3. MTLBuffer over the SAME surface base address — storageModeShared, bytesNoCopy. On unified
     //    memory this shares ONE allocation with the CVPixelBuffer (no copy). The IOSurface base
@@ -112,7 +114,7 @@ public final class SpikeInputBuffer {
     ) else {
       throw .sharedBufferCreateFailed
     }
-    self.metalBuffer = buffer
+    metalBuffer = buffer
   }
 
   /// Wraps the shared surface as a rank-2 `MLMultiArray` with NO host copy — the documented
@@ -148,7 +150,7 @@ public final class SpikeInputBuffer {
   ///
   /// `dataPointer == baseAddress` still holds (same pointer-identity proof, now rank-4).
   public func makeModelInputMultiArray() throws(ZeroCopyInputError) -> MLMultiArray {
-    let rowStrideElements = bytesPerRow / MemoryLayout<Float16>.stride  // padded row, in fp16 units
+    let rowStrideElements = bytesPerRow / MemoryLayout<Float16>.stride // padded row, in fp16 units
     // shape (1, channels, 1, seqLen): strides[time]=1, strides[channel]=rowStride,
     // strides[singleton]=rowStride (size-1 dim), strides[batch]=channels*rowStride (size-1 dim).
     let shape: [NSNumber] = [1, channels as NSNumber, 1, seqLen as NSNumber]
@@ -156,7 +158,7 @@ public final class SpikeInputBuffer {
       (channels * rowStrideElements) as NSNumber,
       rowStrideElements as NSNumber,
       rowStrideElements as NSNumber,
-      1,
+      1
     ]
     do {
       return try MLMultiArray(
@@ -164,7 +166,7 @@ public final class SpikeInputBuffer {
         shape: shape,
         dataType: .float16,
         strides: strides,
-        deallocator: nil  // this SpikeInputBuffer owns the surface; do NOT free here.
+        deallocator: nil // this SpikeInputBuffer owns the surface; do NOT free here.
       )
     } catch {
       throw .multiArrayCreateFailed(underlying: String(describing: error))

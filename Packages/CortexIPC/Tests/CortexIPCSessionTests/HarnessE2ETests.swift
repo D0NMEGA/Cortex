@@ -1,3 +1,9 @@
+@testable import CortexIPCSession
+@testable import CortexIPCTransport
+import CryptoKit
+import Darwin
+import Foundation
+
 // HarnessE2ETests — the D-07 end-to-end CORRECTNESS proof (Plan 02-04 Task 3, IPC-07 correctness;
 // SC#2/SC#3 at runtime). Two complementary tests:
 //
@@ -17,22 +23,16 @@
 // XCTest host (per 02-VALIDATION's "XCTest is the two-process harness host"); the package's other
 // suites use Swift Testing — SwiftPM runs both. @testable import to reach the nonisolated harness.
 import XCTest
-import Foundation
-import CryptoKit
-import Darwin
-@testable import CortexIPCSession
-@testable import CortexIPCTransport
 
 final class HarnessE2ETests: XCTestCase {
-
-  // A unique shm name per test instance (the production ring uses the GLOBAL CORTEX_SHM_NAME; tests
-  // must isolate — Plan 02-02 RingTests precedent). <= 31 bytes (Darwin PSHMNAMLEN).
+  /// A unique shm name per test instance (the production ring uses the GLOBAL CORTEX_SHM_NAME; tests
+  /// must isolate — Plan 02-02 RingTests precedent). <= 31 bytes (Darwin PSHMNAMLEN).
   private var shmName: String = ""
 
   override func setUp() {
     super.setUp()
     // "/cx-e2e-" + a short random hex suffix; well under the 31-byte cap.
-    let suffix = String(UInt32.random(in: 0..<UInt32.max), radix: 16)
+    let suffix = String(UInt32.random(in: 0 ..< UInt32.max), radix: 16)
     shmName = "/cx-e2e-\(suffix)"
   }
 
@@ -58,7 +58,7 @@ final class HarnessE2ETests: XCTestCase {
     var acked = 0
     var lastSeen: UInt64 = 0
 
-    for _ in 0..<frameCount {
+    for _ in 0 ..< frameCount {
       // --- Producer-side (inline, per the test-split directive) ---
       let seq = ring.loadProducerSeq() &+ 1
       let pattern = [Float16](repeating: Float16(UInt8(truncatingIfNeeded: seq)),
@@ -97,7 +97,7 @@ final class HarnessE2ETests: XCTestCase {
     let ring = try ShmRing(name: shmName, create: true)
     var scratch = [UInt8](repeating: 0, count: ring.layout.slotStride)
 
-    // Produce + consume seq 1 and seq 2 normally.
+    /// Produce + consume seq 1 and seq 2 normally.
     func writeFrame(seq: UInt64) throws {
       let pattern = [Float16](repeating: Float16(UInt8(truncatingIfNeeded: seq)), count: cortexChannelCount)
       let plain = try SampleCodec.encode(tsNs: 1, seq: seq, channels: pattern)
@@ -107,16 +107,16 @@ final class HarnessE2ETests: XCTestCase {
     }
 
     try writeFrame(seq: 1)
-    let s1 = try HarnessConsumer.consumeOne(ring: ring, keys: keys, lastSeen: 0, scratch: &scratch, spinBudget: 10_000)
+    let s1 = try HarnessConsumer.consumeOne(ring: ring, keys: keys, lastSeen: 0, scratch: &scratch, spinBudget: 10000)
     XCTAssertEqual(s1, 1)
     try writeFrame(seq: 2)
-    let s2 = try HarnessConsumer.consumeOne(ring: ring, keys: keys, lastSeen: s1, scratch: &scratch, spinBudget: 10_000)
+    let s2 = try HarnessConsumer.consumeOne(ring: ring, keys: keys, lastSeen: s1, scratch: &scratch, spinBudget: 10000)
     XCTAssertEqual(s2, 2)
 
     // The producer seq is now 2. consumeOne with lastSeen == 2 sees no STRICTLY greater seq, so it
     // must STALL (never re-accept seq 2) — proving the forward-only watermark blocks replays.
     XCTAssertThrowsError(
-      try HarnessConsumer.consumeOne(ring: ring, keys: keys, lastSeen: 2, scratch: &scratch, spinBudget: 5_000)
+      try HarnessConsumer.consumeOne(ring: ring, keys: keys, lastSeen: 2, scratch: &scratch, spinBudget: 5000)
     ) { error in
       guard case HarnessConsumerError.producerStalled = error else {
         return XCTFail("expected producerStalled (no forward progress), got \(error)")
@@ -131,10 +131,10 @@ final class HarnessE2ETests: XCTestCase {
   func testTwoProcessSpawnRoundTrip() throws {
     guard let daemonURL = Self.resolveDaemonBinary() else {
       throw XCTSkip("""
-        Two-process spawn proof skipped: the CortexDaemon/consumer binary is not resolvable from the \
-        swift-test bundle (expected under `swift test` — the in-process gate covers correctness). \
-        Run the daemon's two-process flow via the Xcode scheme / Plan 02-05 to exercise this path.
-        """)
+      Two-process spawn proof skipped: the CortexDaemon/consumer binary is not resolvable from the \
+      swift-test bundle (expected under `swift test` — the in-process gate covers correctness). \
+      Run the daemon's two-process flow via the Xcode scheme / Plan 02-05 to exercise this path.
+      """)
     }
     // If a binary IS present (local/CI-with-binary), run it as the consumer child end-to-end.
     // The daemon dispatches "consume" -> HarnessConsumer.runChild; the parent here would mirror
@@ -142,7 +142,9 @@ final class HarnessE2ETests: XCTestCase {
     // environment does not provide; the assertion documents the intended check.
     XCTAssertTrue(FileManager.default.isExecutableFile(atPath: daemonURL.path),
                   "resolved daemon binary must be executable")
-    throw XCTSkip("Daemon binary resolved but the package test host does not drive the Xcode-built two-process flow; see Plan 02-05.")
+    throw XCTSkip(
+      "Daemon binary resolved but the package test host does not drive the Xcode-built two-process flow; see Plan 02-05."
+    )
   }
 
   /// Best-effort resolution of the daemon/consumer binary next to the test bundle. Returns nil under

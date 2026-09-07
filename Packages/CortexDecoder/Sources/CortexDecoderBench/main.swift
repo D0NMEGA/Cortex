@@ -36,7 +36,7 @@ import UniformTypeIdentifiers
 // MARK: - Configuration
 
 /// DEC-11: 10,000 forward passes (the canonical sample size).
-let passCount = 10_000
+let passCount = 10000
 /// Warmup passes before timing — the FIRST prediction triggers Core ML compile/load (Decision 5).
 let warmup = 50
 /// The spike window length (20ms time bins). The Plan-01 input contract is `(1, 96, 1, S)` fp16.
@@ -47,7 +47,8 @@ let sequenceLength = 32
 /// Resolves the model URL from `CORTEX_DECODER_MODEL_URL` (preferred) or the first CLI argument.
 func resolveModelURL() -> URL? {
   if let envPath = ProcessInfo.processInfo.environment["CORTEX_DECODER_MODEL_URL"],
-    !envPath.isEmpty {
+     !envPath.isEmpty
+  {
     return URL(fileURLWithPath: envPath)
   }
   // argv[0] is the executable path; argv[1] (if present) is the model path.
@@ -126,19 +127,19 @@ func deviceAnnotation(for url: URL) async -> String {
   do {
     let plan = try await MLComputePlan.load(contentsOf: url, configuration: configuration)
     guard case let .program(program) = plan.modelStructure,
-      let main = program.functions["main"] else {
+          let main = program.functions["main"]
+    else {
       return "unknown-mac"
     }
     var tally: [String: Int] = [:]
     for op in main.block.operations {
       guard let usage = plan.deviceUsage(for: op) else { continue }
       // MLComputeDevice is an ENUM: .cpu(_) | .gpu(_) | .neuralEngine(_) (05-RESEARCH Decision 2).
-      let key: String
-      switch usage.preferred {
-      case .neuralEngine: key = "NeuralEngine"
-      case .cpu: key = "CPU"
-      case .gpu: key = "GPU"
-      @unknown default: key = "Other"
+      let key = switch usage.preferred {
+      case .neuralEngine: "NeuralEngine"
+      case .cpu: "CPU"
+      case .gpu: "GPU"
+      @unknown default: "Other"
       }
       tally[key, default: 0] += 1
     }
@@ -155,10 +156,10 @@ func deviceAnnotation(for url: URL) async -> String {
 
 // MARK: - Output paths (gitignored .bench/ dir)
 
-let outputDir = URL(fileURLWithPath: #filePath)  // .../Sources/CortexDecoderBench/main.swift
-  .deletingLastPathComponent()  // CortexDecoderBench
-  .deletingLastPathComponent()  // Sources
-  .deletingLastPathComponent()  // CortexDecoder (package root)
+let outputDir = URL(fileURLWithPath: #filePath) // .../Sources/CortexDecoderBench/main.swift
+  .deletingLastPathComponent() // CortexDecoderBench
+  .deletingLastPathComponent() // Sources
+  .deletingLastPathComponent() // CortexDecoder (package root)
   .appendingPathComponent(".bench", isDirectory: true)
 try? FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
 let jsonURL = outputDir.appendingPathComponent("latency_histogram.json")
@@ -173,7 +174,7 @@ let pngURL = outputDir.appendingPathComponent("latency_histogram.png")
 func nanoseconds(_ duration: Duration) -> UInt64 {
   let c = duration.components
   let fromSeconds = UInt64(Swift.max(0, c.seconds)) &* 1_000_000_000
-  let fromAttos = UInt64(Swift.max(0, c.attoseconds) / 1_000_000_000)  // 1e18 attos/s ÷ 1e9 = ns
+  let fromAttos = UInt64(Swift.max(0, c.attoseconds) / 1_000_000_000) // 1e18 attos/s ÷ 1e9 = ns
   return fromSeconds &+ fromAttos
 }
 
@@ -202,7 +203,7 @@ func writeHistogramPNG(bins: [Int], to url: URL) -> Bool {
     ctx.fill(CGRect(x: CGFloat(i) * barWidth, y: 0, width: Swift.max(1, barWidth - 1), height: barHeight))
   }
   guard let image = ctx.makeImage(),
-    let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
+        let dest = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)
   else { return false }
   CGImageDestinationAddImage(dest, image, nil)
   return CGImageDestinationFinalize(dest)
@@ -220,7 +221,7 @@ func binCounts(_ samples: [UInt64], bins: Int = 50) -> (edges: [UInt64], counts:
     let idx = Swift.min(bins - 1, Int(frac * Double(bins)))
     counts[idx] += 1
   }
-  let edges = (0...bins).map { lo + UInt64(Double($0) / Double(bins) * span) }
+  let edges = (0 ... bins).map { lo + UInt64(Double($0) / Double(bins) * span) }
   return (edges: edges, counts: counts)
 }
 
@@ -265,8 +266,8 @@ func runBench() async -> Int32 {
   // Fill the input ONCE with a representative fp16 spike pattern (reused across passes so the loop
   // measures inference, not buffer setup). A mild deterministic ramp keeps the rates non-degenerate.
   do {
-    for channel in 0..<input.channels {
-      for bin in 0..<input.seqLen {
+    for channel in 0 ..< input.channels {
+      for bin in 0 ..< input.seqLen {
         let value = Float16(Float((channel + bin) % 5) * 0.5)
         try input.write(value, channel: channel, bin: bin)
       }
@@ -278,7 +279,9 @@ func runBench() async -> Int32 {
 
   // Warmup — the first prediction triggers Core ML compile/load (Decision 5).
   do {
-    for _ in 0..<warmup { _ = try decoder.decode(input) }
+    for _ in 0 ..< warmup {
+      _ = try decoder.decode(input)
+    }
   } catch {
     print("CortexDecoderBench: a warmup prediction failed: \(error)")
     return 1
@@ -289,7 +292,7 @@ func runBench() async -> Int32 {
   var samples = [UInt64]()
   samples.reserveCapacity(passCount)
   do {
-    for _ in 0..<passCount {
+    for _ in 0 ..< passCount {
       let t0 = clock.now
       _ = try decoder.decode(input)
       let elapsed = clock.now - t0
@@ -311,7 +314,7 @@ func runBench() async -> Int32 {
   do {
     try histogram.encodedJSON().write(to: jsonURL)
     var csv = "bin_lo_ns,bin_hi_ns,count\n"
-    for i in 0..<counts.count {
+    for i in 0 ..< counts.count {
       let lo = edges[Swift.min(i, edges.count - 1)]
       let hi = edges[Swift.min(i + 1, edges.count - 1)]
       csv += "\(lo),\(hi),\(counts[i])\n"
@@ -331,7 +334,8 @@ func runBench() async -> Int32 {
   print("  device=\(annotation)")
   print("  wrote: \(jsonURL.path)")
   print("         \(csvURL.path)")
-  print(pngOK ? "         \(pngURL.path)" : "  (PNG skipped — JSON + bins CSV are the committed numbers; PNG is produced device-side in Plan 05)")
+  print(pngOK ? "         \(pngURL.path)" :
+    "  (PNG skipped — JSON + bins CSV are the committed numbers; PNG is produced device-side in Plan 05)")
   if annotation.hasPrefix("CPU") || annotation.contains("CPU:") {
     print("  NOTE: ops PREFER the CPU here — this Mac number is CORROBORATING (the 1.29M-param scale trap,")
     print("        05-RESEARCH Risk #1), NOT the canonical sub-threshold tail-latency-on-ANE claim (iPad-M4, Plan 05).")

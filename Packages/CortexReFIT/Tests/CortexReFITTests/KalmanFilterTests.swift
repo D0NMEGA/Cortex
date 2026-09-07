@@ -1,3 +1,6 @@
+@testable import CortexReFIT
+import simd
+
 // REFIT-01 / D-01..D-03 — the 6-DOF steady-state constant-gain Kalman step (predict → external
 // position sync → rotate measurement → constant-gain update → emit 2-vector velocity).
 //
@@ -18,9 +21,6 @@
 // `KalmanFilter` is `nonisolated` (it runs on the decoder pthread, SC#3, NOT the MainActor the package
 // defaults to), so this suite needs no actor isolation.
 import Testing
-import simd
-
-@testable import CortexReFIT
 
 @Suite("REFIT-01: KalmanFilter — constant-gain step, ordering, reference-match, rotation wiring")
 struct KalmanFilterTests {
@@ -59,7 +59,9 @@ struct KalmanFilterTests {
     var xMinus = [Float](repeating: 0, count: 6)
     for i in 0 ..< 6 {
       var acc: Float = 0
-      for j in 0 ..< 6 { acc += a[i][j] * x[j] }
+      for j in 0 ..< 6 {
+        acc += a[i][j] * x[j]
+      }
       xMinus[i] = acc
     }
 
@@ -82,7 +84,9 @@ struct KalmanFilterTests {
     var hx = [Float](repeating: 0, count: 2)
     for i in 0 ..< 2 {
       var acc: Float = 0
-      for j in 0 ..< 6 { acc += h[i][j] * xMinus[j] }
+      for j in 0 ..< 6 {
+        acc += h[i][j] * xMinus[j]
+      }
       hx[i] = acc
     }
     let innovation = SIMD2<Float>(zRot.x - hx[0], zRot.y - hx[1])
@@ -99,8 +103,8 @@ struct KalmanFilterTests {
 
   /// Test 1 (single step, NO active target → no rotation): one `step` equals the textbook
   /// `x⁻ = A·x; x = x⁻ + K·(z − H·x⁻)` (with the external position sync) to float tolerance.
-  @Test("single step (no target) equals the hand-computed constant-gain update")
-  func singleStepMatchesReference() {
+  @Test
+  func `single step (no target) equals the hand-computed constant-gain update`() {
     let filter = KalmanFilter()
     let x0: [Float] = [0.2, 0.3, 0.5, -0.4, 0.1, 0.05] // px,py,vx,vy,ax,ay
     filter.setState(x0)
@@ -122,8 +126,8 @@ struct KalmanFilterTests {
   /// `KalmanFilter` full state stays within `tol` of the independent nested-loop reference at EVERY
   /// tick — exercises propagation, not a single step (§6 row 1, threat T-07-02-04). Position is synced
   /// each tick to a deterministic closed-form sweep (no clock/RNG — determinism contract).
-  @Test("≥50-tick trajectory matches the independent reference (‖x_swift − x_ref‖ < tol)")
-  func trajectoryMatchesReference() {
+  @Test
+  func `≥50-tick trajectory matches the independent reference (‖x_swift − x_ref‖ < tol)`() {
     let filter = KalmanFilter()
     let x0: [Float] = [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
     filter.setState(x0)
@@ -162,8 +166,8 @@ struct KalmanFilterTests {
   /// Proof: with the SAME state, measurement, and target, two DIFFERENT synced cursor positions
   /// produce two DIFFERENT rotated measurements ⇒ two different emitted velocities. If the filter
   /// double-integrated position internally (ignoring the sync), both calls would be identical.
-  @Test("position is synced externally (rotation uses synced p, not a double-integrated position)")
-  func positionIsSyncedExternally() {
+  @Test
+  func `position is synced externally (rotation uses synced p, not a double-integrated position)`() {
     let target = SIMD2<Float>(0.5, 0.9)
     let z = SIMD2<Float>(0.4, 0.0) // points +x; rotation will steer it toward the target
     let rAcq: Float = 0.02
@@ -200,8 +204,8 @@ struct KalmanFilterTests {
   /// Test 4 (finiteness): `step` returns a finite `SIMD2<Float>` for finite inputs across the
   /// rotating and passthrough paths. The filter does not clamp (the integrator owns that) but it must
   /// not emit NaN/Inf (threat T-07-02-02).
-  @Test("step returns a finite 2-vector for finite inputs")
-  func outputIsFinite() {
+  @Test
+  func `step returns a finite 2-vector for finite inputs`() {
     let filter = KalmanFilter()
     filter.setCursorPosition(SIMD2<Float>(0.5, 0.5))
 
@@ -224,8 +228,8 @@ struct KalmanFilterTests {
   /// update is the ROTATED z — so the emitted velocity differs from the no-rotation (no-target) path
   /// on the SAME state + measurement. Confirms the rotation acts on the measurement before the update,
   /// not as a cosmetic post-hoc nudge.
-  @Test("rotation wired: active-target output differs from the no-rotation path")
-  func rotationIsWiredOnTheMeasurement() {
+  @Test
+  func `rotation wired: active-target output differs from the no-rotation path`() {
     let x0: [Float] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     // Measurement points the WRONG way relative to the target so the rotation visibly changes it.
     let z = SIMD2<Float>(-0.5, -0.5)
@@ -262,8 +266,8 @@ struct KalmanFilterTests {
   /// both over an identical 64-tick measurement sequence and require bit-equal emitted velocities.
   ///
   /// This is the test that would catch a second unpacking implementation drifting from the first.
-  @Test("KalmanFilter(gain: KalmanConstants.K) reproduces KalmanFilter() exactly")
-  func injectedShippedGainMatchesDefaultInit() {
+  @Test
+  func `KalmanFilter(gain: KalmanConstants.K) reproduces KalmanFilter() exactly`() {
     let x0: [Float] = [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
     let target = SIMD2<Float>(0.9, 0.8)
     let rAcq: Float = 0.02
@@ -293,8 +297,8 @@ struct KalmanFilterTests {
   /// coincidence rather than by construction, and the freeze would be silently load-free.
   ///
   /// It asserts a DIFFERENCE, never a direction or a magnitude, so it stays inside D-09.
-  @Test("KalmanFilter(gain: phase7BaselineK) differs from the shipped-gain filter")
-  func frozenBaselineGainProducesADifferentFilter() {
+  @Test
+  func `KalmanFilter(gain: phase7BaselineK) differs from the shipped-gain filter`() {
     let x0: [Float] = [0.5, 0.5, 0.0, 0.0, 0.0, 0.0]
     let target = SIMD2<Float>(0.9, 0.8)
     let rAcq: Float = 0.02

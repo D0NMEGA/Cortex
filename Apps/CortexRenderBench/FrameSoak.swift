@@ -35,7 +35,7 @@ import Metal
 import QuartzCore
 
 /// The result of an offscreen-throughput soak (mode a).
-struct FrameSoakResult: Sendable {
+struct FrameSoakResult {
   let mode: String
   let deviceName: String
   let durationSec: Double
@@ -56,7 +56,7 @@ struct FrameSoakResult: Sendable {
 enum FrameSoak {
   /// The 120Hz frame budget: 1000 / 120 ≈ 8.333…ms. An interval longer than this is a "dropped
   /// frame" at 120Hz (SC#4). Literal `8.33` appears here and in the over-budget comparison.
-  static let budgetMs = 1000.0 / 120.0  // ≈ 8.33ms — the 120Hz per-frame budget (SC#4)
+  static let budgetMs = 1000.0 / 120.0 // ≈ 8.33ms — the 120Hz per-frame budget (SC#4)
 
   /// Run the offscreen-throughput soak for `seconds` wall-clock seconds.
   ///
@@ -76,7 +76,8 @@ enum FrameSoak {
     // Offscreen target identical to the histogram's (bgra8Unorm + shaderWrite — the live drawable's
     // write scope under framebufferOnly=false).
     let desc = MTLTextureDescriptor.texture2DDescriptor(
-      pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false)
+      pixelFormat: .bgra8Unorm, width: width, height: height, mipmapped: false
+    )
     desc.usage = [.shaderWrite, .shaderRead]
     desc.storageMode = .private
     guard let texture = device.makeTexture(descriptor: desc) else {
@@ -113,7 +114,8 @@ enum FrameSoak {
       let pos = integrator.integrate(latest: v, dt: dt)
       let params = WebgridParams.grid30x30(
         cursorX: pos.x, cursorY: pos.y,
-        viewportWidth: UInt32(width), viewportHeight: UInt32(height))
+        viewportWidth: UInt32(width), viewportHeight: UInt32(height)
+      )
 
       guard let cb = queue.makeCommandBuffer() else { throw GPUTimeBenchError.noCommandBuffer }
       encoder.encode(into: drawable, commandBuffer: cb, params: params)
@@ -127,7 +129,7 @@ enum FrameSoak {
       prevNs = tNs
 
       intervalsMs.append(intervalMs)
-      if intervalMs > budgetMs { overBudget += 1 }  // > 8.33ms → over the 120Hz budget
+      if intervalMs > budgetMs { overBudget += 1 } // > 8.33ms → over the 120Hz budget
       if intervalMs > maxIntervalMs { maxIntervalMs = intervalMs }
       sumIntervalMs += intervalMs
       frames += 1
@@ -149,7 +151,8 @@ enum FrameSoak {
       meanIntervalMs: meanIntervalMs,
       budgetMs: budgetMs,
       width: width,
-      height: height)
+      height: height
+    )
   }
 
   /// Monotonic nanosecond clock (mirrors `CortexCore.Time.machAbsoluteNanoseconds`; inlined here to
@@ -163,41 +166,41 @@ enum FrameSoak {
   /// The exact engineer steps for the canonical on-panel SC#4 soak (mode b) — documented here and in
   /// 06-render-evidence.md so the live ProMotion run is reproducible (D-11 corroborating-canonical).
   static let onPanelRunSteps = """
-    On-panel 120Hz soak (mode b — the canonical SC#4 surface, M5 Pro ProMotion, D-11):
-      1. Build & run the CortexMac scheme on the M5 Pro MacBook Pro built-in ProMotion panel.
-      2. The MacDisplayLinkAdapter (Plan 03) drives the webgrid at preferredFrameRateRange 120/120/120.
-      3. MTL_HUD_ENABLED=1 (set in the CortexMac scheme, RENDER-09) shows live P95 frame time,
-         drawable-wait, encoder-time — confirm P95 frame time ≈ 8.33ms and zero long frames for 60s.
-      4. (optional) enable a callback counter in the adapter to count display-link ticks over 60s and
-         log any interval > 8.33ms; screenshot the HUD as the artifact (lives beside this doc / Plan 06).
-    The iPad-Pro-M4 canonical capture is the deferred optional/future datapoint (06-HUMAN-UAT.md, D-12).
-    """
+  On-panel 120Hz soak (mode b — the canonical SC#4 surface, M5 Pro ProMotion, D-11):
+    1. Build & run the CortexMac scheme on the M5 Pro MacBook Pro built-in ProMotion panel.
+    2. The MacDisplayLinkAdapter (Plan 03) drives the webgrid at preferredFrameRateRange 120/120/120.
+    3. MTL_HUD_ENABLED=1 (set in the CortexMac scheme, RENDER-09) shows live P95 frame time,
+       drawable-wait, encoder-time — confirm P95 frame time ≈ 8.33ms and zero long frames for 60s.
+    4. (optional) enable a callback counter in the adapter to count display-link ticks over 60s and
+       log any interval > 8.33ms; screenshot the HUD as the artifact (lives beside this doc / Plan 06).
+  The iPad-Pro-M4 canonical capture is the deferred optional/future datapoint (06-HUMAN-UAT.md, D-12).
+  """
 
   /// Write `soak_log.json` (mode, duration, frames, achieved Hz, over-budget count, device) into `dir`.
   static func writeJSON(to dir: URL, result r: FrameSoakResult, iso8601Date: String) throws {
     let json = """
-      {
-        "artifact": "soak_log",
-        "success_criterion": "SC#4",
-        "requirement": "RENDER-02 (corroborating)",
-        "mode": "\(r.mode)",
-        "device": "\(r.deviceName)",
-        "device_tier": "M5 Pro ProMotion — corroborating-canonical (D-11)",
-        "canonical_device_deferred": "iPad Pro M4 — 06-HUMAN-UAT.md (D-12, optional/future)",
-        "drive": "deterministic LissajousProducer (D-05) — reproducible",
-        "budget_ms": \(String(format: "%.4f", r.budgetMs)),
-        "duration_sec": \(String(format: "%.3f", r.durationSec)),
-        "frames": \(r.frames),
-        "achieved_hz": \(String(format: "%.2f", r.achievedHz)),
-        "over_budget_intervals": \(r.overBudgetCount),
-        "max_interval_ms": \(String(format: "%.4f", r.maxIntervalMs)),
-        "mean_interval_ms": \(String(format: "%.4f", r.meanIntervalMs)),
-        "texture_extent": { "width": \(r.width), "height": \(r.height) },
-        "verdict": "\(r.overBudgetCount == 0 ? "PASS (zero over-budget intervals)" : "DROPS DETECTED")",
-        "on_panel_canonical": "mode b — run the CortexMac scheme live on the M5 Pro ProMotion panel (see 06-render-evidence.md)",
-        "date": "\(iso8601Date)"
-      }
-      """
+    {
+      "artifact": "soak_log",
+      "success_criterion": "SC#4",
+      "requirement": "RENDER-02 (corroborating)",
+      "mode": "\(r.mode)",
+      "device": "\(r.deviceName)",
+      "device_tier": "M5 Pro ProMotion — corroborating-canonical (D-11)",
+      "canonical_device_deferred": "iPad Pro M4 — 06-HUMAN-UAT.md (D-12, optional/future)",
+      "drive": "deterministic LissajousProducer (D-05) — reproducible",
+      "budget_ms": \(String(format: "%.4f", r.budgetMs)),
+      "duration_sec": \(String(format: "%.3f", r.durationSec)),
+      "frames": \(r.frames),
+      "achieved_hz": \(String(format: "%.2f", r.achievedHz)),
+      "over_budget_intervals": \(r.overBudgetCount),
+      "max_interval_ms": \(String(format: "%.4f", r.maxIntervalMs)),
+      "mean_interval_ms": \(String(format: "%.4f", r.meanIntervalMs)),
+      "texture_extent": { "width": \(r.width), "height": \(r.height) },
+      "verdict": "\(r.overBudgetCount == 0 ? "PASS (zero over-budget intervals)" : "DROPS DETECTED")",
+      "on_panel_canonical": "mode b — run the CortexMac scheme live on the M5 Pro ProMotion panel (see 06-render-evidence.md)",
+      "date": "\(iso8601Date)"
+    }
+    """
     let url = dir.appendingPathComponent("soak_log.json")
     try json.write(to: url, atomically: true, encoding: .utf8)
   }
@@ -212,18 +215,24 @@ func runFrameSoak(args: BenchArgs, date: String) throws {
   print(
     String(
       format:
-        "CortexRenderBench — frame soak: %.0fs @ %dx%d offscreen (deterministic Lissajous, D-05)",
-      args.soakSeconds, args.width, args.height))
+      "CortexRenderBench — frame soak: %.0fs @ %dx%d offscreen (deterministic Lissajous, D-05)",
+      args.soakSeconds, args.width, args.height
+    )
+  )
   let soak = try FrameSoak.run(seconds: args.soakSeconds, width: args.width, height: args.height)
   print("  device         : \(soak.deviceName)")
   print(
     String(
       format: "  duration       : %.3fs   frames=%d   achieved=%.1fHz   target=120Hz",
-      soak.durationSec, soak.frames, soak.achievedHz))
+      soak.durationSec, soak.frames, soak.achievedHz
+    )
+  )
   print(
     String(
       format: "  over-budget    : %d intervals > 8.33ms   (max interval=%.3fms, mean=%.3fms)",
-      soak.overBudgetCount, soak.maxIntervalMs, soak.meanIntervalMs))
+      soak.overBudgetCount, soak.maxIntervalMs, soak.meanIntervalMs
+    )
+  )
   let soakVerdict = soak.overBudgetCount == 0 ? "PASS (zero over-budget frames)" : "DROPS DETECTED"
   print("  SC#4 throughput: \(soakVerdict)")
   try FrameSoak.writeJSON(to: args.outDir, result: soak, iso8601Date: date)

@@ -74,11 +74,11 @@ public nonisolated enum WebgridBPS {
   /// byte-diffs the Phase-7 `refit_bps.json` fixture, which D-09 exists to protect. Editing the
   /// formula to chase parity would break that fixture and destroy the regression signal.
   public static let nonComparabilityDisclosure = """
-    this repo's Webgrid BPS is not like-for-like with either reference: the formula differs \
-    (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), \
-    the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's \
-    current published score adds a click-types term this single-click-type harness omits
-    """
+  this repo's Webgrid BPS is not like-for-like with either reference: the formula differs \
+  (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), \
+  the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's \
+  current published score adds a click-types term this single-click-type harness omits
+  """
 
   /// `log2(N)` — the bits-per-correct-selection normalization (the information content of choosing
   /// one of `N` equiprobable targets). For N = 900 (a 30×30 grid incl. the delete key) ≈ 9.81 bits.

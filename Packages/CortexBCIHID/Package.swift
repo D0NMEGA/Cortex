@@ -23,7 +23,7 @@ let package = Package(
   name: "CortexBCIHID",
   platforms: [.macOS(.v26), .iOS(.v26)],
   products: [
-    .library(name: "CortexBCIHID", targets: ["CortexBCIHID"]),
+    .library(name: "CortexBCIHID", targets: ["CortexBCIHID"])
   ],
   targets: [
     .target(
@@ -33,6 +33,6 @@ let package = Package(
     .testTarget(
       name: "CortexBCIHIDTests",
       dependencies: ["CortexBCIHID"]
-    ),
+    )
   ]
 )

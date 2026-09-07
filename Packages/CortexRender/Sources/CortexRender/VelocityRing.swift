@@ -40,7 +40,7 @@ import Synchronization
 /// trivial value type (no shared heap state). This mirrors the Phase-3 ring's contract exactly — the
 /// SPSC guarantee is a discipline the caller upholds (one producer thread, one consumer thread), not
 /// a property the type system enforces.
-public nonisolated final class VelocityRing: @unchecked Sendable {
+public final nonisolated class VelocityRing: @unchecked Sendable {
   /// Backing storage: `capacity` slots. A trivial value type, so a slot store is a single copy.
   /// `nonatomic_unsafe` accessor pattern: only the producer writes a slot (before releasing `tail`)
   /// and only the consumer reads it (after acquiring `tail`), so the release/acquire on the indices
@@ -87,9 +87,9 @@ public nonisolated final class VelocityRing: @unchecked Sendable {
     let t = tail.load(ordering: .relaxed)
     let h = head.load(ordering: .acquiring)
     let next = (t + 1) & mask
-    if next == h { return false }              // full — never overwrite an unconsumed frame
-    buffer[t] = v                              // write the slot FIRST …
-    tail.store(next, ordering: .releasing)     // … THEN publish it (release pairs with pop's acquire)
+    if next == h { return false } // full — never overwrite an unconsumed frame
+    buffer[t] = v // write the slot FIRST …
+    tail.store(next, ordering: .releasing) // … THEN publish it (release pairs with pop's acquire)
     return true
   }
 
@@ -102,9 +102,9 @@ public nonisolated final class VelocityRing: @unchecked Sendable {
     // (the torn-read mitigation, T-06-02-02).
     let h = head.load(ordering: .relaxed)
     let t = tail.load(ordering: .acquiring)
-    if h == t { return nil }                   // empty
-    let v = buffer[h]                          // read the published slot
-    head.store((h + 1) & mask, ordering: .releasing)  // free the slot for the producer
+    if h == t { return nil } // empty
+    let v = buffer[h] // read the published slot
+    head.store((h + 1) & mask, ordering: .releasing) // free the slot for the producer
     return v
   }
 }

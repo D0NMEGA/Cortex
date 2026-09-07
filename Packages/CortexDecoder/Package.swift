@@ -28,7 +28,7 @@ let package = Package(
   platforms: [.macOS(.v26), .iOS(.v26)],
   products: [
     .library(name: "CortexDecoder", targets: ["CortexDecoder"]),
-    .executable(name: "CortexDecoderBench", targets: ["CortexDecoderBench"]),
+    .executable(name: "CortexDecoderBench", targets: ["CortexDecoderBench"])
   ],
   targets: [
     .target(
@@ -51,6 +51,6 @@ let package = Package(
     .testTarget(
       name: "CortexDecoderTests",
       dependencies: ["CortexDecoder"]
-    ),
+    )
   ]
 )

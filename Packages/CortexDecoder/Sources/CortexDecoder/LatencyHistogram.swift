@@ -43,15 +43,21 @@ public nonisolated struct LatencyHistogram: Codable, Sendable {
   }
 
   /// Number of samples.
-  public var count: Int { samplesNs.count }
+  public var count: Int {
+    samplesNs.count
+  }
 
   // MARK: - Optional (empty-safe) accessors
 
   /// The minimum sample, or nil if empty.
-  public var minOrNil: UInt64? { samplesNs.first }
+  public var minOrNil: UInt64? {
+    samplesNs.first
+  }
 
   /// The maximum sample, or nil if empty.
-  public var maxOrNil: UInt64? { samplesNs.last }
+  public var maxOrNil: UInt64? {
+    samplesNs.last
+  }
 
   /// The nearest-rank percentile for `p` in [0, 1], or nil if the sample set is empty.
   ///
@@ -70,19 +76,29 @@ public nonisolated struct LatencyHistogram: Codable, Sendable {
   // MARK: - Non-optional conveniences (0 sentinel on empty, never crash)
 
   /// The minimum sample, or 0 if empty.
-  public var min: UInt64 { minOrNil ?? 0 }
+  public var min: UInt64 {
+    minOrNil ?? 0
+  }
 
   /// The maximum sample, or 0 if empty.
-  public var max: UInt64 { maxOrNil ?? 0 }
+  public var max: UInt64 {
+    maxOrNil ?? 0
+  }
 
   /// The nearest-rank percentile for `p` in [0, 1], or 0 if empty. See ``percentileOrNil(_:)``.
-  public func percentile(_ p: Double) -> UInt64 { percentileOrNil(p) ?? 0 }
+  public func percentile(_ p: Double) -> UInt64 {
+    percentileOrNil(p) ?? 0
+  }
 
   /// The median (50th percentile), or 0 if empty.
-  public var p50: UInt64 { percentile(0.5) }
+  public var p50: UInt64 {
+    percentile(0.5)
+  }
 
   /// The 99th percentile, or 0 if empty.
-  public var p99: UInt64 { percentile(0.99) }
+  public var p99: UInt64 {
+    percentile(0.99)
+  }
 
   // MARK: - JSON summary
 

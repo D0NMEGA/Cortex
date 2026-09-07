@@ -1,3 +1,5 @@
+import CryptoKit
+
 // SessionKeychain — IPC-06 / SC#3. Round-trips the random 256-bit session secret (D-14) through the
 // macOS DATA-PROTECTION Keychain.
 //
@@ -35,10 +37,8 @@
 // the key bytes. CortexIPCSession is Foundation-allowed (D-04/D-06); not policed by the hot-path gate.
 import Foundation
 import Security
-import CryptoKit
 
 public nonisolated enum SessionKeychain {
-
   /// Keychain account under which the 256-bit session secret is stored.
   public static let account = "cortex.session.secret"
 
@@ -83,7 +83,7 @@ public nonisolated enum SessionKeychain {
     var q: [String: Any] = [
       kSecClass as String: kSecClassGenericPassword,
       kSecAttrService as String: service,
-      kSecAttrAccount as String: account,
+      kSecAttrAccount as String: account
     ]
     switch backend {
     case .dataProtection:

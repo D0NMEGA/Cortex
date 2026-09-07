@@ -35,29 +35,29 @@ let account = "cortex.session.secret"
 // Fixed, NON-SECRET 32-byte test pattern (0x00..0x1F). A real session key is a random
 // SymmetricKey(size: .bits256) — here we use a deterministic pattern so the read side can
 // verify an exact byte match without printing key material.
-let pattern: [UInt8] = Array(0..<32)
+let pattern: [UInt8] = Array(0 ..< 32)
 
-// Base query shared by all operations — EXACTLY the Phase-2 production item shape.
+/// Base query shared by all operations — EXACTLY the Phase-2 production item shape.
 func baseQuery() -> [CFString: Any] {
   [
     kSecClass: kSecClassGenericPassword,
     // CF#8: kCFBooleanTrue (a CFBoolean), never Swift `true`.
     kSecUseDataProtectionKeychain: kCFBooleanTrue as Any,
     kSecAttrAccount: account,
-    kSecAttrAccessGroup: accessGroup,
+    kSecAttrAccessGroup: accessGroup
   ]
 }
 
 func name(for status: OSStatus) -> String {
   switch status {
-  case errSecSuccess: return "errSecSuccess"
-  case errSecItemNotFound: return "errSecItemNotFound"
-  case errSecDuplicateItem: return "errSecDuplicateItem"
-  case errSecParam: return "errSecParam"
-  case errSecMissingEntitlement: return "errSecMissingEntitlement"
-  case errSecInteractionNotAllowed: return "errSecInteractionNotAllowed"
-  case errSecNotAvailable: return "errSecNotAvailable"
-  default: return "OSStatus"
+  case errSecSuccess: "errSecSuccess"
+  case errSecItemNotFound: "errSecItemNotFound"
+  case errSecDuplicateItem: "errSecDuplicateItem"
+  case errSecParam: "errSecParam"
+  case errSecMissingEntitlement: "errSecMissingEntitlement"
+  case errSecInteractionNotAllowed: "errSecInteractionNotAllowed"
+  case errSecNotAvailable: "errSecNotAvailable"
+  default: "OSStatus"
   }
 }
 

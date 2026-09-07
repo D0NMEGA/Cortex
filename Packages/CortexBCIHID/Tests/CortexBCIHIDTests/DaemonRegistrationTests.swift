@@ -1,3 +1,5 @@
+@testable import CortexBCIHID
+
 // DaemonRegistrationTests — Phase 8 (SYS-02, D-03): unit-test the SMAppService daemon-registration
 // SCAFFOLD via the mockable status path. The live SMAppService install is paid-signing-gated (Plan 07
 // HUMAN-UAT), so these tests exercise the protocol + status enum + MockDaemonService — not a real
@@ -5,16 +7,14 @@
 // **Automated** (code path) + **Manual-Only** (live registration).
 import Testing
 
-@testable import CortexBCIHID
-
-// The DaemonRegistration types + VirtualDeviceGate are MainActor-isolated (the package default
-// .defaultIsolation(MainActor.self)); the suite adopts the same isolation to drive them synchronously
-// (mirrors the CortexReFIT KalmanConstantsTests precedent).
+/// The DaemonRegistration types + VirtualDeviceGate are MainActor-isolated (the package default
+/// .defaultIsolation(MainActor.self)); the suite adopts the same isolation to drive them synchronously
+/// (mirrors the CortexReFIT KalmanConstantsTests precedent).
 @Suite("DaemonRegistrationTests")
 @MainActor
 struct DaemonRegistrationTests {
-  @Test("Mock reports its fixed status and register()/unregister() are callable")
-  func mockStatusAndRegisterPath() throws {
+  @Test
+  func `Mock reports its fixed status and register()/unregister() are callable`() throws {
     let mock = MockDaemonService(status: .requiresApproval)
     #expect(mock.status == .requiresApproval)
     #expect(mock.registerCallCount == 0)
@@ -24,8 +24,8 @@ struct DaemonRegistrationTests {
     #expect(mock.unregisterCallCount == 1)
   }
 
-  @Test("DaemonService abstracts the status across all SMAppService.Status mirror cases")
-  func statusEnumMirrorsSMAppService() {
+  @Test
+  func `DaemonService abstracts the status across all SMAppService.Status mirror cases`() {
     let cases: [DaemonRegistrationStatus] = [.notRegistered, .enabled, .requiresApproval, .notFound]
     for expected in cases {
       let service: any DaemonService = MockDaemonService(status: expected)
@@ -33,14 +33,14 @@ struct DaemonRegistrationTests {
     }
   }
 
-  @Test("DaemonRegistration carries the bundled launch-daemon plist name")
-  func registrationModelsPlistName() {
+  @Test
+  func `DaemonRegistration carries the bundled launch-daemon plist name`() {
     let registration = DaemonRegistration(plistName: "com.donovansantine.cortex.daemon.plist")
     #expect(registration.plistName == "com.donovansantine.cortex.daemon.plist")
   }
 
-  @Test("VirtualDeviceGate is inert by default (CORTEX_HID_LIVE OFF) — no live HID symbol linked")
-  func virtualDeviceGateInertByDefault() {
+  @Test
+  func `VirtualDeviceGate is inert by default (CORTEX_HID_LIVE OFF) — no live HID symbol linked`() {
     // The default free-team build must NOT compile in the live path (T-08-01-02 / AMFI-safe).
     #expect(VirtualDeviceGate.isLive == false)
   }

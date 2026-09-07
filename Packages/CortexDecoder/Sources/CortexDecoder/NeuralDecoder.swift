@@ -66,14 +66,16 @@ public final class NeuralDecoder {
       loadURL = modelURL
     }
     do {
-      self.model = try MLModel(contentsOf: loadURL, configuration: Self.productionConfiguration())
+      model = try MLModel(contentsOf: loadURL, configuration: Self.productionConfiguration())
     } catch {
       throw .modelLoadFailed(url: loadURL, underlying: String(describing: error))
     }
   }
 
   /// The model's compute-units configuration (for introspection/tests).
-  public var computeUnits: MLComputeUnits { model.configuration.computeUnits }
+  public var computeUnits: MLComputeUnits {
+    model.configuration.computeUnits
+  }
 
   /// The spike input feature name, frozen by the Plan-01 `.mlpackage` contract:
   /// `spikes`, fp16, shape `(1, 96, 1, S)`.

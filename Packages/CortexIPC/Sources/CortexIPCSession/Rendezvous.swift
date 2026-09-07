@@ -38,16 +38,15 @@ public nonisolated enum RendezvousError: Error, Equatable, Sendable {
 /// The CF#3 rendezvous: hands a Mach send/receive right pair between a parent and its posix_spawn'd
 /// child with no launchd plist and no socket control-message path. Stateless façade over the C shim.
 public nonisolated enum Rendezvous {
-
   /// Default bound (ms) the parent waits for the child's bootstrap handshake before failing rather
   /// than blocking forever (T-02-04-05 — a dead/never-spawned child must not wedge the parent).
-  public static let defaultReplyTimeoutMs: UInt32 = 10_000
+  public static let defaultReplyTimeoutMs: UInt32 = 10000
 
   /// Parent step 1 (before `posix_spawn`): arm `attr` so the child gets the rendezvous SEND right at
   /// `TASK_BOOTSTRAP_PORT`, and return the bootstrap RECEIVE right the parent holds. Pass the spawn
   /// the same `attr`, then call `parentAwaitReply(_:)` with the returned right.
   public static func parentPrepare(_ attr: inout posix_spawnattr_t) throws(RendezvousError) -> mach_port_t {
-    var out: mach_port_t = mach_port_t(MACH_PORT_NULL)
+    var out = mach_port_t(MACH_PORT_NULL)
     // The C param `posix_spawnattr_t *attr` imports as `UnsafeMutablePointer<posix_spawnattr_t?>`
     // (posix_spawnattr_t is an opaque pointer typedef → Optional on import). Bridge `inout attr`
     // through an Optional local, then copy any mutation back so the caller's attr reflects the
@@ -66,8 +65,9 @@ public nonisolated enum Rendezvous {
   /// `FDChannel.send(shmFD:geometry:to:)`. Consumes (deallocates) `bootstrapRecv`.
   public static func parentAwaitReply(_ bootstrapRecv: mach_port_t,
                                       timeoutMs: UInt32 = Rendezvous.defaultReplyTimeoutMs)
-    throws(RendezvousError) -> mach_port_t {
-    var out: mach_port_t = mach_port_t(MACH_PORT_NULL)
+    throws(RendezvousError) -> mach_port_t
+  {
+    var out = mach_port_t(MACH_PORT_NULL)
     let kr = cortex_rendezvous_parent_await_reply(bootstrapRecv, timeoutMs, &out)
     if kr != KERN_SUCCESS {
       throw .parentAwaitReply(kr)
@@ -78,7 +78,7 @@ public nonisolated enum Rendezvous {
   /// Child side: read the injected bootstrap SEND right, advertise a reply port to the parent, and
   /// return the reply RECEIVE right — the `rcv` for `FDChannel.receive(on:)`.
   public static func childAcquire() throws(RendezvousError) -> mach_port_t {
-    var out: mach_port_t = mach_port_t(MACH_PORT_NULL)
+    var out = mach_port_t(MACH_PORT_NULL)
     let kr = cortex_rendezvous_child_acquire(&out)
     if kr != KERN_SUCCESS {
       throw .child(kr)

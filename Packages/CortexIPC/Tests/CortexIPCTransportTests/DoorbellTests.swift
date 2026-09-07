@@ -1,3 +1,6 @@
+@testable import CortexIPCTransport
+import Darwin
+
 // DoorbellTests — proves the socketpair + kqueue EVFILT_READ doorbell (Plan 02-02 Task 2, IPC-02).
 //
 // The doorbell is the CONTROL PLANE / idle-arming wake (D-01, Critical Finding #2): it carries
@@ -10,15 +13,12 @@
 //   3. both socket fds have FD_CLOEXEC set
 //   4. writing to a closed peer does NOT raise SIGPIPE (SO_NOSIGPIPE) — returns EPIPE, process lives
 import Testing
-import Darwin
-
-@testable import CortexIPCTransport
 
 @Suite("Doorbell")
 struct DoorbellTests {
   /// 1. Wake + read: ring(seq) on the producer end, the armed consumer wakes and reads the seq.
-  @Test("kqueue EVFILT_READ wakes and recvmsg reads the 8-byte seq")
-  func wakeDeliversSeq() throws {
+  @Test
+  func `kqueue EVFILT_READ wakes and recvmsg reads the 8-byte seq`() throws {
     let door = try Doorbell()
     defer { door.close() }
     try door.arm()
@@ -28,7 +28,7 @@ struct DoorbellTests {
 
     let result = door.wait(timeoutNanos: 500_000_000) // 500 ms — generous for a same-host wake
     switch result {
-    case .woke(let seq):
+    case let .woke(seq):
       #expect(seq == sent, "the woken consumer reads the exact seq the producer rang")
     case .timeout:
       Issue.record("doorbell timed out instead of waking on a written seq")
@@ -38,8 +38,8 @@ struct DoorbellTests {
   }
 
   /// 2. No spurious wake: with nothing written, a short-timeout wait returns .timeout (0 events).
-  @Test("no spurious wake: empty doorbell times out with zero events")
-  func noSpuriousWake() throws {
+  @Test
+  func `no spurious wake: empty doorbell times out with zero events`() throws {
     let door = try Doorbell()
     defer { door.close() }
     try door.arm()
@@ -49,8 +49,8 @@ struct DoorbellTests {
   }
 
   /// 3. FD_CLOEXEC set on BOTH socket fds (fcntl F_GETFD & FD_CLOEXEC != 0).
-  @Test("both socket fds have FD_CLOEXEC set")
-  func cloexecSetOnBothFds() throws {
+  @Test
+  func `both socket fds have FD_CLOEXEC set`() throws {
     let door = try Doorbell()
     defer { door.close() }
 
@@ -63,8 +63,8 @@ struct DoorbellTests {
   /// 4. SO_NOSIGPIPE: closing the consumer end then writing from the producer returns EPIPE
   ///    instead of delivering SIGPIPE (which would kill the test process). Reaching the #expect
   ///    at all proves the process survived.
-  @Test("SO_NOSIGPIPE: write to a closed peer returns EPIPE, process survives")
-  func noSigpipeOnClosedPeer() throws {
+  @Test
+  func `SO_NOSIGPIPE: write to a closed peer returns EPIPE, process survives`() throws {
     let door = try Doorbell()
     // Close the consumer end so the producer's write hits a dead peer.
     door.closeConsumer()

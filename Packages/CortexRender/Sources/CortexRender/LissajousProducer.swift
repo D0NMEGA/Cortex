@@ -21,7 +21,7 @@
 // `ampY/freqY ≈ 0.4` so the cursor sweeps most of the surface without perpetually saturating at a
 // bound (the integrator clamps regardless — this is about producing a *useful* figure, not safety).
 
-import Foundation  // cos/sin (Darwin math) only — purely the trig free functions, no clock, no RNG.
+import Foundation // cos/sin (Darwin math) only — purely the trig free functions, no clock, no RNG.
 
 /// A deterministic parametric velocity source (D-05). `Sendable` value type (no stored state beyond
 /// the immutable parameters) — safe to hand to the producer thread.

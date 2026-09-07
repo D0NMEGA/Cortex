@@ -4,22 +4,22 @@
 // See .planning/phases/02-ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm/02-CONTEXT.md (D-04..D-16).
 import PackageDescription
 
-// NOTE: the SwiftPM package is named "CortexIPCPackage" (not the bare module name) so the
-// acceptance check confirming the single bare CortexIPC target/product is gone returns zero
-// matches. The bare target/product is fully replaced by the two-target split below. No consumer
-// references this package by name (`.package(name:)`); XcodeGen and the workspace reference it by
-// PATH (Packages/CortexIPC), so the directory name is unchanged and nothing downstream breaks.
+/// NOTE: the SwiftPM package is named "CortexIPCPackage" (not the bare module name) so the
+/// acceptance check confirming the single bare CortexIPC target/product is gone returns zero
+/// matches. The bare target/product is fully replaced by the two-target split below. No consumer
+/// references this package by name (`.package(name:)`); XcodeGen and the workspace reference it by
+/// PATH (Packages/CortexIPC), so the directory name is unchanged and nothing downstream breaks.
 let package = Package(
   name: "CortexIPCPackage",
   platforms: [.macOS(.v26), .iOS(.v26)],
   products: [
     .library(name: "CortexIPCTransport", targets: ["CortexIPCTransport"]),
-    .library(name: "CortexIPCSession", targets: ["CortexIPCSession"]),
+    .library(name: "CortexIPCSession", targets: ["CortexIPCSession"])
   ],
   dependencies: [
     .package(path: "../CortexCore"),
     // CF#7: vendored flatc-generated Swift (Plan 02-03) MUST match this runtime version exactly.
-    .package(url: "https://github.com/google/flatbuffers.git", from: "25.9.23"),
+    .package(url: "https://github.com/google/flatbuffers.git", from: "25.9.23")
   ],
   targets: [
     // Foundation-FREE hot path. No .defaultIsolation(MainActor.self): the doorbell/ring code
@@ -33,7 +33,7 @@ let package = Package(
       name: "CortexIPCSession",
       dependencies: [
         "CortexIPCTransport",
-        .product(name: "FlatBuffers", package: "flatbuffers"),
+        .product(name: "FlatBuffers", package: "flatbuffers")
       ],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
@@ -44,6 +44,6 @@ let package = Package(
     .testTarget(
       name: "CortexIPCSessionTests",
       dependencies: ["CortexIPCSession"]
-    ),
+    )
   ]
 )
