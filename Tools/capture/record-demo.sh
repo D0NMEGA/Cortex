@@ -60,7 +60,12 @@ die() { printf 'error: %s\n' "$*" >&2; exit 1; }
 
 # --- Preconditions ------------------------------------------------------------------------------
 command -v ffmpeg >/dev/null || die "ffmpeg not found. brew install ffmpeg"
-[[ -f "$EXPORT_JSON" ]] || die "missing $EXPORT_JSON. Run: uv run --project Decoder python Decoder/scripts/download_indy.py && uv run --project Decoder python Decoder/scripts/export_replay.py"
+EXPORT_HELP="Run: uv run --project Decoder python Decoder/scripts/download_indy.py && uv run --project Decoder python Decoder/scripts/export_replay.py"
+[[ -f "$EXPORT_JSON" ]] || die "missing $EXPORT_JSON. $EXPORT_HELP"
+# The json is only a manifest; the spikes live in the sibling .bin named inside it. Both are
+# gitignored and materialized separately, so check the one that actually carries the data.
+EXPORT_BIN="${EXPORT_JSON%.json}.bin"
+[[ -f "$EXPORT_BIN" ]] || die "missing $EXPORT_BIN (the json is only its manifest). $EXPORT_HELP"
 [[ -d "$MODEL" ]] || die "missing $MODEL"
 
 # --- Build ---------------------------------------------------------------------------------------
@@ -142,7 +147,7 @@ encode "$GIF_WIDTH" "$FPS"
 # GitHub rejects images and GIFs over 10 MB. Step down rather than hand back a file that will not
 # upload; each step is reported so the final settings are known and reproducible.
 LIMIT=$((10 * 1024 * 1024))
-for attempt in "900 12" "800 10" "700 10" "640 8"; do
+for attempt in "800 10" "700 10" "640 8"; do
   size=$(stat -f%z "$GIF")
   [[ "$size" -le "$LIMIT" ]] && break
   set -- $attempt
