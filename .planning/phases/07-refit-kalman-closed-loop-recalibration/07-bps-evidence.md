@@ -1,5 +1,19 @@
 # Phase 7 REFIT-03 / SC#2 Evidence — ReFIT intent-rotation improves Fitts throughput over raw NDT1
 
+> **SUPERSEDED FOR THE REAL-DATA CLAIM (Phase 10, 2026-09-07).** The 0.374 and 0.161 figures below
+> were produced on a **synthetic seed-locked Poisson replay** with no trained model in the loop.
+> They are superseded for any claim about real neural data by
+> [`10-refit-real-evidence.md`](../10-v1-real-data-closed-loop-launch/10-refit-real-evidence.md)
+> (Phase 10, `indy_20160630_01`, decode-attributable arms: **0 of 1,025 hits, 0.000000 BPS**).
+>
+> **Retained as the D-09 regression fixture.** The `phase7BaselineK` constant in
+> `Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift` is frozen from this Phase-7
+> run. `CortexReFITBench --smoke` verifies the byte-identity of the deterministic synthetic ablation
+> on every CI run to guard against filter-step regressions. Cite these numbers only in that
+> regression context; never in a real-data context.
+>
+> This file is **NOT retroactively edited**.
+
 **Date:** 2026-06-22
 **Result:** ✅ **PASS** — on the fixed seed-locked replay the **ReFIT (Kalman + intent-rotation)**
 throughput **`refit_bps = 0.374`** beats the **raw NDT1** throughput **`raw_bps = 0.161`** by

@@ -21,6 +21,11 @@
 > the pooled test-mean null), all four sessions positive within session, and all four
 > leave-one-session-out folds **negative** against the held-out session's own mean. Cite the Phase-9
 > value for any real-data claim; cite the number below only as a superseded synthetic-replay result.
+>
+> **Phase 10 (2026-09-07).** The shipped fp16 model (velocity checkpoint `9d542cb51d4a`) ran the real
+> closed loop on `indy_20160630_01`. The decode-attributable arms (`raw`, `kalman_only`) scored
+> **0 of 1,025 trials / 0.000000 BPS**. See
+> [`10-refit-real-evidence.md`](../10-v1-real-data-closed-loop-launch/10-refit-real-evidence.md).
 
 **Date:** 2026-06-21
 **Result:** ✅ **PASS** — held-out **co-bps = 0.3804 bits/spike**, beating the mean-firing-rate null
