@@ -442,7 +442,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build \
-            -workspace Cortex.xcworkspace \
+            -project Cortex.xcodeproj \
             -scheme CortexMac \
             -configuration Debug \
             -destination 'generic/platform=macOS' \
@@ -458,7 +458,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build \
-            -workspace Cortex.xcworkspace \
+            -project Cortex.xcodeproj \
             -scheme CortexiOS \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
@@ -474,7 +474,7 @@ jobs:
         run: |
           set -o pipefail
           xcodebuild build \
-            -workspace Cortex.xcworkspace \
+            -project Cortex.xcodeproj \
             -scheme CortexDaemon \
             -configuration Debug \
             -destination 'generic/platform=macOS' \
@@ -601,14 +601,17 @@ jobs:
         run: uv run --project Decoder pytest Decoder/tests -m "not slow" -q
 
       # Runs AFTER the suite on purpose: it proves the suite that just passed had no dataset to
-      # read. Decoder/data/ is gitignored, so a non-empty one on a CI checkout means the dataset
-      # leaked into git (threat T-09-09-04).
-      - name: Prove the quick suite needs no dataset
+      # read and no export artifacts were produced (D-21 tier split). Decoder/data/ and
+      # Decoder/exports/ are gitignored; a non-empty directory means real-data processing leaked
+      # into the CI tier. Scripts that MUST NEVER run in CI: export_replay.py, webgrid_ceiling.py.
+      - name: Prove the quick suite needs no dataset or export artifacts
         run: |
           set -euo pipefail
           test ! -e Decoder/data || test -z "$(ls -A Decoder/data 2>/dev/null)" \
             || { echo "ERROR: Decoder/data is non-empty on a CI checkout -- the dataset must stay gitignored" >&2; exit 1; }
-          echo "OK: the quick suite above ran with an empty Decoder/data/."
+          test ! -e Decoder/exports || test -z "$(ls -A Decoder/exports 2>/dev/null)" \
+            || { echo "ERROR: Decoder/exports is non-empty on a CI checkout -- export artifacts must stay gitignored" >&2; exit 1; }
+          echo "OK: the quick suite ran with empty Decoder/data/ and Decoder/exports/."
 
       # D-19: ties every published decoder number back to the manifest bytes it came from. The
       # --self-test runs alongside the gate, exactly as the seven build-and-lint policy gates do,
@@ -617,3 +620,13 @@ jobs:
         run: |
           ./Tools/scripts/decoder-policy.sh
           ./Tools/scripts/decoder-policy.sh --self-test
+
+      # D-09 / D-21: checks that the Phase-10 real-data result artifacts declare provenance
+      # (data_source=="real", 64-hex source_sha256, session_id matches the manifest) and that
+      # cross-artifact invariants hold (same session and sha across refit-real, replay, ceiling).
+      # Asserts STRUCTURE only -- never the sign or magnitude of a measured result.
+      # The --self-test proves the gate bites on a mutated clean quartet.
+      - name: Real-data provenance gate + self-test (D-09/D-21)
+        run: |
+          ./Tools/scripts/refit-real-policy.sh
+          ./Tools/scripts/refit-real-policy.sh --self-test
