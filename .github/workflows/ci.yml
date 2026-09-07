@@ -520,7 +520,7 @@ jobs:
 
       # --- Phase 8 (SYS-06/PERF-04, Plan 08-03): CortexDemo closed-loop + glass-to-glass timer tests ---
       # Runs the WHOLE CortexDemo package (NO --filter) so BOTH suites are gated here, not silently
-      # excluded: ClosedLoopPipelineTests (SYS-06/D-10 — the synthetic-spike → NDT1 → ReFIT → webgrid loop
+      # excluded: ReplayPipelineTests (SYS-06/D-10 — the synthetic-spike → NDT1 → ReFIT → webgrid loop
       # reaches a HIT with the decoder + Kalman GENUINELY in the loop, deterministic, NDT1 model-skip-
       # clean) AND GlassToGlassTimerTests (PERF-04/D-07 — the software-timed sample uses
       # targetPresentationTimestamp + embeds the verbatim methodology label). Correctness only — the

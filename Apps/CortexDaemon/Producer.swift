@@ -69,7 +69,7 @@ public final class Producer {
   /// D-05, and the one behaviour worth stating loudly: if `CORTEX_REPLAY_EXPORT` is SET but the export
   /// cannot be loaded, this THROWS. It does NOT fall back to `patternF16`. A daemon that was asked for
   /// a real replay and silently emitted a synthetic pattern is the D-05 version of the Pattern-2 trap
-  /// Plan 10-04 removed from the closed loop, and it would put a synthetic number under a real-data
+  /// Plan 10-04 removed from the replay loop, and it would put a synthetic number under a real-data
   /// label. An UNSET variable is the clean-clone path and changes nothing.
   public init(ringName: String = CORTEX_SHM_NAME,
               keychainBackend: SessionKeychain.Backend = .dataProtection) throws

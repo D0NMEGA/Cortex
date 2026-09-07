@@ -1,7 +1,7 @@
 // RecordedSpikeSourceTests - Phase 10 (RD-08, Plan 10-04): the injected spike-window seam and the
 // end of the silent synthetic fallback.
 //
-// RESEARCH Pattern 2 is the defect under test. `ClosedLoopPipeline` sizes its `SpikeInputBuffer` from
+// RESEARCH Pattern 2 is the defect under test. `ReplayPipeline` sizes its `SpikeInputBuffer` from
 // the spike source's `numBins`; `SyntheticSpikeSource`'s default is 8 while the shipped real model's
 // `spikes` input is `(1, 96, 1, 32)`. `decodeWithModel` used to swallow the resulting error into the
 // synthetic fallback, producing a running loop whose numbers were synthetic under a real-data label.
@@ -121,13 +121,13 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 6 - the pipeline derives its buffer length from the injected source
 
-  @Test("Test 6: ClosedLoopPipeline.sourceSeqLen follows the injected source, 32 recorded vs 8 synthetic")
+  @Test("Test 6: ReplayPipeline.sourceSeqLen follows the injected source, 32 recorded vs 8 synthetic")
   func pipelineSeqLenFollowsTheSource() throws {
     let export = try Self.loadFixture()
-    let recorded = ClosedLoopPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
+    let recorded = ReplayPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
     #expect(recorded.sourceSeqLen == 32, "a recorded source sizes the SpikeInputBuffer at the model's 32 bins")
 
-    let synthetic = ClosedLoopPipeline(seed: Self.testSeed)
+    let synthetic = ReplayPipeline(seed: Self.testSeed)
     #expect(synthetic.sourceSeqLen == 8, "the default convenience init still builds the v0 8-bin source")
   }
 
@@ -136,7 +136,7 @@ struct RecordedSpikeSourceTests {
   @Test("Test 7: modelBackedTicks / totalTicks / allTicksModelBacked count every tick")
   func modelBackedCountersAreExact() throws {
     let export = try Self.loadFixture()
-    let pipeline = ClosedLoopPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
+    let pipeline = ReplayPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
 
     #expect(pipeline.totalTicks == 0)
     #expect(!pipeline.allTicksModelBacked, "a run with no ticks is NOT model-backed")
@@ -156,7 +156,7 @@ struct RecordedSpikeSourceTests {
   @Test("Test 8: lastDecodeFailure is nil until a decode fails, then names both shapes")
   func lastDecodeFailureIsRecorded() throws {
     let export = try Self.loadFixture()
-    let clean = ClosedLoopPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
+    let clean = ReplayPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
     for _ in 0 ..< 4 {
       _ = clean.tick()
     }
@@ -166,7 +166,7 @@ struct RecordedSpikeSourceTests {
     // so this control runs on a clean clone. The old code discarded this reason entirely.
     let absent = FileManager.default.temporaryDirectory
       .appendingPathComponent("cortex-no-such-model-\(UUID().uuidString).mlpackage")
-    let broken = ClosedLoopPipeline(
+    let broken = ReplayPipeline(
       source: RecordedSpikeSource(export: export),
       seed: Self.testSeed,
       modelURL: absent
@@ -188,15 +188,15 @@ struct RecordedSpikeSourceTests {
 
   @Test("Test 9: the seqLen mismatch that used to pass silently is now visible on every tick")
   func theSeqLenTrapIsVisible() throws {
-    // The .mlpackage is gitignored; SKIP cleanly when absent (the ClosedLoopPipelineTests Test 2
+    // The .mlpackage is gitignored; SKIP cleanly when absent (the ReplayPipelineTests Test 2
     // idiom) so this suite stays green on a clean clone. With a real model present this is the direct
     // control for RESEARCH Pattern 2: the SAME export, the SAME model, ONE variable changed - the
     // source's window length - and the two runs must be distinguishable from the outside.
-    guard let modelURL = ClosedLoopPipeline.modelURLFromEnvironment() else { return }
+    guard let modelURL = ReplayPipeline.modelURLFromEnvironment() else { return }
     let export = try Self.loadFixture()
 
     // 32 bins: the shape the shipped model's (1, 96, 1, 32) spikes input wants.
-    let correct = ClosedLoopPipeline(
+    let correct = ReplayPipeline(
       source: RecordedSpikeSource(export: export),
       seed: Self.testSeed,
       modelURL: modelURL
@@ -210,7 +210,7 @@ struct RecordedSpikeSourceTests {
 
     // 8 bins: SyntheticSpikeSource's default, and the exact mismatch that used to disappear into the
     // synthetic fallback while the loop kept running and its numbers stopped being real.
-    let mismatched = ClosedLoopPipeline(
+    let mismatched = ReplayPipeline(
       source: RecordedSpikeSource(export: export, numBins: 8),
       seed: Self.testSeed,
       modelURL: modelURL

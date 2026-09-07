@@ -1,7 +1,7 @@
 // RecordedSpikeSource - Phase 10 (RD-08, Plan 10-04): the real-bin `SpikeWindowSource` over a
 // `CortexCore.ReplayExport`.
 //
-// This is the v1 half of the seam. It hands the closed loop the session's OWN 20 ms binned spike
+// This is the v1 half of the seam. It hands the replay loop the session's OWN 20 ms binned spike
 // counts, read from the D-06 export that `Decoder/scripts/export_replay.py` materialized from the
 // SHA-256-pinned `.mat`. Nothing here re-bins, re-scales or re-derives anything: the bins are handed
 // through exactly as the export stored them, because a second binner in Swift would be a silent drift
@@ -43,7 +43,7 @@ public nonisolated struct RecordedSpikeSource: SpikeWindowSource {
   /// (i+1)*numBins)`. That is the right cadence for a throughput bench, which only needs distinct
   /// windows to decode and does not integrate a cursor.
   ///
-  /// A caller that drives a CLOSED LOOP must pass `stride: 1` instead, so one tick advances the
+  /// A caller that drives a REPLAY LOOP must pass `stride: 1` instead, so one tick advances the
   /// session clock by one bin and the trailing window ends at that bin. With the default stride a
   /// 20 ms tick advances 640 ms of recorded time, which desynchronises the loop from the data two
   /// ways at once: the integrator moves the cursor by `velocity * 0.020` when 0.640 s actually

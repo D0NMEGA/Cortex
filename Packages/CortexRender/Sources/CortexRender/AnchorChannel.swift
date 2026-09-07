@@ -1,6 +1,6 @@
 // AnchorChannel — the producer→renderer seam for cursor re-anchoring.
 //
-// The drawn cursor position does NOT come from the closed-loop pipeline. The pipeline integrates
+// The drawn cursor position does NOT come from the replay pipeline. The pipeline integrates
 // decoded velocity for its own filter and scoring; the RENDERER owns a second `CursorIntegrator`
 // that consumes the velocity ring at display rate. So moving the pipeline's cursor does not move
 // what is on screen, and a re-anchor has to reach the renderer explicitly. This channel is how.

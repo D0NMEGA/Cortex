@@ -1,7 +1,7 @@
 // DwellChannel — the producer→renderer latest-value seam for dwell-to-select progress.
 //
 // Mirrors `TargetChannel`: one atomic word, store-latest / load-latest, no queue and no back
-// pressure. The producer is the 20ms closed-loop tick; the consumer is the display-link callback at
+// pressure. The producer is the 20ms replay-loop tick; the consumer is the display-link callback at
 // 120Hz. A frame that lands between two producer ticks reads the previous value, which is the
 // correct behaviour for a progress bar — there is nothing to interpolate and nothing to miss.
 //

@@ -77,7 +77,7 @@ packages:
   # NDT1 (CoreML) → ReFIT-Kalman → CursorIntegrator → 30×30 webgrid pipeline (decoder GENUINELY in the
   # loop, D-10), the software-timed glass-to-glass timer (targetPresentationTimestamp, PERF-04/D-07),
   # and the CortexDemoBench latency bench. Registered here so xcodebuild resolves it; Plan 08-03 Task 3
-  # wires its `ClosedLoopPipeline` into the CortexMac target so the GUI runs the real decoder loop (D-09).
+  # wires its `ReplayPipeline` into the CortexMac target so the GUI runs the real decoder loop (D-09).
   CortexDemo:
     path: Packages/CortexDemo
 
@@ -141,7 +141,7 @@ targets:
     dependencies:
       - package: CortexCore
       - package: CortexRender               # Phase 6: the 120Hz NSView.displayLink webgrid renderer (RENDER-08/02/04/06/07).
-      - package: CortexDemo                 # Phase 8 (D-09/D-10): the ClosedLoopPipeline the GUI drives — the REAL synthetic-spike → NDT1 → ReFIT → webgrid loop (decoder genuinely in loop), replacing the oscillator drive.
+      - package: CortexDemo                 # Phase 8 (D-09/D-10): the ReplayPipeline the GUI drives — the REAL synthetic-spike → NDT1 → ReFIT → webgrid loop (decoder genuinely in loop), replacing the oscillator drive.
       - package: CortexBCIHID               # Phase 8 (SYS-03/04): the ScanInfoRoundTrip whose instrumented log the GUI surfaces.
       - target: CortexDaemon                # Build the daemon bundle as a peer artifact when CortexMac builds.
     info:
@@ -238,7 +238,7 @@ targets:
 
   CortexDemoBench:
     type: tool                              # Standalone macOS software-timed glass-to-glass latency bench.
-                                            # Phase 8 (PERF-04, D-07/D-08): drives ClosedLoopPipeline for
+                                            # Phase 8 (PERF-04, D-07/D-08): drives ReplayPipeline for
                                             # n>=10k ticks, records intent-emission mach_absolute_time and
                                             # a SIMULATED targetPresentationTimestamp (next 120Hz present
                                             # boundary), builds a device-annotated LatencyHistogram, and
@@ -252,7 +252,7 @@ targets:
     sources:
       - path: Packages/CortexDemo/Sources/CortexDemoBench
     dependencies:
-      - package: CortexDemo                  # ClosedLoopPipeline + GlassToGlassTimer under measurement.
+      - package: CortexDemo                  # ReplayPipeline + GlassToGlassTimer under measurement.
       - package: CortexDecoder               # LatencyHistogram (reused percentile value type).
       - package: CortexCore                  # Time.machAbsoluteNanoseconds — the intent-emission clock.
     settings:

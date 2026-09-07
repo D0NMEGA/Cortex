@@ -69,7 +69,7 @@ force_unwrapping:
 # so the linter yields on the wrapped case ONLY. Everything else the rule polices still fails:
 # `func abc(){`, `if x{`, and a stray brace line after a single-line declaration are all still caught.
 # Drove (8 signatures): Apps/CortexDaemon/Benchmark.swift:191, Apps/CortexDaemon/Producer.swift:76,
-# CortexDemo/ClosedLoopPipeline.swift:351 and :448, CortexIPC/FDChannel.swift:35,
+# CortexDemo/ReplayPipeline.swift:351 and :448, CortexIPC/FDChannel.swift:35,
 # CortexIPC/Rendezvous.swift:69, CortexIPC/HarnessConsumer.swift:96 and :155.
 # Drove (3 conditions): CortexDecoderBench/main.swift:51, CortexIPC/FDChannel.swift:75,
 # CortexIPC/HarnessConsumer.swift:104. (Phase 10 / D-18)
@@ -139,7 +139,7 @@ file_length:
   # only stops a file's doc comments from counting toward "this file does too much", which is what
   # the rule is actually about. It matters here because this repo documents heavily: the six files
   # over the limit carry 108-212 comment-only lines each, and three of them come back under 400 on
-  # code alone -- ClosedLoopPipeline.swift 499 -> 287, ReplayExport.swift 408 -> 285,
+  # code alone -- ReplayPipeline.swift 499 -> 287, ReplayExport.swift 408 -> 285,
   # CortexDemoBench/main.swift 494 -> 386. The other three are handled with a scoped disable/enable
   # pair in the file itself rather than by moving this number. (Phase 10 / D-18)
   ignore_comment_only_lines: true

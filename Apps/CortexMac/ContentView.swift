@@ -4,16 +4,16 @@ import CortexDemo
 import CortexRender
 import SwiftUI
 
-// Phase 8 (SYS-06/PERF-04, D-09/D-10): the CortexMac v0 closed-loop GUI demo. This REPLACES the Phase-6
+// Phase 8 (SYS-06/PERF-04, D-09/D-10): the CortexMac v0 replay-loop GUI demo. This REPLACES the Phase-6
 // oscillator-velocity drive with the REAL synthetic-spike → NDT1 → ReFIT-Kalman → CursorIntegrator →
-// 30×30 webgrid closed loop (`CortexDemo.ClosedLoopPipeline`), so the decoder + Kalman are GENUINELY in
+// 30×30 webgrid replay loop (`CortexDemo.ReplayPipeline`), so the decoder + Kalman are GENUINELY in
 // the live demo loop (D-10), not bypassed. The Phase-6 render path is UNCHANGED: the same
 // `WebgridView(ring:)` + `MacDisplayLinkAdapter` (NSView.displayLink) consume the same `VelocityRing`
 // at 120Hz (RENDER-08); only the PRODUCER changed (the decoder loop, not the oscillator). This is the
 // D-09 runnable v0 artifact — free-team GUI-launchable with MTL_HUD_ENABLED=1 (the iPad build is the
 // same code, gated). It VISIBLY surfaces (1) the SYS-03/04 instrumented BCI-HID round-trip log line and
 // (2) the latest SOFTWARE-TIMED glass-to-glass sample WITH the verbatim methodology label (D-07) — so
-// the demo shows the closed loop AND the honest latency framing, never an over-claimed number.
+// the demo shows the replay loop AND the honest latency framing, never an over-claimed number.
 struct ContentView: View {
   /// The producer→renderer SPSC seam (D-03), once per arm. Each view's display-link callback is the
   /// single consumer of its own ring; each driver's MainActor timer is the single producer.
@@ -22,22 +22,26 @@ struct ContentView: View {
   /// difference between them is the whole point. `blind` is what the decoder does; `refit` is what
   /// target knowledge does. Showing only the second is how a target-determined result gets mistaken
   /// for a decoding result (10-PREREGISTRATION section 7).
-  @State private var blind = ClosedLoopDriver(rotationEnabled: false)
-  @State private var refit = ClosedLoopDriver(rotationEnabled: true)
+  @State private var blind = ReplayDriver(rotationEnabled: false)
+  @State private var refit = ReplayDriver(rotationEnabled: true)
 
   var body: some View {
     VStack(spacing: 0) {
       HStack(spacing: 1) {
         arm(
           driver: blind,
-          title: "kalman_only - target-blind",
-          caption: "Heading is the DECODE's own. This is what the decoder does. Published: 0 of 1025 hits."
+          title: "kalman_only - heading from the decode",
+          caption: "Heading is the DECODE's own; no target steering. The start of each trial is still "
+            + "task-derived (see the re-anchor note), so this is not target-free. Published: 0 of 1025."
         )
         arm(
           driver: refit,
-          title: "refit - target-determined",
-          caption: "IntentRotation replaces the decoded heading with the direction to the KNOWN target, "
-            + "keeping only decoded speed. NOT a decoding result. Published: 70 of 1025 hits."
+          // NOT "refit". ReFIT retrains decoder parameters against target-informed intention; this
+          // applies an intent ROTATION at inference and trains nothing. Calling the arm refit
+          // credits the run with a method it does not implement.
+          title: "target-assisted - heading supplied",
+          caption: "IntentRotation replaces the decoded heading with the direction to the KNOWN "
+            + "target, keeping only decoded speed. NOT a decoding result. Published: 70 of 1025."
         )
       }
 
@@ -92,7 +96,7 @@ struct ContentView: View {
   }
 
   /// One arm's render surface with the label that says what it is and what it is not.
-  private func arm(driver: ClosedLoopDriver, title: String, caption: String) -> some View {
+  private func arm(driver: ReplayDriver, title: String, caption: String) -> some View {
     VStack(spacing: 0) {
       // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
       WebgridView(
@@ -120,8 +124,8 @@ struct ContentView: View {
   }
 }
 
-/// Drives the REAL closed loop (D-09/D-10) on the MAIN ACTOR via a 20ms repeating timer: each tick runs
-/// `ClosedLoopPipeline.tick()` (synthetic-spike → NDT1 → ReFIT → integrate) and pushes the decoded+
+/// Drives the REAL replay loop (D-09/D-10) on the MAIN ACTOR via a 20ms repeating timer: each tick runs
+/// `ReplayPipeline.tick()` (synthetic-spike → NDT1 → ReFIT → integrate) and pushes the decoded+
 /// Kalman-refined velocity into the `VelocityRing` the 120Hz display-link callback pops.
 ///
 /// The pipeline + the SYS-03/04 round-trip harness are `@MainActor`-isolated (the CortexDemo package
@@ -133,7 +137,7 @@ struct ContentView: View {
 /// latency lines.
 @MainActor
 @Observable
-final class ClosedLoopDriver {
+final class ReplayDriver {
   /// 4096-slot ring (power-of-two; ample for a 50Hz producer vs a 120Hz consumer). `init?` only
   /// fails for a non-power-of-two/zero capacity, so 4096 can never fail; the trap is unreachable and
   /// says why, rather than being a bare `!`.
@@ -157,10 +161,10 @@ final class ClosedLoopDriver {
   /// (`modelBackedTicks` / `totalTicks`) and records why a decode failed; it was simply never shown.
   private(set) var decodeLine = "decode: warming up…"
 
-  /// The real closed loop (D-10): spike window → NDT1 (or synthetic fallback) → ReFIT → integrate.
+  /// The real replay loop (D-10): spike window → NDT1 (or synthetic fallback) → ReFIT → integrate.
   /// Seeded deterministically so the demo trajectory is reproducible; the model-backed NDT1 path
   /// activates when CORTEX_MODEL_URL points at a built .mlpackage, else the synthetic decode runs.
-  private let pipeline: ClosedLoopPipeline
+  private let pipeline: ReplayPipeline
   /// Which spike source is actually driving the loop, surfaced in the overlay (D-16).
   private(set) var sourceLabel: String
   /// The active task target, published to the renderer once per tick (latest-value, lock-free).
@@ -194,7 +198,7 @@ final class ClosedLoopDriver {
     // D-16: resolve the recorded export the same way `CortexDemoBench --real` does, so the GUI and
     // the bench cannot disagree about what "real" means. BOTH inputs are required: a recorded export
     // with no model would decode synthetically over real spikes and still look real on screen.
-    let modelURL = ClosedLoopPipeline.modelURLFromEnvironment()
+    let modelURL = ReplayPipeline.modelURLFromEnvironment()
     let exportURL = ReplayExport.sidecarURLFromEnvironment()
 
     if let exportURL, let modelURL {
@@ -209,7 +213,7 @@ final class ClosedLoopDriver {
         let source = RecordedSpikeSource(export: export, stride: 1)
         // NDT1 emits cm/s; the filter, integrator and webgrid run in grid-units/s. Without this the
         // demo cursor runs about 17x too fast on the pre-registered box.
-        pipeline = ClosedLoopPipeline(
+        pipeline = ReplayPipeline(
           source: source,
           seed: 0xC0FFEE,
           modelURL: modelURL,
@@ -230,7 +234,7 @@ final class ClosedLoopDriver {
       } catch {
         // A REFUSED export is reported, never silently downgraded to synthetic while the recording
         // rolls. The loop still runs so the window is not blank, but the label says what happened.
-        pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
+        pipeline = ReplayPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
         sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
         recordedSource = nil
         boxOriginMm = .zero
@@ -239,7 +243,7 @@ final class ClosedLoopDriver {
       }
     }
 
-    pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
+    pipeline = ReplayPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
     var missing = [String]()
     if exportURL == nil {
       missing.append("CORTEX_REPLAY_EXPORT")
@@ -265,7 +269,7 @@ final class ClosedLoopDriver {
     guard timer == nil else { return }
     // The 20ms decode cadence on the main actor (the producer). `.common` so it keeps firing during
     // window interaction. The display-link consumer pops the ring on its own callback at 120Hz.
-    let timer = Timer(timeInterval: ClosedLoopPipeline.dt, repeats: true) { [weak self] _ in
+    let timer = Timer(timeInterval: ReplayPipeline.dt, repeats: true) { [weak self] _ in
       MainActor.assumeIsolated { self?.step() }
     }
     RunLoop.main.add(timer, forMode: .common)
@@ -297,13 +301,13 @@ final class ClosedLoopDriver {
       previousTarget = nil
       return
     }
-    let grid = Double(ClosedLoopDriver.gridSide)
+    let grid = Double(ReplayDriver.gridSide)
     targets.store(column: Int(normalised.x * grid), row: Int(normalised.y * grid))
     let current = SIMD2<Float>(Float(normalised.x), Float(normalised.y))
 
     // A new target is a new trial. Re-anchor the cursor onto the target just left before steering at
     // the new one, so what the viewer sees is the decode's within-trial behaviour rather than 24
-    // minutes of accumulated open-loop integration error. See `ClosedLoopPipeline.reanchor(to:)` for
+    // minutes of accumulated open-loop integration error. See `ReplayPipeline.reanchor(to:)` for
     // why a replay cannot close that loop on its own, and the on-screen caption that says so.
     if let previous = previousTarget, previous != current {
       pipeline.reanchor(to: previous)

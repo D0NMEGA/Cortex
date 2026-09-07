@@ -1,12 +1,12 @@
 // swift-tools-version: 6.2
-// CortexDemo — Phase 8 (SYS-06, PERF-04, D-09/D-10): the v0 closed-loop ASSEMBLY package.
+// CortexDemo — Phase 8 (SYS-06, PERF-04, D-09/D-10): the v0 replay-loop ASSEMBLY package.
 //
 // This is the HEART of v0 (08-CONTEXT D-09/D-10, 08-RESEARCH §0.3/§5). It wires the prior phases'
 // halves into ONE running synthetic-spike → NDT1 (CoreML) → ReFIT-Kalman → CursorIntegrator → 30×30
-// webgrid closed loop, so the DECODER + KALMAN are GENUINELY in the loop (NOT the Phase-6 Lissajous
+// webgrid replay loop, so the DECODER + KALMAN are GENUINELY in the loop (NOT the Phase-6 Lissajous
 // shortcut, which bypasses the decoder and would make SYS-06 hollow — D-10).
 //
-//   • ClosedLoopPipeline  — the assembly: SyntheticSpikeSource → [NeuralDecoder.decode | synthetic
+//   • ReplayPipeline  — the assembly: SyntheticSpikeSource → [NeuralDecoder.decode | synthetic
 //     decoded-velocity fallback] → KalmanFilter.step → CursorIntegrator.integrate → WebgridAcquisition.
 //     The NeuralDecoder.decode call site is present + compiled (D-10) and routes spikes through NDT1
 //     when CORTEX_MODEL_URL points at a real model; the deterministic synthetic decoded-velocity
@@ -80,7 +80,7 @@ let package = Package(
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
     // The headless software-timed latency bench (PERF-04). A top-level main.swift runs on the main
-    // actor by default (fine for a sequential bench). It drives ClosedLoopPipeline for n ≥ 10,000
+    // actor by default (fine for a sequential bench). It drives ReplayPipeline for n ≥ 10,000
     // ticks, builds a device-annotated LatencyHistogram from a SIMULATED targetPresentationTimestamp,
     // asserts p99 < 25ms (M5-Pro corroborating), writes .bench/glass_to_glass.json (.sortedKeys), and
     // prints the verbatim D-07 methodology label. Exits 0 with usage when no flag (clean-clone skip).

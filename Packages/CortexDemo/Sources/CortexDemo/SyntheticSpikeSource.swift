@@ -1,7 +1,7 @@
 // SyntheticSpikeSource — Phase 8 (SYS-06, D-10): the deterministic synthetic Indy/Loco spike stream
-// that feeds the closed loop, standing in for the gitignored Indy `.mat` replay.
+// that feeds the replay loop, standing in for the gitignored Indy `.mat` replay.
 //
-// 08-CONTEXT D-10 / 08-RESEARCH §0.3: the v0 closed loop is driven by synthetic Indy/Loco spike replay
+// 08-CONTEXT D-10 / 08-RESEARCH §0.3: the v0 replay loop is driven by synthetic Indy/Loco spike replay
 // through NDT1 so the CoreML decoder is GENUINELY in the loop. This source emits the `(numBins, 96)`
 // fp16 spike windows the NDT1 `spikes` input consumes (the Phase-4 dataset shape: 96 channels, 20ms
 // bins — DEC-02), modeling the post-IPC frame the daemon producer would replay into the decoder.
@@ -18,7 +18,7 @@
 // hot path, but staying lean mirrors the seam types' posture.
 import simd
 
-/// A deterministic source of `(numBins, 96)` fp16 spike windows for the v0 closed loop (D-10).
+/// A deterministic source of `(numBins, 96)` fp16 spike windows for the v0 replay loop (D-10).
 ///
 /// `nonisolated` + `Sendable`: a pure value type holding only its immutable shape + seed. It can be
 /// produced/read from any context (the pipeline drives it on the main actor alongside the UI; the bench

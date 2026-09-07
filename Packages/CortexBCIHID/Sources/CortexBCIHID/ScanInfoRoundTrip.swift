@@ -37,7 +37,12 @@ public nonisolated struct RoundTripResponse: Sendable, Equatable {
   }
 }
 
-/// The in-app host harness for the SYS-03/04 closed loop. Holds the instrumented `RoundTripLog` and a
+/// The in-app host harness for the SYS-03/04 round trip. "Closed loop" here means the HID PROTOCOL
+/// loop -- a Scan-Info OUTPUT report in, an intent report out -- and nothing about neural control:
+/// callers drive it with their own `selectedItem`, so a running log demonstrates that the report
+/// path works, NOT that a decoded cursor selected anything. `CortexMac` drives it from a sequence
+/// counter for exactly this reason.
+/// Holds the instrumented `RoundTripLog` and a
 /// monotonic cycle counter; `respond(to:)` turns one host Scan-Info OUTPUT report into a deterministic
 /// intent and appends exactly one log entry.
 ///

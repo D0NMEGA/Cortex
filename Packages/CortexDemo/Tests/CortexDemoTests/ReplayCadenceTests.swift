@@ -1,7 +1,7 @@
 // ReplayCadenceTests - the replay stride and the streaming dwell readout.
 //
 // The defect under test: `RecordedSpikeSource`'s default stride is its window length, so consecutive
-// window indices are NON-OVERLAPPING. A throughput bench wants that. A closed loop does not: the GUI
+// window indices are NON-OVERLAPPING. A throughput bench wants that. A replay loop does not: the GUI
 // advanced one 32-bin window per 20 ms tick, which ran the session clock 32x faster than wall clock
 // while the integrator still moved the cursor by `velocity * 0.020`. On screen that is a cursor
 // creeping around its start point beside a task target changing every couple of frames.
@@ -102,7 +102,7 @@ struct ReplayCadenceTests {
   @Test("a pipeline that never reaches its target reports no dwell and no selections")
   func dwellStaysZeroOffTarget() throws {
     let source = try RecordedSpikeSource(export: Self.loadFixture(), stride: 1)
-    let pipeline = ClosedLoopPipeline(source: source, seed: 0xC0FFEE)
+    let pipeline = ReplayPipeline(source: source, seed: 0xC0FFEE)
 
     // The synthetic decode fallback runs (no model in a clean clone), so this asserts the READOUT's
     // resting state, not a decoding result: an off-target cursor holds no dwell.
@@ -126,7 +126,7 @@ struct ReanchorTests {
 
   @Test("reanchor moves the cursor and the filter agrees with the integrator")
   func reanchorMovesTheCursor() throws {
-    let pipeline = try ClosedLoopPipeline(
+    let pipeline = try ReplayPipeline(
       source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
       seed: 0xC0FFEE
     )
@@ -144,7 +144,7 @@ struct ReanchorTests {
 
   @Test("reanchor clamps to the grid and refuses a non-finite position")
   func reanchorClampsAndRefuses() throws {
-    let pipeline = try ClosedLoopPipeline(
+    let pipeline = try ReplayPipeline(
       source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
       seed: 0xC0FFEE
     )
@@ -164,7 +164,7 @@ struct ReanchorTests {
 
   @Test("reanchor clears any dwell in progress")
   func reanchorClearsDwell() throws {
-    let pipeline = try ClosedLoopPipeline(
+    let pipeline = try ReplayPipeline(
       source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
       seed: 0xC0FFEE
     )

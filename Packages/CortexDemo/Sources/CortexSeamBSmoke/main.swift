@@ -77,7 +77,7 @@ func flagValue(_ name: String) -> String? {
 let tamperRequested = arguments.contains("--tamper")
 let requestedFrames = flagValue("--frames").flatMap(Int.init) ?? 512
 let modelURL = flagValue("--model").map { URL(fileURLWithPath: $0) }
-  ?? ClosedLoopPipeline.modelURLFromEnvironment()
+  ?? ReplayPipeline.modelURLFromEnvironment()
 
 /// The repo root, walked up from this file: `<root>/Packages/CortexDemo/Sources/CortexSeamBSmoke/`.
 let repoRoot = URL(fileURLWithPath: #filePath)

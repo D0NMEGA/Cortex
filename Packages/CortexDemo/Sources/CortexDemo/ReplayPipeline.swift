@@ -1,11 +1,11 @@
-// ClosedLoopPipeline — Phase 8 (SYS-06, D-10): the v0 synthetic-spike → NDT1 → ReFIT-Kalman →
-// CursorIntegrator → 30×30 webgrid CLOSED LOOP. The decoder + Kalman are GENUINELY in the loop.
+// ReplayPipeline — Phase 8 (SYS-06, D-10): the v0 synthetic-spike → NDT1 → ReFIT-Kalman →
+// CursorIntegrator → 30×30 webgrid REPLAY LOOP. The decoder + Kalman are GENUINELY in the loop.
 //
 // This is the true SYS-06 path (08-CONTEXT D-10, 08-RESEARCH §0.3): a synthetic Indy/Loco spike stream
 // flows through the SAME decode → filter → integrate → webgrid assembly the live demo runs — NOT the
 // Phase-6 oscillator-velocity shortcut (which bypasses the decoder entirely and would make SYS-06
 // hollow). The grep gate (T-08-03-01) asserts that shortcut producer's type name appears nowhere in
-// this file, so the closed loop provably drives the real decoder. The stages, in order:
+// this file, so the replay loop provably drives the real decoder. The stages, in order:
 //
 //   1. SyntheticSpikeSource → a `(numBins, 96)` fp16 spike window (models the post-IPC frame).
 //   2. DECODE — if a `NeuralDecoder` is available (CORTEX_MODEL_URL set + the model loads), route the
@@ -17,7 +17,7 @@
 //      gate).
 //   3. ReFIT-KALMAN — `KalmanFilter.step(measurement:target:acquisitionRadius:)` → refined velocity
 //      (the filter GENUINELY applied, never bypassed; ONE warm filter carried across ticks — the
-//      continuous closed loop is never reset, 07-RESEARCH §2).
+//      continuous replay loop is never reset, 07-RESEARCH §2).
 //   4. INTEGRATE — `CursorIntegrator.integrate(latest:dt:)` → clamped, always-finite [0,1] position
 //      (the single NaN/Inf-reject + clamp seam, Phase-6 T-06-02-01, reused unchanged).
 //   5. WEBGRID — push the position; `WebgridAcquisition` detects a HIT against the active target cell.
@@ -37,7 +37,7 @@ import CortexRender // CursorIntegrator + CursorVelocity (the renderer-owned int
 import Metal // MTLCreateSystemDefaultDevice — only when wiring the model-backed SpikeInputBuffer (gated path).
 import simd
 
-/// One streamed step of the closed loop the GUI consumes: the refined cursor position (grid-normalised
+/// One streamed step of the replay loop the GUI consumes: the refined cursor position (grid-normalised
 /// [0,1]), the velocity pushed to the renderer ring, whether the decoder ran NDT1 (vs the synthetic
 /// fallback), and whether this tick registered a webgrid HIT on the active target.
 public nonisolated struct CursorState: Sendable, Equatable {
@@ -49,7 +49,7 @@ public nonisolated struct CursorState: Sendable, Equatable {
   /// false if it used the deterministic synthetic decoded-velocity fallback (no model present).
   public let decodedByModel: Bool
   /// True if the cursor is within the acquisition radius of the active target this tick (a webgrid HIT
-  /// is registered when this holds continuously for the dwell — see ``ClosedLoopPipeline/runToHit``).
+  /// is registered when this holds continuously for the dwell — see ``ReplayPipeline/runToHit``).
   public let onTarget: Bool
 
   public init(position: SIMD2<Float>, velocity: SIMD2<Float>, decodedByModel: Bool, onTarget: Bool) {
@@ -60,11 +60,11 @@ public nonisolated struct CursorState: Sendable, Equatable {
   }
 }
 
-/// The v0 synthetic-spike → NDT1 → ReFIT → integrator → 30×30 webgrid closed loop (SYS-06, D-10).
+/// The v0 synthetic-spike → NDT1 → ReFIT → integrator → 30×30 webgrid replay loop (SYS-06, D-10).
 ///
 /// A `final class` (reference semantics): one pipeline owns the continuous warm Kalman filter + the
 /// integrator + the active-target/tick cursor across a streaming demo session (never reset mid-loop).
-public final class ClosedLoopPipeline {
+public final class ReplayPipeline {
   // MARK: - Tunables (the same 20ms / 30×30 geometry as CortexReFITBench)
 
   /// The decode/filter/integrate tick in seconds (20ms — the DEC-10 cadence, KalmanConstants.dt).
@@ -84,7 +84,7 @@ public final class ClosedLoopPipeline {
   private let decoder: NeuralDecoder?
   /// The shared-surface spike buffer the model-backed decode writes into (non-nil iff `decoder` is).
   private let spikeBuffer: SpikeInputBuffer?
-  /// ONE warm ReFIT-Kalman filter carried across ticks (the continuous closed loop — never reset).
+  /// ONE warm ReFIT-Kalman filter carried across ticks (the continuous replay loop — never reset).
   private let filter: KalmanFilter
   /// The renderer-owned integrator (the single [0,1] clamp + NaN/Inf reject seam).
   private let integrator: CursorIntegrator
@@ -164,7 +164,7 @@ public final class ClosedLoopPipeline {
 
   // MARK: - Init
 
-  /// Build the closed loop over an INJECTED spike source (the Phase-10 designated init).
+  /// Build the replay loop over an INJECTED spike source (the Phase-10 designated init).
   ///
   /// - Parameters:
   ///   - source: the spike-window seam. `RecordedSpikeSource` replays the real D-06 export;
@@ -236,7 +236,7 @@ public final class ClosedLoopPipeline {
     )
   }
 
-  /// The v0 closed loop over the deterministic `SyntheticSpikeSource` (the Phase-8 call shape, kept
+  /// The v0 replay loop over the deterministic `SyntheticSpikeSource` (the Phase-8 call shape, kept
   /// byte-identical so every existing call site and test compiles and behaves unchanged).
   public convenience init(
     seed: UInt64,
@@ -410,7 +410,7 @@ public final class ClosedLoopPipeline {
     target = newTarget
   }
 
-  /// Advance the continuous closed loop by ONE 20ms tick and return the new `CursorState`. The GUI
+  /// Advance the continuous replay loop by ONE 20ms tick and return the new `CursorState`. The GUI
   /// calls this at the 20ms cadence and pushes the resulting velocity into the renderer's VelocityRing.
   /// The warm Kalman filter + integrator persist across calls (never reset — the continuous loop).
   @discardableResult
@@ -422,7 +422,7 @@ public final class ClosedLoopPipeline {
     let window = spikeSource.window(tickIndex)
     let (decoded, byModel) = decode(window: window, tick: tickIndex, cursor: cursor)
 
-    // ReFIT-Kalman GENUINELY applied (rotation toward the active target enabled — the closed loop).
+    // ReFIT-Kalman GENUINELY applied (rotation toward the active target enabled — the replay loop).
     // Rotation OFF is the `kalman_only` arm: a nil target makes `IntentRotation` return the
     // measurement unchanged, so the heading stays the decode's own.
     let refined = filter.step(
@@ -444,7 +444,7 @@ public final class ClosedLoopPipeline {
 
   // MARK: - Deterministic batch run (the test + bench path)
 
-  /// The outcome of one deterministic closed-loop run: the sampled trajectory, whether a webgrid
+  /// The outcome of one deterministic replay run: the sampled trajectory, whether a webgrid
   /// HIT registered, and how many 20 ms ticks it took.
   ///
   /// A named struct rather than a 3-member tuple return (SwiftLint `large_tuple` caps tuples at 2).
@@ -460,7 +460,7 @@ public final class ClosedLoopPipeline {
     public let ticks: Int
   }
 
-  /// Run the closed loop deterministically from a fresh cursor at the grid center toward `target` and
+  /// Run the replay loop deterministically from a fresh cursor at the grid center toward `target` and
   /// report whether it reaches a webgrid HIT (dwell-to-select), the cursor trajectory, and the tick
   /// count. Byte-identical across two runs on the same seed (D-13).
   ///
@@ -487,9 +487,9 @@ public final class ClosedLoopPipeline {
     let start = SIMD2<Float>(0.5, 0.5)
     let acquisition = WebgridAcquisition(
       dwellSeconds: 0.30,
-      acquisitionRadius: ClosedLoopPipeline.acquisitionRadius,
+      acquisitionRadius: ReplayPipeline.acquisitionRadius,
       timeoutSeconds: 5.0,
-      dt: ClosedLoopPipeline.dt
+      dt: ReplayPipeline.dt
     )
     let filter = KalmanFilter()
     filter.setState([start.x, start.y, 0, 0, 0, 0])
@@ -508,16 +508,16 @@ public final class ClosedLoopPipeline {
       case .raw:
         decoded // no filter — the bypass arm (Test-4 baseline).
       case .refit:
-        filter.step(measurement: decoded, target: target, acquisitionRadius: ClosedLoopPipeline.acquisitionRadius)
+        filter.step(measurement: decoded, target: target, acquisitionRadius: ReplayPipeline.acquisitionRadius)
       }
       let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
-      let pos = integrator.integrate(latest: velocity, dt: ClosedLoopPipeline.dt)
+      let pos = integrator.integrate(latest: velocity, dt: ReplayPipeline.dt)
       positions.append(SIMD2<Float>(pos.x, pos.y))
     }
 
     let trial = acquisition.runTrial(positions: positions, target: target)
     // Ticks to the HIT (1-based elapsed-tick count from the movement time), or the full budget on miss.
-    let ticks = Int((trial.movementTime / ClosedLoopPipeline.dt).rounded())
+    let ticks = Int((trial.movementTime / ReplayPipeline.dt).rounded())
     return RunOutcome(positions: positions, hit: trial.acquired, ticks: ticks)
   }
 }
@@ -528,7 +528,7 @@ public final class ClosedLoopPipeline {
 /// Re-anchoring and the dwell readout exist so a VIEWER can see what the loop is doing. Neither
 /// feeds the loop, and no published number is computed from either, so they live outside the
 /// class body that carries the decode/filter/integrate path.
-extension ClosedLoopPipeline {
+extension ReplayPipeline {
   /// Move the cursor to `position` and re-seat the filter's position state on it.
   ///
   /// TRIAL RE-ANCHORING. The streaming loop integrates decoded velocity open-loop: nothing observes

@@ -15,8 +15,8 @@ stated with numbers below rather than deferred to a footnote.
 | Offline velocity decoding from real M1 spikes | Works. Pooled held-out R2 **0.4238**, beaten by a linear baseline at **0.4616**. |
 | Within-session generalization | Weak. Held-out R2 **0.1446** on the locked session. |
 | Across-session transfer | Fails. Leave-one-session-out co-bps **-0.3498**, below a mean-rate null. |
-| Closed-loop target acquisition, decode-only | **0 of 1,025** acquisitions. |
-| Closed-loop with the target supplied each tick | 70 of 1,025, which is not a decoding result (see below). |
+| Replay target acquisition, decode-only | **0 of 1,025** acquisitions. |
+| Replay with the target supplied each tick | 70 of 1,025, which is not a decoding result (see below). |
 | Software-timed pipeline latency | Measured, p99 **8.831 ms** on an M5 Pro. |
 | Physical glass-to-glass latency | Not measured. No photodiode rig was built. |
 | ANE execution | Graph is **239/239 ANE-eligible**; runtime placement measures **CPU** at this model scale. |
@@ -60,8 +60,9 @@ finding about this setup, not a general claim about NDT1: a stronger result woul
 generalization across sessions, which is exactly where this decoder currently fails.
 Reproduce with `uv run --project Decoder python Decoder/scripts/fit_baseline_decoders.py`.
 
-**Closed-loop replay.** This is an `open-loop replay` of a recorded session: the animal was not in the
-loop, and recorded spikes cannot respond to the decoded cursor. Four arms over 1,025 trials:
+**Replay, not closed loop.** This is an open-loop replay of a recorded session: the animal was not
+in the loop, and recorded spikes cannot respond to the decoded cursor. Nothing here is closed-loop
+BCI, and the code no longer says otherwise. Four arms over 1,025 trials:
 
 | arm | acquisitions | Webgrid BPS | target information |
 |---|---|---|---|
@@ -83,7 +84,7 @@ harness makes incorrect selections **structurally zero** so the error term is al
 here is an upper bound, and Neuralink's published score adds a click-type term that this
 single-click-type harness omits.
 
-## Why the closed-loop number is zero
+## Why the acquisition count is zero
 
 The acquisition rule does not match the task the data came from, and the repository measures this
 directly. Replaying the animal's **own recorded cursor track** through the same rule gives:

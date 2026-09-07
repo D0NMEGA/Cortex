@@ -85,7 +85,7 @@ func flagValue(_ name: String) -> String? {
 let exportURL = flagValue("--export").map { URL(fileURLWithPath: $0) }
   ?? ReplayExport.sidecarURLFromEnvironment()
 let modelURL = flagValue("--model").map { URL(fileURLWithPath: $0) }
-  ?? ClosedLoopPipeline.modelURLFromEnvironment()
+  ?? ReplayPipeline.modelURLFromEnvironment()
 
 /// The gitignored `.bench/` output dir beside the package root (the CortexDemoBench idiom).
 let benchDir = URL(fileURLWithPath: #filePath)

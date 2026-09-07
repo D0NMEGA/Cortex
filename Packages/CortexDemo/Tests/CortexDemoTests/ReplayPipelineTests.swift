@@ -1,6 +1,6 @@
 @testable import CortexDemo
 
-// ClosedLoopPipelineTests — Phase 8 (SYS-06, D-10): the deterministic end-to-end harness proving the
+// ReplayPipelineTests — Phase 8 (SYS-06, D-10): the deterministic end-to-end harness proving the
 // synthetic-spike → NDT1 → ReFIT-Kalman → CursorIntegrator → 30×30 webgrid loop is wired end-to-end
 // with the DECODER + KALMAN genuinely in the loop (NOT the oscillator-velocity shortcut).
 //
@@ -21,9 +21,9 @@ import Foundation
 import simd
 import Testing
 
-@Suite("SYS-06 / D-10: synthetic-spike -> NDT1 -> ReFIT -> webgrid closed loop")
+@Suite("SYS-06 / D-10: synthetic-spike -> NDT1 -> ReFIT -> webgrid replay loop")
 @MainActor
-struct ClosedLoopPipelineTests {
+struct ReplayPipelineTests {
   /// A reachable target on a 30×30 cell center used across the HIT tests. Chosen so the ReFIT
   /// (Kalman+rotation) arm reaches it comfortably within the dwell-to-select budget while the raw-
   /// passthrough arm misses (the Test-4 ablation) — a deterministic, well-margined separation.
@@ -32,9 +32,9 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 1 — the loop reaches a target cell (a webgrid HIT) in synthetic mode.
 
-  @Test("Test 1: synthetic-mode closed loop reaches the target cell (a webgrid HIT)")
+  @Test("Test 1: synthetic-mode replay loop reaches the target cell (a webgrid HIT)")
   func syntheticLoopReachesTarget() {
-    let pipeline = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    let pipeline = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     // No CORTEX_MODEL_URL ⇒ the synthetic decode fallback runs (the clean-clone / CI path).
     #expect(!pipeline.isModelBacked, "with no model the pipeline must run the synthetic decode fallback")
 
@@ -54,9 +54,9 @@ struct ClosedLoopPipelineTests {
   func modelBackedDecodePathPresent() {
     // The .mlpackage is gitignored; resolve from CORTEX_MODEL_URL and SKIP cleanly when absent so the
     // suite stays green on a clean clone / CI (mirrors VelocityOutputTests). The NeuralDecoder.decode
-    // call site is COMPILED regardless (in ClosedLoopPipeline.decodeWithModel) — the structural grep in
+    // call site is COMPILED regardless (in ReplayPipeline.decodeWithModel) — the structural grep in
     // the acceptance criteria proves it is present; here we exercise it ONLY when a real model exists.
-    guard let modelURL = ClosedLoopPipeline.modelURLFromEnvironment() else {
+    guard let modelURL = ReplayPipeline.modelURLFromEnvironment() else {
       return // model artifact not built — export CORTEX_MODEL_URL to exercise the NDT1-in-loop path.
     }
     // The source is built at the SHIPPED model's window length, not the `SyntheticSpikeSource`
@@ -65,7 +65,7 @@ struct ClosedLoopPipelineTests {
     // the synthetic decode. The case could therefore never pass under the condition it was written
     // for, and it looked green only because it returns early when no model is present. Proven
     // pre-existing at commit `5bb164d` and carried in from Plan 10-04's deferred-items.md.
-    let pipeline = ClosedLoopPipeline(
+    let pipeline = ReplayPipeline(
       source: SyntheticSpikeSource(numBins: RecordedSpikeSource.modelSeqLen, seed: Self.testSeed),
       seed: Self.testSeed,
       target: Self.reachableTarget,
@@ -86,9 +86,9 @@ struct ClosedLoopPipelineTests {
 
   @Test("Test 3: deterministic — same seed reproduces the byte-identical trajectory + hit/miss")
   func deterministicAcrossRuns() {
-    let first = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    let first = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget)
       .runToHit(seed: Self.testSeed, target: Self.reachableTarget)
-    let second = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    let second = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget)
       .runToHit(seed: Self.testSeed, target: Self.reachableTarget)
 
     #expect(first.hit == second.hit, "the hit/miss outcome is deterministic for a fixed seed")
@@ -106,8 +106,8 @@ struct ClosedLoopPipelineTests {
   @Test("Test 4: ReFIT-Kalman is genuinely in the loop — the rotation arm HITs where raw does not")
   func kalmanGenuinelyApplied() {
     // Same synthetic decode + target; the ONLY difference is the filter stage (the Phase-7 ablation).
-    let refit = ClosedLoopPipeline.simulate(seed: Self.testSeed, target: Self.reachableTarget, arm: .refit)
-    let raw = ClosedLoopPipeline.simulate(seed: Self.testSeed, target: Self.reachableTarget, arm: .raw)
+    let refit = ReplayPipeline.simulate(seed: Self.testSeed, target: Self.reachableTarget, arm: .refit)
+    let raw = ReplayPipeline.simulate(seed: Self.testSeed, target: Self.reachableTarget, arm: .raw)
 
     // The Kalman+rotation arm reaches the target; the raw-passthrough arm (no filter) does not —
     // proving the filter is genuinely applied in the loop, not bypassed.
@@ -150,13 +150,13 @@ struct ClosedLoopPipelineTests {
   func sourceSeqLenFollowsTheInjectedSource() {
     // The v0 convenience init still builds an 8-bin SyntheticSpikeSource, and 8 is exactly the trap:
     // the shipped real model wants 32, and a mismatch used to become synthetic numbers in silence.
-    let synthetic = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    let synthetic = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     #expect(synthetic.sourceSeqLen == 8)
     #expect(synthetic.spikeSource.numBins == 8)
     #expect(synthetic.spikeSource.channels == 96)
 
     // Injecting a source with the model's window length moves the buffer with it.
-    let injected = ClosedLoopPipeline(
+    let injected = ReplayPipeline(
       source: SyntheticSpikeSource(numBins: 32, seed: Self.testSeed),
       seed: Self.testSeed,
       target: Self.reachableTarget
@@ -168,7 +168,7 @@ struct ClosedLoopPipelineTests {
 
   @Test("Test 7: modelBackedTicks / totalTicks / allTicksModelBacked count the synthetic run honestly")
   func modelBackedTickCounters() {
-    let pipeline = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    let pipeline = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     #expect(pipeline.totalTicks == 0)
     #expect(pipeline.modelBackedTicks == 0)
     #expect(!pipeline.allTicksModelBacked, "zero ticks is not a model-backed run")
@@ -185,7 +185,7 @@ struct ClosedLoopPipelineTests {
 
   @Test("Test 8: lastDecodeFailure is nil with no model and non-nil, naming the shapes, when one fails")
   func lastDecodeFailureIsRecoverable() throws {
-    let clean = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
+    let clean = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     for _ in 0 ..< 3 {
       _ = clean.tick()
     }
@@ -194,7 +194,7 @@ struct ClosedLoopPipelineTests {
     // A model URL that cannot load exercises the failure path with no gitignored .mlpackage present.
     let absent = FileManager.default.temporaryDirectory
       .appendingPathComponent("cortex-no-such-model-\(UUID().uuidString).mlpackage")
-    let broken = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget, modelURL: absent)
+    let broken = ReplayPipeline(seed: Self.testSeed, target: Self.reachableTarget, modelURL: absent)
     #expect(!broken.isModelBacked)
     let reason = try #require(broken.lastDecodeFailure)
     #expect(reason.contains("8"), "the reason names the source's window length")

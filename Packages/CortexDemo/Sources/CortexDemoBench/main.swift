@@ -3,7 +3,7 @@
 // timing gate — D-18 precedent keeps a flaky latency assertion out of CI).
 //
 // ## What it measures (08-RESEARCH §0.3/§5, D-07)
-// It drives the `ClosedLoopPipeline` for n ≥ 10,000 ticks. For each tick it records the intent-emission
+// It drives the `ReplayPipeline` for n ≥ 10,000 ticks. For each tick it records the intent-emission
 // `mach_absolute_time()` → ns (CortexCore.Time, the SAME clock as the BCI HID report timestamp, §1.3),
 // times the decode+filter+integrate pipeline cost INLINE, and models the on-glass present time as a
 // SIMULATED `targetPresentationTimestamp`:
@@ -29,7 +29,7 @@
 // mach clock (which only sets the intent-emission base — the pipeline cost it measures is real work).
 import CortexCore // Time.machAbsoluteNanoseconds + ReplayExport (the D-06 reader, Phase 10 RD-08).
 import CortexDecoder // LatencyHistogram (reused percentile value type).
-import CortexDemo // ClosedLoopPipeline + GlassToGlassTimer (the software-timed measurement under test).
+import CortexDemo // ReplayPipeline + GlassToGlassTimer (the software-timed measurement under test).
 import CryptoKit // SHA256 — binds the Seam A report to the exact sidecar bytes replayed (Phase 10).
 import Foundation
 import simd
@@ -63,7 +63,7 @@ CortexDemoBench — headless SOFTWARE-TIMED glass-to-glass latency bench (PERF-0
 
     swift run --package-path Packages/CortexDemo CortexDemoBench --full
 
-  It drives ClosedLoopPipeline, records intent-emission mach_absolute_time -> ns, models the on-glass
+  It drives ReplayPipeline, records intent-emission mach_absolute_time -> ns, models the on-glass
   present time as a SIMULATED targetPresentationTimestamp (intent + measured pipeline cost, advanced to
   the next 120Hz present boundary), builds a device-annotated LatencyHistogram, prints p50/p99/max + the
   verbatim methodology label, writes .bench/glass_to_glass.json, and ASSERTS p99 < 25 ms (PERF-04).
@@ -99,7 +99,7 @@ let framePeriodNs: UInt64 = 8_333_333
 /// Tick count: a short CI-fast budget in --smoke, the full n = 10,000 otherwise (≥ the 10k bar the
 /// decoder/ReFIT benches use).
 let tickCount = isSmoke ? 2000 : 10000
-/// The determinism seed for the driven pipeline (matches the closed-loop tests).
+/// The determinism seed for the driven pipeline (matches the replay-loop tests).
 let seed: UInt64 = 0xC0FFEE
 /// The device annotation — WHY this is an M5-Pro CORROBORATING number, NOT the iPad-M4 canonical claim.
 let deviceAnnotation = "M5-Pro-software-timed-corroborating"
@@ -174,7 +174,7 @@ if isReal {
   let exportURL = flagValue("--export").map { URL(fileURLWithPath: $0) }
     ?? ReplayExport.sidecarURLFromEnvironment()
   let realModelURL = flagValue("--model").map { URL(fileURLWithPath: $0) }
-    ?? ClosedLoopPipeline.modelURLFromEnvironment()
+    ?? ReplayPipeline.modelURLFromEnvironment()
 
   // Clean-clone / CI: name which input is missing and exit 0. D-07 gitignores the export and the
   // model, so CI structurally cannot run this mode, and the tier split already accepts that.
@@ -217,7 +217,7 @@ if isReal {
   // pipeline rather than scoring its trajectory, so the conversion does not move the published
   // latency (one scalar multiply per tick, far under the run-to-run spread) - it is applied because
   // leaving a known unit error in a second call site is how the first one survived.
-  let realPipeline = ClosedLoopPipeline(
+  let realPipeline = ReplayPipeline(
     source: realSource,
     seed: seed,
     modelURL: realModelURL,
@@ -365,11 +365,11 @@ if isReal {
   exit(0)
 }
 
-// MARK: - Drive the closed loop + record software-timed latencies
+// MARK: - Drive the replay loop + record software-timed latencies
 
-// One warm pipeline driven continuously (the live closed loop). Each tick: record intent emission,
+// One warm pipeline driven continuously (the live replay loop). Each tick: record intent emission,
 // time the pipeline cost inline, model the present timestamp, sample the software-timed latency.
-let pipeline = ClosedLoopPipeline(seed: seed)
+let pipeline = ReplayPipeline(seed: seed)
 var samplesNs = [UInt64]()
 samplesNs.reserveCapacity(tickCount)
 

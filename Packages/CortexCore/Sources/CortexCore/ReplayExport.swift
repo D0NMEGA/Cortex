@@ -5,7 +5,7 @@
 // Python side writes those bytes, `ReplayExportTests` reads them here, and a layout change on either
 // side fails that test rather than silently corrupting a measurement.
 //
-// It lives in `CortexCore` because BOTH `CortexDemo` (the Seam A closed loop, Plan 10-04) and
+// It lives in `CortexCore` because BOTH `CortexDemo` (the Seam A replay loop, Plan 10-04) and
 // `CortexReFITBench` (the real-data ablation, Plan 10-05) consume the export. A second reader would be
 // a silent drift hole - the same reasoning D-06 applies to binning, which stays in `ndt1` for exactly
 // this reason rather than being re-implemented in Swift.
