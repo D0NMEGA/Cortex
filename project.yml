@@ -29,6 +29,21 @@ settings:
     SWIFT_STRICT_CONCURRENCY: complete
     ALWAYS_SEARCH_USER_PATHS: NO
     ENABLE_USER_SCRIPT_SANDBOXING: NO  # Disabled to keep validate-privacy-manifest.sh runnable from build phases if ever needed.
+    # Apple Silicon only, matching the project's stated constraint (FEAT_AES, ANE,
+    # CAMetalDisplayLink and ProMotion are all arm64-only; there is no x86 fallback by design).
+    # This covers the app targets and GUI/local builds. It is NOT sufficient on its own: Xcode's
+    # SwiftPM package targets ignore the project's ARCHS and fall back to ARCHS_STANDARD, so
+    # ci.yml ALSO passes ARCHS=arm64 on the xcodebuild command line, where it does reach them.
+    # Measured: with only this setting, `xcodebuild -destination generic/platform=macOS` still ran
+    # x86_64 passes for CortexCore, CortexDecoder, CortexRender, CortexBCIHID and FlatBuffers.
+    # That is what broke the smoke builds:
+    #   EmitSwiftModule normal x86_64 (in target 'CortexCore' from project 'CortexCore')
+    #   ReplayExport.swift:339: error: 'Float16' is unavailable in macOS
+    # Float16 is arm64-only on macOS, so an x86_64 slice of CortexCore cannot compile at all. It was
+    # invisible to `swift build` / `swift test`, which build for the host arch alone, and CI had
+    # never reached the xcodebuild steps. Found 2026-09-07 while pre-flighting steps 45-47.
+    ARCHS: arm64
+    ONLY_ACTIVE_ARCH: NO
 
 packages:
   CortexCore:
