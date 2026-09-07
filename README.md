@@ -78,7 +78,7 @@ present time — NOT `targetTimestamp`, the render deadline):
 | p50 | **≈ 4.2 ms** |
 | p99 | **≈ 8.3 ms** (`8318256 ns`) — well under the 25ms budget |
 | n | 10,000 ticks (smoke run: 2,000) |
-| methodology | **software-timed pipeline latency — excludes the compositor's 1-3 frames of scanout, which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies** |
+| methodology | **software-timed pipeline latency - excludes the compositor's 1-3 frames of scanout; measuring that delta needs a photodiode rig, which is retired to Future work (LAT-01..LAT-08) and was never built** |
 
 The verbatim methodology label is embedded in `GlassToGlassTimer.methodologyLabel` so it
 travels with every reported number (bench stdout, `glass_to_glass.json`, the GUI overlay) and
