@@ -5,7 +5,7 @@
 
 Cortex.app is a Neuralink-quality iPad/Mac BCI input pipeline clone — a credibility-grade demonstration that a single engineer can build a sub-25ms glass-to-glass neural cursor decoder on Apple Silicon. The decoder (NDT1, ~1.3M params) runs in <2ms on the M4 Neural Engine via CoreML, drives a 120Hz beam-raced Metal renderer, and integrates with Apple's May 2025 BCI HID protocol so the same artifact works as both a tech demo and a deployable assistive input device.
 
-**Core Value:** **Glass-to-glass latency under 25ms, photodiode-instrumented and reproducible.** Every architectural choice serves this — the spec's defining claim is "Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ=0.8 ms, n=10k, photodiode-instrumented)." Without that defensible number, this is a tech demo. With it, it's a credibility artifact suitable for review by Bliss Chapman / Nir Even-Chen.
+**Core Value:** **Real primate M1 spikes decoded end to end, reproducibly, under a software-timed sub-25 ms budget.** NDT1 decodes the O'Doherty/Makin Indy M1 dataset (Zenodo 3854034, four checksum-pinned sessions) through the CoreML -> ReFIT-Kalman -> 120 Hz renderer -> BCI HID path. *Re-pointed 2026-08-28: the photodiode-instrumented "24.7 +/- 1.3 ms" figure is a RETIRED SPEC TARGET, never a measurement, preserved as Future work (LAT-01..LAT-08). It may not be cited as achieved.*
 
 ### Constraints
 
