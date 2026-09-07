@@ -32,7 +32,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1 — completed 2026-06-23 (REFIT-01/02/03 verified 6/6; 3-way ablation on synthetic data refit_bps 0.374 ≥ raw 0.161, +133% S&M-2004 Fitts-TP uplift; SC#3 filter step ~292ns p99 over 10k inline ticks, Mac-corroborating; iPad-M4 canonical latency Manual-Only/deferred)
 - [x] **Phase 8: Apple BCI HID Integration, Distribution & v0 Ship** - Switch Control HID provider registration, Synchron-mirror entitlements, notarized TestFlight build, software-timed latency claim — **v0 milestone** — completed 2026-06-23 (automated half green 5/5: 59 Swift tests + 5 `*-policy.sh` gates + benches; software-timed glass-to-glass p99 ≈ 8.32ms M5-corroborating; ReFIT 1.953 BPS synthetic, honest gap-to-8.5 (as cited since Phase 7; not independently sourceable); 3 never-auto-approve HUMAN-UAT gates — live TestFlight / iPad-M4 canonical latency / on-device HID registration — DEFERRED, tracked in 08-HUMAN-UAT.md)
 - [ ] **Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034)** - Materialize and checksum-pin the four Indy M1 sessions, retrain NDT1 on real spikes, re-derive co-bps / palettization / ANE eligibility on the real-data checkpoint
-- [ ] **Phase 10: v1 Real-Data Closed Loop & Launch** - ReFIT re-fit and ablation on real data, end-to-end real-session replay, synthetic-number sweep with a CI gate, README republish retiring the photodiode claim — **v1 milestone**
+- [x] **Phase 10: v1 Real-Data Closed Loop & Launch** - ReFIT re-fit and ablation on real data, end-to-end real-session replay, synthetic-number sweep with a CI gate, README republish retiring the photodiode claim — **v1 milestone** (completed 2026-09-07)
 
 ## Phase Details
 
@@ -225,7 +225,7 @@ history. Every measurement convention is pre-registered in Wave 0 before any num
 - [x] 10-13-PLAN.md - rewrite `readme-policy.sh` (three independently-controlled 24.7 rules, the provenance triple, 12 controls + an 8-case adversarial corpus) + ADR-0003 with its retirement rationale + the ADR index (RD-10) [Wave 9]
 - [x] 10-14-PLAN.md - `honesty-sweep.sh` + `--self-test` (labels, banners, LAT-01..08 preservation, ADR structure) + CI wiring (RD-09, RD-10) [Wave 10]
 - [x] 10-15-PLAN.md - pin the lint toolchain + `toolchain-policy.sh` + the measured lint baseline + the SwiftFormat sweep (RD-09, D-18) [Wave 11]
-- [ ] 10-16-PLAN.md - the `swiftlint --strict` sweep: CodingKeys for every Codable field so no JSON key moves, force-unwrap dispositions, scoped suppressions (RD-09, D-18) [Wave 12]
+- [x] 10-16-PLAN.md - the `swiftlint --strict` sweep: CodingKeys for every Codable field so no JSON key moves, force-unwrap dispositions, scoped suppressions (RD-09, D-18) [Wave 12]
 - [ ] 10-17-PLAN.md - the pre-push audit, the authorization checkpoint, the first push, the first CI run, and the README reconcile (RD-09, D-18; `autonomous: false`) [Wave 13]
 
 ## Progress
@@ -248,7 +248,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
 | 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
-| 10. v1 Real-Data Closed Loop & Launch | v1 | 16/17 | In Progress|  |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 17/17 | Complete   | 2026-09-07 |
 
 ---
 
