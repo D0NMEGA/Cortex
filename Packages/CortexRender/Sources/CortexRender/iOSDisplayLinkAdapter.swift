@@ -39,6 +39,8 @@ public final class iOSDisplayLinkAdapter: NSObject, CAMetalDisplayLinkDelegate {
   private let synchronizer: FrameSynchronizer
   private let integrator: CursorIntegrator
   private let ring: VelocityRing
+  /// The active task target, latest-value (see `TargetChannel`). `nil` when the host sets none.
+  private let targets: TargetChannel?
   private let log = Logger(subsystem: "app.cortex.render", category: "iOSDisplayLinkAdapter")
 
   /// The display link. `CAMetalDisplayLink` is iOS 17+; the package targets iOS 26, so it is always
@@ -54,13 +56,15 @@ public final class iOSDisplayLinkAdapter: NSObject, CAMetalDisplayLinkDelegate {
   ///   - device: the Metal device (also owns the command queue).
   ///   - ring: the SPSC velocity ring this adapter pops on the callback thread (consumer end).
   ///   - start: the integrator's initial cursor position (defaults to grid centre).
+  ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
   /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline cannot be built, or an error if
   ///   the command queue cannot be created.
   public init(
     layer: CAMetalLayer,
     device: MTLDevice,
     ring: VelocityRing,
-    start: CursorPosition = .init(x: 0.5, y: 0.5)
+    start: CursorPosition = .init(x: 0.5, y: 0.5),
+    targets: TargetChannel? = nil
   ) throws {
     self.layer = layer
     self.encoder = try WebgridFrameEncoder(device: device)
@@ -71,6 +75,7 @@ public final class iOSDisplayLinkAdapter: NSObject, CAMetalDisplayLinkDelegate {
     self.synchronizer = FrameSynchronizer()
     self.integrator = CursorIntegrator(start: start)
     self.ring = ring
+    self.targets = targets
     super.init()
   }
 
@@ -145,11 +150,15 @@ public final class iOSDisplayLinkAdapter: NSObject, CAMetalDisplayLinkDelegate {
 
     // 5. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).
     let drawable = update.drawable
+    // The target is a LATEST-VALUE read, one atomic load per frame - never a queue drain.
+    let target = targets?.load()
     let params = WebgridParams.grid30x30(
       cursorX: pos.x,
       cursorY: pos.y,
       viewportWidth: UInt32(drawable.texture.width),
-      viewportHeight: UInt32(drawable.texture.height)
+      viewportHeight: UInt32(drawable.texture.height),
+      targetColumn: target?.column ?? WebgridParams.noTarget,
+      targetRow: target?.row ?? WebgridParams.noTarget
     )
 
     // 6. Encode one compute pass into the vended drawable.

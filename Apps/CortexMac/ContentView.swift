@@ -22,7 +22,7 @@ struct ContentView: View {
   var body: some View {
     ZStack(alignment: .bottomLeading) {
       // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
-      WebgridView(ring: driver.ring)
+      WebgridView(ring: driver.ring, targets: driver.targets)
         .frame(minWidth: 560, minHeight: 480)
 
       // The honest instrumentation overlay (D-07/D-09): the SYS-03/04 round-trip log line + the latest
@@ -80,6 +80,14 @@ final class ClosedLoopDriver {
   private let pipeline: ClosedLoopPipeline
   /// Which spike source is actually driving the loop, surfaced in the overlay (D-16).
   private(set) var sourceLabel: String
+  /// The active task target, published to the renderer once per tick (latest-value, lock-free).
+  let targets = TargetChannel()
+  /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
+  /// `nil` on the synthetic path, where the task has no recorded target to show.
+  private let recordedSource: RecordedSpikeSource?
+  /// The pre-registered workspace square, used to map a target in mm onto a grid cell.
+  private let boxOriginMm: SIMD2<Double>
+  private let boxSideMm: Double
 
   init() {
     // D-16: resolve the recorded export the same way `CortexDemoBench --real` does, so the GUI and
@@ -94,12 +102,24 @@ final class ClosedLoopDriver {
         let source = RecordedSpikeSource(export: export)
         pipeline = ClosedLoopPipeline(source: source, seed: 0xC0FFEE, modelURL: modelURL)
         sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
+        recordedSource = source
+        // The pre-registered `cursor_bbox_square`: the square of side `sideMm` centred on the
+        // cursor bounding box's centre (10-PREREGISTRATION section 3, as amended).
+        let workspace = export.sidecar.workspace
+        boxSideMm = workspace.sideMm
+        boxOriginMm = SIMD2<Double>(
+          workspace.centreXMm - workspace.sideMm / 2.0,
+          workspace.centreYMm - workspace.sideMm / 2.0
+        )
         return
       } catch {
         // A REFUSED export is reported, never silently downgraded to synthetic while the recording
         // rolls. The loop still runs so the window is not blank, but the label says what happened.
         pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL)
         sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
+        recordedSource = nil
+        boxOriginMm = .zero
+        boxSideMm = 1
         return
       }
     }
@@ -109,6 +129,9 @@ final class ClosedLoopDriver {
     if exportURL == nil { missing.append("CORTEX_REPLAY_EXPORT") }
     if modelURL == nil { missing.append("CORTEX_MODEL_URL") }
     sourceLabel = "spike source: synthetic (unset: \(missing.joined(separator: ", ")))"
+    recordedSource = nil
+    boxOriginMm = .zero
+    boxSideMm = 1
   }
   /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
   private let roundTrip = ScanInfoRoundTrip()
@@ -134,6 +157,30 @@ final class ClosedLoopDriver {
     timer = nil
   }
 
+  /// Map the recorded target (mm) for `windowIndex` onto a grid cell and publish it to the renderer.
+  ///
+  /// Uses the SAME `cursor_bbox_square` normalisation the phase pre-registered, so the square the
+  /// viewer sees is the square the hit criterion is scored in. A target outside the box, or a
+  /// synthetic run with no recorded task, publishes nothing rather than a clamped cell that would
+  /// misrepresent where the animal was reaching.
+  private func publishTarget(forWindow windowIndex: Int) {
+    guard let recordedSource, windowIndex >= 0, boxSideMm > 0 else {
+      targets.clear()
+      return
+    }
+    let targetMm = recordedSource.target(forWindow: windowIndex)
+    let normalised = (targetMm - boxOriginMm) / boxSideMm
+    guard normalised.x >= 0, normalised.x < 1, normalised.y >= 0, normalised.y < 1 else {
+      targets.clear()
+      return
+    }
+    let grid = Double(ClosedLoopDriver.gridSide)
+    targets.store(column: Int(normalised.x * grid), row: Int(normalised.y * grid))
+  }
+
+  /// The 30x30 webgrid substrate (D-01), matching `WebgridParams.grid30x30`.
+  private static let gridSide = 30
+
   /// One 20ms producer tick: decode → filter → integrate, push the velocity, drive the round trip,
   /// and refresh the overlay's software-timed glass-to-glass line.
   private func step() {
@@ -142,6 +189,11 @@ final class ClosedLoopDriver {
 
     // ONE real decode → filter → integrate tick (decoder + Kalman GENUINELY in the loop, D-10).
     let state = pipeline.tick()
+
+    // Publish the RECORDED task target for the window that tick just consumed, so the red selection
+    // square tracks the animal's actual per-trial target rather than a decoration. `tick()` reads
+    // window `tickIndex` then increments, so the window just consumed is `totalTicks - 1`.
+    publishTarget(forWindow: pipeline.totalTicks - 1)
 
     // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
     _ = ring.push(CursorVelocity(

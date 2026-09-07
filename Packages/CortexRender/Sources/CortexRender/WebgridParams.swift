@@ -43,6 +43,20 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   public var viewportWidth: UInt32
   /// Drawable height in pixels (for square-cell aspect mapping).
   public var viewportHeight: UInt32
+  /// Inner-dot radius of the ring cursor, normalised to the grid's shorter extent.
+  public var cursorDotRadius: Float
+  /// Ring stroke width of the ring cursor, normalised to the grid's shorter extent.
+  public var cursorRingWidth: Float
+  /// Active target column, or ``WebgridParams/noTarget`` when no target is active.
+  public var targetColumn: UInt32
+  /// Active target row, or ``WebgridParams/noTarget`` when no target is active.
+  public var targetRow: UInt32
+
+  /// Sentinel meaning "no active target", so the kernel draws no selection square.
+  ///
+  /// A sentinel rather than a separate bool keeps every field a 4-byte scalar, which is what makes
+  /// the Swift/MSL byte mirror trivial.
+  public static let noTarget: UInt32 = .max
 
   /// Memberwise initializer (explicit so the public API is stable across the FFI/MSL mirror).
   public init(
@@ -55,7 +69,11 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     cursorRadius: Float,
     proximityRadius: Float,
     viewportWidth: UInt32,
-    viewportHeight: UInt32
+    viewportHeight: UInt32,
+    cursorDotRadius: Float = 0.006,
+    cursorRingWidth: Float = 0.0035,
+    targetColumn: UInt32 = WebgridParams.noTarget,
+    targetRow: UInt32 = WebgridParams.noTarget
   ) {
     self.gridColumns = gridColumns
     self.gridRows = gridRows
@@ -67,6 +85,10 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.proximityRadius = proximityRadius
     self.viewportWidth = viewportWidth
     self.viewportHeight = viewportHeight
+    self.cursorDotRadius = cursorDotRadius
+    self.cursorRingWidth = cursorRingWidth
+    self.targetColumn = targetColumn
+    self.targetRow = targetRow
   }
 
   /// The modern 30×30 webgrid (D-01) — 900 cells, NOT the rejected 6×6 (REQUIREMENTS Out-of-Scope).
@@ -84,7 +106,9 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     cursorX: Float,
     cursorY: Float,
     viewportWidth: UInt32,
-    viewportHeight: UInt32
+    viewportHeight: UInt32,
+    targetColumn: UInt32 = WebgridParams.noTarget,
+    targetRow: UInt32 = WebgridParams.noTarget
   ) -> WebgridParams {
     WebgridParams(
       gridColumns: 30,
@@ -93,10 +117,14 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       cornerRadius: 0.25,
       cursorX: cursorX,
       cursorY: cursorY,
-      cursorRadius: 0.018,
+      cursorRadius: 0.020,
       proximityRadius: 0.12,
       viewportWidth: viewportWidth,
-      viewportHeight: viewportHeight
+      viewportHeight: viewportHeight,
+      cursorDotRadius: 0.006,
+      cursorRingWidth: 0.0035,
+      targetColumn: targetColumn,
+      targetRow: targetRow
     )
   }
 }

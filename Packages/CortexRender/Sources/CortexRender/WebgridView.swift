@@ -35,12 +35,14 @@ public final class WebgridMetalUIView: UIView {
 /// host's producer pushes into.
 public struct WebgridView: UIViewRepresentable {
   private let ring: VelocityRing
+  private let targets: TargetChannel?
   private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
   /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
   ///   callback (consumer) pops it each frame.
-  public init(ring: VelocityRing) {
+  public init(ring: VelocityRing, targets: TargetChannel? = nil) {
     self.ring = ring
+    self.targets = targets
   }
 
   public func makeCoordinator() -> Coordinator { Coordinator() }
@@ -54,7 +56,7 @@ public struct WebgridView: UIViewRepresentable {
     let metalLayer = view.metalLayer
     MetalLayerConfig.configure(metalLayer, device: device)
     do {
-      let adapter = try iOSDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring)
+      let adapter = try iOSDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring, targets: targets)
       adapter.start()
       context.coordinator.adapter = adapter
     } catch {
@@ -104,12 +106,14 @@ public final class WebgridMetalNSView: NSView {
 /// host's producer pushes into.
 public struct WebgridView: NSViewRepresentable {
   private let ring: VelocityRing
+  private let targets: TargetChannel?
   private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
   /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
   ///   callback (consumer) pops it each frame.
-  public init(ring: VelocityRing) {
+  public init(ring: VelocityRing, targets: TargetChannel? = nil) {
     self.ring = ring
+    self.targets = targets
   }
 
   public func makeCoordinator() -> Coordinator { Coordinator() }
@@ -123,7 +127,7 @@ public struct WebgridView: NSViewRepresentable {
     let metalLayer = view.metalLayer
     MetalLayerConfig.configure(metalLayer, device: device)
     do {
-      let adapter = try MacDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring)
+      let adapter = try MacDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring, targets: targets)
       adapter.start(in: view)
       context.coordinator.adapter = adapter
     } catch {

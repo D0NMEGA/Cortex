@@ -50,6 +50,8 @@ public final class MacDisplayLinkAdapter: NSObject {
   private let synchronizer: FrameSynchronizer
   private let integrator: CursorIntegrator
   private let ring: VelocityRing
+  /// The active task target, latest-value (see `TargetChannel`). `nil` when the host sets none.
+  private let targets: TargetChannel?
   private let log = Logger(subsystem: "app.cortex.render", category: "MacDisplayLinkAdapter")
 
   /// The display link returned by `NSView.displayLink`. `CADisplayLink` is the macOS 14+ AppKit
@@ -64,12 +66,14 @@ public final class MacDisplayLinkAdapter: NSObject {
   ///   - device: the Metal device (also owns the command queue).
   ///   - ring: the SPSC velocity ring this adapter pops on the tick thread (consumer end).
   ///   - start: the integrator's initial cursor position (defaults to grid centre).
+  ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
   /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline / command queue cannot be built.
   public init(
     layer: CAMetalLayer,
     device: MTLDevice,
     ring: VelocityRing,
-    start: CursorPosition = .init(x: 0.5, y: 0.5)
+    start: CursorPosition = .init(x: 0.5, y: 0.5),
+    targets: TargetChannel? = nil
   ) throws {
     self.layer = layer
     self.encoder = try WebgridFrameEncoder(device: device)
@@ -80,6 +84,7 @@ public final class MacDisplayLinkAdapter: NSObject {
     self.synchronizer = FrameSynchronizer()
     self.integrator = CursorIntegrator(start: start)
     self.ring = ring
+    self.targets = targets
     super.init()
   }
 
@@ -137,11 +142,15 @@ public final class MacDisplayLinkAdapter: NSObject {
       let pos = integrator.integrate(latest: latest, dt: dt)
 
       // 6. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).
+      // The target is a LATEST-VALUE read, one atomic load per frame - never a queue drain.
+      let target = targets?.load()
       let params = WebgridParams.grid30x30(
         cursorX: pos.x,
         cursorY: pos.y,
         viewportWidth: UInt32(drawable.texture.width),
-        viewportHeight: UInt32(drawable.texture.height)
+        viewportHeight: UInt32(drawable.texture.height),
+        targetColumn: target?.column ?? WebgridParams.noTarget,
+        targetRow: target?.row ?? WebgridParams.noTarget
       )
 
       // 7. Encode one compute pass into the manually-acquired drawable.
