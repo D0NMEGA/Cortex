@@ -68,7 +68,8 @@ the only one.
 |---|---|---|---|---|
 | 1 | 34154026468 | failure | `decoder-python` step 6 (Ruff) and `build-and-lint` step 7 (toolchain pin) | see 3.1, 3.2 |
 | 2 | 34154374914 | failure | `build-and-lint` step 15 (Resolve SwiftPM) | see 3.3 |
-| 3 | (pending) | | | |
+| 3 | 34154714318 | failure | `build-and-lint` step 18 (CortexIPC tests) | see 3.4 |
+| 4 | (pending) | | | |
 
 ### 3.1 Ruff E501, self-inflicted
 
@@ -117,6 +118,33 @@ all eight packages resolve, exit 0.
 every `Tools/scripts` path referenced anywhere in `ci.yml` exists; no `swift` or `cargo` invocation is
 missing its path argument (the two `cargo` calls correctly use `--manifest-path`); and all 15 scripted
 `run:` blocks execute cleanly locally as whole blocks.
+
+### 3.4 The runner could not run a macOS 26 binary
+
+    error: Exited with unexpected signal code 5
+    Fatal error: Failed to open test bundle ... dlopen(...):
+      Library not loaded: /usr/lib/swift/libswift_DarwinFoundation1.dylib
+
+Not a code defect and not a flake. The runner image is `macos-15-arm64`; all eight `Package.swift`
+files declare `platforms: [.macOS(.v26), .iOS(.v26)]`, which is the project's stated constraint. A
+binary built against the Xcode 26.3 SDK for a macOS 26 deployment target COMPILES on macos-15 and
+then fails at load time, because macOS 15 does not ship the macOS 26 Swift runtime. Nineteen steps
+passed before it, so the failure surfaced only once CI got far enough to execute a test bundle.
+
+`ci.yml:5` claimed macos-15 was "the only runner with Xcode 26.x pre-installed". That was true when
+Phase 1 wrote it and is no longer: `macos-26-arm64` shipped 2026-08-31
+(`actions/runner-images` tag `macos-26-arm64/20260831.0337`). `build-and-lint` moved to `macos-26`.
+`decoder-python` stays on `macos-15` deliberately -- it is pure Python, it passes there, and moving
+it is outside this fix.
+
+The same 26 CortexIPC tests pass on the sweep machine, which runs macOS 26.5. All eight packages do:
+
+    CortexBCIHID 24   CortexDecoder 20   CortexDemo 44   CortexIPC 26
+    CortexReFIT  32   CortexRender  19   CortexRing     7   CortexCore (no test target)
+
+So the runner was never testing what the project targets. Three of the four failures so far were
+pre-existing repo defects that only a real runner could expose, which is the argument for this plan
+existing.
 
 ## 4. Local state at the time of the last push
 
