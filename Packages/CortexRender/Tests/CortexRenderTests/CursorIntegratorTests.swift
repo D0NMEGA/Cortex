@@ -100,31 +100,31 @@ struct CursorIntegratorTests {
   }
 }
 
-@Suite("AnchorChannel: re-anchor events reach the renderer exactly once")
+@Suite("CursorPositionChannel: the authoritative position reaches the renderer once per tick")
 struct AnchorChannelTests {
   @Test("nothing published means nothing to apply")
   func emptyChannelYieldsNil() {
-    #expect(AnchorChannel().take(after: 0) == nil)
+    #expect(CursorPositionChannel().take(after: 0) == nil)
   }
 
-  @Test("an anchor is delivered once, then not again")
+  @Test("a position is delivered once, then not again until republished")
   func anchorAppliesExactlyOnce() {
-    let channel = AnchorChannel()
+    let channel = CursorPositionChannel()
     channel.store(x: 0.25, y: 0.75)
 
     guard let first = channel.take(after: 0) else {
-      Issue.record("a published anchor must be delivered")
+      Issue.record("a published position must be delivered")
       return
     }
     #expect(abs(first.x - 0.25) < 1e-4)
     #expect(abs(first.y - 0.75) < 1e-4)
-    // Polling again with the generation just seen must yield nothing: an anchor is an event, and
-    // re-applying it every frame would pin the cursor on it instead of letting it integrate away.
+    // Polling again with the generation just seen must yield nothing: between producer ticks the
+    // renderer extrapolates with the held velocity, and re-snapping every frame would freeze it.
     #expect(channel.take(after: first.generation) == nil)
 
     channel.store(x: 0.1, y: 0.9)
     guard let second = channel.take(after: first.generation) else {
-      Issue.record("a second anchor must be delivered")
+      Issue.record("a second position must be delivered")
       return
     }
     #expect(second.generation != first.generation)
@@ -133,7 +133,7 @@ struct AnchorChannelTests {
 
   @Test("out-of-range clamps and non-finite is refused")
   func anchorClampsAndRefuses() {
-    let channel = AnchorChannel()
+    let channel = CursorPositionChannel()
     channel.store(x: 2.0, y: -1.0)
     let clamped = channel.take(after: 0)
     #expect(clamped?.x == 1.0)
@@ -258,5 +258,32 @@ struct IntegrateHoldingVelocityTests {
       integrator.integrateHoldingVelocity(latest: nil, dt: 1.0 / 120.0)
     }
     #expect(integrator.position.x == 0.5, "the abandoned trajectory's velocity leaked: \(integrator.position.x)")
+  }
+}
+
+@Suite("resync vs reset: which one keeps the held velocity")
+struct ResyncTests {
+  @Test("resync re-seats the position and keeps extrapolating")
+  func resyncKeepsTheHold() {
+    let integrator = CursorIntegrator(start: .init(x: 0.0, y: 0.5))
+    integrator.integrateHoldingVelocity(latest: CursorVelocity(tsNs: 0, seq: 0, vx: 1.0, vy: 0), dt: 1.0 / 120.0)
+    integrator.resync(to: .init(x: 0.5, y: 0.5))
+    // Between producer ticks the renderer must keep moving on the held velocity; a resync that
+    // dropped it would freeze the cursor for ~70 of every 120 frames.
+    for _ in 0 ..< 12 {
+      integrator.integrateHoldingVelocity(latest: nil, dt: 1.0 / 120.0)
+    }
+    #expect(integrator.position.x > 0.5, "the hold was dropped: \(integrator.position.x)")
+  }
+
+  @Test("reset re-seats the position and drops the hold")
+  func resetDropsTheHold() {
+    let integrator = CursorIntegrator(start: .init(x: 0.0, y: 0.5))
+    integrator.integrateHoldingVelocity(latest: CursorVelocity(tsNs: 0, seq: 0, vx: 1.0, vy: 0), dt: 1.0 / 120.0)
+    integrator.reset(to: .init(x: 0.5, y: 0.5))
+    for _ in 0 ..< 12 {
+      integrator.integrateHoldingVelocity(latest: nil, dt: 1.0 / 120.0)
+    }
+    #expect(integrator.position.x == 0.5, "an abandoned trajectory's velocity leaked: \(integrator.position.x)")
   }
 }

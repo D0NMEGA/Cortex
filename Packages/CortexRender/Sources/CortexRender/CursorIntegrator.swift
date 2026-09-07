@@ -97,6 +97,22 @@ public final nonisolated class CursorIntegrator {
     return integrate(latest: heldVelocity, dt: dt)
   }
 
+  /// Adopt the producer's authoritative position, KEEPING the held velocity.
+  ///
+  /// Called once per producer tick. The renderer integrates between ticks for smoothness, but the
+  /// producer's own integrator is what the filter, the steering and the dwell criterion read, so the
+  /// drawn cursor has to be re-seated on it or the two drift apart on their different clocks and the
+  /// viewer watches a cursor that is not the one being scored.
+  ///
+  /// Unlike ``reset(to:)`` this preserves the held velocity: a fresh sample arrives with every
+  /// publication, and dropping the hold here would freeze the cursor between ticks.
+  public func resync(to position: CursorPosition) {
+    self.position = CursorPosition(
+      x: Self.clampFinite(position.x),
+      y: Self.clampFinite(position.y)
+    )
+  }
+
   /// Move the cursor to `position` without integrating, under the same clamp `integrate` applies.
   ///
   /// The one way the cursor's position changes other than by integrating decoded velocity. It exists

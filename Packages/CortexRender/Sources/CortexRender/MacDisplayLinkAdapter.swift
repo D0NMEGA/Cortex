@@ -52,12 +52,12 @@
     private let ring: VelocityRing
     /// The active task target, latest-value (see `TargetChannel`). `nil` when the host sets none.
     private let targets: TargetChannel?
-    /// The dwell-to-select progress channel, read once per frame alongside the target.
-    private let dwell: DwellChannel?
-    /// Re-anchor events for the renderer's own integrator (see `AnchorChannel`).
-    private let anchors: AnchorChannel?
+    /// Dwell progress and selection flash, read once per frame alongside the target.
+    private let selection: SelectionChannel?
+    /// Re-anchor events for the renderer's own integrator (see `CursorPositionChannel`).
+    private let cursorPositions: CursorPositionChannel?
     /// The last anchor generation applied, so each one moves the cursor exactly once.
-    private var lastAnchor: UInt32 = 0
+    private var lastCursorGeneration: UInt32 = 0
     private let log = Logger(subsystem: "app.cortex.render", category: "MacDisplayLinkAdapter")
 
     /// The display link returned by `NSView.displayLink`. `CADisplayLink` is the macOS 14+ AppKit
@@ -73,7 +73,7 @@
     ///   - ring: the SPSC velocity ring this adapter pops on the tick thread (consumer end).
     ///   - start: the integrator's initial cursor position (defaults to grid centre).
     ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
-    ///   - dwell: the dwell-to-select progress channel; `nil` draws the cursor at its resting size.
+    ///   - selection: dwell + flash state; `nil` draws a resting cursor and an unflashed target.
     ///   - anchors: cursor re-anchor events; `nil` leaves the cursor free-running.
     /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline / command queue cannot be built.
     public init(
@@ -82,8 +82,8 @@
       ring: VelocityRing,
       start: CursorPosition = .init(x: 0.5, y: 0.5),
       targets: TargetChannel? = nil,
-      dwell: DwellChannel? = nil,
-      anchors: AnchorChannel? = nil
+      selection: SelectionChannel? = nil,
+      cursorPositions: CursorPositionChannel? = nil
     ) throws {
       self.layer = layer
       encoder = try WebgridFrameEncoder(device: device)
@@ -95,8 +95,8 @@
       integrator = CursorIntegrator(start: start)
       self.ring = ring
       self.targets = targets
-      self.dwell = dwell
-      self.anchors = anchors
+      self.selection = selection
+      self.cursorPositions = cursorPositions
       super.init()
     }
 
@@ -155,25 +155,28 @@
         //    The hold is what makes the 120Hz render faithful to the ~50Hz producer: treating an
         //    empty ring as zero velocity integrates motion on only 50 of every 120 frames and
         //    shrinks every trajectory to ~42% of its length.
-        // A pending re-anchor moves the cursor before this frame integrates, so the
-        // frame renders from the anchor rather than one tick past it.
-        if let anchor = anchors?.take(after: lastAnchor) {
-          integrator.reset(to: CursorPosition(x: anchor.x, y: anchor.y))
-          lastAnchor = anchor.generation
+        // Re-seat on the producer's authoritative position before integrating. The producer
+        // advances a fixed 20 ms per tick while this loop advances real frame time, so
+        // without this the drawn cursor and the cursor the dwell criterion scores drift
+        // apart, and a viewer sees a closed ring over a target that never registers.
+        if let authoritative = cursorPositions?.take(after: lastCursorGeneration) {
+          integrator.resync(to: CursorPosition(x: authoritative.x, y: authoritative.y))
+          lastCursorGeneration = authoritative.generation
         }
         let pos = integrator.integrateHoldingVelocity(latest: latest, dt: dt)
 
         // 6. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).
         // The target is a LATEST-VALUE read, one atomic load per frame - never a queue drain.
         let target = targets?.load()
+        let sel = selection?.load() ?? .idle
         let params = WebgridParams.grid30x30(
           cursorX: pos.x,
           cursorY: pos.y,
           viewportWidth: UInt32(drawable.texture.width),
           viewportHeight: UInt32(drawable.texture.height),
-          targetColumn: target?.column ?? WebgridParams.noTarget,
-          targetRow: target?.row ?? WebgridParams.noTarget,
-          dwellProgress: dwell?.load() ?? 0
+          target: target,
+          dwellProgress: sel.dwell,
+          targetFlash: sel.flash
         )
 
         // 7. Encode one compute pass into the manually-acquired drawable.

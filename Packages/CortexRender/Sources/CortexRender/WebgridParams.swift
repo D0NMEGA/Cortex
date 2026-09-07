@@ -52,21 +52,26 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   public var cursorDotRadius: Float
   /// Ring stroke width of the ring cursor, normalised to the grid's shorter extent.
   public var cursorRingWidth: Float
-  /// Active target column, or ``WebgridParams/noTarget`` when no target is active.
-  public var targetColumn: UInt32
-  /// Active target row, or ``WebgridParams/noTarget`` when no target is active.
-  public var targetRow: UInt32
+  /// Active target X in grid-normalised `[0, 1]`, meaningful only when ``hasTarget`` is 1.
+  public var targetX: Float
+  /// Active target Y in grid-normalised `[0, 1]`, meaningful only when ``hasTarget`` is 1.
+  public var targetY: Float
+  /// Half-extent of the drawn target square, in the same units as ``cursorRadius``.
+  ///
+  /// Set to the ACQUISITION RADIUS, so the square a viewer sees is the region the dwell criterion
+  /// tests. Drawing it at any other size, or at a quantised grid cell, means the cursor can look
+  /// like it landed while the criterion disagrees, with nothing on screen to explain why.
+  public var targetRadius: Float
+  /// 1 when a target is active, 0 when none is. A scalar rather than a sentinel so every field
+  /// stays a 4-byte value and the Swift/MSL byte mirror stays trivial.
+  public var hasTarget: UInt32
   /// Dwell-to-select progress in `[0, 1]`; the kernel shrinks the cursor ring as it climbs.
   ///
   /// The standard webgrid selection affordance: holding on a target contracts the ring, and
   /// committing the selection releases it back to full size. 0 draws the resting cursor.
   public var dwellProgress: Float
-
-  /// Sentinel meaning "no active target", so the kernel draws no selection square.
-  ///
-  /// A sentinel rather than a separate bool keeps every field a 4-byte scalar, which is what makes
-  /// the Swift/MSL byte mirror trivial.
-  public static let noTarget: UInt32 = .max
+  /// Selection flash in `[0, 1]`, decaying after a commit; greens and swells the active target.
+  public var targetFlash: Float
 
   /// Memberwise initializer (explicit so the public API is stable across the FFI/MSL mirror).
   public init(
@@ -82,9 +87,12 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     viewportHeight: UInt32,
     cursorDotRadius: Float = 0.006,
     cursorRingWidth: Float = 0.0035,
-    targetColumn: UInt32 = WebgridParams.noTarget,
-    targetRow: UInt32 = WebgridParams.noTarget,
-    dwellProgress: Float = 0
+    targetX: Float = 0,
+    targetY: Float = 0,
+    targetRadius: Float = 0.5 / 30.0,
+    hasTarget: UInt32 = 0,
+    dwellProgress: Float = 0,
+    targetFlash: Float = 0
   ) {
     self.gridColumns = gridColumns
     self.gridRows = gridRows
@@ -98,9 +106,12 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.viewportHeight = viewportHeight
     self.cursorDotRadius = cursorDotRadius
     self.cursorRingWidth = cursorRingWidth
-    self.targetColumn = targetColumn
-    self.targetRow = targetRow
+    self.targetX = targetX
+    self.targetY = targetY
+    self.targetRadius = targetRadius
+    self.hasTarget = hasTarget
     self.dwellProgress = dwellProgress
+    self.targetFlash = targetFlash
   }
 
   /// The modern 30×30 webgrid (D-01) — 900 cells, NOT the rejected 6×6 (REQUIREMENTS Out-of-Scope).
@@ -119,9 +130,9 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     cursorY: Float,
     viewportWidth: UInt32,
     viewportHeight: UInt32,
-    targetColumn: UInt32 = WebgridParams.noTarget,
-    targetRow: UInt32 = WebgridParams.noTarget,
-    dwellProgress: Float = 0
+    target: ActiveTarget? = nil,
+    dwellProgress: Float = 0,
+    targetFlash: Float = 0
   ) -> WebgridParams {
     WebgridParams(
       gridColumns: 30,
@@ -136,9 +147,12 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       viewportHeight: viewportHeight,
       cursorDotRadius: 0.006,
       cursorRingWidth: 0.0035,
-      targetColumn: targetColumn,
-      targetRow: targetRow,
-      dwellProgress: dwellProgress
+      targetX: target?.x ?? 0,
+      targetY: target?.y ?? 0,
+      targetRadius: 0.5 / 30.0,
+      hasTarget: target == nil ? 0 : 1,
+      dwellProgress: dwellProgress,
+      targetFlash: targetFlash
     )
   }
 }

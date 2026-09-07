@@ -25,13 +25,13 @@ struct WebgridParams {
   uint viewportHeight;    // drawable height (px)
   float cursorDotRadius;  // inner-dot radius of the ring cursor, same units
   float cursorRingWidth;  // ring stroke width, same units
-  uint targetColumn;      // active target column, or 0xFFFFFFFF for none
-  uint targetRow;         // active target row, or 0xFFFFFFFF for none
+  float targetX;          // active target X, grid-normalised [0,1]
+  float targetY;          // active target Y, grid-normalised [0,1]
+  float targetRadius;     // half-extent of the drawn target = the ACQUISITION RADIUS
+  uint  hasTarget;        // 1 when a target is active, 0 when none is
   float dwellProgress;    // dwell-to-select progress in [0,1]; contracts the ring
+  float targetFlash;      // selection flash in [0,1], decaying; greens and swells the target
 };
-
-// "No active target" sentinel. MUST equal WebgridParams.noTarget on the Swift side.
-constant uint kNoTarget = 0xFFFFFFFFu;
 
 // Signed distance to a rounded box centered at the origin with half-size `halfExtent` and corner
 // radius `r` (classic rounded-box SDF). Negative inside, zero on the edge, positive outside. Used to
@@ -50,6 +50,7 @@ constant float4 kGridLineColor   = float4(1.00, 1.00, 1.00, 1.0);  // white rule
 constant float  kGridLineAlpha   = 0.15;                            // faint, so it reads as a substrate
 constant float4 kCursorColor     = float4(0.95, 0.98, 1.00, 1.0);  // ring + inner dot (D-08)
 constant float4 kTargetColor     = float4(0.90, 0.16, 0.20, 1.0);   // red selection square
+constant float4 kAcquiredColor   = float4(0.20, 0.88, 0.40, 1.0);   // green, on a committed selection
 
 kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
                     constant WebgridParams& p [[buffer(0)]],
@@ -106,20 +107,30 @@ kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
       color = mix(color, kGridLineColor, saturate(lineMask * lineAlpha));
     }
 
-    // (6) The active target, drawn as a filled red square inset in its cell. `kNoTarget` on either
-    //     axis draws nothing, so an absent target is a visual no-op rather than a cell at (0,0).
-    if (p.targetColumn != kNoTarget && p.targetRow != kNoTarget
-        && p.targetColumn < p.gridColumns && p.targetRow < p.gridRows) {
-      const uint2 thisCell = uint2(uint(g.x * cols), uint(g.y * rows));
-      if (thisCell.x == p.targetColumn && thisCell.y == p.targetRow) {
-        // Inset so the square sits inside its cell rather than touching the rules.
-        const float2 targetHalf = float2(0.5 - max(p.cellGap, 0.10) * 0.5);
-        const float2 fromCenter = cellLocal - 0.5;
-        const float radius = clamp(p.cornerRadius, 0.0, 1.0) * min(targetHalf.x, targetHalf.y);
-        const float dT = rounded_box_sdf(fromCenter, targetHalf, radius);
-        const float aaT = max(cellPitch.x, cellPitch.y) * 1.5;
+    // (6) The active target, drawn AT ITS ACTUAL POSITION and sized to the acquisition radius --
+    //     NOT snapped to a grid cell. The criterion tests distance to this point, so quantising the
+    //     drawing to a cell put the square a median 2.26 mm from the scored point against a 2.86 mm
+    //     radius, and a cursor centred in the square was scored as a miss with nothing on screen to
+    //     explain it. `hasTarget == 0` draws nothing, so an absent target is a visual no-op.
+    if (p.hasTarget != 0u) {
+      {
+        // A committed selection greens the square and swells it briefly, then decays back. The
+        // swell is what makes a 300 ms event legible at 12 fps; the colour is what distinguishes it
+        // from the cursor merely passing over the cell, which happens constantly and means nothing.
+        const float flash = clamp(p.targetFlash, 0.0, 1.0);
+        // Half-extent IS the acquisition radius, so the square a viewer sees is the region tested.
+        // Generously rounded, which also brings the corners in toward the circle the criterion
+        // actually uses; the residual overshoot is at the four corners only.
+        // NOT named `half`: that is the reserved 16-bit float type in MSL, the same trap
+        // `rounded_box_sdf`'s `halfExtent` parameter is named around.
+        const float targetExtent = max(p.targetRadius, 1e-5) * (1.0 + 0.45 * flash);
+        const float2 targetHalf = float2(targetExtent);
+        const float2 fromCenter = g - float2(p.targetX, p.targetY);
+        const float corner = 0.35 * targetExtent;
+        const float dT = rounded_box_sdf(fromCenter, targetHalf, corner);
+        const float aaT = max(pixelInGrid.x, pixelInGrid.y);
         const float targetMask = 1.0 - smoothstep(-aaT, aaT, dT);
-        color = mix(color, kTargetColor, targetMask);
+        color = mix(color, mix(kTargetColor, kAcquiredColor, flash), targetMask);
       }
     }
 

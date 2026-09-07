@@ -60,8 +60,8 @@ import SwiftUI
   public struct WebgridView: UIViewRepresentable {
     private let ring: VelocityRing
     private let targets: TargetChannel?
-    private let dwell: DwellChannel?
-    private let anchors: AnchorChannel?
+    private let selection: SelectionChannel?
+    private let cursorPositions: CursorPositionChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
@@ -69,13 +69,13 @@ import SwiftUI
     public init(
       ring: VelocityRing,
       targets: TargetChannel? = nil,
-      dwell: DwellChannel? = nil,
-      anchors: AnchorChannel? = nil
+      selection: SelectionChannel? = nil,
+      cursorPositions: CursorPositionChannel? = nil
     ) {
       self.ring = ring
       self.targets = targets
-      self.dwell = dwell
-      self.anchors = anchors
+      self.selection = selection
+      self.cursorPositions = cursorPositions
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -96,8 +96,8 @@ import SwiftUI
           device: device,
           ring: ring,
           targets: targets,
-          dwell: dwell,
-          anchors: anchors
+          selection: selection,
+          cursorPositions: cursorPositions
         )
         adapter.start()
         context.coordinator.adapter = adapter
@@ -187,8 +187,8 @@ import SwiftUI
   public struct WebgridView: NSViewRepresentable {
     private let ring: VelocityRing
     private let targets: TargetChannel?
-    private let dwell: DwellChannel?
-    private let anchors: AnchorChannel?
+    private let selection: SelectionChannel?
+    private let cursorPositions: CursorPositionChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
@@ -196,13 +196,13 @@ import SwiftUI
     public init(
       ring: VelocityRing,
       targets: TargetChannel? = nil,
-      dwell: DwellChannel? = nil,
-      anchors: AnchorChannel? = nil
+      selection: SelectionChannel? = nil,
+      cursorPositions: CursorPositionChannel? = nil
     ) {
       self.ring = ring
       self.targets = targets
-      self.dwell = dwell
-      self.anchors = anchors
+      self.selection = selection
+      self.cursorPositions = cursorPositions
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -223,8 +223,8 @@ import SwiftUI
           device: device,
           ring: ring,
           targets: targets,
-          dwell: dwell,
-          anchors: anchors
+          selection: selection,
+          cursorPositions: cursorPositions
         )
         adapter.start(in: view)
         context.coordinator.adapter = adapter

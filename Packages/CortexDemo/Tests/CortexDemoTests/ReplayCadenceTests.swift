@@ -78,25 +78,26 @@ struct ReplayCadenceTests {
 
   // MARK: The dwell readout
 
-  @Test("the dwell channel clamps to [0,1] and resolves non-finite input to no hold")
-  func dwellChannelClampsAndRoundTrips() {
-    let channel = DwellChannel()
-    #expect(channel.load() == 0, "a fresh channel reads as no hold")
+  @Test("the selection channel clamps both fields and resolves non-finite input to idle")
+  func selectionChannelClampsAndRoundTrips() {
+    let channel = SelectionChannel()
+    #expect(channel.load() == .idle, "a fresh channel reads as no hold and no flash")
 
-    channel.store(0.5)
-    #expect(channel.load() == 0.5)
+    channel.store(dwell: 0.5, flash: 0.25)
+    #expect(channel.load() == SelectionState(dwell: 0.5, flash: 0.25))
 
-    // Out-of-range and non-finite values must never reach the shader as a radius multiplier.
-    channel.store(2.0)
-    #expect(channel.load() == 1.0)
-    channel.store(-1.0)
-    #expect(channel.load() == 0.0)
-    // Non-finite input resolves to 0, NOT to 1: a garbage value must draw a resting cursor rather
-    // than a fully committed selection, since the ring's contraction is read as evidence of a hold.
-    channel.store(.nan)
-    #expect(channel.load() == 0.0)
-    channel.store(.infinity)
-    #expect(channel.load() == 0.0)
+    // The two fields share one atomic word, so a store must never leave one updated beside the
+    // other stale: a full-size cursor next to a flash from the selection that just released it.
+    channel.store(dwell: 0, flash: 1)
+    #expect(channel.load() == SelectionState(dwell: 0, flash: 1))
+
+    // Out of range clamps; non-finite resolves to 0, NOT to 1. A garbage value must draw a resting
+    // cursor and an unflashed target rather than a completed selection, since both are read as
+    // evidence that an acquisition happened.
+    channel.store(dwell: 2.0, flash: -1.0)
+    #expect(channel.load() == SelectionState(dwell: 1, flash: 0))
+    channel.store(dwell: .nan, flash: .infinity)
+    #expect(channel.load() == .idle)
   }
 
   @Test("a pipeline that never reaches its target reports no dwell and no selections")
@@ -173,6 +174,80 @@ struct ReanchorTests {
     }
     // A hold cannot survive being teleported: the dwell must be CONTINUOUS on one target.
     pipeline.reanchor(to: SIMD2<Float>(0.5, 0.5))
+    #expect(pipeline.dwellProgress == 0)
+  }
+}
+
+@Suite("Selection commit: the counter and the flash")
+@MainActor
+struct SelectionCommitTests {
+  private func freshPipeline() throws -> ReplayPipeline {
+    let source = try RecordedSpikeSource(export: ReplayCadenceTests.loadFixture(), stride: 1)
+    return ReplayPipeline(source: source, seed: 0xC0FFEE)
+  }
+
+  /// Run `ticks` ticks with the target re-pointed at the cursor each time, so the continuous-hold
+  /// condition holds throughout. This exercises the READOUT, not a decoding result: it asserts that
+  /// a satisfied dwell moves the tally a viewer reads off the screen.
+  @discardableResult
+  private func holdOnTarget(_ pipeline: ReplayPipeline, ticks: Int) -> SIMD2<Float> {
+    var position = pipeline.tick().position
+    for _ in 0 ..< ticks {
+      pipeline.setTarget(position)
+      position = pipeline.tick().position
+    }
+    return position
+  }
+
+  @Test("a dwell short of the threshold does not commit")
+  func shortHoldDoesNotCommit() throws {
+    let pipeline = try freshPipeline()
+    // 0.30 s at 20 ms is 15 ticks; 14 is one short, and the threshold must be a threshold.
+    holdOnTarget(pipeline, ticks: 14)
+    #expect(pipeline.selectionCount == 0)
+    #expect(pipeline.selectionFlash == 0)
+    #expect(pipeline.dwellProgress > 0, "a partial hold shows partial progress")
+  }
+
+  @Test("a satisfied dwell commits once and lights the flash")
+  func dwellCommitsOnce() throws {
+    let pipeline = try freshPipeline()
+    holdOnTarget(pipeline, ticks: 15)
+    #expect(pipeline.selectionCount == 1, "15 continuous on-target ticks is exactly one commit")
+    #expect(pipeline.selectionFlash == 1, "a commit lights the flash fully")
+    #expect(pipeline.dwellProgress == 0, "the counter restarts after committing")
+  }
+
+  @Test("the hold must be re-earned: a sustained hold commits again, never continuously")
+  func holdMustBeReEarned() throws {
+    let pipeline = try freshPipeline()
+    holdOnTarget(pipeline, ticks: 30)
+    #expect(pipeline.selectionCount == 2, "30 ticks is two 15-tick holds, not 16 commits")
+  }
+
+  @Test("the flash decays to zero and does not re-arm on its own")
+  func flashDecays() throws {
+    let pipeline = try freshPipeline()
+    holdOnTarget(pipeline, ticks: 15)
+    #expect(pipeline.selectionFlash == 1)
+
+    // Break the hold with a far target. The flash fades over its own window and the tally holds.
+    let committed = pipeline.selectionCount
+    pipeline.setTarget(SIMD2<Float>(0.99, 0.01))
+    for _ in 0 ..< 18 {
+      pipeline.tick()
+    }
+    #expect(pipeline.selectionFlash == 0, "still lit: \(pipeline.selectionFlash)")
+    #expect(pipeline.selectionCount == committed, "no commit without a hold")
+  }
+
+  @Test("a re-anchor clears a flash so it cannot bleed into the next trial")
+  func reanchorClearsFlash() throws {
+    let pipeline = try freshPipeline()
+    holdOnTarget(pipeline, ticks: 15)
+    #expect(pipeline.selectionFlash == 1)
+    pipeline.reanchor(to: SIMD2<Float>(0.5, 0.5))
+    #expect(pipeline.selectionFlash == 0)
     #expect(pipeline.dwellProgress == 0)
   }
 }

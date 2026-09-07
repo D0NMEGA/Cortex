@@ -95,6 +95,32 @@ struct ContentView: View {
     }
   }
 
+  /// A live acquisition tally for one arm.
+  ///
+  /// LIVE, and labelled so, because it counts only the trials that have replayed since launch. The
+  /// published 0-of-1025 and 70-of-1025 in the arm captions come from the full free-running scored
+  /// replay and are a different measurement; a viewer who conflates them would read a two-minute
+  /// capture as the session result.
+  private func scoreBadge(driver: ReplayDriver) -> some View {
+    VStack(alignment: .trailing, spacing: 1) {
+      Text("\(driver.selectionCount) / \(driver.trialCount)")
+        .font(.system(size: 15, design: .monospaced).bold())
+        .foregroundStyle(driver.selectionCount > 0 ? .green : .white)
+      Text("acquired / trials, this run")
+        .font(.system(size: 8, design: .monospaced))
+        .foregroundStyle(.secondary)
+      // A zero tally alone cannot say whether the cursor never arrived or arrived and could not
+      // hold. This says which, and it is the number to read before concluding anything from a zero.
+      Text("best hold \(Int((driver.peakDwell * 100).rounded()))% of 0.30 s")
+        .font(.system(size: 8, design: .monospaced))
+        .foregroundStyle(.secondary)
+    }
+    .padding(.horizontal, 8)
+    .padding(.vertical, 5)
+    .background(.black.opacity(0.72), in: RoundedRectangle(cornerRadius: 5))
+    .padding(8)
+  }
+
   /// One arm's render surface with the label that says what it is and what it is not.
   private func arm(driver: ReplayDriver, title: String, caption: String) -> some View {
     VStack(spacing: 0) {
@@ -102,10 +128,11 @@ struct ContentView: View {
       WebgridView(
         ring: driver.ring,
         targets: driver.targets,
-        dwell: driver.dwell,
-        anchors: driver.anchors
+        selection: driver.selection,
+        cursorPositions: driver.cursorPositions
       )
       .frame(minWidth: 360, minHeight: 360)
+      .overlay(alignment: .topTrailing) { scoreBadge(driver: driver) }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
           .font(.system(.caption, design: .monospaced).bold())
@@ -169,11 +196,22 @@ final class ReplayDriver {
   private(set) var sourceLabel: String
   /// The active task target, published to the renderer once per tick (latest-value, lock-free).
   let targets = TargetChannel()
-  /// Dwell-to-select progress, published to the renderer once per tick (latest-value, lock-free).
-  let dwell = DwellChannel()
-  /// Cursor re-anchor events. The RENDERER owns the integrator that draws the cursor, so a
-  /// re-anchor has to be published to it as well as applied to the pipeline's own integrator.
-  let anchors = AnchorChannel()
+  /// Dwell progress + selection flash, published to the renderer once per tick (lock-free).
+  let selection = SelectionChannel()
+  /// The pipeline's authoritative cursor position, republished every tick.
+  ///
+  /// The RENDERER owns the integrator that draws the cursor; the PIPELINE owns the one the filter,
+  /// the steering and the dwell criterion read. Publishing the pipeline's position every tick is
+  /// what keeps them the same cursor -- without it they integrate different clocks and a viewer
+  /// watches a ring close over a target that never registers.
+  let cursorPositions = CursorPositionChannel()
+  /// Selections committed since launch, mirrored off the pipeline so `@Observable` tracks it.
+  ///
+  /// `ReplayPipeline` is a plain class, so SwiftUI sees no change when its counter moves; reading it
+  /// straight from the badge would render a tally frozen at zero.
+  private(set) var selectionCount = 0
+  /// Longest continuous hold reached, as a fraction of the 0.30 s requirement.
+  private(set) var peakDwell: Float = 0
   /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
   /// `nil` on the synthetic path, where the task has no recorded target to show.
   private let recordedSource: RecordedSpikeSource?
@@ -189,6 +227,9 @@ final class ReplayDriver {
   /// 5.19 mm from the target it just left (77% within half the 15 mm task pitch) against 61.45 mm
   /// from the one that just appeared.
   private var previousTarget: SIMD2<Float>?
+  /// Trials seen since launch: one per target change. The DENOMINATOR of the live counter, and not
+  /// the session's 1,025 -- a capture shows a couple of minutes of a 24-minute replay.
+  private(set) var trialCount = 0
 
   /// Whether this driver runs the ReFIT rotation (the target-determined arm) or not.
   let rotationEnabled: Bool
@@ -330,9 +371,11 @@ final class ReplayDriver {
       previousTarget = nil
       return
     }
-    let grid = Double(ReplayDriver.gridSide)
-    targets.store(column: Int(normalised.x * grid), row: Int(normalised.y * grid))
     let current = SIMD2<Float>(Float(normalised.x), Float(normalised.y))
+    // Publish the target WHERE IT IS, not the grid cell containing it. The dwell criterion tests
+    // distance to this exact point; drawing the cell instead put the square a median 2.26 mm away
+    // against a 2.86 mm radius, so a cursor centred in the square was scored as a miss.
+    targets.store(x: current.x, y: current.y)
 
     // A new target is a new trial. Re-anchor the cursor onto the target just left before steering at
     // the new one, so what the viewer sees is the decode's within-trial behaviour rather than 24
@@ -340,7 +383,7 @@ final class ReplayDriver {
     // why a replay cannot close that loop on its own, and the on-screen caption that says so.
     if let previous = previousTarget, previous != current {
       pipeline.reanchor(to: previous)
-      anchors.store(x: previous.x, y: previous.y)
+      trialCount += 1
     }
     previousTarget = current
 
@@ -348,9 +391,6 @@ final class ReplayDriver {
     // the stale init-time centre cell while the viewer sees a square somewhere else entirely.
     pipeline.setTarget(current)
   }
-
-  /// The 30x30 webgrid substrate (D-01), matching `WebgridParams.grid30x30`.
-  private static let gridSide = 30
 
   /// One 20ms producer tick: decode → filter → integrate, push the velocity, drive the round trip,
   /// and refresh the overlay's software-timed glass-to-glass line.
@@ -366,9 +406,17 @@ final class ReplayDriver {
     // window `tickIndex` then increments, so the window just consumed is `totalTicks - 1`.
     publishTarget(forWindow: pipeline.totalTicks - 1)
 
-    // Publish the dwell the cursor has accumulated on that target, so the ring contracts as a
-    // selection is committed. Same 0.30 s continuous-hold criterion the run is scored with.
-    dwell.store(pipeline.dwellProgress)
+    // Publish the dwell the cursor has accumulated and any selection flash, so the ring contracts
+    // as a selection is committed and the target greens when it does. Same 0.30 s continuous-hold
+    // criterion the run is scored with.
+    // Publish the authoritative position AFTER `publishTarget`, so a tick that re-anchored sends the
+    // re-anchored position rather than the one the tick integrated to just before it.
+    let authoritative = pipeline.cursorPosition
+    cursorPositions.store(x: authoritative.x, y: authoritative.y)
+
+    selection.store(dwell: pipeline.dwellProgress, flash: pipeline.selectionFlash)
+    selectionCount = pipeline.selectionCount
+    peakDwell = pipeline.peakDwell
 
     // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
     _ = ring.push(CursorVelocity(

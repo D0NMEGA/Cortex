@@ -139,6 +139,33 @@ public final class ReplayPipeline {
   /// A LIVE count over however much of the session has replayed. It is not the published per-session
   /// hit count and must not be presented as one.
   public private(set) var selectionCount = 0
+  /// How recently a selection committed, decaying `1 → 0` over `Self.flashTicks` ticks.
+  ///
+  /// Display state, like `dwellProgress`. It exists because a selection is a 300 ms event on a grid
+  /// the cursor crosses constantly: without a marked commit a viewer cannot tell an acquisition from
+  /// the cursor happening to pass over the target cell, and at 12 fps in a GIF the moment is gone in
+  /// three frames.
+  public private(set) var selectionFlash: Float = 0
+  /// The longest continuous hold reached so far, as a fraction of the dwell requirement.
+  ///
+  /// A run that reports 0 acquisitions is ambiguous on its own: the cursor may never reach the
+  /// target, or it may reach it and fail to hold. This distinguishes them, and it is the number to
+  /// look at before concluding anything from a zero.
+  public private(set) var peakDwell: Float = 0
+
+  /// The authoritative cursor position: the one the filter, the steering and the dwell all read.
+  ///
+  /// The renderer keeps its own integrator so it can move the cursor smoothly at 120 Hz between
+  /// 50 Hz producer ticks, but THIS is the position that decides whether a trial registers. The two
+  /// integrate different clocks -- a fixed 20 ms per tick here, real frame time there -- so the
+  /// renderer re-seats on this every tick rather than being left to drift.
+  public var cursorPosition: SIMD2<Float> {
+    SIMD2<Float>(integrator.position.x, integrator.position.y)
+  }
+
+  /// Ticks the selection flash takes to decay. 18 at 20 ms is 360 ms -- long enough to survive a
+  /// 12 fps capture, short enough not to still be lit when the next trial starts.
+  private static let flashTicks = 18
 
   // MARK: - Model-in-loop accounting (Phase 10, RD-08 — the Pattern-2 mitigation)
 
@@ -291,16 +318,6 @@ public final class ReplayPipeline {
     // leaving it as `decoder != nil` would report a ridge-driven run as unbacked, which reads as
     // "the synthetic fallback is running" -- the exact confusion the counters exist to prevent.
     ridge != nil || decoder != nil
-  }
-
-  /// Resolve the optional model URL from `CORTEX_MODEL_URL` (the gitignored R&D `.mlpackage`/`.mlmodelc`).
-  /// Absent/empty ⇒ nil ⇒ the synthetic decode fallback runs (the clean-clone / CI path, mirrors
-  /// VelocityOutputTests / CortexDecoderBench). The URL is never committed — model from env only.
-  public static func modelURLFromEnvironment() -> URL? {
-    guard let raw = ProcessInfo.processInfo.environment["CORTEX_MODEL_URL"], !raw.isEmpty else {
-      return nil
-    }
-    return URL(fileURLWithPath: raw)
   }
 
   // MARK: - Decode stage (the D-10 seam: NDT1 genuinely in loop, with a deterministic fallback)
@@ -476,6 +493,7 @@ public final class ReplayPipeline {
 
     tickIndex &+= 1
     let onTarget = simd_distance(position, target) <= Self.acquisitionRadius
+    decayFlash()
     updateDwell(onTarget: onTarget)
     return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
   }
@@ -566,7 +584,7 @@ public final class ReplayPipeline {
 /// Re-anchoring and the dwell readout exist so a VIEWER can see what the loop is doing. Neither
 /// feeds the loop, and no published number is computed from either, so they live outside the
 /// class body that carries the decode/filter/integrate path.
-extension ReplayPipeline {
+public extension ReplayPipeline {
   /// Move the cursor to `position` and re-seat the filter's position state on it.
   ///
   /// TRIAL RE-ANCHORING. The streaming loop integrates decoded velocity open-loop: nothing observes
@@ -584,13 +602,14 @@ extension ReplayPipeline {
   ///
   /// This changes what the displayed track means, so a caller must label it. It is a DISPLAY path:
   /// `runToHit` and `CortexReplayBench` do not use it, and no published number comes from it.
-  public func reanchor(to position: SIMD2<Float>) {
+  func reanchor(to position: SIMD2<Float>) {
     guard position.x.isFinite, position.y.isFinite else { return }
     integrator.reset(to: CursorPosition(x: position.x, y: position.y))
     let clamped = SIMD2<Float>(integrator.position.x, integrator.position.y)
     filter.setCursorPosition(clamped)
     continuousOnTarget = 0
     dwellProgress = 0
+    selectionFlash = 0
   }
 
   /// Advance the streaming dwell counter for one tick.
@@ -608,12 +627,22 @@ extension ReplayPipeline {
     continuousOnTarget += 1
     let required = acquisition.dwellTicks
     if continuousOnTarget >= required {
+      peakDwell = 1
       selectionCount += 1
+      selectionFlash = 1
       continuousOnTarget = 0
       dwellProgress = 0
     } else {
       dwellProgress = Float(continuousOnTarget) / Float(required)
     }
+    peakDwell = max(peakDwell, dwellProgress)
+  }
+
+  /// Decay the selection flash by one tick. Linear, so the on-screen duration is exactly
+  /// `flashTicks * dt` rather than an exponential tail that never quite reaches zero.
+  private func decayFlash() {
+    guard selectionFlash > 0 else { return }
+    selectionFlash = max(0, selectionFlash - 1.0 / Float(Self.flashTicks))
   }
 }
 
@@ -622,7 +651,17 @@ extension ReplayPipeline {
 ///
 /// Which decoder to run and whether it loaded. Setup, not the decode path, so it sits beside the
 /// class rather than inside a body that already carries decode, filter, integrate and scoring.
-extension ReplayPipeline {
+public extension ReplayPipeline {
+  /// Resolve the optional model URL from `CORTEX_MODEL_URL` (the gitignored R&D `.mlpackage`/`.mlmodelc`).
+  /// Absent/empty ⇒ nil ⇒ the synthetic decode fallback runs (the clean-clone / CI path, mirrors
+  /// VelocityOutputTests / CortexDecoderBench). The URL is never committed — model from env only.
+  static func modelURLFromEnvironment() -> URL? {
+    guard let raw = ProcessInfo.processInfo.environment["CORTEX_MODEL_URL"], !raw.isEmpty else {
+      return nil
+    }
+    return URL(fileURLWithPath: raw)
+  }
+
   /// Load the linear decoder and check it against the source's window shape.
   ///
   /// It ships in CortexDecoder's bundle, so unlike NDT1 it needs no external file and no Metal
@@ -653,7 +692,7 @@ extension ReplayPipeline {
   /// Resolve the decoder from `CORTEX_DECODER`, defaulting to the one that scores higher on this
   /// data. An unrecognised value falls back to the default rather than failing the launch, and the
   /// caller surfaces which decoder actually ran, so a typo cannot masquerade as a result.
-  public static func decoderFromEnvironment(default fallback: Decoder = .ridge) -> Decoder {
+  static func decoderFromEnvironment(default fallback: Decoder = .ridge) -> Decoder {
     guard let raw = ProcessInfo.processInfo.environment["CORTEX_DECODER"]?.lowercased() else {
       return fallback
     }

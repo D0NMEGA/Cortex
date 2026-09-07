@@ -1,56 +1,63 @@
-// TargetChannel — the producer→renderer channel carrying the ACTIVE TASK TARGET cell.
+// TargetChannel — the active task target, published to the renderer once per tick.
 //
-// The velocity ring (`VelocityRing`) carries motion; this carries the thing the motion is aimed at.
-// They are deliberately separate: the ring is a queue the consumer drains sample by sample, while
-// the target is a LATEST-VALUE signal with no history worth keeping. A renderer that fell a frame
-// behind on velocity still wants the newest target, not a backlog of stale ones.
+// ## Why this carries a POSITION and not a cell
+// It used to carry a 30x30 cell index, and the shader filled that cell. But the acquisition
+// criterion is a distance to the target's ACTUAL position, which is wherever the task put it, not
+// wherever the grid quantises it to. On this session those differ by a median 2.26 mm against a
+// 2.86 mm acquisition radius, and for 15 of the 64 targets the cell centre falls OUTSIDE the radius
+// altogether -- so a cursor drawn dead centre in the red square was scored as a miss.
 //
-// Concurrency posture matches `VelocityRing`: a single `Atomic` load/store on the display-link
-// callback path, no locks, no allocation, no ARC traffic in the hot path (the audio-callback-regime
-// discipline this project holds renderer-side code to).
-//
-// The cell is packed into one 32-bit word so a reader observes column and row from the SAME write.
-// Two separate atomics could tear across a target change and render a cell that never existed.
-
+// That is the worst kind of display bug: the viewer sees the cursor land, sees the ring close, and
+// nothing registers, with no way to tell from the screen that the square and the criterion are not
+// the same place. The target is now published where it actually is, and the shader draws it at the
+// acquisition radius, so "the cursor is in the square" and "the criterion is satisfied" agree.
 import Synchronization
 
-/// The active task target, as a grid cell, shared producer to renderer.
-///
-/// `Sendable` and lock-free: the producer calls ``store(column:row:)`` (or ``clear()``) on its own
-/// cadence and the renderer calls ``load()`` once per frame.
-public final class TargetChannel: Sendable {
-  /// Packed `(column << 16) | row`, or ``TargetChannel/empty`` when no target is active.
-  ///
-  /// `UInt32.max` is the empty sentinel rather than a separate flag word, so "is there a target"
-  /// and "which cell" are answered by one atomic load and cannot disagree.
-  private static let empty: UInt32 = .max
+/// The active target's position in grid-normalised `[0, 1]` space.
+public nonisolated struct ActiveTarget: Sendable, Equatable {
+  public let x: Float
+  public let y: Float
 
-  private let packed = Atomic<UInt32>(TargetChannel.empty)
+  public init(x: Float, y: Float) {
+    self.x = x
+    self.y = y
+  }
+}
+
+/// A latest-value channel for the active target. One atomic word, no queue, no back pressure.
+public final class TargetChannel: Sendable {
+  /// "No target" sentinel. A real target always sets the high bit, so 0 can never be a live value.
+  private static let empty: UInt64 = 0
+  /// bit 32 validity, bits 31..16 x, bits 15..0 y, as 16-bit fixed point over `[0, 1]`. That
+  /// resolves to about 1/2000 of a cell, far finer than a pixel at any plausible window size.
+  private let packed = Atomic<UInt64>(TargetChannel.empty)
 
   public init() {}
 
-  /// Publish the active target cell. Columns and rows above `UInt16.max` are refused rather than
-  /// truncated, because a silently wrapped cell would render a target in the wrong place.
-  public func store(column: Int, row: Int) {
-    guard column >= 0, row >= 0, column <= Int(UInt16.max), row <= Int(UInt16.max) else {
+  /// Publish the active target. Non-finite or out-of-grid input clears instead of publishing: a
+  /// target the task never showed must not be drawn, and clamping one into range would invent a
+  /// location for it.
+  public func store(x: Float, y: Float) {
+    guard x.isFinite, y.isFinite, x >= 0, x < 1, y >= 0, y < 1 else {
       clear()
       return
     }
-    let value = UInt32(UInt16(column)) << 16 | UInt32(UInt16(row))
-    // The sentinel is a legal packing of (65535, 65535); a grid that large is not reachable here,
-    // but treat it as empty rather than let it alias.
-    packed.store(value == TargetChannel.empty ? TargetChannel.empty : value, ordering: .releasing)
+    let qx = UInt64(x * 65535 + 0.5)
+    let qy = UInt64(y * 65535 + 0.5)
+    packed.store(1 << 32 | qx << 16 | qy, ordering: .releasing)
   }
 
-  /// Withdraw the active target, so the renderer draws none.
   public func clear() {
     packed.store(TargetChannel.empty, ordering: .releasing)
   }
 
-  /// The active target cell, or `nil` when none is set.
-  public func load() -> (column: UInt32, row: UInt32)? {
+  /// The active target, or `nil` when none is showing.
+  public func load() -> ActiveTarget? {
     let value = packed.load(ordering: .acquiring)
-    guard value != TargetChannel.empty else { return nil }
-    return (column: value >> 16, row: value & 0xFFFF)
+    guard value & (1 << 32) != 0 else { return nil }
+    return ActiveTarget(
+      x: Float((value >> 16) & 0xFFFF) / 65535,
+      y: Float(value & 0xFFFF) / 65535
+    )
   }
 }
