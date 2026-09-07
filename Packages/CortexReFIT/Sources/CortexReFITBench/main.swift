@@ -360,7 +360,9 @@ func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> ArmResult {
       acquisition: acquisition
     )
     conditions[bin].append(outcome.fittsTrial)
-    if outcome.acquired { webgridCorrect += 1 } // a HIT is a correct Webgrid selection (Sc).
+    if outcome.acquired {
+      webgridCorrect += 1
+    } // a HIT is a correct Webgrid selection (Sc).
     webgridSeconds += outcome.elapsedSeconds // sum the per-trial elapsed time into the arm's t.
   }
 

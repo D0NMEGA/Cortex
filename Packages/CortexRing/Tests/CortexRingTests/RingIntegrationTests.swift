@@ -84,7 +84,9 @@ func `push on a full ring returns false`() {
   var pushed = 0
   while ring.push(CortexFrame.cortexTestFrame(seq: UInt64(pushed))) {
     pushed += 1
-    if pushed > 64 { break } // safety: never spin forever if the contract regressed
+    if pushed > 64 {
+      break
+    } // safety: never spin forever if the contract regressed
   }
   #expect(pushed >= 1) // at least one slot was usable
   #expect(ring.push(CortexFrame.cortexTestFrame(seq: 999)) == false) // now full → false

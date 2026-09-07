@@ -318,7 +318,9 @@ struct KalmanFilterTests {
       frozen.setCursorPosition(p)
       let a = shipped.step(measurement: z, target: target, acquisitionRadius: rAcq)
       let b = frozen.step(measurement: z, target: target, acquisitionRadius: rAcq)
-      if a != b { diverged = true }
+      if a != b {
+        diverged = true
+      }
     }
     #expect(diverged, "the frozen Phase-7 baseline gain and the shipped re-fit gain drive the filter identically")
   }

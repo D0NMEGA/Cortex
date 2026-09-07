@@ -87,7 +87,9 @@ public final nonisolated class VelocityRing: @unchecked Sendable {
     let t = tail.load(ordering: .relaxed)
     let h = head.load(ordering: .acquiring)
     let next = (t + 1) & mask
-    if next == h { return false } // full — never overwrite an unconsumed frame
+    if next == h {
+      return false
+    } // full — never overwrite an unconsumed frame
     buffer[t] = v // write the slot FIRST …
     tail.store(next, ordering: .releasing) // … THEN publish it (release pairs with pop's acquire)
     return true
@@ -102,7 +104,9 @@ public final nonisolated class VelocityRing: @unchecked Sendable {
     // (the torn-read mitigation, T-06-02-02).
     let h = head.load(ordering: .relaxed)
     let t = tail.load(ordering: .acquiring)
-    if h == t { return nil } // empty
+    if h == t {
+      return nil
+    } // empty
     let v = buffer[h] // read the published slot
     head.store((h + 1) & mask, ordering: .releasing) // free the slot for the producer
     return v

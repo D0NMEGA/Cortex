@@ -53,7 +53,9 @@ public nonisolated enum Rendezvous {
     // injected special port before it posix_spawns with the same attr.
     var optAttr: posix_spawnattr_t? = attr
     let kr = cortex_rendezvous_parent_prepare(&optAttr, &out)
-    if let mutated = optAttr { attr = mutated }
+    if let mutated = optAttr {
+      attr = mutated
+    }
     if kr != KERN_SUCCESS {
       throw .parentPrepare(kr)
     }

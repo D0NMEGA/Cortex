@@ -53,7 +53,11 @@ struct VelocityRingTests {
     var accepted: [CursorVelocity] = []
     for i in 0 ..< 16 {
       let v = CursorVelocity(tsNs: UInt64(i), seq: UInt64(i), vx: Float16(Float(i)), vy: 0.0)
-      if ring.push(v) { accepted.append(v) } else { break }
+      if ring.push(v) {
+        accepted.append(v)
+      } else {
+        break
+      }
     }
     #expect(accepted.count >= 1) // some frames fit
     #expect(accepted.count < 16) // …but it is bounded (push eventually returns false)
@@ -108,8 +112,12 @@ struct VelocityRingTests {
         _ = sched_yield() // empty — let the producer get ahead, then retry
         continue
       }
-      if v.seq != expected { corrupt += 1 } // out-of-order / lost ⇒ FIFO or zero-loss violated
-      if v.vx != Float16(Float(expected & 0x3FF)) { corrupt += 1 } // torn slot ⇒ payload mismatch
+      if v.seq != expected {
+        corrupt += 1
+      } // out-of-order / lost ⇒ FIFO or zero-loss violated
+      if v.vx != Float16(Float(expected & 0x3FF)) {
+        corrupt += 1
+      } // torn slot ⇒ payload mismatch
       expected += 1
     }
 
@@ -161,7 +169,9 @@ struct LissajousProducerTests {
       )
       #expect(pos.x >= 0.0 && pos.x <= 1.0)
       #expect(pos.y >= 0.0 && pos.y <= 1.0)
-      if pos.x > 0.05, pos.x < 0.95, pos.y > 0.05, pos.y < 0.95 { sawInterior = true }
+      if pos.x > 0.05, pos.x < 0.95, pos.y > 0.05, pos.y < 0.95 {
+        sawInterior = true
+      }
       t += dt
     }
     #expect(sawInterior) // not pinned to a corner — a real figure

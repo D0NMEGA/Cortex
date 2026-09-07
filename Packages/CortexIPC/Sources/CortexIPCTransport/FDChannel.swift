@@ -43,7 +43,9 @@ public enum FDChannel {
                         UInt32(geometry.depth),
                         namePtr)
     }
-    if rc != 0 { throw .send(rc) }
+    if rc != 0 {
+      throw .send(rc)
+    }
   }
 
   /// Consumer side: receive on `rcv` (a receive right); reconstruct the shm fd (CLOEXEC already
@@ -68,7 +70,9 @@ public enum FDChannel {
       }
       return cortex_fdmsg_recv(rcv, &ringBytes, &slotStride, &slotDepth, nameBase)
     }
-    if fd < 0 { throw .recv(fd) }
+    if fd < 0 {
+      throw .recv(fd)
+    }
 
     // Rebuild + validate the geometry against the compile-time expectation. The consumer trusts
     // its OWN CORTEX_CHANNEL_COUNT-derived layout; a mismatching sender is rejected (the fd is

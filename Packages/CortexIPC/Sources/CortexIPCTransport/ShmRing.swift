@@ -134,7 +134,9 @@ public final class ShmRing {
 
     let oflag: Int32 = create ? (O_CREAT | O_RDWR) : O_RDWR
     let fd = cortex_shm_open(name, oflag, 0o600)
-    if fd < 0 { throw .open(errno) }
+    if fd < 0 {
+      throw .open(errno)
+    }
 
     if create {
       if ftruncate(fd, off_t(layout.ringBytes)) != 0 {
@@ -185,7 +187,9 @@ public final class ShmRing {
 
   deinit {
     _ = munmap(base, layout.ringBytes)
-    if ownedFD >= 0 { close(ownedFD) }
+    if ownedFD >= 0 {
+      close(ownedFD)
+    }
   }
 
   // MARK: - Slot arithmetic (constant-time)
@@ -236,7 +240,9 @@ public final class ShmRing {
   /// This is the sub-µs path SC#1 measures (Critical Finding #2) — no syscall, no context switch.
   public func pollLatest(into out: UnsafeMutableRawBufferPointer, lastSeen: UInt64) -> UInt64? {
     let s = producerSeq.pointee.load(ordering: .acquiring)
-    if s == lastSeen { return nil }
+    if s == lastSeen {
+      return nil
+    }
     let idx = slotIndex(forSeq: s)
     let src = slotBase(idx)
     let n = min(out.count, layout.slotStride)

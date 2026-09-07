@@ -275,7 +275,9 @@ public final class ClosedLoopPipeline {
     // The single place a decode resolves, so the counters cannot drift from the ticks (RD-08). Integer
     // increments in tick order — the D-13 determinism contract is untouched.
     totalTicks += 1
-    if byModel { modelBackedTicks += 1 }
+    if byModel {
+      modelBackedTicks += 1
+    }
     return (velocity, byModel)
   }
 

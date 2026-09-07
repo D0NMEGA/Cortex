@@ -398,7 +398,9 @@ func runArm(_ arm: ReplayArm) -> ArmRun {
     // Scored against the TRUE target for every arm, including the reversed-target one.
     let target = trueTargets[range.start]
     let result = acquisition.runTrial(positions: sampled, target: target)
-    if result.acquired { correct += 1 }
+    if result.acquired {
+      correct += 1
+    }
     seconds += result.movementTime
 
     let axis = target - start

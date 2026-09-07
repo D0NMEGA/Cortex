@@ -72,8 +72,12 @@ public enum Harness {
     var status: Int32 = 0
     while true {
       let w = waitpid(pid, &status, 0)
-      if w == pid { break }
-      if w < 0, errno == EINTR { continue }
+      if w == pid {
+        break
+      }
+      if w < 0, errno == EINTR {
+        continue
+      }
       throw HarnessError.waitFailed(errno)
     }
     // Extract the child's exit code from the wait status (WEXITSTATUS).

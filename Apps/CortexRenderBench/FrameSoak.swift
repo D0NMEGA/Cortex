@@ -133,8 +133,12 @@ enum FrameSoak {
       prevNs = tNs
 
       intervalsMs.append(intervalMs)
-      if intervalMs > budgetMs { overBudget += 1 } // > 8.33ms → over the 120Hz budget
-      if intervalMs > maxIntervalMs { maxIntervalMs = intervalMs }
+      if intervalMs > budgetMs {
+        overBudget += 1
+      } // > 8.33ms → over the 120Hz budget
+      if intervalMs > maxIntervalMs {
+        maxIntervalMs = intervalMs
+      }
       sumIntervalMs += intervalMs
       frames += 1
       simT += dt

@@ -185,8 +185,12 @@ final class ClosedLoopDriver {
 
     pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
     var missing = [String]()
-    if exportURL == nil { missing.append("CORTEX_REPLAY_EXPORT") }
-    if modelURL == nil { missing.append("CORTEX_MODEL_URL") }
+    if exportURL == nil {
+      missing.append("CORTEX_REPLAY_EXPORT")
+    }
+    if modelURL == nil {
+      missing.append("CORTEX_MODEL_URL")
+    }
     sourceLabel = "spike source: synthetic (unset: \(missing.joined(separator: ", ")))"
     recordedSource = nil
     boxOriginMm = .zero

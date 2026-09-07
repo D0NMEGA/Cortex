@@ -144,7 +144,9 @@ func deviceAnnotation(for url: URL) async -> String {
       tally[key, default: 0] += 1
     }
     guard !tally.isEmpty else { return "unknown-mac" }
-    if tally.count == 1, let only = tally.keys.first { return only }
+    if tally.count == 1, let only = tally.keys.first {
+      return only
+    }
     let summary = tally.sorted { $0.key < $1.key }
       .map { "\($0.key):\($0.value)" }
       .joined(separator: ",")

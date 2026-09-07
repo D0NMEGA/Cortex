@@ -58,7 +58,9 @@ public final class Doorbell {
   public init() throws(DoorbellError) {
     var fds: [Int32] = [-1, -1]
     let rc = socketpair(AF_UNIX, SOCK_STREAM, 0, &fds)
-    if rc != 0 { throw .socketpair(errno) }
+    if rc != 0 {
+      throw .socketpair(errno)
+    }
 
     producerFD = fds[0]
     consumerFD = fds[1]
@@ -77,8 +79,12 @@ public final class Doorbell {
   /// and SO_NOSIGPIPE (a dead peer must not kill the process; writes return EPIPE instead).
   private static func harden(_ fd: Int32) throws(DoorbellError) {
     let flags = fcntl(fd, F_GETFD)
-    if flags < 0 { throw .sockopt(errno) }
-    if fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0 { throw .sockopt(errno) }
+    if flags < 0 {
+      throw .sockopt(errno)
+    }
+    if fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0 {
+      throw .sockopt(errno)
+    }
 
     var one: Int32 = 1
     if setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &one, socklen_t(MemoryLayout<Int32>.size)) != 0 {
@@ -90,7 +96,8 @@ public final class Doorbell {
 
   /// Release all fds (idempotent).
   public func close() {
-    if kq >= 0 { Darwin.close(kq)
+    if kq >= 0 {
+      Darwin.close(kq)
       kq = -1
     }
     closeProducer()
@@ -99,14 +106,16 @@ public final class Doorbell {
 
   /// Close only the producer end (used by tests to simulate a dead peer; idempotent).
   public func closeProducer() {
-    if producerFD >= 0 { Darwin.close(producerFD)
+    if producerFD >= 0 {
+      Darwin.close(producerFD)
       producerFD = -1
     }
   }
 
   /// Close only the consumer end (idempotent).
   public func closeConsumer() {
-    if consumerFD >= 0 { Darwin.close(consumerFD)
+    if consumerFD >= 0 {
+      Darwin.close(consumerFD)
       consumerFD = -1
     }
   }
@@ -130,7 +139,9 @@ public final class Doorbell {
   /// subsequent `wait` calls.
   public func arm() throws(DoorbellError) {
     let q = kqueue()
-    if q < 0 { throw .kqueue(errno) }
+    if q < 0 {
+      throw .kqueue(errno)
+    }
 
     var ev = kevent()
     ev.ident = UInt(UInt32(bitPattern: consumerFD))
@@ -167,8 +178,12 @@ public final class Doorbell {
       n = kevent(kq, nil, 0, &out, 1, nil)
     }
 
-    if n < 0 { return .timeout } // interrupted/failed — treat as a non-wake (caller may retry)
-    if n == 0 { return .timeout } // deadline elapsed, no event
+    if n < 0 {
+      return .timeout
+    } // interrupted/failed — treat as a non-wake (caller may retry)
+    if n == 0 {
+      return .timeout
+    } // deadline elapsed, no event
 
     // EV_EOF means the producer end closed (fail-closed signal, T-02-02-05 path).
     if (out.flags & UInt16(EV_EOF)) != 0, out.data == 0 {
@@ -192,8 +207,12 @@ public final class Doorbell {
       }
     }
 
-    if got == 0 { return .peerClosed } // orderly shutdown
-    if got < 0 { return .timeout } // EAGAIN/EINTR on a spurious wake — treat as non-wake
+    if got == 0 {
+      return .peerClosed
+    } // orderly shutdown
+    if got < 0 {
+      return .timeout
+    } // EAGAIN/EINTR on a spurious wake — treat as non-wake
     return .woke(seq: seq)
   }
 }

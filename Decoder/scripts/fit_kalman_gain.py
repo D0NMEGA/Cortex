@@ -787,8 +787,8 @@ import simd
 
 /// Committed steady-state ReFIT-Kalman matrices for the 6-DOF constant-acceleration model.
 ///
-/// Layout choice (CONTEXT "implementer's discretion"): Swift `simd` has no `SIMD6`, so each 6-wide row
-/// of A and H is stored as a `SIMD8<Float>` with the last 2 lanes zero-padded — the pad lanes
+/// Layout choice (CONTEXT "implementer's discretion"): Swift `simd` has no `SIMD6`, so each 6-wide
+/// row of A and H is stored as a `SIMD8<Float>` with the last 2 lanes zero-padded — the pad lanes
 /// contribute nothing to an inlined `simd_dot`, so the Wave-2 predict/update step
 /// (`x⁻ = A·x`; `x = x⁻ + K·(z − H·x⁻)`) stays a handful of fixed-size simd dot products with no
 /// heap. Only the first 6 lanes of each A/H row are meaningful.

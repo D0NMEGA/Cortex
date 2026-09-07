@@ -55,17 +55,20 @@ func parseArgs(_ argv: [String]) -> BenchArgs {
     let tok = args[i]
     switch tok {
     case "--warmup":
-      if i + 1 < args.count, let k = Int(args[i + 1]) { a.warmup = max(0, k)
+      if i + 1 < args.count, let k = Int(args[i + 1]) {
+        a.warmup = max(0, k)
         i += 1
       }
     case "--soak":
       a.runSoak = true
       // Optional numeric seconds immediately after --soak.
-      if i + 1 < args.count, let s = Double(args[i + 1]) { a.soakSeconds = max(0.1, s)
+      if i + 1 < args.count, let s = Double(args[i + 1]) {
+        a.soakSeconds = max(0.1, s)
         i += 1
       }
     case "--out":
-      if i + 1 < args.count { a.outDir = URL(fileURLWithPath: args[i + 1])
+      if i + 1 < args.count {
+        a.outDir = URL(fileURLWithPath: args[i + 1])
         i += 1
       }
     default:
@@ -75,7 +78,8 @@ func parseArgs(_ argv: [String]) -> BenchArgs {
       } else if let x = tok.firstIndex(where: { $0 == "x" || $0 == "X" }) {
         let wStr = String(tok[tok.startIndex ..< x])
         let hStr = String(tok[tok.index(after: x)...])
-        if let w = Int(wStr), let h = Int(hStr), w > 0, h > 0 { a.width = w
+        if let w = Int(wStr), let h = Int(hStr), w > 0, h > 0 {
+          a.width = w
           a.height = h
         }
       }

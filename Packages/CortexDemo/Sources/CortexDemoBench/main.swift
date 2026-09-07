@@ -262,7 +262,9 @@ if isReal {
     realSamplesNs.append(latencyNs)
 
     let frameIndex = presentNs / framePeriodNs
-    if firstFrameIndex == nil { firstFrameIndex = frameIndex }
+    if firstFrameIndex == nil {
+      firstFrameIndex = frameIndex
+    }
     lastFrameIndex = frameIndex
   }
 

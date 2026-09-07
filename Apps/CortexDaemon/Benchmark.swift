@@ -240,7 +240,9 @@ public enum Benchmark {
 
   /// Nearest-rank percentile of an ASCENDING-sorted array. `q` in [0,1]. Returns 0 for an empty array.
   private static func percentile(_ sorted: [UInt64], _ q: Double) -> UInt64 {
-    if sorted.isEmpty { return 0 }
+    if sorted.isEmpty {
+      return 0
+    }
     // Nearest-rank: rank = ceil(q * n), clamped to [1, n]; index = rank − 1.
     let rank = Int((q * Double(sorted.count)).rounded(.up))
     let idx = min(max(rank, 1), sorted.count) - 1
