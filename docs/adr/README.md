@@ -8,6 +8,7 @@ WHY a decision was made -- the codebase shows WHAT.
 
 - [ADR-0001 -- Foundation and 2026 Toolchain](0001-foundation-and-2026-toolchain.md)
 - [ADR-0002 -- v0 Ship, BCI HID Integration, and the Wire-and-Gate Doctrine](0002-v0-ship-and-bci-hid-integration.md)
+- [ADR-0003 -- Retire the photodiode latency path; re-point v1 at real-data decoding](0003-photodiode-retirement-and-real-data-v1.md)
 
 ## When to write an ADR
 

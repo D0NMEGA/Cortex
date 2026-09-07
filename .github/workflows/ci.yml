@@ -269,21 +269,29 @@ jobs:
           ./Tools/scripts/match-policy.sh
           ./Tools/scripts/match-policy.sh --self-test
 
-      # --- Phase 8 (DIST-04/PERF-02, Plan 08-06): README credibility + no-leak gate + self-test ---
-      # The always-on structural PROXY for the credibility-grade README (the artifact handed to
-      # Bliss Chapman / Nir Even-Chen): assert the rejected-alternatives subset (MLX, _ANEClient,
-      # CocoaPods, altool), the DUAL latency claim (the verbatim `software-timed pipeline latency`
-      # phrase NEXT TO the v1 photodiode SPEC-TARGET `24.7` — D-07), every honest-gate disclosure
-      # (free/Personal-team signing, ANE-eligible, photodiode, synthetic, entitlement), and the
-      # Webgrid BPS formula `max(0`/`8.5` gap (PERF-02); AND forbid any secret/PII leak (a PEM
-      # private-key header, an inline MATCH_PASSWORD, an email, an ASC issuer UUID — T-08-06-02).
+      # --- Phase 8 (DIST-04/PERF-02, Plan 08-06); REWRITTEN Phase 10 (RD-10, Plan 10-13) ---------
+      # README credibility + no-leak gate + self-test. The always-on structural PROXY for the
+      # credibility-grade README (the artifact handed to Bliss Chapman / Nir Even-Chen): assert the
+      # rejected-alternatives subset (MLX, _ANEClient, CocoaPods, altool), the verbatim
+      # `software-timed pipeline latency` methodology phrase (D-07), every honest-gate disclosure
+      # (free/Personal-team signing, ANE-eligible, synthetic, entitlement), the Webgrid BPS formula
+      # `max(0`/`8.5` gap (PERF-02), and the D-14 real-data provenance triple (`indy_20160630_01`,
+      # `9d542cb51d4a`, `open-loop replay`); AND forbid any secret/PII leak (a PEM private-key
+      # header, an inline MATCH_PASSWORD, an email, an ASC issuer UUID — T-08-06-02).
+      # `photodiode` and the flat `24.7` LEFT the required set with the 2026-08-28 v1 re-point. The
+      # figure is now CONTEXT-SENSITIVE (D-13): three rules require the retirement marker on the same
+      # line (case-insensitively), forbid any achieved framing anywhere on that line, and require a
+      # Future-work/retired governing heading. Do not "restore" the old required tokens.
       # Mirrors the render-policy.sh / notarize-policy.sh / match-policy.sh steps above. The
       # --self-test runs alongside so a silently-weakened gate fails CI loudly: the disclosure-strip
-      # (photodiode/software-timed/24.7/synthetic/8.5) and the secret-injection (private-key/email/
-      # MATCH_PASSWORD/issuer-UUID) negative controls stop biting -> self-test exits non-zero
-      # (threats T-08-06-02/03). Over-claiming or leaking a credential into the README would forge
-      # the project's credibility, which is exactly what this gate prevents on every PR.
-      - name: README credibility + no-leak gate (DIST-04, D-06)
+      # (software-timed/synthetic/8.5 + the three provenance literals), the secret-injection
+      # (private-key/email/MATCH_PASSWORD/issuer-UUID) and the EIGHT-case D-13 adversarial corpus
+      # stop yielding their pinned verdicts -> self-test exits non-zero (threats T-08-06-02/03,
+      # T-10-13-01/08). The corpus is the regression test for the 2026-09-05 review finding
+      # (10-REVIEWS.md D-1) that an earlier rule design PASSED dishonest sentences and REJECTED
+      # honest ones. Over-claiming or leaking a credential into the README would forge the project's
+      # credibility, which is exactly what this gate prevents on every PR.
+      - name: README credibility + no-leak gate (DIST-04, D-06, RD-10)
         run: |
           ./Tools/scripts/readme-policy.sh
           ./Tools/scripts/readme-policy.sh --self-test
