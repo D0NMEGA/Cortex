@@ -449,6 +449,17 @@ jobs:
       - name: Run CortexReFIT tests (REFIT-01/02/03 — constants + filter + S&M-2004 throughput)
         run: swift test --package-path Packages/CortexReFIT
 
+      # --- Phase 6 (RENDER-01/02/03): CortexRender's own test suite ---
+      # CortexRender was BUILT by the matrix loop above but its tests were never RUN: before
+      # 2026-09-07 this workflow had seven `swift test` invocations and none of them was
+      # CortexRender, so 19 tests covering the cursor integrator, the SPSC velocity ring and the
+      # webgrid parameters had never executed on a runner. Found while auditing which packages CI
+      # actually tests, after the macos-15 runtime failure showed that "CI is green" and "CI ran the
+      # thing" are different claims. Correctness only; no GPU timing is asserted here, since the
+      # runner's GPU is not the M5 Pro the render evidence was measured on.
+      - name: Run CortexRender tests (RENDER-01/02/03 — integrator, velocity ring, webgrid params)
+        run: swift test --package-path Packages/CortexRender
+
       # --- Phase 7 (REFIT-03 / D-10, SC#2): deterministic ReFIT BPS-uplift guard ---
       # The build-failing structural invariant on the committed refit_bps.json: refit_bps >= raw_bps
       # on the fixed seed (mirrors the Phase-4 co-bps>null gate). A filter regression that erases the
