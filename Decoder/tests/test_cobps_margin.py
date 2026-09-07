@@ -2,8 +2,8 @@
 
 The margin has been derived twice and both predecessors are superseded, for different reasons.
 
-Phase 4 committed ``CO_BPS_MARGIN = 0.05`` against a co-bps of 0.3804 measured on a purpose-built
-learnable synthetic sinusoid (``04-training-evidence.md``: "No real ``.mat`` was present under
+Phase 4 committed ``CO_BPS_MARGIN = 0.05`` against a co-bps of 0.3804 measured on a synthetic,
+purpose-built, learnable sinusoid (``04-training-evidence.md``: "No real ``.mat`` was present under
 ``Decoder/data/``"). That constant is calibrated to a dataset the model was guaranteed to be able to
 fit, so carrying it onto real primate M1 spikes would assert nothing about the real number.
 

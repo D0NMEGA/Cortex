@@ -296,6 +296,32 @@ jobs:
           ./Tools/scripts/readme-policy.sh
           ./Tools/scripts/readme-policy.sh --self-test
 
+      # --- Phase 10 (RD-09 / RD-10): repo-wide honesty sweep + self-test ---
+      # Makes the RD-09 sweep structural instead of a one-time edit. readme-policy.sh above polices
+      # ONE file; this polices the tree. Seven assertions: (1) every one of the five enumerated
+      # superseded numbers outside the excluded paths carries a labeling token on its own line;
+      # (2) every superseded *-evidence.md carries a forward-pointing banner; (3) all eight
+      # LAT-01..LAT-08 identifiers survive in ROADMAP.md AND REQUIREMENTS.md so the photodiode
+      # RETIREMENT cannot become a DELETION; (4) ADR-0003 exists with the four required headings, a
+      # Status line, an index link and both retirement-rationale literals; (5) README.md and
+      # docs/cortex-spec.md each state all four BPS non-comparability grounds; (6) every ADR excluded
+      # from the token scan carries a DATED supersession note, which is what pays for that exclusion;
+      # (7) no line naming the 8.5 Neuralink reference frames it as verified or independently sourced
+      # (D-17: it is retrieved and not independently sourceable).
+      # It asserts LABELS and STRUCTURE only, never the VALUE of any number (D-09): a red build on a
+      # measured finding is pressure to tune that finding. The claim is BOUNDED -- a five-token
+      # tripwire against regression, not a proof over every figure in the repo; the universal claim
+      # is carried by the RD-09 human review plus decoder-policy.sh / refit-real-policy.sh.
+      # The --self-test runs alongside so a silently-weakened gate is caught, exactly as the other
+      # policy gates do. Two of its 14 controls exist specifically to prove that neither the path
+      # exclusions nor the digit-string collision exemptions are blanket holes: the same unlabeled
+      # string bites the moment it moves into scanned position. The gate's own header names every
+      # excluded path and every collision form, each with its reason -- read it before widening one.
+      - name: Repo-wide honesty sweep + self-test (RD-09/RD-10)
+        run: |
+          ./Tools/scripts/honesty-sweep.sh
+          ./Tools/scripts/honesty-sweep.sh --self-test
+
       # --- Phase 6 (RENDER-03, SC#3): build-time assertion that 120Hz is unlocked in the iOS plist ---
       # Mirrors the Phase-1 validate-privacy-manifest.sh / Verify-PrivacyInfo-in-bundle build-time
       # discipline (RESEARCH Decision 7). Two layers, both deterministic and build-free on the runner:

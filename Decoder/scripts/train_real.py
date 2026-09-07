@@ -5,8 +5,8 @@ Produces, in one run:
 
   1. **One pooled checkpoint** (D-11) trained on the four sessions' TRAIN halves with the Phase-4
      hyperparameters verbatim (D-14) but NOT the Phase-4 objective, which Plan 09-06b corrected.
-     See the masking note below: D-14 comparability with the synthetic 0.3804 is deliberately
-     broken, because 0.3804 was produced by the defect.
+     See the masking note below: D-14 comparability with the synthetic 0.3804 is
+     deliberately broken, because that synthetic number was produced by the defect.
   2. **Per-session held-out co-bps** (RD-04a) on each session's own chronological tail (D-12),
      scored against BOTH nulls (see below).
   3. **A full four-fold leave-one-session-out rotation** (RD-04b, D-13): retrain from scratch on
@@ -43,7 +43,8 @@ scoring share one objective. Every number this script produced before that corre
 superseded and is preserved in the metrics JSON under `superseded_visible_input_objective`.
 
 This breaks D-14 comparability with the Phase-4 config-verbatim run, deliberately: Phase 4's
-0.3804 came out of the same defective objective, so comparability to it was never meaningful.
+synthetic 0.3804 came out of the same defective objective, so comparability to it was never
+meaningful.
 Everything else in the config is unchanged, so the objective is the only variable between the
 superseded numbers and the current ones.
 
@@ -125,9 +126,10 @@ from ndt1.train import (
 )
 
 # --- Phase-4 config, copied VERBATIM (D-14) ---------------------------------------------------
-# These are the exact constants in tests/test_heldout_cobps.py that produced the synthetic co-bps
-# 0.3804, and they are unchanged: not for comparability with 0.3804, which Plan 09-06b gave up
-# (that number came out of the same defective objective, so comparing to it was never meaningful),
+# These are the exact constants in tests/test_heldout_cobps.py that produced the synthetic
+# co-bps 0.3804, and they are unchanged: not for comparability with that synthetic number, which
+# Plan 09-06b gave up (it came out of the same defective objective, so comparing to it was never
+# meaningful),
 # but so that the OBJECTIVE is the only variable between the superseded numbers in this file and
 # the current ones. D-14 permits RAISING the epoch budget if the curve has clearly not converged,
 # and forbids lowering it. D-25 forbids moving any of these to improve the result.
@@ -229,7 +231,7 @@ _MEASURED_KEYS: tuple[str, ...] = (
 # The RULE is unchanged across the 09-06b objective correction; only the observation it reads
 # moved. Re-deriving under a rule chosen after seeing the corrected number would be the exact
 # tuning D-22 exists to prevent.
-PHASE4_OBSERVED_CO_BPS: float = 0.3804
+PHASE4_OBSERVED_CO_BPS: float = 0.3804  # synthetic: Phase-4's defective-objective observation
 PHASE4_MARGIN: float = 0.05
 MARGIN_SIGNIFICANT_DIGITS: int = 2
 
