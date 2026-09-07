@@ -200,6 +200,8 @@
     "sc2_disposition_written_by": "Plan 10-10 Task 3b (blocking checkpoint:decision)",
     "table": "10-PREREGISTRATION section 15, committed in Wave 0 before any hit count existed"
   },
+  "sc2_disposition": "not_met",
+  "sc2_rule": "B",
   "schema_version": 1,
   "seams": [
     {
