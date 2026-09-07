@@ -1,0 +1,78 @@
+{
+  "bin_ms": 20.0,
+  "binary": "ridge_velocity_k32.bin",
+  "binary_sha256": "6c0dd0c58e59c91f85d8f6476f64e3eb4124e55fff27630fd8de93ef50f627d1",
+  "channels": 96,
+  "feature_order": "bin-major, oldest bin first: feature index = bin * channels + channel, which is the order RecordedSpikeSource hands Swift its window in",
+  "heldout_r2": {
+    "n": 56943,
+    "null": "the POOLED TRAIN-split mean velocity per axis",
+    "pooled": 0.4615764875205117,
+    "vx": 0.4154891740482517,
+    "vy": 0.5243717929408341
+  },
+  "history_bins": 32,
+  "history_ms": 640.0,
+  "lag_bins": 1,
+  "lambda": 0.01,
+  "lambda_selection": {
+    "grid": {
+      "0.01": 0.5330576809908087,
+      "0.1": 0.5330576809758655,
+      "1.0": 0.5330576794905835,
+      "10.0": 0.5330575396678573,
+      "100.0": 0.5330491997696793,
+      "1000.0": 0.5329523867533152
+    },
+    "in_sample_train_r2": 0.5330576809908087,
+    "selected": 0.01
+  },
+  "not_a_claim": "A held-out R2 is a velocity-reconstruction score on recorded data. It is not an acquisition rate and says nothing about online control.",
+  "per_session": {
+    "indy_20160624_03": {
+      "n": 4968,
+      "null": "this session's own TRAIN-split mean velocity per axis",
+      "pooled": 0.517422494261575,
+      "vx": 0.4858023956197235,
+      "vy": 0.5611427390677661
+    },
+    "indy_20160627_01": {
+      "n": 33597,
+      "null": "this session's own TRAIN-split mean velocity per axis",
+      "pooled": 0.5582589191958249,
+      "vx": 0.5131965657695395,
+      "vy": 0.6229794689109371
+    },
+    "indy_20160630_01": {
+      "n": 14600,
+      "null": "this session's own TRAIN-split mean velocity per axis",
+      "pooled": 0.1831610617020144,
+      "vx": 0.10982533293215457,
+      "vy": 0.2805437948758841
+    },
+    "indy_20160915_01": {
+      "n": 3778,
+      "null": "this session's own TRAIN-split mean velocity per axis",
+      "pooled": 0.4345159509636711,
+      "vx": 0.41639727108444247,
+      "vy": 0.45234317608947483
+    }
+  },
+  "schema_version": 1,
+  "self_check": {
+    "rule": "feature i = ((i % 7) - 3) / 4, i over 0..<(history*channels), bin-major",
+    "vx": 1.7763086314945753,
+    "vy": 2.200316870271224
+  },
+  "sessions_fit_on": [
+    "indy_20160624_03",
+    "indy_20160627_01",
+    "indy_20160630_01",
+    "indy_20160915_01"
+  ],
+  "units": {
+    "input": "spike counts/bin",
+    "output": "cm/s"
+  },
+  "what_this_is": "The matched causal ridge velocity decoder from fit_baseline_decoders.py at history=32 bins, shipped so the Swift replay path can run the same filter the comparison table scores. Not refit and not retuned here."
+}

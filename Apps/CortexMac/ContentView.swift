@@ -200,8 +200,13 @@ final class ReplayDriver {
     // with no model would decode synthetically over real spikes and still look real on screen.
     let modelURL = ReplayPipeline.modelURLFromEnvironment()
     let exportURL = ReplayExport.sidecarURLFromEnvironment()
+    // Defaults to the matched linear decoder, which reaches the higher held-out R2 on this data.
+    // `CORTEX_DECODER=ndt1` runs the transformer instead; the decode line names whichever ran.
+    let kind = ReplayPipeline.decoderFromEnvironment()
 
-    if let exportURL, let modelURL {
+    // The linear decoder ships in the app bundle, so it needs no model file. NDT1 does, and running
+    // the transformer arm without one would silently be the synthetic readout.
+    if let exportURL, kind == .ridge || modelURL != nil {
       do {
         let export = try ReplayExport(sidecarURL: exportURL)
         // `stride: 1` replays in REAL TIME: one 20 ms tick advances the session by one 20 ms bin,
@@ -218,7 +223,8 @@ final class ReplayDriver {
           seed: 0xC0FFEE,
           modelURL: modelURL,
           modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm),
-          rotationEnabled: rotationEnabled
+          rotationEnabled: rotationEnabled,
+          decoderKind: kind
         )
         sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
         recordedSource = source
@@ -234,7 +240,12 @@ final class ReplayDriver {
       } catch {
         // A REFUSED export is reported, never silently downgraded to synthetic while the recording
         // rolls. The loop still runs so the window is not blank, but the label says what happened.
-        pipeline = ReplayPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
+        pipeline = ReplayPipeline(
+          seed: 0xC0FFEE,
+          modelURL: modelURL,
+          rotationEnabled: rotationEnabled,
+          decoderKind: kind
+        )
         sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
         recordedSource = nil
         boxOriginMm = .zero
@@ -243,18 +254,36 @@ final class ReplayDriver {
       }
     }
 
-    pipeline = ReplayPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
+    pipeline = ReplayPipeline(
+      seed: 0xC0FFEE,
+      modelURL: modelURL,
+      rotationEnabled: rotationEnabled,
+      decoderKind: kind
+    )
+    sourceLabel = Self.missingInputsLabel(exportURL: exportURL, modelURL: modelURL, kind: kind)
+    recordedSource = nil
+    boxOriginMm = .zero
+    boxSideMm = 1
+  }
+
+  /// Name the environment variables whose absence forced the synthetic readout.
+  ///
+  /// `CORTEX_MODEL_URL` is listed only for the NDT1 arm. The linear decoder ships in the app bundle,
+  /// so demanding a model file for it would send a reader hunting for a checkpoint that this run
+  /// never needed.
+  private static func missingInputsLabel(
+    exportURL: URL?,
+    modelURL: URL?,
+    kind: ReplayPipeline.Decoder
+  ) -> String {
     var missing = [String]()
     if exportURL == nil {
       missing.append("CORTEX_REPLAY_EXPORT")
     }
-    if modelURL == nil {
+    if kind == .ndt1, modelURL == nil {
       missing.append("CORTEX_MODEL_URL")
     }
-    sourceLabel = "spike source: synthetic (unset: \(missing.joined(separator: ", ")))"
-    recordedSource = nil
-    boxOriginMm = .zero
-    boxSideMm = 1
+    return "spike source: synthetic (unset: \(missing.joined(separator: ", ")))"
   }
 
   /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
@@ -365,12 +394,16 @@ final class ReplayDriver {
     // cursor that looks plausible either way.
     let backed = pipeline.modelBackedTicks
     let total = pipeline.totalTicks
+    let name = switch pipeline.decoderKind {
+    case .ridge: "ridge (linear, 32 bins x 96 ch, held-out R2 0.4616)"
+    case .ndt1: "NDT1 CoreML (held-out R2 0.4238)"
+    }
     if total > 0, backed == total {
-      decodeLine = "decode: NDT1 CoreML on \(backed)/\(total) ticks (model in loop)"
+      decodeLine = "decode: \(name) on \(backed)/\(total) ticks"
     } else if let reason = pipeline.lastDecodeFailure {
-      decodeLine = "decode: NDT1 on \(backed)/\(total) ticks - SYNTHETIC FALLBACK: \(reason)"
+      decodeLine = "decode: \(name) on \(backed)/\(total) ticks - SYNTHETIC FALLBACK: \(reason)"
     } else {
-      decodeLine = "decode: NDT1 on \(backed)/\(total) ticks"
+      decodeLine = "decode: \(name) on \(backed)/\(total) ticks"
     }
 
     // Software-timed glass-to-glass sample (D-07): present = next 120Hz boundary after the tick.

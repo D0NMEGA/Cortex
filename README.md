@@ -58,6 +58,23 @@ chosen by a weaker rule than the encoder's, so the baseline is untuned rather th
 So on this dataset, under this protocol, the transformer is not earning its parameters. That is a
 finding about this setup, not a general claim about NDT1: a stronger result would need better
 generalization across sessions, which is exactly where this decoder currently fails.
+
+**The demo runs the decoder that wins.** `CortexMac` drives the replay from that same ridge filter by
+default, loaded from the weights the comparison was measured with rather than a reimplementation of
+them: `export_ridge_decoder.py` refuses to write the file unless the exported weights reproduce the
+published 0.4616 on the same 56,943 rows, and a Swift test asserts the on-device decode matches the
+Python fit on a fixed probe window. It is 3,072 multiply-adds per axis and ships in the app bundle,
+so the demo needs no checkpoint file at all.
+
+`CORTEX_DECODER=ndt1` runs the transformer instead, with everything downstream identical: the same
+window, lag, cm/s units, filter, integrator and scoring. The on-screen instrumentation names which
+decoder produced the motion and on how many ticks, because a decoded cursor and a synthetic one look
+the same on screen.
+
+A caution on reading the demo as a decoder comparison: it is not one. Two 45-second captures cover
+different stretches of the session with roughly 26 trials each, and over that window the two
+decoders look comparable, with NDT1 slightly ahead on per-trial progress. The matched claim is the
+R2 table above, scored on identical rows.
 Reproduce with `uv run --project Decoder python Decoder/scripts/fit_baseline_decoders.py`.
 
 **Replay, not closed loop.** This is an open-loop replay of a recorded session: the animal was not
@@ -155,6 +172,10 @@ Other rejected options, each with a CI gate preventing regression: the Apple-pri
 Requires Apple Silicon, macOS 26, Xcode 26.3. Signing is a free **Personal team**, so the BCI HID
 `entitlement` is declared but inert, and GUI launch is the supported path.
 
+The GUI decodes with the ridge filter by default and needs only `CORTEX_REPLAY_EXPORT`, since the
+weights are in the bundle. `CORTEX_DECODER=ndt1` selects the transformer and additionally needs
+`CORTEX_MODEL_URL`. `Tools/capture/record-demo.sh` builds, launches, frames and records the window.
+
 ```bash
 # Rust SPSC ring, consumed by SwiftPM as a binary target
 ./Tools/scripts/build-rust.sh
@@ -166,6 +187,11 @@ uv run --project Decoder pytest Decoder/tests -m "not slow" -q
 
 # Materialize the dataset from the committed checksum manifest (not committed)
 uv run --project Decoder python Decoder/scripts/download_indy.py
+
+# Refit the linear baselines and re-export the decoder the demo runs. The export refuses to write
+# unless its weights reproduce the published held-out R2, so a drifted fit fails loudly here.
+uv run --project Decoder python Decoder/scripts/fit_baseline_decoders.py
+uv run --project Decoder python Decoder/scripts/export_ridge_decoder.py
 
 # Real-data replay: Seam A latency and the four-arm ablation
 swift run --package-path Packages/CortexDemo CortexDemoBench --real

@@ -79,6 +79,10 @@ public final class ReplayPipeline {
   /// Injecting it is what lets the real path change exactly ONE variable while decode, filter,
   /// integrate and webgrid stay byte-identical (10-PREREGISTRATION section 9, Seam A).
   public let spikeSource: any SpikeWindowSource
+  /// Which decoder this pipeline was asked to run.
+  public let decoderKind: Decoder
+  /// The matched linear decoder. Non-nil when `decoderKind == .ridge` and its weights loaded.
+  private let ridge: RidgeVelocityDecoder?
   /// The optional NDT1 decoder. Non-nil ⇒ NDT1 GENUINELY in the loop (CORTEX_MODEL_URL set + loaded);
   /// nil ⇒ the deterministic synthetic decoded-velocity fallback runs (clean clone / CI).
   private let decoder: NeuralDecoder?
@@ -164,6 +168,24 @@ public final class ReplayPipeline {
 
   // MARK: - Init
 
+  /// Which decoder converts a spike window into a velocity.
+  ///
+  /// Both are shipped and both are real. `ridge` is the matched causal linear filter on raw binned
+  /// spikes; `ndt1` is the 1.3M-parameter transformer encoder plus its ridge readout. On this
+  /// dataset the linear filter reaches the higher held-out velocity R2 (0.4616 against 0.4238,
+  /// pooled over 56,943 held-out rows), which is why it is the default: a demo driven by the losing
+  /// decoder while the README publishes the winner would be showing something other than the result.
+  ///
+  /// Everything downstream is identical between them -- same window, same lag, same cm/s output,
+  /// same filter, same integrator, same scoring -- so a difference on screen is a difference between
+  /// the decoders and nothing else.
+  public enum Decoder: String, Sendable, CaseIterable {
+    /// The matched linear baseline, loaded from CortexDecoder's shipped weights.
+    case ridge
+    /// NDT1 CoreML, when a model URL is supplied and loads.
+    case ndt1
+  }
+
   /// Build the replay loop over an INJECTED spike source (the Phase-10 designated init).
   ///
   /// - Parameters:
@@ -183,13 +205,18 @@ public final class ReplayPipeline {
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
     modelURL: URL? = nil,
     modelVelocityGridUnitsPerCm: Float = 1.0,
-    rotationEnabled: Bool = true
+    rotationEnabled: Bool = true,
+    decoderKind: Decoder = .ndt1
   ) {
     self.seed = seed
     self.target = target
     self.modelVelocityGridUnitsPerCm = modelVelocityGridUnitsPerCm
     self.rotationEnabled = rotationEnabled
+    self.decoderKind = decoderKind
     spikeSource = source
+
+    let (ridgeDecoder, ridgeFailure) = Self.loadRidge(kind: decoderKind, source: source)
+    ridge = ridgeDecoder
 
     // Wire the model-backed decode path when a model URL is supplied AND the model + a shared-surface
     // spike buffer can be created. This is the D-10 NDT1-genuinely-in-loop path; it is PRESENT +
@@ -222,7 +249,7 @@ public final class ReplayPipeline {
     }
     decoder = loadedDecoder
     spikeBuffer = loadedBuffer
-    lastDecodeFailure = setupFailure
+    lastDecodeFailure = ridgeFailure ?? setupFailure
 
     filter = KalmanFilter()
     filter.setState([start.x, start.y, 0, 0, 0, 0])
@@ -243,7 +270,8 @@ public final class ReplayPipeline {
     start: SIMD2<Float> = SIMD2<Float>(0.5, 0.5),
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
     modelURL: URL? = nil,
-    rotationEnabled: Bool = true
+    rotationEnabled: Bool = true,
+    decoderKind: Decoder = .ndt1
   ) {
     self.init(
       source: SyntheticSpikeSource(seed: seed),
@@ -251,14 +279,18 @@ public final class ReplayPipeline {
       start: start,
       target: target,
       modelURL: modelURL,
-      rotationEnabled: rotationEnabled
+      rotationEnabled: rotationEnabled,
+      decoderKind: decoderKind
     )
   }
 
   /// True iff this pipeline routes spikes through `NeuralDecoder.decode` (NDT1 genuinely in loop, D-10).
   /// False ⇒ the deterministic synthetic decoded-velocity fallback (clean clone / CI, no model present).
   public var isModelBacked: Bool {
-    decoder != nil
+    // Either real decoder counts. Before the linear decoder existed this could only mean NDT1;
+    // leaving it as `decoder != nil` would report a ridge-driven run as unbacked, which reads as
+    // "the synthetic fallback is running" -- the exact confusion the counters exist to prevent.
+    ridge != nil || decoder != nil
   }
 
   /// Resolve the optional model URL from `CORTEX_MODEL_URL` (the gitignored R&D `.mlpackage`/`.mlmodelc`).
@@ -278,13 +310,19 @@ public final class ReplayPipeline {
   /// COMPILED here (D-10) — `decodeWithModel` is only EXERCISED when a real model + shared buffer exist.
   private func decode(window: [Float16], tick: Int, cursor: SIMD2<Float>) -> (velocity: SIMD2<Float>, byModel: Bool) {
     var modelVelocity: SIMD2<Float>?
-    if let decoder, let spikeBuffer {
-      modelVelocity = decodeWithModel(decoder: decoder, buffer: spikeBuffer, window: window)
+    switch decoderKind {
+    case .ridge:
+      // 3,072 multiply-adds per axis over the same window NDT1 gets, in the same cm/s units.
+      modelVelocity = ridge?.decode(window: window)
+    case .ndt1:
+      if let decoder, let spikeBuffer {
+        modelVelocity = decodeWithModel(decoder: decoder, buffer: spikeBuffer, window: window)
+      }
     }
     // NDT1 GENUINELY in the loop (D-10) when the model produced a velocity; otherwise the deterministic
     // synthetic decoded-velocity (the CortexReFITBench idiom): a closed-form noisy readout pointing
     // toward the target, so raw scatters and the Kalman/rotation arm recovers it.
-    // NDT1 emits cm/s; the filter, the integrator and the webgrid all run in grid-units/s. The same
+    // BOTH decoders emit cm/s; the filter, the integrator and the webgrid run in grid-units/s. The same
     // conversion `CortexReplayBench` applies at its decode site, and it applies ONLY to the model
     // output: `syntheticDecodedVelocity` is a closed-form readout already expressed in grid-units/s.
     // Without it the loop integrates cm/s as grid-units/s and the cursor runs
@@ -576,5 +614,49 @@ extension ReplayPipeline {
     } else {
       dwellProgress = Float(continuousOnTarget) / Float(required)
     }
+  }
+}
+
+// MARK: - Decoder resolution
+
+///
+/// Which decoder to run and whether it loaded. Setup, not the decode path, so it sits beside the
+/// class rather than inside a body that already carries decode, filter, integrate and scoring.
+extension ReplayPipeline {
+  /// Load the linear decoder and check it against the source's window shape.
+  ///
+  /// It ships in CortexDecoder's bundle, so unlike NDT1 it needs no external file and no Metal
+  /// device. The shape check is the point: a decoder whose feature count disagrees with the source
+  /// would otherwise decode a prefix of the window and return a plausible velocity, which is the
+  /// same silent-substitution failure `decodeWithModel` exists to prevent on the NDT1 side. Both the
+  /// mismatch and a load failure come back as a reason for `lastDecodeFailure`, never as a nil that
+  /// quietly becomes the synthetic readout under a real-data label.
+  private static func loadRidge(
+    kind: Decoder,
+    source: any SpikeWindowSource
+  ) -> (RidgeVelocityDecoder?, String?) {
+    guard kind == .ridge else { return (nil, nil) }
+    do {
+      let loaded = try RidgeVelocityDecoder()
+      let expected = source.numBins * source.channels
+      guard loaded.featureCount == expected else {
+        return (nil, "ridge decoder wants \(loaded.featureCount) features (\(loaded.historyBins) "
+          + "bins x \(loaded.channels) channels) but the source supplies \(expected) "
+          + "(\(source.numBins) x \(source.channels))")
+      }
+      return (loaded, nil)
+    } catch {
+      return (nil, "ridge decoder did not load: \(error)")
+    }
+  }
+
+  /// Resolve the decoder from `CORTEX_DECODER`, defaulting to the one that scores higher on this
+  /// data. An unrecognised value falls back to the default rather than failing the launch, and the
+  /// caller surfaces which decoder actually ran, so a typo cannot masquerade as a result.
+  public static func decoderFromEnvironment(default fallback: Decoder = .ridge) -> Decoder {
+    guard let raw = ProcessInfo.processInfo.environment["CORTEX_DECODER"]?.lowercased() else {
+      return fallback
+    }
+    return Decoder(rawValue: raw) ?? fallback
   }
 }

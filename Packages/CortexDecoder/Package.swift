@@ -33,6 +33,11 @@ let package = Package(
   targets: [
     .target(
       name: "CortexDecoder",
+      // The matched linear velocity decoder's weights, ~24 KB, written by
+      // Decoder/scripts/export_ridge_decoder.py and committed. It is small enough to ship in the
+      // bundle and doing so keeps the decoder that the comparison table scores and the decoder the
+      // app runs the same artifact, rather than two things that have to be kept in step by hand.
+      resources: [.process("Resources")],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
     // Plan 05-04 (DEC-11): the in-process Swift latency bench. A top-level main.swift runs on the
