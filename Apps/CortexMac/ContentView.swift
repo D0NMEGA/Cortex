@@ -15,39 +15,75 @@ import SwiftUI
 // (2) the latest SOFTWARE-TIMED glass-to-glass sample WITH the verbatim methodology label (D-07) — so
 // the demo shows the closed loop AND the honest latency framing, never an over-claimed number.
 struct ContentView: View {
-  /// The producer→renderer SPSC seam (D-03). The view's display-link callback is the single consumer;
-  /// `ClosedLoopDriver`'s MainActor timer is the single producer (the decoder loop) — SPSC upheld.
-  @State private var driver = ClosedLoopDriver()
+  /// The producer→renderer SPSC seam (D-03), once per arm. Each view's display-link callback is the
+  /// single consumer of its own ring; each driver's MainActor timer is the single producer.
+  ///
+  /// TWO arms run side by side on the SAME session and the SAME decoded spikes, because the
+  /// difference between them is the whole point. `blind` is what the decoder does; `refit` is what
+  /// target knowledge does. Showing only the second is how a target-determined result gets mistaken
+  /// for a decoding result (10-PREREGISTRATION section 7).
+  @State private var blind = ClosedLoopDriver(rotationEnabled: false)
+  @State private var refit = ClosedLoopDriver(rotationEnabled: true)
 
   var body: some View {
-    ZStack(alignment: .bottomLeading) {
-      // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
-      WebgridView(ring: driver.ring, targets: driver.targets)
-        .frame(minWidth: 560, minHeight: 480)
+    VStack(spacing: 0) {
+      HStack(spacing: 1) {
+        arm(
+          driver: blind,
+          title: "kalman_only - target-blind",
+          caption: "Heading is the DECODE's own. This is what the decoder does. Published: 0 of 1025 hits."
+        )
+        arm(
+          driver: refit,
+          title: "refit - target-determined",
+          caption: "IntentRotation replaces the decoded heading with the direction to the KNOWN target, "
+            + "keeping only decoded speed. NOT a decoding result. Published: 70 of 1025 hits."
+        )
+      }
 
-      // The honest instrumentation overlay (D-07/D-09): the SYS-03/04 round-trip log line + the latest
-      // software-timed glass-to-glass sample WITH the methodology label (no over-claim).
+      // The honest instrumentation strip (D-07/D-09): source label, the SYS-03/04 round-trip line and
+      // the latest software-timed glass-to-glass sample WITH the methodology label (no over-claim).
       VStack(alignment: .leading, spacing: 4) {
         // D-16: name the spike source ON SCREEN. A demo that silently ran synthetic while being
         // recorded as real-data evidence is the Pattern-2 trap in capture form.
-        Text(driver.sourceLabel)
+        Text(blind.sourceLabel)
           .font(.system(.caption, design: .monospaced))
-        Text(driver.roundTripLine)
+        Text(blind.roundTripLine)
           .font(.system(.caption, design: .monospaced))
-        Text(driver.latencyLine)
+        Text(blind.latencyLine)
           .font(.system(.caption, design: .monospaced))
         Text(GlassToGlassTimer.methodologyLabel)
           .font(.system(size: 9, design: .monospaced))
           .foregroundStyle(.secondary)
-          .frame(maxWidth: 520, alignment: .leading)
       }
+      .frame(maxWidth: .infinity, alignment: .leading)
       .padding(8)
-      .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 6))
+      .background(.black)
       .foregroundStyle(.white)
-      .padding(12)
     }
-    .onAppear { driver.start() }
-    .onDisappear { driver.stop() }
+    .onAppear { blind.start(); refit.start() }
+    .onDisappear { blind.stop(); refit.stop() }
+  }
+
+  /// One arm's render surface with the label that says what it is and what it is not.
+  private func arm(driver: ClosedLoopDriver, title: String, caption: String) -> some View {
+    VStack(spacing: 0) {
+      // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
+      WebgridView(ring: driver.ring, targets: driver.targets)
+        .frame(minWidth: 360, minHeight: 360)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(title)
+          .font(.system(.caption, design: .monospaced).bold())
+        Text(caption)
+          .font(.system(size: 9, design: .monospaced))
+          .foregroundStyle(.secondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .padding(6)
+      .background(.black)
+      .foregroundStyle(.white)
+    }
   }
 }
 
@@ -89,7 +125,11 @@ final class ClosedLoopDriver {
   private let boxOriginMm: SIMD2<Double>
   private let boxSideMm: Double
 
-  init() {
+  /// Whether this driver runs the ReFIT rotation (the target-determined arm) or not.
+  let rotationEnabled: Bool
+
+  init(rotationEnabled: Bool) {
+    self.rotationEnabled = rotationEnabled
     // D-16: resolve the recorded export the same way `CortexDemoBench --real` does, so the GUI and
     // the bench cannot disagree about what "real" means. BOTH inputs are required: a recorded export
     // with no model would decode synthetically over real spikes and still look real on screen.
@@ -106,7 +146,8 @@ final class ClosedLoopDriver {
           source: source,
           seed: 0xC0FFEE,
           modelURL: modelURL,
-          modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm)
+          modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm),
+          rotationEnabled: rotationEnabled
         )
         sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
         recordedSource = source
@@ -122,7 +163,7 @@ final class ClosedLoopDriver {
       } catch {
         // A REFUSED export is reported, never silently downgraded to synthetic while the recording
         // rolls. The loop still runs so the window is not blank, but the label says what happened.
-        pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL)
+        pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
         sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
         recordedSource = nil
         boxOriginMm = .zero
@@ -131,7 +172,7 @@ final class ClosedLoopDriver {
       }
     }
 
-    pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL)
+    pipeline = ClosedLoopPipeline(seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled)
     var missing = [String]()
     if exportURL == nil { missing.append("CORTEX_REPLAY_EXPORT") }
     if modelURL == nil { missing.append("CORTEX_MODEL_URL") }
@@ -183,6 +224,9 @@ final class ClosedLoopDriver {
     }
     let grid = Double(ClosedLoopDriver.gridSide)
     targets.store(column: Int(normalised.x * grid), row: Int(normalised.y * grid))
+    // Steer the loop at the SAME target the square draws. Without this the ReFIT arm rotates toward
+    // the stale init-time centre cell while the viewer sees a square somewhere else entirely.
+    pipeline.setTarget(SIMD2<Float>(Float(normalised.x), Float(normalised.y)))
   }
 
   /// The 30x30 webgrid substrate (D-01), matching `WebgridParams.grid30x30`.

@@ -104,6 +104,14 @@ public final class ClosedLoopPipeline {
   /// is the identity the synthetic path wants, so callers that never touch a real export are
   /// unchanged.
   public let modelVelocityGridUnitsPerCm: Float
+  /// Whether the ReFIT intent rotation is applied in the streaming `tick()` loop.
+  ///
+  /// `true` is the `refit` arm: `IntentRotation` replaces the decoded DIRECTION with the direction to
+  /// the known target, keeping only the decoded speed, so the resulting heading is TARGET-DETERMINED
+  /// BY CONSTRUCTION and is not attributable to the decode (10-PREREGISTRATION section 7).
+  /// `false` is the `kalman_only` arm: the filter runs with no target, so the heading is the decode's
+  /// own. Only the `false` arm's behaviour may be presented as what the decoder does.
+  public let rotationEnabled: Bool
   /// The monotonic streaming tick index (drives the deterministic synthetic decode).
   private var tickIndex: Int = 0
 
@@ -153,11 +161,13 @@ public final class ClosedLoopPipeline {
     start: SIMD2<Float> = SIMD2<Float>(0.5, 0.5),
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
     modelURL: URL? = nil,
-    modelVelocityGridUnitsPerCm: Float = 1.0
+    modelVelocityGridUnitsPerCm: Float = 1.0,
+    rotationEnabled: Bool = true
   ) {
     self.seed = seed
     self.target = target
     self.modelVelocityGridUnitsPerCm = modelVelocityGridUnitsPerCm
+    self.rotationEnabled = rotationEnabled
     spikeSource = source
 
     // Wire the model-backed decode path when a model URL is supplied AND the model + a shared-surface
@@ -211,14 +221,16 @@ public final class ClosedLoopPipeline {
     seed: UInt64,
     start: SIMD2<Float> = SIMD2<Float>(0.5, 0.5),
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
-    modelURL: URL? = nil
+    modelURL: URL? = nil,
+    rotationEnabled: Bool = true
   ) {
     self.init(
       source: SyntheticSpikeSource(seed: seed),
       seed: seed,
       start: start,
       target: target,
-      modelURL: modelURL
+      modelURL: modelURL,
+      rotationEnabled: rotationEnabled
     )
   }
 
@@ -366,6 +378,15 @@ public final class ClosedLoopPipeline {
 
   // MARK: - Streaming tick (the GUI path: one decode→filter→integrate per 20ms)
 
+  /// Point the loop at a new active target.
+  ///
+  /// The recorded session's target moves per trial, so a real-data caller drives this each tick.
+  /// With `rotationEnabled == false` the value still feeds the on-screen target and the `onTarget`
+  /// test, but it does NOT steer the cursor.
+  public func setTarget(_ newTarget: SIMD2<Float>) {
+    target = newTarget
+  }
+
   /// Advance the continuous closed loop by ONE 20ms tick and return the new `CursorState`. The GUI
   /// calls this at the 20ms cadence and pushes the resulting velocity into the renderer's VelocityRing.
   /// The warm Kalman filter + integrator persist across calls (never reset — the continuous loop).
@@ -379,7 +400,13 @@ public final class ClosedLoopPipeline {
     let (decoded, byModel) = decode(window: window, tick: tickIndex, cursor: cursor)
 
     // ReFIT-Kalman GENUINELY applied (rotation toward the active target enabled — the closed loop).
-    let refined = filter.step(measurement: decoded, target: target, acquisitionRadius: Self.acquisitionRadius)
+    // Rotation OFF is the `kalman_only` arm: a nil target makes `IntentRotation` return the
+    // measurement unchanged, so the heading stays the decode's own.
+    let refined = filter.step(
+      measurement: decoded,
+      target: rotationEnabled ? target : nil,
+      acquisitionRadius: Self.acquisitionRadius
+    )
 
     // Integrate via the renderer-owned integrator (the single [0,1] clamp + non-finite reject seam).
     let velocity = CursorVelocity(ts_ns: 0, seq: UInt64(tickIndex), vx: Float16(refined.x), vy: Float16(refined.y))
