@@ -222,7 +222,7 @@ history. Every measurement convention is pre-registered in Wave 0 before any num
 - [x] 10-10-PLAN.md - `10-HUMAN-UAT.md` (six never-auto-approve device gates) + the capture-only signing override that makes CortexMac buildable + the M5-Pro demo capture + the SC#2 hit-disposition checkpoint (RD-08, RD-10; `autonomous: false`) [Wave 6]
 - [x] 10-11-PLAN.md - the RD-09 code sweep: the methodology label's four-way coupled edit, 4.16 relabeled as T5 dense 9x9, 8.5 dated and sourced, the cross-system causal claim dropped (RD-09) [Wave 7]
 - [x] 10-12-PLAN.md - README republish (real-data headline, D-14 provenance triple, honest gates, CI-has-never-run) + AGENTS.md + five superseded banners (RD-09, RD-10) [Wave 8]
-- [ ] 10-13-PLAN.md - rewrite `readme-policy.sh` (three independently-controlled 24.7 rules, the provenance triple, 12 controls + an 8-case adversarial corpus) + ADR-0003 with its retirement rationale + the ADR index (RD-10) [Wave 9]
+- [x] 10-13-PLAN.md - rewrite `readme-policy.sh` (three independently-controlled 24.7 rules, the provenance triple, 12 controls + an 8-case adversarial corpus) + ADR-0003 with its retirement rationale + the ADR index (RD-10) [Wave 9]
 - [ ] 10-14-PLAN.md - `honesty-sweep.sh` + `--self-test` (labels, banners, LAT-01..08 preservation, ADR structure) + CI wiring (RD-09, RD-10) [Wave 10]
 - [ ] 10-15-PLAN.md - pin the lint toolchain + `toolchain-policy.sh` + the measured lint baseline + the SwiftFormat sweep (RD-09, D-18) [Wave 11]
 - [ ] 10-16-PLAN.md - the `swiftlint --strict` sweep: CodingKeys for every Codable field so no JSON key moves, force-unwrap dispositions, scoped suppressions (RD-09, D-18) [Wave 12]
@@ -248,7 +248,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
 | 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
-| 10. v1 Real-Data Closed Loop & Launch | v1 | 13/17 | In Progress|  |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 14/17 | In Progress|  |
 
 ---
 
