@@ -45,17 +45,21 @@ struct ContentView: View {
       // it qualifies BOTH tracks, and because a viewer who reads nothing else must not walk away
       // believing this is a free-running decoded cursor. The published hit counts in the captions
       // above come from the free-running scored replay, NOT from what is on screen here.
-      Text("Cursor RE-ANCHORED to the previous target at each trial start; motion within a trial is "
-        + "decoded. Open-loop integration drifts ~26 cells of a 30-cell grid in 30 s and a replay "
-        + "cannot correct it, so a free-running track shows accumulated error rather than the "
-        + "decode. The hit counts below are from the free-running scored replay, not from this view.")
+      // `lineLimit`, NOT `fixedSize(vertical:)`: a fixed-size Text can be proposed a near-zero width
+      // mid-resize, wrap to one character per line and demand an enormous height. That is not
+      // hypothetical here -- it drove the window to 1120x5139 pt the first time the capture script
+      // resized it, and the recording framed empty space. A line limit bounds the height whatever
+      // width is proposed.
+      Text("Cursor RE-ANCHORED to the previous target at each trial start; motion within a trial "
+        + "is decoded. Open-loop integration drifts ~26 cells of a 30-cell grid in 30 s and a "
+        + "replay cannot correct it. Hit counts below are from the free-running scored replay.")
         .font(.system(size: 9, design: .monospaced))
+        .lineLimit(3)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
         .background(.black)
         .foregroundStyle(.orange)
-        .fixedSize(horizontal: false, vertical: true)
 
       // The honest instrumentation strip (D-07/D-09): source label, the SYS-03/04 round-trip line and
       // the latest software-timed glass-to-glass sample WITH the methodology label (no over-claim).
@@ -102,7 +106,9 @@ struct ContentView: View {
         Text(caption)
           .font(.system(size: 9, design: .monospaced))
           .foregroundStyle(.secondary)
-          .fixedSize(horizontal: false, vertical: true)
+          // Bounded rather than fixed-size, for the same reason as the re-anchoring banner: a
+          // fixed-size Text proposed a near-zero width mid-resize demands an unbounded height.
+          .lineLimit(3)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(6)

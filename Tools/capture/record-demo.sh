@@ -26,9 +26,14 @@ cd "$REPO"
 # --- Framing. Fixed so successive captures are comparable and so the GIF width matches GitHub's
 # README column (about 890 px), avoiding a browser downscale that smears the grid. -----------------
 WIN_X=60
-WIN_Y=60
+WIN_Y=32            # high enough that the window's bottom clears the Dock; at y=60 the capture
+                    # rect's last few points caught a sliver of Dock under the instrumentation strip
 WIN_W=1120          # window points; the capture is cropped to the content area below
-WIN_H=680
+# At or above the layout's own minimum. Asking for LESS does not shrink the window, it makes AppKit
+# and SwiftUI renegotiate and the result overshoots wildly (1120x5139 pt was observed), so the
+# request has to clear the minimum rather than fight it.
+WIN_H=920          # slack over the layout minimum, so the bottom trim below does not clip the
+                   # methodology label -- the line that qualifies the latency number
 GIF_WIDTH=900       # final GIF width in px
 FPS=12              # 12 is plenty for a cursor demo and roughly halves the size versus 24
 SECONDS_TO_RECORD=20
@@ -92,11 +97,21 @@ fi
 # Stat the EXECUTABLE, not the .app directory: a bundle directory's mtime does not track relinking,
 # so the bundle holding the newest binary here was dated three months older than a stale sibling.
 # Bundles with no executable at all (an abandoned build) are skipped.
-APP="$(find ~/Library/Developer/Xcode/DerivedData -name 'CortexMac.app' -type d 2>/dev/null \
-  | while read -r bundle; do
-      exe="$bundle/Contents/MacOS/CortexMac"
-      [[ -f "$exe" ]] && printf '%s %s\n' "$(stat -f %m "$exe")" "$bundle"
-    done | sort -rn | head -1 | cut -d' ' -f2-)"
+# A plain loop over process substitution, deliberately NOT a pipeline: under `set -euo pipefail` a
+# `find | while ... | sort | head` form dies two ways. The loop body's last `[[ -f ]] && printf`
+# short-circuits to status 1 when the final bundle has no executable, and `head -1` closing the pipe
+# can hand `sort` a SIGPIPE. Both kill the script with no message, which is how this first shipped.
+APP=""
+newest_mtime=0
+while IFS= read -r bundle; do
+  exe="$bundle/Contents/MacOS/CortexMac"
+  [[ -f "$exe" ]] || continue
+  mtime="$(stat -f %m "$exe")"
+  if [[ "$mtime" -gt "$newest_mtime" ]]; then
+    newest_mtime="$mtime"
+    APP="$bundle"
+  fi
+done < <(find ~/Library/Developer/Xcode/DerivedData -name 'CortexMac.app' -type d 2>/dev/null)
 [[ -n "$APP" ]] || die "CortexMac.app not found in DerivedData"
 log "app: $APP"
 log "built: $(stat -f '%Sm' "$APP/Contents/MacOS/CortexMac" 2>/dev/null || echo unknown)"
@@ -158,6 +173,19 @@ sleep 2
 # --- Record ---------------------------------------------------------------------------------------
 # -R takes a screen rect in points, from the frame read back above; a couple of points are trimmed
 # off the top for the title bar.
+# Clamp to the screen. A window can report a frame taller than the display (SwiftUI layout can blow
+# up mid-resize), and screencapture will happily take a rect that is mostly off-screen, producing a
+# recording of empty desktop. Refuse a frame that is wildly wrong rather than record it.
+SCREEN="$(osascript -e 'tell application "Finder" to get bounds of window of desktop' 2>/dev/null | tr -d ' ')"
+SCREEN_H="${SCREEN##*,}"
+if [[ "$SCREEN_H" =~ ^[0-9]+$ ]] && [[ "$WIN_H" -gt "$SCREEN_H" ]]; then
+  die "the window reports ${WIN_W}x${WIN_H} pt but the screen is only ${SCREEN_H} pt tall. \
+That is a layout failure, not a framing one; recording it would capture empty desktop."
+fi
+# Trim only the title bar. The bottom is NOT trimmed: the window caps at its ideal height and the
+# instrumentation strip runs to the last point of it, so trimming there clips the methodology label,
+# which is the line that qualifies the latency number above it. Clearing the Dock is done by placing
+# the window higher (WIN_Y), not by cutting content off the frame.
 RECT="${WIN_X},$((WIN_Y + 28)),${WIN_W},$((WIN_H - 28))"
 log "recording ${SECONDS_TO_RECORD}s of rect ${RECT}"
 screencapture -v -V "$SECONDS_TO_RECORD" -R "$RECT" "$MOV" >/dev/null 2>&1 || die "screencapture failed. Grant Screen Recording to your terminal."
