@@ -409,7 +409,7 @@ public final class ClosedLoopPipeline {
     )
 
     // Integrate via the renderer-owned integrator (the single [0,1] clamp + non-finite reject seam).
-    let velocity = CursorVelocity(ts_ns: 0, seq: UInt64(tickIndex), vx: Float16(refined.x), vy: Float16(refined.y))
+    let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tickIndex), vx: Float16(refined.x), vy: Float16(refined.y))
     let pos = integrator.integrate(latest: velocity, dt: Self.dt)
     let position = SIMD2<Float>(pos.x, pos.y)
 
@@ -486,7 +486,7 @@ public final class ClosedLoopPipeline {
       case .refit:
         filter.step(measurement: decoded, target: target, acquisitionRadius: ClosedLoopPipeline.acquisitionRadius)
       }
-      let velocity = CursorVelocity(ts_ns: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
+      let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tick), vx: Float16(refined.x), vy: Float16(refined.y))
       let pos = integrator.integrate(latest: velocity, dt: ClosedLoopPipeline.dt)
       positions.append(SIMD2<Float>(pos.x, pos.y))
     }

@@ -44,7 +44,7 @@ final class WebgridDriver {
       var simTime = 0.0
       while !Thread.current.isCancelled {
         let (vx, vy) = producer.velocity(at: simTime)
-        _ = ring.push(CursorVelocity(ts_ns: UInt64(seq) &* 20_000_000, seq: seq, vx: vx, vy: vy))
+        _ = ring.push(CursorVelocity(tsNs: UInt64(seq) &* 20_000_000, seq: seq, vx: vx, vy: vy))
         seq &+= 1
         simTime += stepSeconds
         Thread.sleep(forTimeInterval: stepSeconds)

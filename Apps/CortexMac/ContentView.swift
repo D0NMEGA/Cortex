@@ -253,7 +253,7 @@ final class ClosedLoopDriver {
 
     // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
     _ = ring.push(CursorVelocity(
-      ts_ns: intentEmissionNs,
+      tsNs: intentEmissionNs,
       seq: seq,
       vx: Float16(state.velocity.x),
       vy: Float16(state.velocity.y)

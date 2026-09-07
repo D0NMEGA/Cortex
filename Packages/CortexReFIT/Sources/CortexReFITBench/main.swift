@@ -274,7 +274,7 @@ func simulateReach(
     }
 
     // Integrate via the renderer-owned integrator (the single [0,1] clamp + non-finite reject).
-    let velocity = CursorVelocity(ts_ns: 0, seq: UInt64(tick), vx: Float16(filtered.x), vy: Float16(filtered.y))
+    let velocity = CursorVelocity(tsNs: 0, seq: UInt64(tick), vx: Float16(filtered.x), vy: Float16(filtered.y))
     let pos = integrator.integrate(latest: velocity, dt: dt)
     sampled.append(SIMD2<Float>(pos.x, pos.y))
   }
@@ -386,15 +386,31 @@ func runArm(_ arm: Arm, reaches: [Reach], seed: UInt64) -> ArmResult {
 /// The committed machine-readable evidence shape (D-10). Snake-case keys; encoded with .sortedKeys
 /// so two same-seed runs are byte-identical.
 struct RefitBPS: Codable {
-  let raw_bps: Double
-  let kalman_only_bps: Double
-  let refit_bps: Double
+  let rawBps: Double
+  let kalmanOnlyBps: Double
+  let refitBps: Double
   let delta: Double // refit_bps − raw_bps (the filter's pure contribution)
-  let n_trials: Int
+  let nTrials: Int
   let seed: String // hex string (UInt64 seed)
   let dt: Double
   let metric: String
   let methodology: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `refit_bps.json` is byte-diffed against the
+  /// committed Phase-7 artifact by ci.yml, and `webgrid_bps.json` against the committed Phase-8
+  /// artifact by bps-policy.sh. A key rename fails both. CodingKeys keeps Swift camelCase (SwiftLint
+  /// identifier_name) and the wire format snake_case (byte identity) at the same time. Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case rawBps = "raw_bps"
+    case kalmanOnlyBps = "kalman_only_bps"
+    case refitBps = "refit_bps"
+    case delta
+    case nTrials = "n_trials"
+    case seed
+    case dt
+    case metric
+    case methodology
+  }
 }
 
 func writeJSON(_ payload: RefitBPS, to url: URL) throws {
@@ -410,23 +426,46 @@ func writeJSON(_ payload: RefitBPS, to url: URL) throws {
 /// metric — AND the S&M-2004 Fitts-TP cross-check, PERF-03), the formula DISCLOSURE string, the
 /// mandatory `incorrect_model` Si disclosure (D-12/T-08-05-07), and the honest synthetic-vs-live caveat.
 struct WebgridBPSReport: Codable {
-  let raw_webgrid_bps: Double
-  let kalman_only_webgrid_bps: Double
-  let refit_webgrid_bps: Double
-  let raw_fitts_tp: Double // the S&M-2004 Fitts-TP cross-check, raw arm (PERF-03 — retained alongside).
-  let refit_fitts_tp: Double // the S&M-2004 Fitts-TP cross-check, ReFIT arm (PERF-03).
-  let n_targets: Int // N = 900 (the 30×30 grid incl. the delete/cancel key — 08-RESEARCH §6).
+  let rawWebgridBps: Double
+  let kalmanOnlyWebgridBps: Double
+  let refitWebgridBps: Double
+  let rawFittsTp: Double // the S&M-2004 Fitts-TP cross-check, raw arm (PERF-03 — retained alongside).
+  let refitFittsTp: Double // the S&M-2004 Fitts-TP cross-check, ReFIT arm (PERF-03).
+  let nTargets: Int // N = 900 (the 30×30 grid incl. the delete/cancel key — 08-RESEARCH §6).
   let formula: String // DISCLOSURE pin (asserted by bps-policy.sh) — NOT the executed source of truth.
-  let incorrect_model: String // the mandatory Si disclosure (single-target dwell-to-select ⇒ Si=0).
+  let incorrectModel: String // the mandatory Si disclosure (single-target dwell-to-select ⇒ Si=0).
   let correct: Int // Sc on the ReFIT arm (HIT count) — the arm whose BPS is the headline.
   let incorrect: Int // Si — structurally 0 (disclosed by `incorrect_model`).
   let seconds: Double // t on the ReFIT arm (summed elapsed across reaches).
   let seed: String // hex string (UInt64 seed) — matches refit_bps.json.
-  let reference_peak_bps: Double // Neuralink P1 figure (8.5, as cited by this repo since Phase 7; not independently
+  let referencePeakBps: Double // Neuralink P1 figure (8.5, as cited by this repo since Phase 7; not independently
   // sourceable) — the honest gap target (D-12).
-  let brain_gate_dense_9x9_bps: Double // BrainGate T5 dense 9x9 (4.16) — Pandarinath 2017 (NOT a pass bar — D-12).
-  let brain_gate_6x6_t5_bps: Double // Same paper's 6x6 figure for T5 (3.7) — exposed for like-for-like comparison.
+  let brainGateDense9x9Bps: Double // BrainGate T5 dense 9x9 (4.16) — Pandarinath 2017 (NOT a pass bar — D-12).
+  let brainGate6x6T5Bps: Double // Same paper's 6x6 figure for T5 (3.7) — exposed for like-for-like comparison.
   let caveat: String // synthetic-replay (not live-human), honest gap to 8.5, NOT tuned toward 4.16 — D-12.
+
+  /// The JSON keys are snake_case and LOAD-BEARING: `refit_bps.json` is byte-diffed against the
+  /// committed Phase-7 artifact by ci.yml, and `webgrid_bps.json` against the committed Phase-8
+  /// artifact by bps-policy.sh. A key rename fails both. CodingKeys keeps Swift camelCase (SwiftLint
+  /// identifier_name) and the wire format snake_case (byte identity) at the same time. Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case rawWebgridBps = "raw_webgrid_bps"
+    case kalmanOnlyWebgridBps = "kalman_only_webgrid_bps"
+    case refitWebgridBps = "refit_webgrid_bps"
+    case rawFittsTp = "raw_fitts_tp"
+    case refitFittsTp = "refit_fitts_tp"
+    case nTargets = "n_targets"
+    case formula
+    case incorrectModel = "incorrect_model"
+    case correct
+    case incorrect
+    case seconds
+    case seed
+    case referencePeakBps = "reference_peak_bps"
+    case brainGateDense9x9Bps = "brain_gate_dense_9x9_bps"
+    case brainGate6x6T5Bps = "brain_gate_6x6_t5_bps"
+    case caveat
+  }
 }
 
 func writeWebgridJSON(_ payload: WebgridBPSReport, to url: URL) throws {
@@ -537,11 +576,11 @@ let kalmanOnlyBPS = kalmanOnlyResult.fittsTP
 let refitBPS = refitResult.fittsTP
 
 let payload = RefitBPS(
-  raw_bps: rawBPS,
-  kalman_only_bps: kalmanOnlyBPS,
-  refit_bps: refitBPS,
+  rawBps: rawBPS,
+  kalmanOnlyBps: kalmanOnlyBPS,
+  refitBps: refitBPS,
   delta: refitBPS - rawBPS,
-  n_trials: reaches.count,
+  nTrials: reaches.count,
   seed: String(format: "0x%llX", seed),
   dt: dt,
   metric: "Soukoreff-MacKenzie-2004 ISO 9241-9 Fitts throughput (TP=IDe/MT, effective-width); NOT the Webgrid bitrate — do not compare to 4.16/8.5 (Phase 8, D-13)",
@@ -560,21 +599,21 @@ let webgridCaveat =
   "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference figure 8.5 BPS (Neuralink P1, as cited since Phase 7; not independently sourceable); honest measured number, NOT tuned toward 4.16 (T5 dense 9x9) — D-12. " +
   WebgridBPS.nonComparabilityDisclosure
 let webgridPayload = WebgridBPSReport(
-  raw_webgrid_bps: rawResult.webgridBPS,
-  kalman_only_webgrid_bps: kalmanOnlyResult.webgridBPS,
-  refit_webgrid_bps: refitResult.webgridBPS,
-  raw_fitts_tp: rawResult.fittsTP,
-  refit_fitts_tp: refitResult.fittsTP,
-  n_targets: WebgridBPS.gridTargetCount(rows: 30, cols: 30), // 900 incl. the delete key.
+  rawWebgridBps: rawResult.webgridBPS,
+  kalmanOnlyWebgridBps: kalmanOnlyResult.webgridBPS,
+  refitWebgridBps: refitResult.webgridBPS,
+  rawFittsTp: rawResult.fittsTP,
+  refitFittsTp: refitResult.fittsTP,
+  nTargets: WebgridBPS.gridTargetCount(rows: 30, cols: 30), // 900 incl. the delete key.
   formula: "B = max(0, log2(N)*(Sc-Si)/t)", // DISCLOSURE pin (bps-policy.sh) — executed math is WebgridBPS.
-  incorrect_model: incorrectModelDisclosure,
+  incorrectModel: incorrectModelDisclosure,
   correct: refitResult.correct, // Sc on the ReFIT arm (the headline arm).
   incorrect: refitResult.incorrect, // 0 — structurally (disclosed above).
   seconds: refitResult.seconds, // t on the ReFIT arm.
   seed: String(format: "0x%llX", seed),
-  reference_peak_bps: WebgridBPS.referencePeakBPS, // 8.5 — the honest gap target.
-  brain_gate_dense_9x9_bps: WebgridBPS.brainGateDenseGridBPS, // 4.16 T5 dense 9x9 — reference, NOT a pass bar.
-  brain_gate_6x6_t5_bps: WebgridBPS.brainGate6x6T5BPS, // 3.7 T5 6x6 — for like-for-like comparison.
+  referencePeakBps: WebgridBPS.referencePeakBPS, // 8.5 — the honest gap target.
+  brainGateDense9x9Bps: WebgridBPS.brainGateDenseGridBPS, // 4.16 T5 dense 9x9 — reference, NOT a pass bar.
+  brainGate6x6T5Bps: WebgridBPS.brainGate6x6T5BPS, // 3.7 T5 6x6 — for like-for-like comparison.
   caveat: webgridCaveat
 )
 
@@ -614,7 +653,7 @@ if refitBPS >= rawBPS {
 let refitGapTo85 = WebgridBPS.referencePeakBPS - refitResult.webgridBPS
 print("")
 print(
-  "CortexReFITBench — Webgrid information-rate BPS  (B = max(0, log2(N)*(Sc-Si)/t), N=\(webgridPayload.n_targets) incl. delete key)"
+  "CortexReFITBench — Webgrid information-rate BPS  (B = max(0, log2(N)*(Sc-Si)/t), N=\(webgridPayload.nTargets) incl. delete key)"
 )
 print("  raw_webgrid_bps         = \(rawResult.webgridBPS)")
 print("  kalman_only_webgrid_bps = \(kalmanOnlyResult.webgridBPS)")

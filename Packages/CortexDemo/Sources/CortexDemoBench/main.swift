@@ -129,21 +129,45 @@ let deviceAnnotation = "M5-Pro-software-timed-corroborating"
 struct RealSeamReport: Codable {
   let seam: String
   let boundary: String
-  let p50_ns: UInt64
-  let p99_ns: UInt64
-  let max_ns: UInt64
+  let p50Ns: UInt64
+  let p99Ns: UInt64
+  let maxNs: UInt64
   let count: Int
-  let device_annotation: String
+  let deviceAnnotation: String
   let methodology: String
   let note: String
-  let ticks_model_backed: Int
-  let ticks_total: Int
-  let session_id: String
-  let export_sidecar_sha256: String
-  let data_source: String
-  let frame_period_ns: UInt64
-  let frames_modelled: Int
-  let cadence_provenance: String
+  let ticksModelBacked: Int
+  let ticksTotal: Int
+  let sessionId: String
+  let exportSidecarSha256: String
+  let dataSource: String
+  let framePeriodNs: UInt64
+  let framesModelled: Int
+  let cadenceProvenance: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: the emitted artifacts are read back by
+  /// `Decoder/tests/test_real_replay_schema.py` and by the Tools/scripts policy gates, which match the
+  /// key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase (SwiftLint
+  /// identifier_name) and the wire format snake_case (byte identity) at the same time. Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case seam
+    case boundary
+    case p50Ns = "p50_ns"
+    case p99Ns = "p99_ns"
+    case maxNs = "max_ns"
+    case count
+    case deviceAnnotation = "device_annotation"
+    case methodology
+    case note
+    case ticksModelBacked = "ticks_model_backed"
+    case ticksTotal = "ticks_total"
+    case sessionId = "session_id"
+    case exportSidecarSha256 = "export_sidecar_sha256"
+    case dataSource = "data_source"
+    case framePeriodNs = "frame_period_ns"
+    case framesModelled = "frames_modelled"
+    case cadenceProvenance = "cadence_provenance"
+  }
 }
 
 if isReal {
@@ -275,25 +299,25 @@ if isReal {
       + "ReFIT-Kalman step and the integrator. EXCLUDES IPC, the GPU encode, and the compositor's 1-3 "
       + "frames of scanout. Seam B (Plan 10-06) measures a strictly WIDER boundary and is not "
       + "comparable to this number.",
-    p50_ns: realHistogram.p50,
-    p99_ns: realHistogram.p99,
-    max_ns: realHistogram.max,
+    p50Ns: realHistogram.p50,
+    p99Ns: realHistogram.p99,
+    maxNs: realHistogram.max,
     count: realHistogram.count,
-    device_annotation: deviceAnnotation,
+    deviceAnnotation: deviceAnnotation,
     methodology: GlassToGlassTimer.methodologyLabel,
     note: "Seam A: the Phase-8 measurement geometry with exactly two things changed, the spike source "
       + "and the decode. NO pass/fail bar is applied and no budget is compared against (D-09). "
       + "ticks_total includes the 8 warmup ticks that precede the \(realTickCount) measured ticks; the "
       + "source clamps at its last whole window, so any tick beyond window \(realSource.windowCount - 1) "
       + "re-replays that window.",
-    ticks_model_backed: realPipeline.modelBackedTicks,
-    ticks_total: realPipeline.totalTicks,
-    session_id: export.sidecar.sessionId,
-    export_sidecar_sha256: sidecarDigest,
-    data_source: "real",
-    frame_period_ns: framePeriodNs,
-    frames_modelled: Int(lastFrameIndex - (firstFrameIndex ?? lastFrameIndex)),
-    cadence_provenance: "MODELLED 120 Hz present boundary arithmetic, not a CAMetalDisplayLink reading; "
+    ticksModelBacked: realPipeline.modelBackedTicks,
+    ticksTotal: realPipeline.totalTicks,
+    sessionId: export.sidecar.sessionId,
+    exportSidecarSha256: sidecarDigest,
+    dataSource: "real",
+    framePeriodNs: framePeriodNs,
+    framesModelled: Int(lastFrameIndex - (firstFrameIndex ?? lastFrameIndex)),
+    cadenceProvenance: "MODELLED 120 Hz present boundary arithmetic, not a CAMetalDisplayLink reading; "
       + "the measured display cadence is the Plan 10-10 GUI capture and the deferred iPad-M4 gate"
   )
 
@@ -327,8 +351,8 @@ if isReal {
   print("  max = \(realHistogram.max) ns  (\(String(format: "%.3f", Double(realHistogram.max) / 1_000_000)) ms)")
   print("  device = \(deviceAnnotation)")
   print("  methodology: \(GlassToGlassTimer.methodologyLabel)")
-  print("  cadence: \(realReport.cadence_provenance)")
-  print("  frame_period_ns = \(framePeriodNs); frames_modelled = \(realReport.frames_modelled)")
+  print("  cadence: \(realReport.cadenceProvenance)")
+  print("  frame_period_ns = \(framePeriodNs); frames_modelled = \(realReport.framesModelled)")
   print("  Phase-8 synthetic p99 for comparison: 8318256 ns (8.318 ms).")
   print("  The two ARE comparable BECAUSE only the spike source and the decode changed; the warmup, the")
   print("  tick loop, the modelled 120 Hz present arithmetic and GlassToGlassTimer.sample are identical.")
@@ -386,27 +410,43 @@ let histogram = GlassToGlassTimer.histogram(samplesNs: samplesNs, deviceAnnotati
 /// so the byte order is deterministic. Carries the VERBATIM methodology label (D-07) + the device
 /// annotation (D-08) + the PERF-04 budget + the PASS/FAIL verdict so the JSON is self-describing.
 struct GlassToGlassReport: Codable {
-  let p50_ns: UInt64
-  let p99_ns: UInt64
-  let max_ns: UInt64
+  let p50Ns: UInt64
+  let p99Ns: UInt64
+  let maxNs: UInt64
   let count: Int
-  let budget_ns: UInt64
+  let budgetNs: UInt64
   let passed: Bool
-  let device_annotation: String
+  let deviceAnnotation: String
   let methodology: String
   let note: String
+
+  /// The JSON keys are snake_case and LOAD-BEARING: the emitted artifacts are read back by
+  /// `Decoder/tests/test_real_replay_schema.py` and by the Tools/scripts policy gates, which match the
+  /// key strings literally. A key rename breaks them. CodingKeys keeps Swift camelCase (SwiftLint
+  /// identifier_name) and the wire format snake_case (byte identity) at the same time. Do not remove.
+  enum CodingKeys: String, CodingKey {
+    case p50Ns = "p50_ns"
+    case p99Ns = "p99_ns"
+    case maxNs = "max_ns"
+    case count
+    case budgetNs = "budget_ns"
+    case passed
+    case deviceAnnotation = "device_annotation"
+    case methodology
+    case note
+  }
 }
 
 let passed = histogram.p99 < budgetNs
 
 let report = GlassToGlassReport(
-  p50_ns: histogram.p50,
-  p99_ns: histogram.p99,
-  max_ns: histogram.max,
+  p50Ns: histogram.p50,
+  p99Ns: histogram.p99,
+  maxNs: histogram.max,
   count: histogram.count,
-  budget_ns: budgetNs,
+  budgetNs: budgetNs,
   passed: passed,
-  device_annotation: deviceAnnotation,
+  deviceAnnotation: deviceAnnotation,
   methodology: GlassToGlassTimer.methodologyLabel,
   note: "M5-Pro corroborating; the canonical iPad-M4 capture (real CAMetalDisplayLink "
     + "targetPresentationTimestamp) is the Plan 07 never-auto-approve HUMAN-UAT gate (D-08)."

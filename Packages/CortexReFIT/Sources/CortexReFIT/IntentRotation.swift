@@ -67,7 +67,7 @@ public nonisolated struct IntentRotation: Sendable {
     measurement z: SIMD2<Float>,
     cursor p: SIMD2<Float>,
     target: SIMD2<Float>?,
-    acquisitionRadius r_acq: Float
+    acquisitionRadius rAcq: Float
   ) -> SIMD2<Float> {
     // No active target → nothing to rotate toward (Test 3).
     guard let target else { return z }
@@ -79,7 +79,7 @@ public nonisolated struct IntentRotation: Sendable {
     // Gate (CONTEXT D-06): rotate ONLY when the cursor is OUTSIDE the acquisition radius AND the
     // decoded speed exceeds the zero-velocity guard. `dist > r_acq` (with a positive `r_acq`) also
     // guarantees `dist > 0`, so `speed / dist` below never divides by zero (Tests 2, 4, 5).
-    guard dist > r_acq, speed > Self.epsilon else { return z }
+    guard dist > rAcq, speed > Self.epsilon else { return z }
 
     // Full direction-align with magnitude preserved: speed * (d / dist) (Test 1).
     return (speed / dist) * d

@@ -77,11 +77,28 @@ struct LatencyHistogramTests {
     let data = try hist.encodedJSON()
     let decoded = try JSONDecoder().decode(LatencyHistogram.Summary.self, from: data)
     #expect(decoded.count == 100)
-    #expect(decoded.p50_ns == 50)
-    #expect(decoded.p99_ns == 99)
-    #expect(decoded.min_ns == 1)
-    #expect(decoded.max_ns == 100)
+    #expect(decoded.p50Ns == 50)
+    #expect(decoded.p99Ns == 99)
+    #expect(decoded.minNs == 1)
+    #expect(decoded.maxNs == 100)
     #expect(decoded.deviceAnnotation == "NeuralEngine")
+  }
+
+  @Test("the emitted JSON keys are snake_case, so `Summary`'s CodingKeys cannot be dropped silently")
+  func emittedKeysAreSnakeCase() throws {
+    // The Swift properties are camelCase (SwiftLint identifier_name) while the wire keys stay
+    // snake_case, and only the explicit CodingKeys enum holds those two apart. Deleting it would
+    // still compile and still round-trip -- JSONEncoder would just derive camelCase keys and
+    // JSONDecoder would read them back -- so the round-trip test above cannot catch that. This
+    // one reads the bytes and fails if a key moved.
+    let hist = LatencyHistogram(samplesNs: Self.oneToHundred, deviceAnnotation: "NeuralEngine")
+    let json = try #require(String(data: hist.encodedJSON(), encoding: .utf8))
+    for key in ["\"p50_ns\"", "\"p99_ns\"", "\"min_ns\"", "\"max_ns\""] {
+      #expect(json.contains(key), "the emitted JSON must still carry the wire key \(key)")
+    }
+    for derived in ["\"p50Ns\"", "\"p99Ns\"", "\"minNs\"", "\"maxNs\""] {
+      #expect(!json.contains(derived), "a camelCase key means CodingKeys was dropped: \(derived)")
+    }
   }
 
   @Test("the histogram value type is Sendable and survives a Codable round-trip itself")

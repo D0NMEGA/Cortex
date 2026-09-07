@@ -110,7 +110,7 @@ enum FrameSoak {
     while nowNs() - startNs < durationNs {
       // Real webgrid compute pass for this frame (deterministic drive, D-05).
       let (vx, vy) = producer.velocity(at: simT)
-      let v = CursorVelocity(ts_ns: 0, seq: 0, vx: vx, vy: vy)
+      let v = CursorVelocity(tsNs: 0, seq: 0, vx: vx, vy: vy)
       let pos = integrator.integrate(latest: v, dt: dt)
       let params = WebgridParams.grid30x30(
         cursorX: pos.x, cursorY: pos.y,

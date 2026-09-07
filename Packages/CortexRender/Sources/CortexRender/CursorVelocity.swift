@@ -28,7 +28,7 @@
 ///   `position += velocity * dt` with no extra scale factor — see `CursorIntegrator`).
 public nonisolated struct CursorVelocity: Sendable, Equatable {
   /// `mach_absolute_time`-derived nanoseconds — mirrors `CortexFrame.ts_ns` (Phase 2 D-12).
-  public var ts_ns: UInt64
+  public var tsNs: UInt64
   /// Monotonic sequence number — mirrors `CortexFrame.seq` (Phase 2 D-12).
   public var seq: UInt64
   /// fp16 velocity x, grid-units/second (DEC-10 2-vector fp16).
@@ -37,8 +37,8 @@ public nonisolated struct CursorVelocity: Sendable, Equatable {
   public var vy: Float16
 
   /// Memberwise initializer (explicit so the public API is stable across a future FFI mirror).
-  public init(ts_ns: UInt64, seq: UInt64, vx: Float16, vy: Float16) {
-    self.ts_ns = ts_ns
+  public init(tsNs: UInt64, seq: UInt64, vx: Float16, vy: Float16) {
+    self.tsNs = tsNs
     self.seq = seq
     self.vx = vx
     self.vy = vy

@@ -174,7 +174,7 @@ enum GPUTimeHistogram {
     /// compute pass's GPU time in milliseconds (gpuEndTime - gpuStartTime, valid post-completion).
     func encodeAndTimeFrame(t: Double) throws -> Double {
       let (vx, vy) = producer.velocity(at: t)
-      let v = CursorVelocity(ts_ns: 0, seq: 0, vx: vx, vy: vy)
+      let v = CursorVelocity(tsNs: 0, seq: 0, vx: vx, vy: vy)
       let pos = integrator.integrate(latest: v, dt: dt)
       let params = WebgridParams.grid30x30(
         cursorX: pos.x, cursorY: pos.y,
