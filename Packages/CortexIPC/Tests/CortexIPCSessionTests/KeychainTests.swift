@@ -32,8 +32,8 @@ struct KeychainTests {
     try? SessionKeychain.delete(backend: Self.testBackend)
   }
 
-  @Test
-  func `store then load returns the identical 32 secret bytes (SC#3 round-trip)`() throws {
+  @Test("store then load returns the identical 32 secret bytes (SC#3 round-trip)")
+  func roundTripByteEquality() throws {
     defer { cleanup() }
     let secret = SessionKeys.generateSecret()
     let original = secret.withUnsafeBytes { Array($0) }
@@ -46,8 +46,8 @@ struct KeychainTests {
     #expect(loadedBytes == original)
   }
 
-  @Test
-  func `load after delete throws an errSecItemNotFound-derived error (fail-closed)`() throws {
+  @Test("load after delete throws an errSecItemNotFound-derived error (fail-closed)")
+  func notFoundAfterDelete() throws {
     defer { cleanup() }
     let secret = SessionKeys.generateSecret()
     try SessionKeychain.store(secret: secret, backend: Self.testBackend)
@@ -58,8 +58,8 @@ struct KeychainTests {
     }
   }
 
-  @Test
-  func `storing twice (delete-then-add) succeeds without errSecDuplicateItem; second value wins`() throws {
+  @Test("storing twice (delete-then-add) succeeds without errSecDuplicateItem; second value wins")
+  func idempotentReStore() throws {
     defer { cleanup() }
     let first = SessionKeys.generateSecret()
     let second = SessionKeys.generateSecret()
@@ -73,16 +73,16 @@ struct KeychainTests {
     #expect(loaded == secondBytes)
   }
 
-  @Test
-  func `delete is idempotent — deleting a non-existent item does not throw`() throws {
+  @Test("delete is idempotent — deleting a non-existent item does not throw")
+  func deleteIsIdempotent() throws {
     defer { cleanup() }
     // No item stored. Both calls must succeed (errSecItemNotFound treated as success).
     try SessionKeychain.delete(backend: Self.testBackend)
     try SessionKeychain.delete(backend: Self.testBackend)
   }
 
-  @Test
-  func `the PRODUCTION query is the data-protection keychain (kCFBooleanTrue + AfterFirstUnlock, IPC-06/CF#8)`() {
+  @Test("the PRODUCTION query is the data-protection keychain (kCFBooleanTrue + AfterFirstUnlock, IPC-06/CF#8)")
+  func productionQueryHasDataProtectionAttributes() {
     let q = SessionKeychain.baseQuery(backend: .dataProtection)
 
     // kSecUseDataProtectionKeychain must be the CFBoolean true (CF#8), NOT a Swift Bool / NSNumber.

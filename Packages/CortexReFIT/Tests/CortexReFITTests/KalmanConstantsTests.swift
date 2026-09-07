@@ -50,8 +50,8 @@ private func maxAbsRowSum(_ matrix: [[Double]]) -> Double {
 struct KalmanConstantsTests {
   /// The gain K has exactly zero position rows (rows 0, 1 = px, py) — position is unobservable from
   /// a velocity measurement, so it receives no correction (07-RESEARCH §2.3, threat T-07-01-02).
-  @Test
-  func `K position rows (0,1) are exactly zero`() {
+  @Test("K position rows (0,1) are exactly zero")
+  func gainPositionRowsAreZero() {
     #expect(KalmanConstants.K.count == 6)
     #expect(KalmanConstants.K[0] == SIMD2<Float>(0, 0))
     #expect(KalmanConstants.K[1] == SIMD2<Float>(0, 0))
@@ -59,8 +59,8 @@ struct KalmanConstantsTests {
 
   /// The velocity/acceleration rows of K are NOT all zero — the committed gain is real (a degenerate
   /// all-zero gain would also satisfy the position-row check, so guard against it).
-  @Test
-  func `K velocity/acceleration rows (2..5) are non-zero`() {
+  @Test("K velocity/acceleration rows (2..5) are non-zero")
+  func gainVelocityRowsAreNonZero() {
     let velAccelRows = Array(KalmanConstants.K[2 ..< 6])
     let allZero = velAccelRows.allSatisfy { $0 == SIMD2<Float>(0, 0) }
     #expect(!allZero)
@@ -68,8 +68,8 @@ struct KalmanConstantsTests {
 
   /// H = [0 I 0]: it selects (vx, vy) — columns 2, 3 — and nothing else. The 6-wide rows are stored
   /// as SIMD8 with 2 zero-pad lanes (Swift has no SIMD6), so columns 6, 7 are also zero.
-  @Test
-  func `H equals [0 I 0] (velocity-selecting rows)`() {
+  @Test("H equals [0 I 0] (velocity-selecting rows)")
+  func measurementSelectsVelocity() {
     #expect(KalmanConstants.H.count == 2)
     // Row 0 selects vx (column 2).
     #expect(KalmanConstants.H[0] == SIMD8<Float>(0, 0, 1, 0, 0, 0, 0, 0))
@@ -79,8 +79,8 @@ struct KalmanConstantsTests {
 
   /// A is constant-acceleration: the position rows carry `dt` velocity coupling (columns 2, 3) and
   /// `½dt²` acceleration coupling (columns 4, 5); the diagonal is identity. Spot-check the cells.
-  @Test
-  func `A carries dt velocity coupling and ½dt² acceleration coupling`() {
+  @Test("A carries dt velocity coupling and ½dt² acceleration coupling")
+  func transitionHasConstantAccelerationStructure() {
     #expect(KalmanConstants.A.count == 6)
     let dt = KalmanConstants.dt
     #expect(dt == 0.02)
@@ -100,8 +100,8 @@ struct KalmanConstantsTests {
   }
 
   /// Q (observable block) and R are square and carry the documented provenance dimensions.
-  @Test
-  func `Qobs is 4x4 and R is 2x2 (provenance shapes)`() {
+  @Test("Qobs is 4x4 and R is 2x2 (provenance shapes)")
+  func noiseProvenanceShapes() {
     #expect(KalmanConstants.Qobs.count == 4)
     #expect(KalmanConstants.R.count == 2)
     // R is diagonal (the default decoder-noise floor): off-diagonals zero, diagonal positive.
@@ -121,8 +121,8 @@ struct KalmanConstantsTests {
   /// model is per-axis, and the off-diagonal is published rather than discarded. That is why
   /// `noiseProvenanceShapes` below can keep requiring `R[0].y == 0` unchanged: the two agree by
   /// pre-registration, not by coincidence, and a general 2x2 R could not land here silently.
-  @Test
-  func `Provenance header records a real-data noise fit, not the default`() throws {
+  @Test("Provenance header records a real-data noise fit, not the default")
+  func noiseSourceIsRealData() throws {
     let url = URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent() // CortexReFITTests
       .deletingLastPathComponent() // Tests
@@ -156,8 +156,8 @@ struct KalmanConstantsTests {
   /// Phase-7 default constants, rho = 0.9802 but ‖M^64‖ = 0.87). Such a bar would redden the build
   /// on a perfectly stable gain, which is the false-red failure 10-PREREGISTRATION section 13
   /// forbids. The nth-root form has no tuned constant in it at all.
-  @Test
-  func `The shipped closed-loop gain is Schur-stable on the observable block`() {
+  @Test("The shipped closed-loop gain is Schur-stable on the observable block")
+  func shippedGainIsSchurStable() {
     var m = observableClosedLoop() // 4x4
     for _ in 0 ..< 6 {
       m = matMul(m, m)
@@ -205,8 +205,8 @@ struct KalmanConstantsTests {
   /// rows must be exactly zero for the same observability reason, and its velocity/acceleration rows
   /// must be non-degenerate. A structural break here means the second emitted gain is not the gain
   /// the documented default Q/R produces.
-  @Test
-  func `phase7BaselineK has 6 rows, zero position rows, and non-zero velocity/acceleration rows`() {
+  @Test("phase7BaselineK has 6 rows, zero position rows, and non-zero velocity/acceleration rows")
+  func frozenBaselineHasTheSameStructureAsTheShippedGain() {
     #expect(KalmanConstants.phase7BaselineK.count == 6)
     #expect(KalmanConstants.phase7BaselineK[0] == SIMD2<Float>(0, 0))
     #expect(KalmanConstants.phase7BaselineK[1] == SIMD2<Float>(0, 0))
@@ -223,14 +223,14 @@ struct KalmanConstantsTests {
   ///
   /// Note what is NOT asserted: nothing about which gain is larger, or by how much. That would be an
   /// assertion on the direction of a real-data result (10-PREREGISTRATION section 13).
-  @Test
-  func `phase7BaselineK is not the shipped re-fit gain K`() {
+  @Test("phase7BaselineK is not the shipped re-fit gain K")
+  func frozenBaselineDiffersFromTheShippedGain() {
     #expect(KalmanConstants.phase7BaselineK != KalmanConstants.K)
   }
 
   /// The package namespace metadata matches the 6-DOF / 2-measurement contract.
-  @Test
-  func `CortexReFIT namespace dimensions match the 6-DOF / 2-measurement contract`() {
+  @Test("CortexReFIT namespace dimensions match the 6-DOF / 2-measurement contract")
+  func namespaceDimensions() {
     #expect(CortexReFIT.phase == 7)
     #expect(CortexReFIT.stateDimension == 6)
     #expect(CortexReFIT.measurementDimension == 2)

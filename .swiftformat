@@ -18,4 +18,20 @@
 # only", i.e. `as!` in a test is deliberate and permitted. Disabled rather than worked around, and
 # the two rewritten sites were restored to their original `as!` (Phase 10 / D-18).
 --disable noForceUnwrapInTests
+
+# swiftTestingTestCaseNames DELETES the @Test("...") display string and moves it into a backticked
+# function name: `@Test("Descriptor exposes the Usage Page and Usage byte pairs") func
+# descriptorUsageConstants()` became `@Test` + ``func `Descriptor exposes the Usage Page and Usage
+# byte pairs`()``. It did that to 179 of this repo's 182 test cases in the Phase-10 sweep.
+#
+# Disabled for three reasons, in order of weight:
+#   1. It contradicts the repo's documented Swift Testing convention, which is @Test("description")
+#      on a camelCase function. The rule does not reformat that style, it replaces it.
+#   2. It manufactures SwiftLint identifier_name errors that cannot be fixed -- renaming the function
+#      re-triggers the formatter. As configured, `swiftformat --lint` and `swiftlint --strict` were
+#      mutually unsatisfiable; 75 of the 546 post-sweep violations were this rule's doing, and no
+#      amount of work in the linter could clear them.
+#   3. Identifiers containing spaces, parentheses and hex literals are hostile to grep, to
+#      `swift test --filter`, and to reading a stack trace.
+--disable swiftTestingTestCaseNames
 --exclude .build,Packages/.build,Packages/CortexCore/.build,Packages/CortexIPC/.build,Packages/CortexRender/.build,Packages/CortexDecoder/.build,Packages/CortexRing/.build,DerivedData,Cortex.xcodeproj,Cortex.xcworkspace,vendor,fastlane/Fastfile,fastlane/Matchfile,fastlane/Appfile

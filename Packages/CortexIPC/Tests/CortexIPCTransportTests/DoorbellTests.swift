@@ -17,8 +17,8 @@ import Testing
 @Suite("Doorbell")
 struct DoorbellTests {
   /// 1. Wake + read: ring(seq) on the producer end, the armed consumer wakes and reads the seq.
-  @Test
-  func `kqueue EVFILT_READ wakes and recvmsg reads the 8-byte seq`() throws {
+  @Test("kqueue EVFILT_READ wakes and recvmsg reads the 8-byte seq")
+  func wakeDeliversSeq() throws {
     let door = try Doorbell()
     defer { door.close() }
     try door.arm()
@@ -38,8 +38,8 @@ struct DoorbellTests {
   }
 
   /// 2. No spurious wake: with nothing written, a short-timeout wait returns .timeout (0 events).
-  @Test
-  func `no spurious wake: empty doorbell times out with zero events`() throws {
+  @Test("no spurious wake: empty doorbell times out with zero events")
+  func noSpuriousWake() throws {
     let door = try Doorbell()
     defer { door.close() }
     try door.arm()
@@ -49,8 +49,8 @@ struct DoorbellTests {
   }
 
   /// 3. FD_CLOEXEC set on BOTH socket fds (fcntl F_GETFD & FD_CLOEXEC != 0).
-  @Test
-  func `both socket fds have FD_CLOEXEC set`() throws {
+  @Test("both socket fds have FD_CLOEXEC set")
+  func cloexecSetOnBothFds() throws {
     let door = try Doorbell()
     defer { door.close() }
 
@@ -63,8 +63,8 @@ struct DoorbellTests {
   /// 4. SO_NOSIGPIPE: closing the consumer end then writing from the producer returns EPIPE
   ///    instead of delivering SIGPIPE (which would kill the test process). Reaching the #expect
   ///    at all proves the process survived.
-  @Test
-  func `SO_NOSIGPIPE: write to a closed peer returns EPIPE, process survives`() throws {
+  @Test("SO_NOSIGPIPE: write to a closed peer returns EPIPE, process survives")
+  func noSigpipeOnClosedPeer() throws {
     let door = try Doorbell()
     // Close the consumer end so the producer's write hits a dead peer.
     door.closeConsumer()

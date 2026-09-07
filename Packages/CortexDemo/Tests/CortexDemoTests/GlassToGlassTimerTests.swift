@@ -19,8 +19,8 @@ import Testing
 struct GlassToGlassTimerTests {
   // MARK: Test 1 — sample() converts + subtracts + clamps non-negative.
 
-  @Test
-  func `1: sample() = present(ns) - intentEmission(ns), non-negative, clamps to 0 if present < intent`() {
+  @Test("Test 1: sample() = present(ns) - intentEmission(ns), non-negative, clamps to 0 if present < intent")
+  func sampleConvertsAndClampsNonNegative() {
     // present = 0.025 s = 25_000_000 ns; intent = 5_000_000 ns ⇒ 20_000_000 ns software-timed latency.
     let latency = GlassToGlassTimer.sample(intentEmissionNs: 5_000_000, presentTimestampSeconds: 0.025)
     #expect(latency == 20_000_000, "sample() = present(ns) - intentEmission(ns)")
@@ -41,8 +41,8 @@ struct GlassToGlassTimerTests {
 
   // MARK: Test 2 — the verbatim D-07 honesty label is embedded.
 
-  @Test
-  func `2: methodologyLabel contains the verbatim D-07 honesty phrases (cannot be dropped)`() {
+  @Test("Test 2: methodologyLabel contains the verbatim D-07 honesty phrases (cannot be dropped)")
+  func methodologyLabelEmbedsVerbatimD07Phrases() {
     let label = GlassToGlassTimer.methodologyLabel
     // The three load-bearing phrases the D-07 honesty discipline requires (gate-checkable).
     // readme-policy.sh:136 requires this prefix byte-identical.
@@ -68,8 +68,8 @@ struct GlassToGlassTimerTests {
 
   // MARK: Test 3 — a histogram of synthetic (intent, present) pairs computes p50/p99 via LatencyHistogram.
 
-  @Test
-  func `3: histogram of N synthetic samples computes p50/p99 via LatencyHistogram (reuse)`() {
+  @Test("Test 3: histogram of N synthetic samples computes p50/p99 via LatencyHistogram (reuse)")
+  func histogramComputesPercentiles() {
     // 100 synthetic software-timed samples: intent fixed, present sweeps so latency = 10..<110 ms.
     var samples = [UInt64]()
     for index in 0 ..< 100 {
@@ -88,8 +88,8 @@ struct GlassToGlassTimerTests {
 
   // MARK: Test 4 — the timer takes a present timestamp documented as targetPresentationTimestamp.
 
-  @Test
-  func `4: the present-time input is targetPresentationTimestamp (NOT targetTimestamp) — structural`() throws {
+  @Test("Test 4: the present-time input is targetPresentationTimestamp (NOT targetTimestamp) — structural")
+  func presentInputIsTargetPresentationTimestamp() throws {
     // The API surface takes a present timestamp in seconds (a CFTimeInterval) — the
     // targetPresentationTimestamp semantics. We assert structurally that the SOURCE documents this as
     // targetPresentationTimestamp and does NOT bind targetTimestamp as the present clock (D-07 /

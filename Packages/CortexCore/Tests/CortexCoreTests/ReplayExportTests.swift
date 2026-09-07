@@ -79,8 +79,8 @@ struct ReplayExportTests {
 
   // MARK: Test 1 - the committed Python-written fixture reads
 
-  @Test
-  func `1: the committed Python-written fixture reads with the declared shape`() throws {
+  @Test("Test 1: the committed Python-written fixture reads with the declared shape")
+  func readsTheCommittedFixture() throws {
     let export = try ReplayExport(sidecarURL: Self.fixtureSidecar)
     #expect(export.binCount == 256, "the committed fixture is 256 bins (108,544 bytes / 424)")
     #expect(export.channelCount == 96, "the 96-channel Indy contract (DEC-02)")
@@ -97,8 +97,8 @@ struct ReplayExportTests {
 
   // MARK: Test 2 - a size mismatch is refused BEFORE the bytes are loaded
 
-  @Test
-  func `2: a one-byte truncation throws .sizeMismatch (checked before any read)`() throws {
+  @Test("Test 2: a one-byte truncation throws .sizeMismatch (checked before any read)")
+  func refusesASizeMismatch() throws {
     let dir = try Self.stageFixture()
     let binaryURL = dir.appendingPathComponent("tiny_replay.bin")
     let handle = try FileHandle(forWritingTo: binaryURL)
@@ -112,8 +112,8 @@ struct ReplayExportTests {
 
   // MARK: Test 3 - a schema bump is refused
 
-  @Test
-  func `3: schema_version != 1 throws .unsupportedSchema`() throws {
+  @Test("Test 3: schema_version != 1 throws .unsupportedSchema")
+  func refusesASchemaBump() throws {
     let dir = try Self.stageFixture()
     let sidecarURL = try Self.tamper(dir, key: "schema_version", value: 2)
     #expect(throws: ReplayExportError.unsupportedSchema(found: 2, expected: 1)) {
@@ -123,8 +123,8 @@ struct ReplayExportTests {
 
   // MARK: Test 4 - a wrong channel count is refused
 
-  @Test
-  func `4: n_channels != 96 throws .badChannelCount`() throws {
+  @Test("Test 4: n_channels != 96 throws .badChannelCount")
+  func refusesAWrongChannelCount() throws {
     let dir = try Self.stageFixture()
     let sidecarURL = try Self.tamper(dir, key: "n_channels", value: 192)
     #expect(throws: ReplayExportError.badChannelCount(found: 192, expected: 96)) {
@@ -134,8 +134,8 @@ struct ReplayExportTests {
 
   // MARK: Test 5 - a wrong record size is refused
 
-  @Test
-  func `5: record_bytes != 424 throws .badRecordSize`() throws {
+  @Test("Test 5: record_bytes != 424 throws .badRecordSize")
+  func refusesAWrongRecordSize() throws {
     let dir = try Self.stageFixture()
     let sidecarURL = try Self.tamper(dir, key: "record_bytes", value: 400)
     #expect(throws: ReplayExportError.badRecordSize(found: 400, expected: 424)) {
@@ -145,8 +145,8 @@ struct ReplayExportTests {
 
   // MARK: Test 6 - a malformed provenance digest is refused
 
-  @Test
-  func `6: a source_sha256 that is not 64 lowercase hex throws .malformedProvenance`() throws {
+  @Test("Test 6: a source_sha256 that is not 64 lowercase hex throws .malformedProvenance")
+  func refusesAMalformedDigest() throws {
     let dir = try Self.stageFixture()
     let sidecarURL = try Self.tamper(dir, key: "source_sha256", value: "NOT-A-DIGEST")
     #expect(throws: ReplayExportError.malformedProvenance(field: "source_sha256")) {
@@ -163,8 +163,8 @@ struct ReplayExportTests {
 
   // MARK: Test 7 - a symlinked binary_path escaping the sidecar's directory is refused (ASVS V12)
 
-  @Test
-  func `7: a binary_path resolving outside the sidecar's directory throws .pathEscape`() throws {
+  @Test("Test 7: a binary_path resolving outside the sidecar's directory throws .pathEscape")
+  func refusesASymlinkEscape() throws {
     let root = FileManager.default.temporaryDirectory
       .appendingPathComponent("cortex-escape-\(UUID().uuidString)", isDirectory: true)
     let exports = root.appendingPathComponent("exports", isDirectory: true)
@@ -204,8 +204,8 @@ struct ReplayExportTests {
 
   // MARK: Test 8 - the window is bin-major and bounds-checked
 
-  @Test
-  func `8: window(endingAt:length:) is bin-major over the raw bytes and refuses out-of-range`() throws {
+  @Test("Test 8: window(endingAt:length:) is bin-major over the raw bytes and refuses out-of-range")
+  func windowIsBinMajorAndBounded() throws {
     let export = try ReplayExport(sidecarURL: Self.fixtureSidecar)
     let window = try export.window(endingAt: 31, length: 32)
 
@@ -237,8 +237,8 @@ struct ReplayExportTests {
 
   // MARK: Test 9 - the kinematic accessors return the stored doubles unchanged
 
-  @Test
-  func `9: velocity/target/binStart return the stored Float64 values unchanged`() throws {
+  @Test("Test 9: velocity/target/binStart return the stored Float64 values unchanged")
+  func kinematicAccessorsAreExact() throws {
     let export = try ReplayExport(sidecarURL: Self.fixtureSidecar)
 
     let velocity0 = try export.velocity(at: 0)
@@ -263,8 +263,8 @@ struct ReplayExportTests {
 
   // MARK: Test 10 - an absent sidecar or binary fails closed
 
-  @Test
-  func `10: an absent sidecar or binary throws .notFound rather than returning empty data`() throws {
+  @Test("Test 10: an absent sidecar or binary throws .notFound rather than returning empty data")
+  func failsClosedOnAbsentFiles() throws {
     let missing = FileManager.default.temporaryDirectory
       .appendingPathComponent("cortex-absent-\(UUID().uuidString).json")
     #expect(throws: ReplayExportError.notFound(path: missing.path)) {
@@ -281,8 +281,8 @@ struct ReplayExportTests {
 
   // MARK: Test 11 - a malformed sidecar names why
 
-  @Test
-  func `11: unparseable JSON and a non-positive n_bins both throw .malformedSidecar`() throws {
+  @Test("Test 11: unparseable JSON and a non-positive n_bins both throw .malformedSidecar")
+  func refusesAMalformedSidecar() throws {
     let dir = try Self.stageFixture()
     let sidecarURL = dir.appendingPathComponent("tiny_replay.json")
     try Data("{ not json".utf8).write(to: sidecarURL)
@@ -306,8 +306,8 @@ struct ReplayExportTests {
 
   // MARK: Test 12 - the environment hook is absent-means-skip, never absent-means-synthetic
 
-  @Test
-  func `12: sidecarURLFromEnvironment treats an absent or empty CORTEX_REPLAY_EXPORT as nil`() {
+  @Test("Test 12: sidecarURLFromEnvironment treats an absent or empty CORTEX_REPLAY_EXPORT as nil")
+  func environmentHookSkipsCleanly() {
     // The variable is not set in the test process, so the clean-clone answer is nil - the caller then
     // SKIPS, which is the D-07 / ASVS V14 idiom. It must never mean "fall back to synthetic".
     let resolved = ReplayExport.sidecarURLFromEnvironment()

@@ -426,3 +426,49 @@ All four created/modified key artifacts exist on disk; `toolchain-policy.sh` is 
 commits are present in history (`2f80b2e`, `bcab25b`, `72661b5`, `6e5db71`, `7af0cad`), each
 reachable and parented on `87e3028`. The baseline commit `bcab25b` precedes the sweep commit
 `7af0cad`, satisfying the plan's ordering requirement that the baseline predate the change.
+
+---
+
+## Amendment (orchestrator, 2026-09-07): the SwiftFormat / SwiftLint deadlock is resolved
+
+This plan escalated a genuine conflict rather than picking a winner, which was correct. The
+resolution, decided at merge time:
+
+**`swiftTestingTestCaseNames` is disabled in `.swiftformat`.** The rule does not reformat this
+repo's test style, it replaces it: it DELETES the `@Test("description")` display string and moves
+the text into a backticked function name. Measured on the sweep, `@Test("` occurrences fell from
+**182 to 3** across `Packages/*/Tests/` -- 179 test display names removed.
+
+Three reasons, in order of weight:
+
+1. It contradicts the documented Swift Testing convention for this machine, which is
+   `@Test("description")` above a camelCase function.
+2. It manufactured violations that could not be cleared from the linter side, because renaming the
+   function re-triggers the formatter. That is what made the two tools mutually unsatisfiable.
+3. Identifiers containing spaces, parentheses and hex literals (`func ``Descriptor declares all five
+   report IDs (0x85 0x01..0x04, with RID4 shared)``()`) are hostile to grep, `swift test --filter`,
+   and stack traces.
+
+Disabling the rule restores the status quo ante; it does not impose a new convention.
+
+**Method.** Added the `--disable` with its rationale, restored every test source from the pre-sweep
+commit `87e3028`, then re-ran `swiftformat .` so the remaining rules re-applied without the rename.
+
+**Result, all re-measured on `main` after the fix:**
+
+| quantity | 10-15 as merged | after the fix |
+|---|---|---|
+| `swiftformat --lint .` | exit 0 | exit 0 |
+| `swiftlint --strict` violations | 546 | **471** |
+| `@Test("` in `Packages/*/Tests/` | 3 | **182** (pre-sweep value) |
+| committed JSON + `*-evidence.md` changed vs `87e3028` | 0 | **0** |
+| Swift tests | 44 / 32 / 19 | 44 / 32 / 19 |
+| pytest | 288 passed, 1 skipped | 289 passed, 10 deselected |
+| policy gates | 11/11 green | 11/11 green |
+
+The `as!` restorations this plan made in `KeychainTests.swift` survived the test-source restore, as
+expected: they are the original pre-sweep text and `noForceUnwrapInTests` stays disabled.
+
+**Roster handed to 10-16 is therefore 471, not 546.** Group A (the 75 deadlock violations) is gone;
+it was never work the linter could do. Seven backticked test functions remain in
+`Packages/CortexRing/Tests/` -- those are hand-written, predate the sweep, and are real 10-16 work.

@@ -17,8 +17,8 @@ struct CursorIntegratorTests {
   /// precision; 1e-3 comfortably covers a single store + one multiply-add.
   private let eps: Float = 1e-3
 
-  @Test
-  func `integrate moves position by exactly velocity * dt from the start point`() {
+  @Test("integrate moves position by exactly velocity * dt from the start point")
+  func integrateMovesByVelocityTimesDt() {
     let integrator = CursorIntegrator(start: .init(x: 0.5, y: 0.5))
     // vx = 1.0 grid-units/s, dt = 0.1 s  ->  Δx = +0.1, y unchanged.
     let v = CursorVelocity(ts_ns: 1, seq: 1, vx: 1.0, vy: 0.0)
@@ -28,8 +28,8 @@ struct CursorIntegratorTests {
     #expect(pos.x > 0.5) // direction is positive
   }
 
-  @Test
-  func `integrate clamps to the upper grid bound — cursor cannot leave [0,1] on the right/top`() {
+  @Test("integrate clamps to the upper grid bound — cursor cannot leave [0,1] on the right/top")
+  func integrateClampsUpper() {
     let integrator = CursorIntegrator(start: .init(x: 0.5, y: 0.5))
     let fast = CursorVelocity(ts_ns: 1, seq: 1, vx: 1000.0, vy: 1000.0)
     // Many ticks of a large positive velocity must saturate, never exceed 1.0 (threat T-06-02-01).
@@ -43,8 +43,8 @@ struct CursorIntegratorTests {
     #expect(abs(pos.y - 1.0) < eps)
   }
 
-  @Test
-  func `integrate clamps to the lower grid bound — cursor cannot leave [0,1] on the left/bottom`() {
+  @Test("integrate clamps to the lower grid bound — cursor cannot leave [0,1] on the left/bottom")
+  func integrateClampsLower() {
     let integrator = CursorIntegrator(start: .init(x: 0.5, y: 0.5))
     let fast = CursorVelocity(ts_ns: 1, seq: 1, vx: -1000.0, vy: -1000.0)
     var pos = CursorPosition(x: 1, y: 1)
@@ -57,8 +57,8 @@ struct CursorIntegratorTests {
     #expect(abs(pos.y - 0.0) < eps)
   }
 
-  @Test
-  func `integrate rejects NaN velocity (holds position, no NaN position) — T-06-02-01`() {
+  @Test("integrate rejects NaN velocity (holds position, no NaN position) — T-06-02-01")
+  func integrateRejectsNaN() {
     let integrator = CursorIntegrator(start: .init(x: 0.5, y: 0.5))
     let bad = CursorVelocity(ts_ns: 1, seq: 1, vx: Float16.nan, vy: 0.0)
     let pos = integrator.integrate(latest: bad, dt: 0.1)
@@ -68,8 +68,8 @@ struct CursorIntegratorTests {
     #expect(abs(pos.y - 0.5) < eps)
   }
 
-  @Test
-  func `integrate rejects infinite velocity (holds position) — T-06-02-01`() {
+  @Test("integrate rejects infinite velocity (holds position) — T-06-02-01")
+  func integrateRejectsInfinity() {
     let integrator = CursorIntegrator(start: .init(x: 0.5, y: 0.5))
     let bad = CursorVelocity(ts_ns: 1, seq: 1, vx: Float16.infinity, vy: -Float16.infinity)
     let pos = integrator.integrate(latest: bad, dt: 0.1)
@@ -79,8 +79,8 @@ struct CursorIntegratorTests {
     #expect(abs(pos.y - 0.5) < eps)
   }
 
-  @Test
-  func `integrate(latest: nil) holds position exactly — empty ring -> velocity 0 (D-04)`() {
+  @Test("integrate(latest: nil) holds position exactly — empty ring -> velocity 0 (D-04)")
+  func integrateEmptyRingHolds() {
     let integrator = CursorIntegrator(start: .init(x: 0.42, y: 0.73))
     let pos = integrator.integrate(latest: nil, dt: 0.1)
     #expect(abs(pos.x - 0.42) < eps)
@@ -90,8 +90,8 @@ struct CursorIntegratorTests {
     #expect(integrator.position.y == pos.y)
   }
 
-  @Test
-  func `CursorVelocity field order is ts_ns, seq, vx, vy and round-trips its values`() {
+  @Test("CursorVelocity field order is ts_ns, seq, vx, vy and round-trips its values")
+  func cursorVelocityFieldOrder() {
     let v = CursorVelocity(ts_ns: 0xDEAD_BEEF, seq: 7, vx: 0.5, vy: -0.25)
     #expect(v.ts_ns == 0xDEAD_BEEF)
     #expect(v.seq == 7)

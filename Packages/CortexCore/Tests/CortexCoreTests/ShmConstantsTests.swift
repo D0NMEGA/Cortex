@@ -7,20 +7,20 @@
 @testable import CortexCore
 import Testing
 
-@Test
-func `Swift can read CORTEX_SHM_NAME from CortexCoreC and value matches /cortex.samples`() {
+@Test("Swift can read CORTEX_SHM_NAME from CortexCoreC and value matches /cortex.samples")
+func shmNameMatchesCanonicalValue() {
   #expect(Cortex.shmName == "/cortex.samples")
   #expect(Cortex.shmName.count == 15)
   #expect(Cortex.shmName.utf8.count <= 31, "Must fit Darwin PSHMNAMLEN")
 }
 
-@Test
-func `App Group identifier matches D-07`() {
+@Test("App Group identifier matches D-07")
+func appGroupIdentifierIsCanonical() {
   #expect(AppGroup.identifier == "group.com.donovansantine.cortex.shared")
 }
 
-@Test
-func `mach_absolute_time wrapper returns monotonically non-decreasing values`() {
+@Test("mach_absolute_time wrapper returns monotonically non-decreasing values")
+func machTimeIsMonotonic() {
   let t0 = Time.machAbsoluteNanoseconds()
   let t1 = Time.machAbsoluteNanoseconds()
   #expect(t1 >= t0)

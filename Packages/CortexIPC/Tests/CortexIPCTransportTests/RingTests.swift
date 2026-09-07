@@ -43,8 +43,8 @@ private func withFreshRing(_ body: (ShmRing, String) throws -> Void) throws {
 @Suite("ShmRing")
 struct RingTests {
   /// 1. Round-trip: write a known payload + bump seq, read it back via the busy-poll path.
-  @Test
-  func `write/read round-trip via busy-poll: bytes identical, seq advanced`() throws {
+  @Test("write/read round-trip via busy-poll: bytes identical, seq advanced")
+  func roundTrip() throws {
     try withFreshRing { ring, _ in
       let payloadLen = ring.layout.slotStride
       var src = [UInt8](repeating: 0, count: payloadLen)
@@ -67,8 +67,8 @@ struct RingTests {
   }
 
   /// 2. Wrap-around: writing depth+2 frames overwrites slots 0 and 1; reader sees latest seq.
-  @Test
-  func `slot arithmetic wraps: depth+2 frames reuse slots 0 and 1, latest seq visible`() throws {
+  @Test("slot arithmetic wraps: depth+2 frames reuse slots 0 and 1, latest seq visible")
+  func wrapAround() throws {
     try withFreshRing { ring, _ in
       let depth = ring.layout.depth
       let stride = ring.layout.slotStride
@@ -99,8 +99,8 @@ struct RingTests {
   }
 
   /// 3. Stride is the constant derived from CORTEX_CHANNEL_COUNT — assert == the computed value.
-  @Test
-  func `stride is the constant computed from CORTEX_CHANNEL_COUNT`() throws {
+  @Test("stride is the constant computed from CORTEX_CHANNEL_COUNT")
+  func constantStride() throws {
     try withFreshRing { ring, _ in
       // Recompute independently: roundUp16(perSlotSeq(8) + CHANNEL_COUNT*2 + FlatBuffers framing
       // headroom + GCM_TAG(16)). Plan 02-04 Rule-1 fix: the slot reserves the ENCRYPTED FlatBuffers
@@ -119,8 +119,8 @@ struct RingTests {
 
   /// 4. Two mappings of the SAME name: a write through mapping A is visible through mapping B
   ///    (intra-process MAP_SHARED proof; full cross-process is the Plan 02-04 harness).
-  @Test
-  func `MAP_SHARED visibility across two mappings of the same name`() throws {
+  @Test("MAP_SHARED visibility across two mappings of the same name")
+  func twoMappingsShare() throws {
     let name = uniqueRingName()
     _ = shm_unlink(name)
     let producer = try ShmRing(name: name, create: true)
@@ -144,8 +144,8 @@ struct RingTests {
   ///    acquire-loads seq THEN reads the slot. A consumer that has seen seq S must therefore
   ///    observe the full slot for S (no torn read). We assert the contract structurally: after
   ///    pollLatest returns S, the payload for S is fully present, then exercise the ack-bounce.
-  @Test
-  func `acquire/release ordering: observed seq implies a fully-written slot + ack-bounce`() throws {
+  @Test("acquire/release ordering: observed seq implies a fully-written slot + ack-bounce")
+  func orderingContract() throws {
     try withFreshRing { ring, _ in
       let stride = ring.layout.slotStride
       // Sentinel payload: every byte distinct-ish so a partial copy would be detectable.

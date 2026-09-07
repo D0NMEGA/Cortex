@@ -13,8 +13,8 @@ struct SampleCodecTests {
     (0 ..< cortexChannelCount).map { Float16($0) - 32.0 } // mix of negatives + positives
   }
 
-  @Test
-  func `ts_ns, seq, and the Float16 channel array round-trip bit-exact`() throws {
+  @Test("ts_ns, seq, and the Float16 channel array round-trip bit-exact")
+  func roundTripBitExact() throws {
     let channels = Self.makeChannels()
     let tsNs: UInt64 = 1_234_567_890_123
     let seq: UInt64 = 0xDEAD_BEEF_0000_0042
@@ -34,8 +34,8 @@ struct SampleCodecTests {
     }
   }
 
-  @Test
-  func `decode exposes channel_data as a zero-copy Float16 view of count == CORTEX_CHANNEL_COUNT`() throws {
+  @Test("decode exposes channel_data as a zero-copy Float16 view of count == CORTEX_CHANNEL_COUNT")
+  func zeroCopyFloat16View() throws {
     let channels = Self.makeChannels()
     let bytes = try SampleCodec.encode(tsNs: 7, seq: 9, channels: channels)
     let decoded = try SampleCodec.decode(bytes)
@@ -49,8 +49,8 @@ struct SampleCodecTests {
     #expect(count == cortexChannelCount)
   }
 
-  @Test
-  func `encode rejects channel_data whose element count != CORTEX_CHANNEL_COUNT (half-pair invariant, D-10)`() throws {
+  @Test("encode rejects channel_data whose element count != CORTEX_CHANNEL_COUNT (half-pair invariant, D-10)")
+  func encodeRejectsWrongCount() throws {
     let tooFew = [Float16](repeating: 1.0, count: cortexChannelCount - 1)
     #expect(throws: SampleCodecError.badChannelCount(cortexChannelCount - 1)) {
       _ = try SampleCodec.encode(tsNs: 0, seq: 0, channels: tooFew)
@@ -61,8 +61,8 @@ struct SampleCodecTests {
     }
   }
 
-  @Test
-  func `decode rejects a Sample whose channel_data byte length != CORTEX_CHANNEL_COUNT*2 (fail-closed)`() throws {
+  @Test("decode rejects a Sample whose channel_data byte length != CORTEX_CHANNEL_COUNT*2 (fail-closed)")
+  func decodeRejectsWrongByteLength() throws {
     // Hand-build a well-formed Sample with a too-short channel_data vector (verifier passes, but the
     // half-pair invariant must still reject it on decode).
     var builder = FlatBufferBuilder(initialSize: 64)
@@ -76,8 +76,8 @@ struct SampleCodecTests {
     }
   }
 
-  @Test
-  func `decode rejects a truncated/garbage buffer via the FlatBuffers verifier (getCheckedRoot)`() throws {
+  @Test("decode rejects a truncated/garbage buffer via the FlatBuffers verifier (getCheckedRoot)")
+  func decodeRejectsGarbage() throws {
     // First build a valid frame, then truncate it so the verifier's offsets run past the end.
     let valid = try SampleCodec.encode(tsNs: 1, seq: 1, channels: Self.makeChannels())
     let truncated = Array(valid.prefix(valid.count / 2))

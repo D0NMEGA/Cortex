@@ -105,3 +105,7 @@ Decoder/**/*.mlpackage/
 Decoder/**/__pycache__/
 Decoder/.pytest_cache/
 Decoder/.ruff_cache/
+
+# Agent worktrees and session scratch. These are live git checkouts of other
+# branches; committing them as gitlinks would publish dangling submodule pointers.
+.agent/

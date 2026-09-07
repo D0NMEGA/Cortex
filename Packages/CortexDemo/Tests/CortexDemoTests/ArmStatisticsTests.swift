@@ -18,8 +18,8 @@ struct ArmStatisticsTests {
 
   // MARK: - realizedGain
 
-  @Test
-  func `realizedGain of a sequence against itself is exactly 1`() {
+  @Test("realizedGain of a sequence against itself is exactly 1")
+  func gainOfIdenticalSequencesIsOne() {
     let v: [SIMD2<Float>] = [
       SIMD2<Float>(0.3, 0.4), // |v| = 0.5
       SIMD2<Float>(-1.0, 0.0),
@@ -28,8 +28,8 @@ struct ArmStatisticsTests {
     #expect(abs(ArmStatistics.realizedGain(inputs: v, outputs: v) - 1.0) < Self.tol)
   }
 
-  @Test
-  func `realizedGain of outputs scaled by 2 is exactly 2`() {
+  @Test("realizedGain of outputs scaled by 2 is exactly 2")
+  func gainOfDoubledOutputsIsTwo() {
     let inputs: [SIMD2<Float>] = [
       SIMD2<Float>(0.3, 0.4),
       SIMD2<Float>(-1.0, 0.0),
@@ -39,8 +39,8 @@ struct ArmStatisticsTests {
     #expect(abs(ArmStatistics.realizedGain(inputs: inputs, outputs: outputs) - 2.0) < 1e-6)
   }
 
-  @Test
-  func `realizedGain returns 0 for an all-zero input rather than NaN or infinity`() {
+  @Test("realizedGain returns 0 for an all-zero input rather than NaN or infinity")
+  func gainWithZeroDenominatorIsZero() {
     let zeros = [SIMD2<Float>](repeating: SIMD2<Float>(0, 0), count: 4)
     let outputs: [SIMD2<Float>] = [
       SIMD2<Float>(1, 0), SIMD2<Float>(0, 1), SIMD2<Float>(1, 1), SIMD2<Float>(2, 2)
@@ -50,16 +50,16 @@ struct ArmStatisticsTests {
     #expect(gain.isFinite)
   }
 
-  @Test
-  func `realizedGain returns 0 for empty inputs without crashing`() {
+  @Test("realizedGain returns 0 for empty inputs without crashing")
+  func gainOfEmptyInputIsZero() {
     let empty = [SIMD2<Float>]()
     let gain = ArmStatistics.realizedGain(inputs: empty, outputs: empty)
     #expect(gain == 0)
     #expect(gain.isFinite)
   }
 
-  @Test
-  func `realizedGain stays finite when one sample is the zero vector`() {
+  @Test("realizedGain stays finite when one sample is the zero vector")
+  func gainIsFiniteWithAZeroSample() {
     let inputs: [SIMD2<Float>] = [SIMD2<Float>(0, 0), SIMD2<Float>(1, 0), SIMD2<Float>(0, 3)]
     let outputs: [SIMD2<Float>] = [SIMD2<Float>(0, 0), SIMD2<Float>(0.5, 0), SIMD2<Float>(0, 1.5)]
     let gain = ArmStatistics.realizedGain(inputs: inputs, outputs: outputs)
@@ -70,16 +70,16 @@ struct ArmStatisticsTests {
 
   // MARK: - realizedSmoothing
 
-  @Test
-  func `realizedSmoothing of a constant speed series is 0, not NaN`() {
+  @Test("realizedSmoothing of a constant speed series is 0, not NaN")
+  func smoothingOfAConstantSeriesIsZero() {
     let constant = [SIMD2<Float>](repeating: SIMD2<Float>(0.6, 0.8), count: 16) // |v| = 1 every tick
     let smoothing = ArmStatistics.realizedSmoothing(outputs: constant)
     #expect(smoothing == 0)
     #expect(smoothing.isFinite)
   }
 
-  @Test
-  func `realizedSmoothing of an alternating speed series is about -1`() {
+  @Test("realizedSmoothing of an alternating speed series is about -1")
+  func smoothingOfAnAlternatingSeriesIsNegativeOne() {
     // Speeds alternate 1, 2, 1, 2, ... so consecutive samples sit on opposite sides of the mean.
     var series = [SIMD2<Float>]()
     for i in 0 ..< 64 {
@@ -90,8 +90,8 @@ struct ArmStatisticsTests {
     #expect(smoothing >= -1.0000001)
   }
 
-  @Test
-  func `realizedSmoothing of a slowly varying series is close to +1`() {
+  @Test("realizedSmoothing of a slowly varying series is close to +1")
+  func smoothingOfASlowRampIsNearPositiveOne() {
     // A slow ramp: consecutive speeds are almost equal, so the lag-1 autocorrelation is near +1.
     var series = [SIMD2<Float>]()
     for i in 0 ..< 128 {
@@ -102,22 +102,22 @@ struct ArmStatisticsTests {
     #expect(smoothing <= 1.0000001)
   }
 
-  @Test
-  func `realizedSmoothing returns 0 for an empty series without crashing`() {
+  @Test("realizedSmoothing returns 0 for an empty series without crashing")
+  func smoothingOfEmptySeriesIsZero() {
     let smoothing = ArmStatistics.realizedSmoothing(outputs: [])
     #expect(smoothing == 0)
     #expect(smoothing.isFinite)
   }
 
-  @Test
-  func `realizedSmoothing returns 0 for a single sample (no lag-1 pair exists)`() {
+  @Test("realizedSmoothing returns 0 for a single sample (no lag-1 pair exists)")
+  func smoothingOfOneSampleIsZero() {
     let smoothing = ArmStatistics.realizedSmoothing(outputs: [SIMD2<Float>(1, 1)])
     #expect(smoothing == 0)
     #expect(smoothing.isFinite)
   }
 
-  @Test
-  func `realizedSmoothing stays finite and bounded on a series containing a zero vector`() {
+  @Test("realizedSmoothing stays finite and bounded on a series containing a zero vector")
+  func smoothingIsFiniteWithAZeroSample() {
     let series: [SIMD2<Float>] = [
       SIMD2<Float>(0, 0), SIMD2<Float>(1, 0), SIMD2<Float>(0, 0), SIMD2<Float>(0, 2), SIMD2<Float>(0, 0)
     ]
@@ -128,8 +128,8 @@ struct ArmStatisticsTests {
 
   // MARK: - The published-artifact guarantee
 
-  @Test
-  func `both statistics are finite for every degenerate shape a floored arm can produce`() {
+  @Test("both statistics are finite for every degenerate shape a floored arm can produce")
+  func everyDegenerateShapeIsFinite() {
     let shapes: [[SIMD2<Float>]] = [
       [],
       [SIMD2<Float>(0, 0)],

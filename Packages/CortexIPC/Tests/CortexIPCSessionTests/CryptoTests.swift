@@ -16,8 +16,8 @@ struct CryptoTests {
 
   private static let plaintext: [UInt8] = Array("the quick brown fox — 0.5ms neural block".utf8)
 
-  @Test
-  func `seal then open with the same (subkey, seq) returns the identical plaintext`() throws {
+  @Test("seal then open with the same (subkey, seq) returns the identical plaintext")
+  func roundTrip() throws {
     let keys = Self.makeKeys()
     let seq: UInt64 = 42
     let (ct, tag) = try SessionCrypto.seal(Self.plaintext, keys: keys, direction: .daemonToApp, seq: seq)
@@ -27,8 +27,8 @@ struct CryptoTests {
     #expect(ct != Self.plaintext)
   }
 
-  @Test
-  func `flipping one ciphertext byte OR one tag byte makes open() throw (fail-closed integrity)`() throws {
+  @Test("flipping one ciphertext byte OR one tag byte makes open() throw (fail-closed integrity)")
+  func tamperFailsClosed() throws {
     let keys = Self.makeKeys()
     let seq: UInt64 = 7
     let (ct, tag) = try SessionCrypto.seal(Self.plaintext, keys: keys, direction: .daemonToApp, seq: seq)
@@ -53,8 +53,8 @@ struct CryptoTests {
     }
   }
 
-  @Test
-  func `nonce(direction, seq) is prefix||bigEndian(seq), exactly 12 bytes, and unique across seq`() throws {
+  @Test("nonce(direction, seq) is prefix||bigEndian(seq), exactly 12 bytes, and unique across seq")
+  func nonceUniquenessAcrossSeq() throws {
     let direction = Direction.daemonToApp
     let prefix = direction.noncePrefix
 
@@ -76,8 +76,8 @@ struct CryptoTests {
     #expect(seen.count == seqs.count)
   }
 
-  @Test
-  func `the two directions never collide on (key, nonce): a frame sealed for A does not open with B`() throws {
+  @Test("the two directions never collide on (key, nonce): a frame sealed for A does not open with B")
+  func crossDirectionIsolation() throws {
     let keys = Self.makeKeys()
     let seq: UInt64 = 99
 
@@ -97,8 +97,8 @@ struct CryptoTests {
     #expect(opened == Self.plaintext)
   }
 
-  @Test
-  func `the nonce is reconstructable from seq alone — open succeeds without it being transmitted`() throws {
+  @Test("the nonce is reconstructable from seq alone — open succeeds without it being transmitted")
+  func nonceReconstructedFromSeq() throws {
     let keys = Self.makeKeys()
     let seq: UInt64 = 0x0102_0304_0506_0708
 
@@ -114,8 +114,8 @@ struct CryptoTests {
     #expect(Array(rebuilt) == Direction.daemonToApp.noncePrefix + SessionCrypto.seqBigEndianBytes(seq))
   }
 
-  @Test
-  func `distinct secrets derive distinct subkeys (fresh-key-per-launch resets the nonce space, D-14)`() throws {
+  @Test("distinct secrets derive distinct subkeys (fresh-key-per-launch resets the nonce space, D-14)")
+  func freshSecretResetsKeyspace() throws {
     let seq: UInt64 = 1
     let keys1 = SessionKeys(secret: SessionKeys.generateSecret())
     let keys2 = SessionKeys(secret: SessionKeys.generateSecret())

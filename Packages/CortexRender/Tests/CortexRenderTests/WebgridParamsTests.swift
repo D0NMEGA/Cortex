@@ -11,8 +11,8 @@ import Testing
 @Suite("WebgridParams")
 struct WebgridParamsTests {
   /// D-01: the substrate is the modern 30×30 Neuralink/Bliss-Chapman webgrid, not the legacy 6×6.
-  @Test
-  func `grid30x30 convenience pins a 30×30 grid`() {
+  @Test("grid30x30 convenience pins a 30×30 grid")
+  func grid30x30HasThirtyByThirty() {
     let params = WebgridParams.grid30x30(
       cursorX: 0.5, cursorY: 0.5, viewportWidth: 1920, viewportHeight: 1080
     )
@@ -22,8 +22,8 @@ struct WebgridParamsTests {
 
   /// RENDER-06: the struct is uploaded as raw bytes, so it must be a trivial value type with a
   /// stable, positive stride and no reference fields (bit-for-bit copyable into the GPU buffer).
-  @Test
-  func `layout is trivially copyable with a stable stride`() {
+  @Test("layout is trivially copyable with a stable stride")
+  func layoutIsTriviallyCopyable() {
     // A non-zero stride proves the type has storage; equal `size`/`stride` parity across calls
     // proves the layout is deterministic (no hidden refcounted/existential fields would round-trip
     // raw). Two independent default-constructed values compare byte-equal when copied as raw bytes.
@@ -39,8 +39,8 @@ struct WebgridParamsTests {
   }
 
   /// A 30×30 grid is 900 cells — the canonical ~900-cell webgrid the compute shader fills.
-  @Test
-  func `cell count derived from params is 900`() {
+  @Test("cell count derived from params is 900")
+  func cellCountIsNineHundred() {
     let params = WebgridParams.grid30x30(
       cursorX: 0.0, cursorY: 0.0, viewportWidth: 1024, viewportHeight: 1024
     )

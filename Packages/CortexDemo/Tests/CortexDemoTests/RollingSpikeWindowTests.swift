@@ -34,8 +34,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 1 - a fresh accumulator is empty
 
-  @Test
-  func `1: a fresh RollingSpikeWindow(channels: 96, length: 32) is empty and not full`() {
+  @Test("Test 1: a fresh RollingSpikeWindow(channels: 96, length: 32) is empty and not full")
+  func freshWindowIsEmpty() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
 
     #expect(window.channels == 96)
@@ -51,8 +51,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 2 - the 32nd bin is what makes it full
 
-  @Test
-  func `2: 31 bins leaves isFull false; the 32nd makes it true`() {
+  @Test("Test 2: 31 bins leaves isFull false; the 32nd makes it true")
+  func fillsOnTheThirtySecondBin() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
 
     Self.pushRange(window, 31)
@@ -67,8 +67,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 3 - window() is bin-major with the OLDEST bin first
 
-  @Test
-  func `3: window() is bin-major with the OLDEST bin first`() {
+  @Test("Test 3: window() is bin-major with the OLDEST bin first")
+  func windowIsOldestFirst() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 32)
 
@@ -92,8 +92,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 4 - a 33rd push shifts the window by exactly one bin
 
-  @Test
-  func `4: a 33rd push keeps isFull and shifts the window by exactly one bin (the wrap)`() {
+  @Test("Test 4: a 33rd push keeps isFull and shifts the window by exactly one bin (the wrap)")
+  func thirtyThirdPushWrapsByOne() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 32)
     let before = window.window()
@@ -119,8 +119,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 5 - a duplicate seq is refused and does not mutate the buffer
 
-  @Test
-  func `5: a repeated seq returns .duplicate and does not advance the accumulator`() {
+  @Test("Test 5: a repeated seq returns .duplicate and does not advance the accumulator")
+  func duplicateSeqIsRefused() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 4)
     #expect(window.count == 4)
@@ -138,8 +138,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 6 - a gap RESETS the accumulator instead of bridging it
 
-  @Test
-  func `6: a skipped seq returns .gap and RESETS count to 0 rather than inserting zeros`() {
+  @Test("Test 6: a skipped seq returns .gap and RESETS count to 0 rather than inserting zeros")
+  func gapResetsRatherThanBridging() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 10)
     #expect(window.count == 10)
@@ -157,8 +157,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 7 - a gap does not silently insert zero bins
 
-  @Test
-  func `7: after a gap, 32 fresh contiguous bins are needed and none of them is a zero filler`() {
+  @Test("Test 7: after a gap, 32 fresh contiguous bins are needed and none of them is a zero filler")
+  func gapDoesNotInsertZeroBins() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 10)
     #expect(window.push(seq: 13, channels: Self.bin(12)) == .gap(expected: 11, got: 13))
@@ -178,8 +178,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 8 - a wrong channel count is refused without mutating anything
 
-  @Test
-  func `8: push with a channel count other than 96 returns .badChannelCount and mutates nothing`() {
+  @Test("Test 8: push with a channel count other than 96 returns .badChannelCount and mutates nothing")
+  func badChannelCountIsRefused() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 5)
     let before = window.count
@@ -198,9 +198,9 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 9 - fill() writes bin 0 as the OLDEST bin
 
-  @Test
+  @Test("Test 9: fill(_:) writes bin 0 as the OLDEST bin, matching window()'s ordering")
   @MainActor
-  func `9: fill(_:) writes bin 0 as the OLDEST bin, matching window()'s ordering`() throws {
+  func fillWritesOldestAtBinZero() throws {
     guard let device = MTLCreateSystemDefaultDevice() else {
       // No Metal device (a headless CI container). The ordering contract is still pinned by Test 3.
       return
@@ -224,9 +224,9 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 10 - fill() on an unfilled accumulator refuses
 
-  @Test
+  @Test("Test 10: fill(_:) on an accumulator that is not full throws rather than writing a partial window")
   @MainActor
-  func `10: fill(_:) on an accumulator that is not full throws rather than writing a partial window`() throws {
+  func fillRefusesAPartialWindow() throws {
     guard let device = MTLCreateSystemDefaultDevice() else { return }
     let window = RollingSpikeWindow(channels: 96, length: 32)
     Self.pushRange(window, 31)
@@ -239,8 +239,8 @@ struct RollingSpikeWindowTests {
 
   // MARK: Test 11 - the first accepted seq can be anything; only the SUCCESSOR is constrained
 
-  @Test
-  func `11: the first push accepts any seq, and a gap RE-ANCHORS rather than clearing the anchor`() {
+  @Test("Test 11: the first push accepts any seq, and a gap RE-ANCHORS rather than clearing the anchor")
+  func firstPushAcceptsAnySeqAndAGapReAnchors() {
     let window = RollingSpikeWindow(channels: 96, length: 32)
 
     #expect(window.push(seq: 5000, channels: Self.bin(0)) == .accepted, "an empty accumulator has no expectation yet")

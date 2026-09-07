@@ -5,8 +5,8 @@
 // tests (RingTests, DoorbellTests, FdPassTests) land in Plan 02-02.
 import Testing
 
-@Test
-func `CortexIPCTransport target links`() {
+@Test("CortexIPCTransport target links")
+func transportTargetLinks() {
   // The split target exists and is importable. Plan 02-02 replaces this with real tests.
   _ = CortexIPCTransport.self
 }

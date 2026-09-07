@@ -23,8 +23,8 @@ struct IntentRotationTests {
   /// Test 1 (OUTSIDE r_acq, target active): the rotation aligns direction FULLY onto cursor→target
   /// and PRESERVES the decoded speed. The output's magnitude == ‖z‖ and its unit direction ==
   /// unit(target − cursor) — the canonical Gilja behavior (D-06).
-  @Test
-  func `outside acquisition radius: direction aligns to cursor→target, magnitude preserved`() {
+  @Test("outside acquisition radius: direction aligns to cursor→target, magnitude preserved")
+  func rotatesOutsideAcquisitionRadius() {
     let rotation = IntentRotation()
     // Decoded velocity pointing the WRONG way (down-left); target is up-right of the cursor.
     let z = SIMD2<Float>(-1.0, -2.0)
@@ -47,8 +47,8 @@ struct IntentRotationTests {
   /// Test 2 (INSIDE r_acq): when the cursor is within the acquisition radius of the target, the
   /// rotation is OFF — output == z unchanged. This prevents the on-target "snap" (07-RESEARCH §7
   /// pitfall 4); it is the online analogue of Gilja's "magnitude→0 on hold".
-  @Test
-  func `inside acquisition radius: passthrough (no rotation, prevents on-target snap)`() {
+  @Test("inside acquisition radius: passthrough (no rotation, prevents on-target snap)")
+  func passthroughInsideAcquisitionRadius() {
     let rotation = IntentRotation()
     let z = SIMD2<Float>(0.3, -0.4)
     let cursor = SIMD2<Float>(0.50, 0.50)
@@ -61,8 +61,8 @@ struct IntentRotationTests {
   }
 
   /// Test 3 (NO active target): no target ⇒ nothing to rotate toward ⇒ output == z unchanged.
-  @Test
-  func `no active target: passthrough (output == z)`() {
+  @Test("no active target: passthrough (output == z)")
+  func passthroughNoTarget() {
     let rotation = IntentRotation()
     let z = SIMD2<Float>(0.7, 0.1)
     let cursor = SIMD2<Float>(0.3, 0.3)
@@ -75,8 +75,8 @@ struct IntentRotationTests {
 
   /// Test 4 (ZERO-velocity guard): ‖z‖ ≈ 0 with an active target outside r_acq ⇒ output == z (no
   /// divide-by-zero, no NaN). The `eps` gate (speed > eps) is the T-07-02-02 mitigation.
-  @Test
-  func `zero-velocity guard: ‖z‖≈0 → passthrough, no divide-by-zero / NaN`() {
+  @Test("zero-velocity guard: ‖z‖≈0 → passthrough, no divide-by-zero / NaN")
+  func zeroVelocityGuard() {
     let rotation = IntentRotation()
     let z = SIMD2<Float>(0.0, 0.0)
     let cursor = SIMD2<Float>(0.2, 0.2)
@@ -93,8 +93,8 @@ struct IntentRotationTests {
   /// Test 5 (FINITENESS): the output is always finite for finite inputs (never NaN/Inf). Covers the
   /// rotating branch and the degenerate target == cursor case (‖d‖ → 0; the dist > r_acq gate with a
   /// positive r_acq guards the divide and forces passthrough).
-  @Test
-  func `finiteness: finite inputs → finite output across branches`() {
+  @Test("finiteness: finite inputs → finite output across branches")
+  func finiteForFiniteInputs() {
     let rotation = IntentRotation()
     let cursor = SIMD2<Float>(0.5, 0.5)
 

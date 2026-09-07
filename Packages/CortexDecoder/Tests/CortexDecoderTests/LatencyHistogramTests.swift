@@ -22,22 +22,22 @@ struct LatencyHistogramTests {
   /// The canonical known distribution: 1...100 ns. Hand-computable percentiles.
   private static let oneToHundred: [UInt64] = Array(1 ... 100)
 
-  @Test
-  func `percentile(0.5) is the median (nearest-rank: 50) on 1...100`() {
+  @Test("percentile(0.5) is the median (nearest-rank: 50) on 1...100")
+  func medianOnKnownArray() {
     let hist = LatencyHistogram(samplesNs: Self.oneToHundred, deviceAnnotation: "test")
     #expect(hist.percentile(0.5) == 50)
     #expect(hist.p50 == 50)
   }
 
-  @Test
-  func `percentile(0.99) is the 99th (nearest-rank: 99) on 1...100`() {
+  @Test("percentile(0.99) is the 99th (nearest-rank: 99) on 1...100")
+  func p99OnKnownArray() {
     let hist = LatencyHistogram(samplesNs: Self.oneToHundred, deviceAnnotation: "test")
     #expect(hist.percentile(0.99) == 99)
     #expect(hist.p99 == 99)
   }
 
-  @Test
-  func `percentile clamps p to [0, 1]: 0.0 -> min, 1.0 -> max, out-of-range clamps`() {
+  @Test("percentile clamps p to [0, 1]: 0.0 -> min, 1.0 -> max, out-of-range clamps")
+  func percentileClampsEdges() {
     let hist = LatencyHistogram(samplesNs: Self.oneToHundred, deviceAnnotation: "test")
     #expect(hist.percentile(0.0) == 1) // min
     #expect(hist.percentile(1.0) == 100) // max
@@ -48,8 +48,8 @@ struct LatencyHistogramTests {
     #expect(hist.percentile(1.5) == 100)
   }
 
-  @Test
-  func `an unsorted input is sorted internally before percentile`() {
+  @Test("an unsorted input is sorted internally before percentile")
+  func unsortedInputIsSorted() {
     let hist = LatencyHistogram(samplesNs: [100, 1, 50, 2, 99], deviceAnnotation: "test")
     #expect(hist.min == 1)
     #expect(hist.max == 100)
@@ -58,8 +58,8 @@ struct LatencyHistogramTests {
     #expect(hist.percentile(0.5) == 50)
   }
 
-  @Test
-  func `an empty sample set returns nil percentiles (explicit, not a crash)`() {
+  @Test("an empty sample set returns nil percentiles (explicit, not a crash)")
+  func emptySetIsHandled() {
     let hist = LatencyHistogram(samplesNs: [], deviceAnnotation: "empty")
     #expect(hist.count == 0)
     #expect(hist.percentileOrNil(0.5) == nil)
@@ -71,8 +71,8 @@ struct LatencyHistogramTests {
     #expect(hist.p99 == 0)
   }
 
-  @Test
-  func `JSON encode round-trips count, p50, p99, min, max, and deviceAnnotation`() throws {
+  @Test("JSON encode round-trips count, p50, p99, min, max, and deviceAnnotation")
+  func jsonRoundTrips() throws {
     let hist = LatencyHistogram(samplesNs: Self.oneToHundred, deviceAnnotation: "NeuralEngine")
     let data = try hist.encodedJSON()
     let decoded = try JSONDecoder().decode(LatencyHistogram.Summary.self, from: data)
@@ -84,8 +84,8 @@ struct LatencyHistogramTests {
     #expect(decoded.deviceAnnotation == "NeuralEngine")
   }
 
-  @Test
-  func `the histogram value type is Sendable and survives a Codable round-trip itself`() throws {
+  @Test("the histogram value type is Sendable and survives a Codable round-trip itself")
+  func histogramItselfIsCodable() throws {
     let hist = LatencyHistogram(samplesNs: [10, 20, 30], deviceAnnotation: "CPU")
     let data = try JSONEncoder().encode(hist)
     let decoded = try JSONDecoder().decode(LatencyHistogram.self, from: data)

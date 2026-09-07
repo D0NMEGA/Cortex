@@ -16,8 +16,8 @@ import Testing
 @Suite("DEC-07: production compute units pin to the Apple Neural Engine")
 @MainActor
 struct ComputeUnitsTests {
-  @Test
-  func `productionConfiguration() uses .cpuAndNeuralEngine`() {
+  @Test("productionConfiguration() uses .cpuAndNeuralEngine")
+  func productionConfigurationUsesCPUAndNeuralEngine() {
     let config = NeuralDecoder.productionConfiguration()
     #expect(config.computeUnits == .cpuAndNeuralEngine)
   }
@@ -25,14 +25,14 @@ struct ComputeUnitsTests {
   /// Build gate: the production config must NEVER be `.all`. `.all` would let Core ML place ops
   /// on the GPU, defeating the DEC-06/DEC-08 residency claim. This is the assertion the negative
   /// control bites.
-  @Test
-  func `productionConfiguration() is never .all (DEC-07 build gate)`() {
+  @Test("productionConfiguration() is never .all (DEC-07 build gate)")
+  func productionConfigurationIsNeverAll() {
     let config = NeuralDecoder.productionConfiguration()
     #expect(config.computeUnits != .all)
   }
 
-  @Test
-  func `productionConfiguration() rejects CPU-only and CPU+GPU placement`() {
+  @Test("productionConfiguration() rejects CPU-only and CPU+GPU placement")
+  func productionConfigurationRejectsNonANEUnits() {
     // Tightens the gate beyond just `.all`: the only acceptable production value is the ANE pin.
     let units = NeuralDecoder.productionConfiguration().computeUnits
     #expect(units != .cpuOnly)
