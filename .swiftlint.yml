@@ -84,3 +84,52 @@ type_name:
   # exception rather than a rule-wide relaxation: any OTHER lowercase-initial type still fails.
   excluded:
     - iOSDisplayLinkAdapter
+
+identifier_name:
+  # ONLY the min-length arm is relaxed. The character-set arm and `validates_start_with_lowercase`
+  # are deliberately LEFT AT THEIR DEFAULTS, because the character-set arm is the one that polices
+  # the snake_case JSON wire keys, and Plan 10-16 cleared all 97 of those the expensive way --
+  # camelCase Swift properties plus explicit `CodingKeys` -- precisely so this rule could stay armed
+  # against them. Do NOT add this rule's symbol-allowlist option (the setting that would let `_`
+  # through): threat T-10-16-03 names doing so as the way to clear the class without earning it, and
+  # an acceptance gate greps this file for that option's name, so writing it here even inside a
+  # comment turns a real signal into a false alarm. That is why it is described and not spelled.
+  #
+  # Why the min-length arm is off. SwiftLint's default (warning 3 / error 2) reported 328 violations
+  # -- 189 at error severity for 1-character names and 139 at warning for 2-character ones -- and the
+  # population is mathematical and systems NOTATION, not lazy naming:
+  #   Kalman / linear algebra   x z a h k p q r s A H K a0..a5 h0 h1 k0..k5 hx  (the ReFIT filter)
+  #   kinematics                dt dx dy vx vy x0 t0 t1
+  #   POSIX and Mach            fd rc cb kq kh ns ts
+  #   loop indices              i j k n m
+  # `KalmanFilter.swift`'s own file header writes the per-tick ordering as
+  #     x- = A . x                  (predict)
+  #     x  = x- + K . (z_rot - H . x-)   (update, constant gain)
+  # so renaming `x`, `z`, `K`, `H` to 3-plus-character names would break the correspondence between
+  # the code, that comment, and the ReFIT literature the constants were solved against. The rename
+  # would also be a ~328-site diff across ~50 files, reaching into the hot path (`ShmRing.swift`,
+  # `Doorbell.swift`) and into the three bench mains whose JSON output is byte-diffed by CI -- the
+  # unreviewable-diff failure mode this plan's own threat register calls out (T-10-16-06).
+  #
+  # Unlike the snake_case class, there is no option here that keeps both properties: `CodingKeys` let
+  # the wire format and the Swift names BOTH be right, whereas renaming `x` to `stateVector` simply
+  # trades one property for another. What this DOES give up, stated plainly: SwiftLint will no longer
+  # flag a genuinely lazy short name (`fa`, `o1`, `s2` and similar already exist in the test files).
+  # Length was never a good proxy for clarity in this codebase, and code review is the check for that.
+  #
+  # Drove (top files): CortexReFITTests/KalmanFilterTests.swift 45, CortexReFIT/KalmanFilter.swift 23,
+  # CortexDaemon/Benchmark.swift 22, CortexRenderTests/VelocityRingTests.swift 21,
+  # CortexRender/CursorIntegrator.swift 11, CortexIPC/ShmRing.swift 11, CortexIPC/Doorbell.swift 11,
+  # CortexRenderBench/main.swift 11, CortexRenderBench/GPUTimeHistogram.swift 11. (Phase 10 / D-18)
+  min_length:
+    warning: 1
+    error: 0
+
+nesting:
+  # `CodingKeys` is a nested type the LANGUAGE requires: it must be declared inside the type whose
+  # coding it describes. `LatencyHistogram.Summary.CodingKeys` therefore sits two levels deep and
+  # trips a rule about avoiding deep type hierarchies, for a declaration that cannot be moved. This
+  # is SwiftLint's own opt-out for that false positive; every other kind of second-level nested type
+  # still fails. Drove: Packages/CortexDecoder/Sources/CortexDecoder/LatencyHistogram.swift:125,
+  # introduced by Plan 10-16's CodingKeys work. (Phase 10 / D-18)
+  ignore_coding_keys: true
