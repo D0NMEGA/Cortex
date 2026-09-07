@@ -50,8 +50,23 @@ jobs:
 
       - name: Install tooling
         run: |
+          set -euo pipefail
+          # shellcheck source=Tools/toolchain-versions.env
+          . Tools/toolchain-versions.env
           brew update >/dev/null
           brew install xcodegen swiftformat swiftlint xcbeautify
+          echo "swiftformat: $(swiftformat --version)  (pinned: ${SWIFTFORMAT_VERSION})"
+          echo "swiftlint:   $(swiftlint version)      (pinned: ${SWIFTLINT_VERSION})"
+
+      # --- Phase 10 (D-18): the lint toolchain is brew-installed and therefore UNPINNED. The
+      # SwiftFormat/SwiftLint verdict below is only comparable to the committed 10-lint-baseline.md
+      # if the runner is on the versions the sweep was measured under. This gate asserts that and
+      # fails loudly on drift. It sits HERE, immediately after the install, so a drifted toolchain
+      # fails in seconds rather than after ~25 minutes of build work.
+      - name: Lint toolchain version pin + self-test (D-18)
+        run: |
+          ./Tools/scripts/toolchain-policy.sh
+          ./Tools/scripts/toolchain-policy.sh --self-test
 
       # --- Phase 3 (THREAD-06 / D-R1): Rust toolchain + cbindgen ---
       # Phase 3 introduces the first Rust in the repo; cargo/cbindgen are NOT preinstalled on
