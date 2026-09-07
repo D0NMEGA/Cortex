@@ -231,14 +231,20 @@ struct SelectionCommitTests {
     holdOnTarget(pipeline, ticks: 15)
     #expect(pipeline.selectionFlash == 1)
 
-    // Break the hold with a far target. The flash fades over its own window and the tally holds.
+    // Break the hold and watch the flash fall, over the ticks immediately after the commit: a fresh
+    // commit needs 15 more on-target ticks and cannot re-arm inside that window. Running for a long
+    // time with a "far" target is NOT safe here -- the cursor drifts into the [0,1] clamp, and a
+    // corner target then sits inside the radius forever and re-commits.
     let committed = pipeline.selectionCount
     pipeline.setTarget(SIMD2<Float>(0.99, 0.01))
-    for _ in 0 ..< 18 {
+    var previous = pipeline.selectionFlash
+    for _ in 0 ..< 10 {
       pipeline.tick()
+      #expect(pipeline.selectionFlash < previous, "flash did not fall: \(pipeline.selectionFlash)")
+      previous = pipeline.selectionFlash
     }
-    #expect(pipeline.selectionFlash == 0, "still lit: \(pipeline.selectionFlash)")
-    #expect(pipeline.selectionCount == committed, "no commit without a hold")
+    #expect(pipeline.selectionCount == committed, "no commit inside the dwell window")
+    #expect(previous < 1, "the flash is still at full brightness")
   }
 
   @Test("a re-anchor clears a flash so it cannot bleed into the next trial")

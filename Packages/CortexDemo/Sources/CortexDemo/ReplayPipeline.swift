@@ -70,7 +70,21 @@ public final class ReplayPipeline {
   /// The decode/filter/integrate tick in seconds (20ms — the DEC-10 cadence, KalmanConstants.dt).
   public static let dt: Double = 0.020
   /// Acquisition radius = ½ cell of the 30×30 grid in [0,1] space (the WebgridAcquisition default).
+  /// The Webgrid-derived default: half a cell of the 30x30 substrate.
+  ///
+  /// This is a convention imported from Neuralink's Webgrid task, NOT a tolerance this dataset
+  /// defines. On the Indy session it works out to 2.861 mm against a task that steps its targets
+  /// 15 mm apart, and the animal's OWN recorded hand track satisfies it on only 14.3% of trials.
+  /// Scoring a decoder against a rule the subject itself mostly fails measures the rule.
   public static let acquisitionRadius: Float = 0.5 / 30.0
+
+  /// The radius this pipeline scores with, in grid-normalised units.
+  ///
+  /// An instance value so a caller replaying a real session can pass the tolerance the TASK
+  /// defines -- half its own target pitch -- rather than the imported one. Defaults to
+  /// ``acquisitionRadius`` so the synthetic path, `runToHit` and every existing caller are
+  /// unchanged. `CortexReplayBench` keeps its own constant and its published numbers do not move.
+  public let scoringRadius: Float
 
   // MARK: - Stages
 
@@ -163,9 +177,12 @@ public final class ReplayPipeline {
     SIMD2<Float>(integrator.position.x, integrator.position.y)
   }
 
-  /// Ticks the selection flash takes to decay. 18 at 20 ms is 360 ms -- long enough to survive a
-  /// 12 fps capture, short enough not to still be lit when the next trial starts.
-  private static let flashTicks = 18
+  /// Ticks the selection flash takes to decay. 30 at 20 ms is 600 ms.
+  ///
+  /// Measured off a capture rather than guessed: at 360 ms the flash read as roughly 0.15 s of
+  /// visible green, which is two frames of a 12 fps GIF and easy to miss entirely. 600 ms is still
+  /// under half the 1.3 s median trial, so it has faded well before the next target appears.
+  private static let flashTicks = 30
 
   // MARK: - Model-in-loop accounting (Phase 10, RD-08 — the Pattern-2 mitigation)
 
@@ -173,12 +190,6 @@ public final class ReplayPipeline {
   public private(set) var modelBackedTicks = 0
   /// Every `tick()` this pipeline has run.
   public private(set) var totalTicks = 0
-  /// True only if EVERY tick ran the model. A run where this is false must NOT publish a real-data
-  /// number (10-PREREGISTRATION section 10): its numbers came from the synthetic fallback.
-  public var allTicksModelBacked: Bool {
-    totalTicks > 0 && modelBackedTicks == totalTicks
-  }
-
   /// The FIRST reason a decode could not run, naming both shapes. Nil until a decode is attempted and
   /// fails. This is the whole point of the Pattern-2 repair: the fallback BEHAVIOUR is unchanged, but
   /// the reason is now recoverable instead of discarded.
@@ -233,8 +244,12 @@ public final class ReplayPipeline {
     modelURL: URL? = nil,
     modelVelocityGridUnitsPerCm: Float = 1.0,
     rotationEnabled: Bool = true,
-    decoderKind: Decoder = .ndt1
+    decoderKind: Decoder = .ndt1,
+    scoringRadius: Float = ReplayPipeline.acquisitionRadius
   ) {
+    self.scoringRadius = scoringRadius.isFinite && scoringRadius > 0
+      ? scoringRadius
+      : ReplayPipeline.acquisitionRadius
     self.seed = seed
     self.target = target
     self.modelVelocityGridUnitsPerCm = modelVelocityGridUnitsPerCm
@@ -284,7 +299,7 @@ public final class ReplayPipeline {
     integrator = CursorIntegrator(start: .init(x: start.x, y: start.y))
     acquisition = WebgridAcquisition(
       dwellSeconds: 0.30,
-      acquisitionRadius: Self.acquisitionRadius,
+      acquisitionRadius: scoringRadius,
       timeoutSeconds: 5.0,
       dt: Self.dt
     )
@@ -298,7 +313,8 @@ public final class ReplayPipeline {
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
     modelURL: URL? = nil,
     rotationEnabled: Bool = true,
-    decoderKind: Decoder = .ndt1
+    decoderKind: Decoder = .ndt1,
+    scoringRadius: Float = ReplayPipeline.acquisitionRadius
   ) {
     self.init(
       source: SyntheticSpikeSource(seed: seed),
@@ -307,17 +323,9 @@ public final class ReplayPipeline {
       target: target,
       modelURL: modelURL,
       rotationEnabled: rotationEnabled,
-      decoderKind: decoderKind
+      decoderKind: decoderKind,
+      scoringRadius: scoringRadius
     )
-  }
-
-  /// True iff this pipeline routes spikes through `NeuralDecoder.decode` (NDT1 genuinely in loop, D-10).
-  /// False ⇒ the deterministic synthetic decoded-velocity fallback (clean clone / CI, no model present).
-  public var isModelBacked: Bool {
-    // Either real decoder counts. Before the linear decoder existed this could only mean NDT1;
-    // leaving it as `decoder != nil` would report a ridge-driven run as unbacked, which reads as
-    // "the synthetic fallback is running" -- the exact confusion the counters exist to prevent.
-    ridge != nil || decoder != nil
   }
 
   // MARK: - Decode stage (the D-10 seam: NDT1 genuinely in loop, with a deterministic fallback)
@@ -483,7 +491,7 @@ public final class ReplayPipeline {
     let refined = filter.step(
       measurement: decoded,
       target: rotationEnabled ? target : nil,
-      acquisitionRadius: Self.acquisitionRadius
+      acquisitionRadius: scoringRadius
     )
 
     // Integrate via the renderer-owned integrator (the single [0,1] clamp + non-finite reject seam).
@@ -492,7 +500,7 @@ public final class ReplayPipeline {
     let position = SIMD2<Float>(pos.x, pos.y)
 
     tickIndex &+= 1
-    let onTarget = simd_distance(position, target) <= Self.acquisitionRadius
+    let onTarget = simd_distance(position, target) <= scoringRadius
     decayFlash()
     updateDwell(onTarget: onTarget)
     return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
@@ -585,6 +593,21 @@ public final class ReplayPipeline {
 /// feeds the loop, and no published number is computed from either, so they live outside the
 /// class body that carries the decode/filter/integrate path.
 public extension ReplayPipeline {
+  /// True only if EVERY tick ran the model. A run where this is false must NOT publish a real-data
+  /// number (10-PREREGISTRATION section 10): its numbers came from the synthetic fallback.
+  var allTicksModelBacked: Bool {
+    totalTicks > 0 && modelBackedTicks == totalTicks
+  }
+
+  /// True iff this pipeline routes spikes through `NeuralDecoder.decode` (NDT1 genuinely in loop, D-10).
+  /// False ⇒ the deterministic synthetic decoded-velocity fallback (clean clone / CI, no model present).
+  var isModelBacked: Bool {
+    // Either real decoder counts. Before the linear decoder existed this could only mean NDT1;
+    // leaving it as `decoder != nil` would report a ridge-driven run as unbacked, which reads as
+    // "the synthetic fallback is running" -- the exact confusion the counters exist to prevent.
+    ridge != nil || decoder != nil
+  }
+
   /// Move the cursor to `position` and re-seat the filter's position state on it.
   ///
   /// TRIAL RE-ANCHORING. The streaming loop integrates decoded velocity open-loop: nothing observes

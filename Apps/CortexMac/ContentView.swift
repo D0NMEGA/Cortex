@@ -114,6 +114,9 @@ struct ContentView: View {
       Text("best hold \(Int((driver.peakDwell * 100).rounded()))% of 0.30 s")
         .font(.system(size: 8, design: .monospaced))
         .foregroundStyle(.secondary)
+      Text(driver.radiusLabel)
+        .font(.system(size: 8, design: .monospaced))
+        .foregroundStyle(.secondary)
     }
     .padding(.horizontal, 8)
     .padding(.vertical, 5)
@@ -130,7 +133,8 @@ struct ContentView: View {
         targets: driver.targets,
         selection: driver.selection,
         cursorPositions: driver.cursorPositions,
-        lattice: driver.lattice
+        lattice: driver.lattice,
+        targetRadius: driver.scoringRadius
       )
       .frame(minWidth: 360, minHeight: 360)
       .overlay(alignment: .topTrailing) { scoreBadge(driver: driver) }
@@ -221,6 +225,23 @@ final class ReplayDriver {
   /// Drawing the task's own pitch is the only way the squares land on the lattice without moving
   /// them off the point the dwell criterion scores.
   let lattice: GridLattice
+  /// The acquisition tolerance this run scores with, grid-normalised, and the same in millimetres.
+  let scoringRadius: Float
+  let scoringRadiusMm: Double
+
+  /// Names the rule in force, because the tally means nothing without it.
+  ///
+  /// The published 0-of-1025 and 70-of-1025 are scored at the 30x30 Webgrid half-cell, 2.861 mm on
+  /// this session. That is a convention from a different task, and the animal's OWN recorded hand
+  /// satisfies it on only 14.3% of trials, so a decoder scored against it is largely being told
+  /// about the rule. This run uses half the task's own 15 mm target pitch instead, which the
+  /// animal's track satisfies on 92.8%.
+  var radiusLabel: String {
+    scoringRadiusMm > 0
+      ? String(format: "radius %.2f mm = half the task pitch", scoringRadiusMm)
+      : "radius = 30x30 Webgrid half-cell"
+  }
+
   /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
   /// `nil` on the synthetic path, where the task has no recorded target to show.
   private let recordedSource: RecordedSpikeSource?
@@ -245,9 +266,30 @@ final class ReplayDriver {
 
   init(rotationEnabled: Bool) {
     self.rotationEnabled = rotationEnabled
-    // D-16: resolve the recorded export the same way `CortexDemoBench --real` does, so the GUI and
-    // the bench cannot disagree about what "real" means. BOTH inputs are required: a recorded export
-    // with no model would decode synthetically over real spikes and still look real on screen.
+    let setup = Self.resolve(rotationEnabled: rotationEnabled)
+    pipeline = setup.pipeline
+    sourceLabel = setup.sourceLabel
+    recordedSource = setup.recordedSource
+    lattice = setup.geometry.lattice
+    scoringRadius = setup.geometry.scoringRadius
+    scoringRadiusMm = setup.geometry.scoringRadiusMm
+    boxOriginMm = setup.geometry.originMm
+    boxSideMm = setup.geometry.sideMm
+  }
+
+  /// Everything the driver needs, resolved from the environment before any property is stored.
+  private struct Setup {
+    let pipeline: ReplayPipeline
+    let sourceLabel: String
+    let recordedSource: RecordedSpikeSource?
+    let geometry: Geometry
+  }
+
+  /// Resolve the spike source, the decoder and the task geometry from the environment.
+  ///
+  /// D-16: the recorded export is resolved the same way `CortexDemoBench --real` does, so the GUI
+  /// and the bench cannot disagree about what "real" means.
+  private static func resolve(rotationEnabled: Bool) -> Setup {
     let modelURL = ReplayPipeline.modelURLFromEnvironment()
     let exportURL = ReplayExport.sidecarURLFromEnvironment()
     // Defaults to the matched linear decoder, which reaches the higher held-out R2 on this data.
@@ -256,64 +298,68 @@ final class ReplayDriver {
 
     // The linear decoder ships in the app bundle, so it needs no model file. NDT1 does, and running
     // the transformer arm without one would silently be the synthetic readout.
-    if let exportURL, kind == .ridge || modelURL != nil {
-      do {
-        let export = try ReplayExport(sidecarURL: exportURL)
-        // `stride: 1` replays in REAL TIME: one 20 ms tick advances the session by one 20 ms bin,
-        // decoding the trailing 32-bin window ending there -- the cadence `CortexReplayBench` scores
-        // with. The default stride is the window length, which advances 640 ms of recorded time per
-        // tick; that made the demo integrate `velocity * 0.020` across 0.640 s of real motion (the
-        // cursor crept around its start point at 1/32 speed) while the per-trial target advanced 32x
-        // too fast (the task square changed every ~2 frames and read as random strobing).
-        let source = RecordedSpikeSource(export: export, stride: 1)
-        // NDT1 emits cm/s; the filter, integrator and webgrid run in grid-units/s. Without this the
-        // demo cursor runs about 17x too fast on the pre-registered box.
-        pipeline = ReplayPipeline(
-          source: source,
-          seed: 0xC0FFEE,
-          modelURL: modelURL,
-          modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm),
-          rotationEnabled: rotationEnabled,
-          decoderKind: kind
-        )
-        sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
-        recordedSource = source
-        let geometry = Self.geometry(export: export, source: source)
-        boxOriginMm = geometry.originMm
-        boxSideMm = geometry.sideMm
-        lattice = geometry.lattice
-        return
-      } catch {
-        // A REFUSED export is reported, never silently downgraded to synthetic while the recording
-        // rolls. The loop still runs so the window is not blank, but the label says what happened.
-        pipeline = ReplayPipeline(
-          seed: 0xC0FFEE,
-          modelURL: modelURL,
-          rotationEnabled: rotationEnabled,
-          decoderKind: kind
-        )
-        sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
-        lattice = .uniform30
-        recordedSource = nil
-        boxOriginMm = .zero
-        boxSideMm = 1
-        return
-      }
+    guard let exportURL, kind == .ridge || modelURL != nil else {
+      let pipeline = ReplayPipeline(
+        seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled, decoderKind: kind
+      )
+      return Setup(
+        pipeline: pipeline,
+        sourceLabel: missingInputsLabel(exportURL: exportURL, modelURL: modelURL, kind: kind),
+        recordedSource: nil,
+        geometry: syntheticGeometry
+      )
     }
 
-    pipeline = ReplayPipeline(
-      seed: 0xC0FFEE,
-      modelURL: modelURL,
-      rotationEnabled: rotationEnabled,
-      decoderKind: kind
-    )
-    sourceLabel = Self.missingInputsLabel(exportURL: exportURL, modelURL: modelURL, kind: kind)
-    // No recorded task, so no task lattice: the synthetic path keeps the uniform substrate.
-    lattice = .uniform30
-    recordedSource = nil
-    boxOriginMm = .zero
-    boxSideMm = 1
+    do {
+      let export = try ReplayExport(sidecarURL: exportURL)
+      // `stride: 1` replays in REAL TIME: one 20 ms tick advances the session by one 20 ms bin,
+      // decoding the trailing 32-bin window ending there -- the cadence `CortexReplayBench` scores
+      // with. The default stride is the window length, which advances 640 ms of recorded time per
+      // tick; that made the demo integrate `velocity * 0.020` across 0.640 s of real motion while
+      // the per-trial target advanced 32x too fast and read as random strobing.
+      let source = RecordedSpikeSource(export: export, stride: 1)
+      let geometry = geometry(export: export, source: source)
+      // Both decoders emit cm/s; the filter, integrator and webgrid run in grid-units/s. Without
+      // this conversion the cursor runs about 17x too fast on the pre-registered box.
+      let pipeline = ReplayPipeline(
+        source: source,
+        seed: 0xC0FFEE,
+        modelURL: modelURL,
+        modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm),
+        rotationEnabled: rotationEnabled,
+        decoderKind: kind,
+        scoringRadius: geometry.scoringRadius
+      )
+      return Setup(
+        pipeline: pipeline,
+        sourceLabel: "spike source: real: \(export.sidecar.sessionId)",
+        recordedSource: source,
+        geometry: geometry
+      )
+    } catch {
+      // A REFUSED export is reported, never silently downgraded to synthetic while the recording
+      // rolls. The loop still runs so the window is not blank, but the label says what happened.
+      let pipeline = ReplayPipeline(
+        seed: 0xC0FFEE, modelURL: modelURL, rotationEnabled: rotationEnabled, decoderKind: kind
+      )
+      return Setup(
+        pipeline: pipeline,
+        sourceLabel: "spike source: synthetic (the export at \(exportURL.lastPathComponent) "
+          + "was refused: \(error))",
+        recordedSource: nil,
+        geometry: syntheticGeometry
+      )
+    }
   }
+
+  /// The 30x30 substrate's own geometry, for a run with no recorded task behind it.
+  private static let syntheticGeometry = Geometry(
+    originMm: .zero,
+    sideMm: 1,
+    lattice: .uniform30,
+    scoringRadius: ReplayPipeline.acquisitionRadius,
+    scoringRadiusMm: 0
+  )
 
   /// The workspace box and the ruled lattice, both derived from the export's own sidecar.
   ///
@@ -323,6 +369,10 @@ final class ReplayDriver {
     let originMm: SIMD2<Double>
     let sideMm: Double
     let lattice: GridLattice
+    /// Half the task's own target pitch, grid-normalised: the tolerance the TASK defines.
+    let scoringRadius: Float
+    /// The same radius in millimetres, for the on-screen label.
+    let scoringRadiusMm: Double
   }
 
   private static func geometry(export: ReplayExport, source: RecordedSpikeSource) -> Geometry {
@@ -339,7 +389,19 @@ final class ReplayDriver {
       boxOriginMm: origin,
       boxSideMm: workspace.sideMm
     )
-    return Geometry(originMm: origin, sideMm: workspace.sideMm, lattice: lattice)
+    // Half the task's own 15 mm target pitch, so the drawn square exactly fills its cell on the
+    // lattice above and the tolerance is one the task defines rather than one imported from a
+    // different task. Falls back to the Webgrid half-cell if the sidecar has no usable pitch.
+    let pitchMm = export.sidecar.targetGrid.pitchMm
+    let usable = pitchMm > 0 && pitchMm < workspace.sideMm && workspace.sideMm > 0
+    let radiusMm = usable ? pitchMm / 2.0 : Double(ReplayPipeline.acquisitionRadius) * workspace.sideMm
+    return Geometry(
+      originMm: origin,
+      sideMm: workspace.sideMm,
+      lattice: lattice,
+      scoringRadius: Float(radiusMm / workspace.sideMm),
+      scoringRadiusMm: radiusMm
+    )
   }
 
   /// The task's own target lattice, phased so every target falls at a cell centre.

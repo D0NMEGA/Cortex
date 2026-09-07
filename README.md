@@ -101,6 +101,14 @@ harness makes incorrect selections **structurally zero** so the error term is al
 here is an upper bound, and Neuralink's published score adds a click-type term that this
 single-click-type harness omits.
 
+**The runnable demo scores against a different radius, and says so.** `CortexMac` uses half the
+task's own 15 mm target pitch, 7.50 mm, and draws the target square at exactly that size on a grid
+ruled at the task's pitch, so what a viewer sees inside the square is what the dwell criterion
+accepts. The published table above is unchanged and remains at the Webgrid half-cell; the two are
+different rules and the demo names which one is in force on screen. Measured over all 1,024 trials
+with per-trial re-anchoring, the target-assisted arm acquires 275 (26.9%) at 7.50 mm against 39
+(3.8%) at 2.861 mm. The decode-only arm acquires none at either.
+
 ## Why the acquisition count is zero
 
 The acquisition rule does not match the task the data came from, and the repository measures this
