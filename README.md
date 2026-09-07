@@ -130,9 +130,10 @@ process-boundary qualification are stated in those words in `10-replay.json` (`b
 
 ### Future work (retired from v1): photodiode-instrumented latency
 
-Glass-to-glass latency 24.7 +/- 1.3 ms (p50, sigma=0.8 ms, n=10k, photodiode-instrumented) is a
-retired spec target, never measured. The photodiode rig (LAT-01..LAT-08) is hardware-gated and was
-never built; ADR-0003 records why it was retired.
+<!-- readme-policy.sh rule A is a SAME-LINE check: the figure below and its retirement marker must stay on one physical line. Re-wrapping this paragraph fails the gate. -->
+Glass-to-glass latency 24.7 +/- 1.3 ms (p50, sigma=0.8 ms, n=10k, photodiode-instrumented) is a retired spec target, never measured.
+The photodiode rig (LAT-01..LAT-08) is hardware-gated and was never built; ADR-0003 records why it
+was retired.
 
 ## Webgrid information-rate BPS
 
