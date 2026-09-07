@@ -337,6 +337,20 @@ jobs:
           ./Tools/scripts/honesty-sweep.sh
           ./Tools/scripts/honesty-sweep.sh --self-test
 
+      # --- Info.plist keys XcodeGen would silently strip (Phase 10 follow-up, 2026-09-07) ---
+      # XcodeGen REGENERATES Info.plist from project.yml's info.properties rather than merging into
+      # it, so a key present only in the tracked plist is dropped from the built app on the next
+      # `xcodegen generate`. NSAccessibilityUsageDescription and CortexBCIHIDProtocolVersion were in
+      # that state from 2cdb878 (2026-06-23) until 2026-09-07: written to the generator's output,
+      # never to its input, stripped on every generate, and green the whole time because no gate
+      # asserted them. This gate asserts BOTH sides -- the tracked plist and the project.yml block --
+      # and controls 3 and 4 of its self-test are the real defect's exact shape, key gone from
+      # project.yml with the plist still intact.
+      - name: Info.plist required keys + self-test (SYS-01/05)
+        run: |
+          ./Tools/scripts/infoplist-policy.sh
+          ./Tools/scripts/infoplist-policy.sh --self-test
+
       # --- Phase 6 (RENDER-03, SC#3): build-time assertion that 120Hz is unlocked in the iOS plist ---
       # Mirrors the Phase-1 validate-privacy-manifest.sh / Verify-PrivacyInfo-in-bundle build-time
       # discipline (RESEARCH Decision 7). Two layers, both deterministic and build-free on the runner:

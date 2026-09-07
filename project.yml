@@ -88,6 +88,15 @@ targets:
         # (RESEARCH Decision 7). iOS 15+; macOS needs no equivalent. XcodeGen injects this key=true
         # into the built Apps/CortexiOS/Info.plist; the CI plist gate (Plan 04 / ci.yml) asserts it.
         CADisableMinimumFrameDurationOnPhone: true
+        # Phase 8 (SYS-03/04). BOTH keys must live HERE, not only in the tracked Info.plist:
+        # XcodeGen REGENERATES Info.plist from this block rather than merging into it, so any key
+        # absent here is dropped from the built app on every `xcodegen generate`. Both were added
+        # to the generated OUTPUT in 2cdb878 (2026-06-23) and never to this INPUT, so they were
+        # silently stripped for eleven weeks and nothing caught it, because no gate asserted them.
+        # infoplist-policy.sh now does. NSAccessibilityUsageDescription is a REQUIRED purpose
+        # string: without it the assistive-input path ships with no user-facing justification.
+        NSAccessibilityUsageDescription: Cortex registers as a Switch Control / Accessibility HID input provider so a neural cursor decoder can drive the system pointer and selection.
+        CortexBCIHIDProtocolVersion: may-2025
     entitlements:
       path: Apps/CortexiOS/Cortex.entitlements
       properties:
@@ -126,6 +135,15 @@ targets:
         CFBundleDisplayName: Cortex
         LSUIElement: false
         NSPrincipalClass: NSApplication
+        # Phase 8 (SYS-03/04). BOTH keys must live HERE, not only in the tracked Info.plist:
+        # XcodeGen REGENERATES Info.plist from this block rather than merging into it, so any key
+        # absent here is dropped from the built app on every `xcodegen generate`. Both were added
+        # to the generated OUTPUT in 2cdb878 (2026-06-23) and never to this INPUT, so they were
+        # silently stripped for eleven weeks and nothing caught it, because no gate asserted them.
+        # infoplist-policy.sh now does. NSAccessibilityUsageDescription is a REQUIRED purpose
+        # string: without it the assistive-input path ships with no user-facing justification.
+        NSAccessibilityUsageDescription: Cortex registers as a Switch Control / Accessibility HID input provider so a neural cursor decoder can drive the system pointer and selection.
+        CortexBCIHIDProtocolVersion: may-2025
     entitlements:
       path: Apps/CortexMac/Cortex.entitlements
       properties:
