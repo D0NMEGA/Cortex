@@ -26,7 +26,7 @@ import SwiftUI
   /// A `UIView` whose backing layer IS a `CAMetalLayer` (via `layerClass`) — the cleanest way to host
   /// a Metal layer at full size with automatic resize, no manual frame syncing.
   public final class WebgridMetalUIView: UIView {
-    override public class var layerClass: AnyClass {
+    override public static var layerClass: AnyClass {
       CAMetalLayer.self
     }
 

@@ -61,7 +61,7 @@ struct LatencyHistogramTests {
   @Test("an empty sample set returns nil percentiles (explicit, not a crash)")
   func emptySetIsHandled() {
     let hist = LatencyHistogram(samplesNs: [], deviceAnnotation: "empty")
-    #expect(hist.count == 0)
+    #expect(hist.isEmpty)
     #expect(hist.percentileOrNil(0.5) == nil)
     #expect(hist.percentileOrNil(0.99) == nil)
     #expect(hist.minOrNil == nil)

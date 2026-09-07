@@ -47,6 +47,12 @@ public nonisolated struct LatencyHistogram: Codable, Sendable {
     samplesNs.count
   }
 
+  /// Whether the histogram holds no samples. Present so callers can say `isEmpty` rather than
+  /// `count == 0`, which is what SwiftLint's `empty_count` rule asks for at the call site.
+  public var isEmpty: Bool {
+    samplesNs.isEmpty
+  }
+
   // MARK: - Optional (empty-safe) accessors
 
   /// The minimum sample, or nil if empty.

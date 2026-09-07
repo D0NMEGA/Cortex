@@ -83,6 +83,20 @@ struct GPUTimeStats {
   let meanMs: Double
 }
 
+/// One bench run: the device it ran on, the offscreen extent it ran at, and the percentile stats.
+///
+/// A named struct rather than a 4-member tuple return (SwiftLint `large_tuple` caps tuples at 2).
+/// All four members are load-bearing at the call site -- `main.swift` prints `deviceName` and
+/// `stats`, and passes `deviceName`/`width`/`height`/`stats` straight into `writeJSON`, which emits
+/// the committed `gpu_time_hist.json`. Member names are unchanged from the tuple labels, so every
+/// `.member` access at the call site is source-identical and no emitted key moves.
+struct GPUTimeRun {
+  let deviceName: String
+  let width: Int
+  let height: Int
+  let stats: GPUTimeStats
+}
+
 /// Errors building / running the GPU-time bench.
 enum GPUTimeBenchError: Error, CustomStringConvertible {
   case noDevice
@@ -133,7 +147,7 @@ enum GPUTimeHistogram {
   ///   - frames: number of MEASURED frames (≥10_000 per RENDER-05). Defaults applied by `main`.
   ///   - warmup: discarded warmup frames (pipeline + clock warmup, Phase-5 precedent).
   ///   - width/height: the representative offscreen drawable extent.
-  /// - Returns: the device name, the texture extent, and the percentile stats.
+  /// - Returns: a ``GPUTimeRun``: the device name, the texture extent, and the percentile stats.
   ///
   /// `@MainActor`: `WebgridFrameEncoder` is MainActor-isolated (CortexRender uses
   /// `.defaultIsolation(MainActor.self)`), so its `init` + `encode` must be called on the MainActor.
@@ -141,7 +155,7 @@ enum GPUTimeHistogram {
   @MainActor
   static func run(
     frames: Int, warmup: Int, width: Int, height: Int
-  ) throws -> (deviceName: String, width: Int, height: Int, stats: GPUTimeStats) {
+  ) throws -> GPUTimeRun {
     guard let device = MTLCreateSystemDefaultDevice() else { throw GPUTimeBenchError.noDevice }
     guard let queue = device.makeCommandQueue() else { throw GPUTimeBenchError.noCommandQueue }
 
@@ -193,7 +207,7 @@ enum GPUTimeHistogram {
     }
 
     let stats = percentiles(of: samples)
-    return (device.name, width, height, stats)
+    return GPUTimeRun(deviceName: device.name, width: width, height: height, stats: stats)
   }
 
   /// Reduce the per-frame millisecond samples to p50/p95/p99 + min/max/mean. Sorts a copy and
