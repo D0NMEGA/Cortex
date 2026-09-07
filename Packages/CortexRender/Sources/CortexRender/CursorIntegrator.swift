@@ -55,6 +55,48 @@ public final nonisolated class CursorIntegrator {
     )
   }
 
+  /// The last velocity seen, and how long it has gone unrefreshed. Zero-order-hold state.
+  private var heldVelocity: CursorVelocity?
+  private var heldAge: Double = 0
+
+  /// Integrate under a zero-order hold on VELOCITY, for a consumer that outruns its producer.
+  ///
+  /// `integrate` treats an empty ring as velocity zero, which HOLDS POSITION. That is right when the
+  /// producer has stopped and wrong when it is merely slower than the consumer, which is this
+  /// system's steady state: the decode publishes at 50 Hz and the renderer draws at 120 Hz, so about
+  /// 70 of every 120 frames find the ring empty. Integrating zero on those frames advances the
+  /// cursor for only 50/120 of each second, shrinking every trajectory to about 42% of its true
+  /// length -- a factor that hides completely at matched rates and appears as a decoder that
+  /// systematically undershoots.
+  ///
+  /// Holding the last velocity is what the display-link adapters already claimed to do. Held
+  /// velocity expires after `staleAfter` so a producer that genuinely stops parks the cursor rather
+  /// than flying it into the clamp on a stale sample.
+  ///
+  /// - Parameters:
+  ///   - latest: the velocity popped this frame, or `nil` if the ring was empty.
+  ///   - dt: the frame delta in seconds.
+  ///   - staleAfter: how long a held velocity stays valid. The default is five 20 ms producer
+  ///     periods, long enough to bridge normal cadence jitter and short enough that a dead producer
+  ///     stops the cursor within a tenth of a second.
+  @discardableResult
+  public func integrateHoldingVelocity(
+    latest: CursorVelocity?,
+    dt: Double,
+    staleAfter: Double = 0.100
+  ) -> CursorPosition {
+    if let latest {
+      heldVelocity = latest
+      heldAge = 0
+    } else if heldVelocity != nil {
+      heldAge += dt
+      if !(heldAge <= staleAfter) { // `!(<=)` also drops a non-finite dt
+        heldVelocity = nil
+      }
+    }
+    return integrate(latest: heldVelocity, dt: dt)
+  }
+
   /// Move the cursor to `position` without integrating, under the same clamp `integrate` applies.
   ///
   /// The one way the cursor's position changes other than by integrating decoded velocity. It exists
@@ -67,6 +109,9 @@ public final nonisolated class CursorIntegrator {
   /// WITHIN each trial and re-anchored BETWEEN trials, which is not the same claim as a free-running
   /// decoded track.
   public func reset(to position: CursorPosition) {
+    // Drop any held velocity: it belonged to the trajectory being abandoned.
+    heldVelocity = nil
+    heldAge = 0
     self.position = CursorPosition(
       x: Self.clampFinite(position.x),
       y: Self.clampFinite(position.y)

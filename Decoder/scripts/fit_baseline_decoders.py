@@ -216,8 +216,10 @@ def _select_lambda(acc: _GramAccumulator, designs: list[SessionDesign]) -> tuple
     this rule always selects the SMALLEST lambda in the grid. The encoder readout does better; it
     falls back to generalized cross-validation when the train scores span more than its flat
     tolerance. A degenerate rule is acceptable here only because of the direction of the error: a
-    better-chosen lambda could only improve the held-out score, so the baseline number this script
-    publishes is a LOWER bound on what a linear decoder achieves. It is not a reason to prefer the
+    better-chosen lambda would very likely improve the held-out score, but "would only improve" is
+    too strong: a validated lambda could land lower on this particular test split. What the number
+    IS, without qualification, is a score this model family already attains on these rows UNTUNED.
+    The win over the encoder does not rest on the stronger claim. It is not a reason to prefer the
     baseline's number if it were losing, and if this script is ever used to argue the other way the
     rule must be replaced with GCV first.
     """
@@ -323,7 +325,10 @@ def main(argv: list[str] | None = None) -> int:
         "lambda_selection_caveat": (
             "Lambda is picked by in-sample train R2, which is monotone in model freedom and so "
             "always selects the smallest grid value. The encoder readout uses GCV. This makes the "
-            "baseline scores here a LOWER bound: a better lambda could only raise them."
+            "baseline UNTUNED: it is a score already attained by this model family on these "
+            "rows, not a tuned optimum. Proper validation would very likely raise it, but that is "
+            "not guaranteed -- a validated lambda could land lower on this particular test split. "
+            "The observed win over the encoder does not rest on the claim."
         ),
         "not_a_claim": (
             "These are baselines, not a product. A baseline that matches or beats the encoder is "

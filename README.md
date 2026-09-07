@@ -53,8 +53,7 @@ train-mean null, reaches a higher held-out R2 than the 1.3M-parameter NDT1 encod
 
 Both are scored on the identical 56,943 held-out rows. The baseline also leads on every session
 individually, including the locked one (0.1832 against 0.1446). The baseline's ridge penalty is
-chosen by a weaker rule than the encoder's, which makes its score a lower bound rather than a
-flattering one.
+chosen by a weaker rule than the encoder's, so the baseline is untuned rather than flattered.
 
 So on this dataset, under this protocol, the transformer is not earning its parameters. That is a
 finding about this setup, not a general claim about NDT1: a stronger result would need better
@@ -197,7 +196,9 @@ synthetic; a number measured on a Mac is never presented as an iPad number.
 - A matched linear baseline now exists and **beats** the encoder (see above). A fitted Kalman decoder
   on the same splits has not been run yet.
 - The baseline's ridge penalty is selected by in-sample train R2, which always picks the smallest
-  value in the grid. That makes its reported score a lower bound, not a tuned optimum.
+  value in the grid, so its score is untuned rather than optimised. Proper validation would very
+  likely raise it, but not certainly: a validated penalty could land lower on this particular test
+  split. The win over the encoder does not depend on that either way.
 - On-device iPad and iPhone measurements are not yet collected.
 - The training readout pairs a spike window with the velocity one 20 ms bin later; the replay path
   associates the decode with the window's own last bin. That inconsistency is not yet resolved.

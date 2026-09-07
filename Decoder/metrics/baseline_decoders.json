@@ -2,7 +2,7 @@
   "bin_ms": 20.0,
   "elapsed_s": 44.02,
   "lag_bins": 1,
-  "lambda_selection_caveat": "Lambda is picked by in-sample train R2, which is monotone in model freedom and so always selects the smallest grid value. The encoder readout uses GCV. This makes the baseline scores here a LOWER bound: a better lambda could only raise them.",
+  "lambda_selection_caveat": "Lambda is picked by in-sample train R2, which is monotone in model freedom and so always selects the smallest grid value. The encoder readout uses GCV. The baseline is therefore UNTUNED: it is a score already attained by this model family on these rows, not a tuned optimum. Proper validation would very likely raise it, but that is not guaranteed -- a validated lambda could land lower on this particular test split. The observed win over the encoder does not rest on the claim.",
   "not_a_claim": "These are baselines, not a product. A baseline that matches or beats the encoder is reported as measured; nothing here is clamped or re-rolled.",
   "results": [
     {

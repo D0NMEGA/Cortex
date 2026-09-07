@@ -169,7 +169,7 @@
         integrator.reset(to: CursorPosition(x: anchor.x, y: anchor.y))
         lastAnchor = anchor.generation
       }
-      let pos = integrator.integrate(latest: latest, dt: dt)
+      let pos = integrator.integrateHoldingVelocity(latest: latest, dt: dt)
 
       // 5. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).
       let drawable = update.drawable

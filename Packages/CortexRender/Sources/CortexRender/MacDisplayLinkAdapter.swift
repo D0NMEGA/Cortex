@@ -151,14 +151,17 @@
           latest = next
         }
 
-        // 5. Integrate velocity → clamped, always-finite position (D-04 / T-06-02-01).
+        // 5. Integrate under a zero-order hold on velocity → clamped, finite position.
+        //    The hold is what makes the 120Hz render faithful to the ~50Hz producer: treating an
+        //    empty ring as zero velocity integrates motion on only 50 of every 120 frames and
+        //    shrinks every trajectory to ~42% of its length.
         // A pending re-anchor moves the cursor before this frame integrates, so the
         // frame renders from the anchor rather than one tick past it.
         if let anchor = anchors?.take(after: lastAnchor) {
           integrator.reset(to: CursorPosition(x: anchor.x, y: anchor.y))
           lastAnchor = anchor.generation
         }
-        let pos = integrator.integrate(latest: latest, dt: dt)
+        let pos = integrator.integrateHoldingVelocity(latest: latest, dt: dt)
 
         // 6. Build the 30×30 uniforms with the integrated cursor + the drawable extent (D-01).
         // The target is a LATEST-VALUE read, one atomic load per frame - never a queue drain.
