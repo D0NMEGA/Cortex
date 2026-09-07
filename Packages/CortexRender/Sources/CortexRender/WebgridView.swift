@@ -62,6 +62,7 @@ import SwiftUI
     private let targets: TargetChannel?
     private let selection: SelectionChannel?
     private let cursorPositions: CursorPositionChannel?
+    private let lattice: GridLattice
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
@@ -70,12 +71,14 @@ import SwiftUI
       ring: VelocityRing,
       targets: TargetChannel? = nil,
       selection: SelectionChannel? = nil,
-      cursorPositions: CursorPositionChannel? = nil
+      cursorPositions: CursorPositionChannel? = nil,
+      lattice: GridLattice = .uniform30
     ) {
       self.ring = ring
       self.targets = targets
       self.selection = selection
       self.cursorPositions = cursorPositions
+      self.lattice = lattice
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -97,7 +100,8 @@ import SwiftUI
           ring: ring,
           targets: targets,
           selection: selection,
-          cursorPositions: cursorPositions
+          cursorPositions: cursorPositions,
+          lattice: lattice
         )
         adapter.start()
         context.coordinator.adapter = adapter
@@ -189,6 +193,7 @@ import SwiftUI
     private let targets: TargetChannel?
     private let selection: SelectionChannel?
     private let cursorPositions: CursorPositionChannel?
+    private let lattice: GridLattice
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
@@ -197,12 +202,14 @@ import SwiftUI
       ring: VelocityRing,
       targets: TargetChannel? = nil,
       selection: SelectionChannel? = nil,
-      cursorPositions: CursorPositionChannel? = nil
+      cursorPositions: CursorPositionChannel? = nil,
+      lattice: GridLattice = .uniform30
     ) {
       self.ring = ring
       self.targets = targets
       self.selection = selection
       self.cursorPositions = cursorPositions
+      self.lattice = lattice
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -224,7 +231,8 @@ import SwiftUI
           ring: ring,
           targets: targets,
           selection: selection,
-          cursorPositions: cursorPositions
+          cursorPositions: cursorPositions,
+          lattice: lattice
         )
         adapter.start(in: view)
         context.coordinator.adapter = adapter

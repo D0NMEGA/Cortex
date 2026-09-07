@@ -11,6 +11,42 @@
 // the byte layout trivially matches the C/MSL struct (`uint`/`float` scalars) with natural 4-byte
 // alignment and no padding surprises.
 
+/// The ruled lattice the grid draws: spacing and offset in grid-normalised units.
+public nonisolated struct GridLattice: Sendable, Equatable {
+  public let pitchX: Float
+  public let pitchY: Float
+  public let phaseX: Float
+  public let phaseY: Float
+
+  public init(pitchX: Float, pitchY: Float, phaseX: Float, phaseY: Float) {
+    self.pitchX = pitchX
+    self.pitchY = pitchY
+    self.phaseX = phaseX
+    self.phaseY = phaseY
+  }
+
+  /// The uniform 30x30 substrate, anchored at the workspace corner.
+  public static let uniform30 = GridLattice(
+    pitchX: 1.0 / 30.0, pitchY: 1.0 / 30.0, phaseX: 0, phaseY: 0
+  )
+
+  /// A lattice at `pitch`, phased so that `reference` sits at a cell CENTRE.
+  ///
+  /// Used to draw the task's own target lattice: pass any observed target position and the rules
+  /// land so every target of that lattice fills a cell.
+  public static func centred(on reference: SIMD2<Float>, pitch: SIMD2<Float>) -> GridLattice {
+    func phase(_ ref: Float, _ p: Float) -> Float {
+      guard p > 0, ref.isFinite else { return 0 }
+      let raw = (ref - 0.5 * p).truncatingRemainder(dividingBy: p)
+      return raw < 0 ? raw + p : raw
+    }
+    return GridLattice(
+      pitchX: pitch.x, pitchY: pitch.y,
+      phaseX: phase(reference.x, pitch.x), phaseY: phase(reference.y, pitch.y)
+    )
+  }
+}
+
 /// Uniforms describing the webgrid + cursor for one frame, shared Swift↔Metal.
 ///
 /// `Sendable` because it crosses into the display-link callback (Plan 03) under the package's
@@ -65,6 +101,19 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   /// 1 when a target is active, 0 when none is. A scalar rather than a sentinel so every field
   /// stays a 4-byte value and the Swift/MSL byte mirror stays trivial.
   public var hasTarget: UInt32
+  /// Rule spacing in grid-normalised units. Defaults to `1/30`, the uniform 30x30 substrate.
+  ///
+  /// A pitch and a phase rather than a column count, because the ruled lattice has to be able to
+  /// line up with the TASK's target lattice. This session's targets step 15 mm apart on a workspace
+  /// 171.68 mm across, which is 2.62 cells of a 30x30 grid -- an irrational step, so no 30x30 grid
+  /// can ever have a target sit on a cell. Drawing the task's own pitch is the only way the squares
+  /// land on the lattice without moving them off the point the criterion scores.
+  public var gridPitchX: Float
+  public var gridPitchY: Float
+  /// Offset of the first rule from the grid origin, in the same units, so the lattice can be phased
+  /// onto the target positions rather than onto the workspace corner.
+  public var gridPhaseX: Float
+  public var gridPhaseY: Float
   /// Dwell-to-select progress in `[0, 1]`; the kernel shrinks the cursor ring as it climbs.
   ///
   /// The standard webgrid selection affordance: holding on a target contracts the ring, and
@@ -91,6 +140,10 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     targetY: Float = 0,
     targetRadius: Float = 0.5 / 30.0,
     hasTarget: UInt32 = 0,
+    gridPitchX: Float = 1.0 / 30.0,
+    gridPitchY: Float = 1.0 / 30.0,
+    gridPhaseX: Float = 0,
+    gridPhaseY: Float = 0,
     dwellProgress: Float = 0,
     targetFlash: Float = 0
   ) {
@@ -110,6 +163,10 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.targetY = targetY
     self.targetRadius = targetRadius
     self.hasTarget = hasTarget
+    self.gridPitchX = gridPitchX
+    self.gridPitchY = gridPitchY
+    self.gridPhaseX = gridPhaseX
+    self.gridPhaseY = gridPhaseY
     self.dwellProgress = dwellProgress
     self.targetFlash = targetFlash
   }
@@ -131,6 +188,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     viewportWidth: UInt32,
     viewportHeight: UInt32,
     target: ActiveTarget? = nil,
+    lattice: GridLattice = .uniform30,
+    targetRadius: Float = 0.5 / 30.0,
     dwellProgress: Float = 0,
     targetFlash: Float = 0
   ) -> WebgridParams {
@@ -149,8 +208,12 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       cursorRingWidth: 0.0035,
       targetX: target?.x ?? 0,
       targetY: target?.y ?? 0,
-      targetRadius: 0.5 / 30.0,
+      targetRadius: targetRadius,
       hasTarget: target == nil ? 0 : 1,
+      gridPitchX: lattice.pitchX,
+      gridPitchY: lattice.pitchY,
+      gridPhaseX: lattice.phaseX,
+      gridPhaseY: lattice.phaseY,
       dwellProgress: dwellProgress,
       targetFlash: targetFlash
     )

@@ -45,6 +45,8 @@
     private let selection: SelectionChannel?
     /// Re-anchor events for the renderer's own integrator (see `CursorPositionChannel`).
     private let cursorPositions: CursorPositionChannel?
+    /// The ruled lattice, fixed for the view's lifetime.
+    private let lattice: GridLattice
     /// The last anchor generation applied, so each one moves the cursor exactly once.
     private var lastCursorGeneration: UInt32 = 0
     private let log = Logger(subsystem: "app.cortex.render", category: "iOSDisplayLinkAdapter")
@@ -74,7 +76,8 @@
       start: CursorPosition = .init(x: 0.5, y: 0.5),
       targets: TargetChannel? = nil,
       selection: SelectionChannel? = nil,
-      cursorPositions: CursorPositionChannel? = nil
+      cursorPositions: CursorPositionChannel? = nil,
+      lattice: GridLattice = .uniform30
     ) throws {
       self.layer = layer
       encoder = try WebgridFrameEncoder(device: device)
@@ -88,6 +91,7 @@
       self.targets = targets
       self.selection = selection
       self.cursorPositions = cursorPositions
+      self.lattice = lattice
       super.init()
     }
 
@@ -184,6 +188,7 @@
         viewportWidth: UInt32(drawable.texture.width),
         viewportHeight: UInt32(drawable.texture.height),
         target: target,
+        lattice: lattice,
         dwellProgress: sel.dwell,
         targetFlash: sel.flash
       )

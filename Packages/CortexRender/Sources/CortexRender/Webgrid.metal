@@ -29,6 +29,10 @@ struct WebgridParams {
   float targetY;          // active target Y, grid-normalised [0,1]
   float targetRadius;     // half-extent of the drawn target = the ACQUISITION RADIUS
   uint  hasTarget;        // 1 when a target is active, 0 when none is
+  float gridPitchX;       // rule spacing, grid-normalised
+  float gridPitchY;
+  float gridPhaseX;       // offset of the first rule, so the lattice can be phased onto the targets
+  float gridPhaseY;
   float dwellProgress;    // dwell-to-select progress in [0,1]; contracts the ring
   float targetFlash;      // selection flash in [0,1], decaying; greens and swells the target
 };
@@ -77,12 +81,14 @@ kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
 
   // Only shade inside the centered square; outside stays background.
   if (g.x >= 0.0 && g.x <= 1.0 && g.y >= 0.0 && g.y <= 1.0) {
-    const float cols = float(max(p.gridColumns, 1u));     // DoS guard: never divide by zero
-    const float rows = float(max(p.gridRows, 1u));        //            (T-06-01-03 cheap guard)
+    // Rule spacing and offset, so the ruled lattice can be phased onto the TASK's target lattice
+    // instead of the workspace corner. `max` is the DoS guard: never divide by zero
+    // (T-06-01-03 cheap guard).
+    const float2 cellPitch = float2(max(p.gridPitchX, 1e-4), max(p.gridPitchY, 1e-4));
+    const float2 phase = float2(p.gridPhaseX, p.gridPhaseY);
 
-    // Which cell this pixel falls in, and its local position within that cell pitch [0,1)^2.
-    const float2 cellPitch = float2(1.0 / cols, 1.0 / rows);
-    const float2 cellLocal = float2(fract(g.x * cols), fract(g.y * rows));
+    // Local position within the cell this pixel falls in, [0,1)^2.
+    const float2 cellLocal = fract((g - phase) / cellPitch);
 
     // (4) Ruled grid lines (D-06): the field is drawn as thin white rules on the cell boundaries
     //     rather than as 900 filled tiles, so the cursor and the target are the only bright things

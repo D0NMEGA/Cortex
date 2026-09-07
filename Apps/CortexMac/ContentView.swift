@@ -129,7 +129,8 @@ struct ContentView: View {
         ring: driver.ring,
         targets: driver.targets,
         selection: driver.selection,
-        cursorPositions: driver.cursorPositions
+        cursorPositions: driver.cursorPositions,
+        lattice: driver.lattice
       )
       .frame(minWidth: 360, minHeight: 360)
       .overlay(alignment: .topTrailing) { scoreBadge(driver: driver) }
@@ -212,6 +213,14 @@ final class ReplayDriver {
   private(set) var selectionCount = 0
   /// Longest continuous hold reached, as a fraction of the 0.30 s requirement.
   private(set) var peakDwell: Float = 0
+  /// The ruled lattice the renderer draws.
+  ///
+  /// The TASK's target lattice when a real export is replaying, not the uniform 30x30 substrate.
+  /// This session steps its targets 15 mm apart on a workspace 171.68 mm across, which is 2.62
+  /// cells of a 30x30 grid: an irrational step, so on a 30x30 grid no target can ever sit on a cell.
+  /// Drawing the task's own pitch is the only way the squares land on the lattice without moving
+  /// them off the point the dwell criterion scores.
+  let lattice: GridLattice
   /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
   /// `nil` on the synthetic path, where the task has no recorded target to show.
   private let recordedSource: RecordedSpikeSource?
@@ -269,14 +278,10 @@ final class ReplayDriver {
         )
         sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
         recordedSource = source
-        // The pre-registered `cursor_bbox_square`: the square of side `sideMm` centred on the
-        // cursor bounding box's centre (10-PREREGISTRATION section 3, as amended).
-        let workspace = export.sidecar.workspace
-        boxSideMm = workspace.sideMm
-        boxOriginMm = SIMD2<Double>(
-          workspace.centreXMm - workspace.sideMm / 2.0,
-          workspace.centreYMm - workspace.sideMm / 2.0
-        )
+        let geometry = Self.geometry(export: export, source: source)
+        boxOriginMm = geometry.originMm
+        boxSideMm = geometry.sideMm
+        lattice = geometry.lattice
         return
       } catch {
         // A REFUSED export is reported, never silently downgraded to synthetic while the recording
@@ -288,6 +293,7 @@ final class ReplayDriver {
           decoderKind: kind
         )
         sourceLabel = "spike source: synthetic (the export at \(exportURL.lastPathComponent) was refused: \(error))"
+        lattice = .uniform30
         recordedSource = nil
         boxOriginMm = .zero
         boxSideMm = 1
@@ -302,9 +308,59 @@ final class ReplayDriver {
       decoderKind: kind
     )
     sourceLabel = Self.missingInputsLabel(exportURL: exportURL, modelURL: modelURL, kind: kind)
+    // No recorded task, so no task lattice: the synthetic path keeps the uniform substrate.
+    lattice = .uniform30
     recordedSource = nil
     boxOriginMm = .zero
     boxSideMm = 1
+  }
+
+  /// The workspace box and the ruled lattice, both derived from the export's own sidecar.
+  ///
+  /// Computed HERE rather than on a later tick because the display-link adapter captures the
+  /// lattice when the render view is created; one computed after that never reaches the renderer.
+  private struct Geometry {
+    let originMm: SIMD2<Double>
+    let sideMm: Double
+    let lattice: GridLattice
+  }
+
+  private static func geometry(export: ReplayExport, source: RecordedSpikeSource) -> Geometry {
+    // The pre-registered `cursor_bbox_square`: the square of side `sideMm` centred on the cursor
+    // bounding box's centre (10-PREREGISTRATION section 3, as amended).
+    let workspace = export.sidecar.workspace
+    let origin = SIMD2<Double>(
+      workspace.centreXMm - workspace.sideMm / 2.0,
+      workspace.centreYMm - workspace.sideMm / 2.0
+    )
+    let lattice = taskLattice(
+      pitchMm: export.sidecar.targetGrid.pitchMm,
+      firstTargetMm: source.target(forWindow: 0),
+      boxOriginMm: origin,
+      boxSideMm: workspace.sideMm
+    )
+    return Geometry(originMm: origin, sideMm: workspace.sideMm, lattice: lattice)
+  }
+
+  /// The task's own target lattice, phased so every target falls at a cell centre.
+  ///
+  /// The 30x30 substrate cannot do this. This session steps its targets 15 mm apart on a workspace
+  /// 171.68 mm across, which is 2.62 cells of a 30x30 grid, so no phase puts them all on cells --
+  /// the squares can only look aligned by being DRAWN somewhere other than where they are scored,
+  /// which is the defect this replaces. Falls back to the uniform substrate if the sidecar's pitch
+  /// is not usable, rather than drawing a lattice the task does not have.
+  private static func taskLattice(
+    pitchMm: Double,
+    firstTargetMm: SIMD2<Double>,
+    boxOriginMm: SIMD2<Double>,
+    boxSideMm: Double
+  ) -> GridLattice {
+    guard boxSideMm > 0, pitchMm > 0, pitchMm < boxSideMm else { return .uniform30 }
+    let pitch = Float(pitchMm / boxSideMm)
+    let normalised = (firstTargetMm - boxOriginMm) / boxSideMm
+    let reference = SIMD2<Float>(Float(normalised.x), Float(normalised.y))
+    guard reference.x.isFinite, reference.y.isFinite else { return .uniform30 }
+    return .centred(on: reference, pitch: SIMD2<Float>(pitch, pitch))
   }
 
   /// Name the environment variables whose absence forced the synthetic readout.
