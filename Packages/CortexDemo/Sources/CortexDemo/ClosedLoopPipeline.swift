@@ -115,6 +115,27 @@ public final class ClosedLoopPipeline {
   /// The monotonic streaming tick index (drives the deterministic synthetic decode).
   private var tickIndex: Int = 0
 
+  // MARK: - Streaming dwell-to-select (display state; scoring lives in WebgridAcquisition)
+
+  /// Consecutive ticks the cursor has been inside the acquisition radius of the active target.
+  private var continuousOnTarget = 0
+  /// Fraction of the pre-registered continuous dwell accumulated, in `[0, 1]`.
+  ///
+  /// This is the SAME criterion `WebgridAcquisition` scores with -- 0.30 s continuous inside half a
+  /// cell -- read out per tick so a viewer can see a selection being committed instead of inferring
+  /// it. It resets to 0 the moment the cursor leaves the radius, because the dwell must be
+  /// continuous, and snaps back to 0 on commit.
+  ///
+  /// Display state only: it is derived from the loop, never fed back into it, and no published
+  /// number is computed from it. The scored figures come from `WebgridAcquisition.runTrial` over a
+  /// whole trial's positions in `CortexReplayBench`.
+  public private(set) var dwellProgress: Float = 0
+  /// Selections committed since the pipeline was created, under that same criterion.
+  ///
+  /// A LIVE count over however much of the session has replayed. It is not the published per-session
+  /// hit count and must not be presented as one.
+  public private(set) var selectionCount = 0
+
   // MARK: - Model-in-loop accounting (Phase 10, RD-08 — the Pattern-2 mitigation)
 
   /// Ticks whose velocity came from `NeuralDecoder.decode`.
@@ -417,7 +438,31 @@ public final class ClosedLoopPipeline {
 
     tickIndex &+= 1
     let onTarget = simd_distance(position, target) <= Self.acquisitionRadius
+    updateDwell(onTarget: onTarget)
     return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
+  }
+
+  /// Advance the streaming dwell counter for one tick.
+  ///
+  /// Same rule as `WebgridAcquisition.runTrial`: the counter increments while the cursor is inside
+  /// the radius and RESETS on any tick it is outside, so the hold must be continuous. On reaching
+  /// `dwellTicks` a selection is committed and the counter restarts, which is what makes the
+  /// on-screen cursor pop back to full size the instant it commits.
+  private func updateDwell(onTarget: Bool) {
+    guard onTarget else {
+      continuousOnTarget = 0
+      dwellProgress = 0
+      return
+    }
+    continuousOnTarget += 1
+    let required = acquisition.dwellTicks
+    if continuousOnTarget >= required {
+      selectionCount += 1
+      continuousOnTarget = 0
+      dwellProgress = 0
+    } else {
+      dwellProgress = Float(continuousOnTarget) / Float(required)
+    }
   }
 
   // MARK: - Deterministic batch run (the test + bench path)

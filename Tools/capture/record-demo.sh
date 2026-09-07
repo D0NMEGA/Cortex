@@ -116,13 +116,25 @@ tell application "System Events"
 end tell
 OSA
 
+# Read the frame BACK rather than assuming the request was honoured. SwiftUI enforces a minimum
+# height for the two-pane layout (about 884 pt), so asking for 680 yields a taller window and a
+# capture rect computed from the REQUESTED size clips off everything below the fold -- which is the
+# arm captions and the instrumentation strip, the part that says what the demo is.
+FRAME="$(osascript -e 'tell application "System Events" to tell process "CortexMac" to get {item 1 of position, item 2 of position, item 1 of size, item 2 of size} of window 1' 2>/dev/null | tr -d ' ')"
+if [[ "$FRAME" =~ ^-?[0-9]+,-?[0-9]+,[0-9]+,[0-9]+$ ]]; then
+  IFS=, read -r WIN_X WIN_Y WIN_W WIN_H <<<"$FRAME"
+  log "window frame: ${WIN_W}x${WIN_H} at ${WIN_X},${WIN_Y}"
+else
+  log "WARNING: could not read the window frame back; using the requested ${WIN_W}x${WIN_H}"
+fi
+
 # Let the renderer settle so the capture opens on a live grid rather than a blank surface. This is
 # the only fixed wait in the script and it is deliberately short.
 sleep 2
 
 # --- Record ---------------------------------------------------------------------------------------
-# -R takes a screen rect in points. The window was just placed at a known origin, so the rect is
-# known too; a couple of points are trimmed off the top for the title bar.
+# -R takes a screen rect in points, from the frame read back above; a couple of points are trimmed
+# off the top for the title bar.
 RECT="${WIN_X},$((WIN_Y + 28)),${WIN_W},$((WIN_H - 28))"
 log "recording ${SECONDS_TO_RECORD}s of rect ${RECT}"
 screencapture -v -V "$SECONDS_TO_RECORD" -R "$RECT" "$MOV" >/dev/null 2>&1 || die "screencapture failed. Grant Screen Recording to your terminal."

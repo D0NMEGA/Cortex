@@ -52,6 +52,8 @@
     private let ring: VelocityRing
     /// The active task target, latest-value (see `TargetChannel`). `nil` when the host sets none.
     private let targets: TargetChannel?
+    /// The dwell-to-select progress channel, read once per frame alongside the target.
+    private let dwell: DwellChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "MacDisplayLinkAdapter")
 
     /// The display link returned by `NSView.displayLink`. `CADisplayLink` is the macOS 14+ AppKit
@@ -67,13 +69,15 @@
     ///   - ring: the SPSC velocity ring this adapter pops on the tick thread (consumer end).
     ///   - start: the integrator's initial cursor position (defaults to grid centre).
     ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
+    ///   - dwell: the dwell-to-select progress channel; `nil` draws the cursor at its resting size.
     /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline / command queue cannot be built.
     public init(
       layer: CAMetalLayer,
       device: MTLDevice,
       ring: VelocityRing,
       start: CursorPosition = .init(x: 0.5, y: 0.5),
-      targets: TargetChannel? = nil
+      targets: TargetChannel? = nil,
+      dwell: DwellChannel? = nil
     ) throws {
       self.layer = layer
       encoder = try WebgridFrameEncoder(device: device)
@@ -85,6 +89,7 @@
       integrator = CursorIntegrator(start: start)
       self.ring = ring
       self.targets = targets
+      self.dwell = dwell
       super.init()
     }
 
@@ -151,7 +156,8 @@
           viewportWidth: UInt32(drawable.texture.width),
           viewportHeight: UInt32(drawable.texture.height),
           targetColumn: target?.column ?? WebgridParams.noTarget,
-          targetRow: target?.row ?? WebgridParams.noTarget
+          targetRow: target?.row ?? WebgridParams.noTarget,
+          dwellProgress: dwell?.load() ?? 0
         )
 
         // 7. Encode one compute pass into the manually-acquired drawable.

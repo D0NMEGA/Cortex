@@ -60,13 +60,15 @@ import SwiftUI
   public struct WebgridView: UIViewRepresentable {
     private let ring: VelocityRing
     private let targets: TargetChannel?
+    private let dwell: DwellChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
     ///   callback (consumer) pops it each frame.
-    public init(ring: VelocityRing, targets: TargetChannel? = nil) {
+    public init(ring: VelocityRing, targets: TargetChannel? = nil, dwell: DwellChannel? = nil) {
       self.ring = ring
       self.targets = targets
+      self.dwell = dwell
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -82,7 +84,13 @@ import SwiftUI
       let metalLayer = view.metalLayer
       MetalLayerConfig.configure(metalLayer, device: device)
       do {
-        let adapter = try iOSDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring, targets: targets)
+        let adapter = try iOSDisplayLinkAdapter(
+          layer: metalLayer,
+          device: device,
+          ring: ring,
+          targets: targets,
+          dwell: dwell
+        )
         adapter.start()
         context.coordinator.adapter = adapter
       } catch {
@@ -171,13 +179,15 @@ import SwiftUI
   public struct WebgridView: NSViewRepresentable {
     private let ring: VelocityRing
     private let targets: TargetChannel?
+    private let dwell: DwellChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "WebgridView")
 
     /// - Parameter ring: the SPSC ring the host's single producer pushes into; the display-link
     ///   callback (consumer) pops it each frame.
-    public init(ring: VelocityRing, targets: TargetChannel? = nil) {
+    public init(ring: VelocityRing, targets: TargetChannel? = nil, dwell: DwellChannel? = nil) {
       self.ring = ring
       self.targets = targets
+      self.dwell = dwell
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -193,7 +203,13 @@ import SwiftUI
       let metalLayer = view.metalLayer
       MetalLayerConfig.configure(metalLayer, device: device)
       do {
-        let adapter = try MacDisplayLinkAdapter(layer: metalLayer, device: device, ring: ring, targets: targets)
+        let adapter = try MacDisplayLinkAdapter(
+          layer: metalLayer,
+          device: device,
+          ring: ring,
+          targets: targets,
+          dwell: dwell
+        )
         adapter.start(in: view)
         context.coordinator.adapter = adapter
       } catch {

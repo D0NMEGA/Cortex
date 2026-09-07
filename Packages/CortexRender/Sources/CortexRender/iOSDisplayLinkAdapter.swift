@@ -41,6 +41,8 @@
     private let ring: VelocityRing
     /// The active task target, latest-value (see `TargetChannel`). `nil` when the host sets none.
     private let targets: TargetChannel?
+    /// The dwell-to-select progress channel, read once per frame alongside the target.
+    private let dwell: DwellChannel?
     private let log = Logger(subsystem: "app.cortex.render", category: "iOSDisplayLinkAdapter")
 
     /// The display link. `CAMetalDisplayLink` is iOS 17+; the package targets iOS 26, so it is always
@@ -57,6 +59,7 @@
     ///   - ring: the SPSC velocity ring this adapter pops on the callback thread (consumer end).
     ///   - start: the integrator's initial cursor position (defaults to grid centre).
     ///   - targets: the active-target channel the renderer reads once per frame; `nil` draws no target.
+    ///   - dwell: the dwell-to-select progress channel; `nil` draws the cursor at its resting size.
     /// - Throws: `WebgridFrameEncoderError` if the `webgrid` pipeline cannot be built, or an error if
     ///   the command queue cannot be created.
     public init(
@@ -64,7 +67,8 @@
       device: MTLDevice,
       ring: VelocityRing,
       start: CursorPosition = .init(x: 0.5, y: 0.5),
-      targets: TargetChannel? = nil
+      targets: TargetChannel? = nil,
+      dwell: DwellChannel? = nil
     ) throws {
       self.layer = layer
       encoder = try WebgridFrameEncoder(device: device)
@@ -76,6 +80,7 @@
       integrator = CursorIntegrator(start: start)
       self.ring = ring
       self.targets = targets
+      self.dwell = dwell
       super.init()
     }
 
@@ -163,7 +168,8 @@
         viewportWidth: UInt32(drawable.texture.width),
         viewportHeight: UInt32(drawable.texture.height),
         targetColumn: target?.column ?? WebgridParams.noTarget,
-        targetRow: target?.row ?? WebgridParams.noTarget
+        targetRow: target?.row ?? WebgridParams.noTarget,
+        dwellProgress: dwell?.load() ?? 0
       )
 
       // 6. Encode one compute pass into the vended drawable.

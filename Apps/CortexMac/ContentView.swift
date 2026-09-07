@@ -73,7 +73,7 @@ struct ContentView: View {
   private func arm(driver: ClosedLoopDriver, title: String, caption: String) -> some View {
     VStack(spacing: 0) {
       // The Phase-6 120Hz webgrid render surface — UNCHANGED (RENDER-08), now driven by the real loop.
-      WebgridView(ring: driver.ring, targets: driver.targets)
+      WebgridView(ring: driver.ring, targets: driver.targets, dwell: driver.dwell)
         .frame(minWidth: 360, minHeight: 360)
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
@@ -129,6 +129,8 @@ final class ClosedLoopDriver {
   private(set) var sourceLabel: String
   /// The active task target, published to the renderer once per tick (latest-value, lock-free).
   let targets = TargetChannel()
+  /// Dwell-to-select progress, published to the renderer once per tick (latest-value, lock-free).
+  let dwell = DwellChannel()
   /// The recorded source, kept so the per-trial target can be read alongside each decoded tick.
   /// `nil` on the synthetic path, where the task has no recorded target to show.
   private let recordedSource: RecordedSpikeSource?
@@ -150,7 +152,13 @@ final class ClosedLoopDriver {
     if let exportURL, let modelURL {
       do {
         let export = try ReplayExport(sidecarURL: exportURL)
-        let source = RecordedSpikeSource(export: export)
+        // `stride: 1` replays in REAL TIME: one 20 ms tick advances the session by one 20 ms bin,
+        // decoding the trailing 32-bin window ending there -- the cadence `CortexReplayBench` scores
+        // with. The default stride is the window length, which advances 640 ms of recorded time per
+        // tick; that made the demo integrate `velocity * 0.020` across 0.640 s of real motion (the
+        // cursor crept around its start point at 1/32 speed) while the per-trial target advanced 32x
+        // too fast (the task square changed every ~2 frames and read as random strobing).
+        let source = RecordedSpikeSource(export: export, stride: 1)
         // NDT1 emits cm/s; the filter, integrator and webgrid run in grid-units/s. Without this the
         // demo cursor runs about 17x too fast on the pre-registered box.
         pipeline = ClosedLoopPipeline(
@@ -261,6 +269,10 @@ final class ClosedLoopDriver {
     // square tracks the animal's actual per-trial target rather than a decoration. `tick()` reads
     // window `tickIndex` then increments, so the window just consumed is `totalTicks - 1`.
     publishTarget(forWindow: pipeline.totalTicks - 1)
+
+    // Publish the dwell the cursor has accumulated on that target, so the ring contracts as a
+    // selection is committed. Same 0.30 s continuous-hold criterion the run is scored with.
+    dwell.store(pipeline.dwellProgress)
 
     // Push the decoded+Kalman-refined velocity into the SAME ring the 120Hz renderer consumes.
     _ = ring.push(CursorVelocity(

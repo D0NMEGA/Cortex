@@ -37,13 +37,39 @@ public nonisolated struct RecordedSpikeSource: SpikeWindowSource {
   /// The number of WHOLE `numBins`-long windows the export contains. The replay ends here; there is no
   /// partial final window, because a short window would be zero-padded spikes the session never had.
   public let windowCount: Int
+  /// Bins the window advances between consecutive `windowIndex` values.
+  ///
+  /// Defaults to `numBins`, i.e. NON-OVERLAPPING windows: index `i` covers bins `[i*numBins,
+  /// (i+1)*numBins)`. That is the right cadence for a throughput bench, which only needs distinct
+  /// windows to decode and does not integrate a cursor.
+  ///
+  /// A caller that drives a CLOSED LOOP must pass `stride: 1` instead, so one tick advances the
+  /// session clock by one bin and the trailing window ends at that bin. With the default stride a
+  /// 20 ms tick advances 640 ms of recorded time, which desynchronises the loop from the data two
+  /// ways at once: the integrator moves the cursor by `velocity * 0.020` when 0.640 s actually
+  /// elapsed (a 32x under-travel), and the per-trial target advances ~32x faster than real time, so
+  /// the task target changes every couple of frames. `CortexReplayBench` already decodes one window
+  /// per bin for exactly this reason; `stride` is what lets the GUI loop match it.
+  public let stride: Int
 
-  public init(export: ReplayExport, numBins: Int = RecordedSpikeSource.modelSeqLen) {
+  /// - Parameters:
+  ///   - export: the session to replay.
+  ///   - numBins: window length; must match the model's sequence length.
+  ///   - stride: bins advanced per window index. `nil` means `numBins` (non-overlapping).
+  public init(
+    export: ReplayExport,
+    numBins: Int = RecordedSpikeSource.modelSeqLen,
+    stride: Int? = nil
+  ) {
     precondition(numBins > 0, "RecordedSpikeSource requires a positive window length")
+    let step = stride ?? numBins
+    precondition(step > 0, "RecordedSpikeSource requires a positive stride")
     self.export = export
     self.numBins = numBins
+    self.stride = step
     channels = export.channelCount
-    windowCount = export.binCount / numBins
+    // Whole windows only. At the default stride this is `binCount / numBins`, unchanged.
+    windowCount = export.binCount < numBins ? 0 : (export.binCount - numBins) / step + 1
   }
 
   /// The `numBins`-bin window at `windowIndex`, in bin-major order.
@@ -54,8 +80,7 @@ public nonisolated struct RecordedSpikeSource: SpikeWindowSource {
   /// the caller's own tick budget is 0 - a loop that runs zero ticks fails the model-in-loop assertion
   /// loudly rather than reporting numbers from a zero window.
   public func window(_ windowIndex: Int) -> [Float16] {
-    let clamped = max(0, windowIndex)
-    let endingAt = min((clamped + 1) * numBins - 1, export.binCount - 1)
+    let endingAt = lastBin(forWindow: windowIndex)
     guard let bins = try? export.window(endingAt: endingAt, length: numBins) else {
       return [Float16](repeating: 0, count: numBins * channels)
     }
@@ -75,6 +100,6 @@ public nonisolated struct RecordedSpikeSource: SpikeWindowSource {
   /// The export bin index the window at `windowIndex` ends on, under the same clamp as `window(_:)`.
   public func lastBin(forWindow windowIndex: Int) -> Int {
     let clamped = max(0, windowIndex)
-    return min((clamped + 1) * numBins - 1, export.binCount - 1)
+    return min(numBins - 1 + clamped * stride, export.binCount - 1)
   }
 }

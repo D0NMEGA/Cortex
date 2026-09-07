@@ -38,6 +38,11 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   /// Bright filled-disc cursor radius (D-08), normalised to the grid's shorter extent.
   public var cursorRadius: Float
   /// Cursor-proximity cell-highlight falloff radius (D-09), normalised to the grid's shorter extent.
+  ///
+  /// ``grid30x30`` passes 0, which disables the lift. At the original 0.12 the falloff reached 3.6
+  /// cells from the cursor, so it read on screen as a soft grey blob following the cursor rather
+  /// than as a highlight, and it was the brightest thing in a capture after the cursor itself. The
+  /// parameter and the kernel's falloff are kept because the effect is sound at a small radius.
   public var proximityRadius: Float
   /// Drawable width in pixels (for square-cell aspect mapping).
   public var viewportWidth: UInt32
@@ -51,6 +56,11 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   public var targetColumn: UInt32
   /// Active target row, or ``WebgridParams/noTarget`` when no target is active.
   public var targetRow: UInt32
+  /// Dwell-to-select progress in `[0, 1]`; the kernel shrinks the cursor ring as it climbs.
+  ///
+  /// The standard webgrid selection affordance: holding on a target contracts the ring, and
+  /// committing the selection releases it back to full size. 0 draws the resting cursor.
+  public var dwellProgress: Float
 
   /// Sentinel meaning "no active target", so the kernel draws no selection square.
   ///
@@ -73,7 +83,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     cursorDotRadius: Float = 0.006,
     cursorRingWidth: Float = 0.0035,
     targetColumn: UInt32 = WebgridParams.noTarget,
-    targetRow: UInt32 = WebgridParams.noTarget
+    targetRow: UInt32 = WebgridParams.noTarget,
+    dwellProgress: Float = 0
   ) {
     self.gridColumns = gridColumns
     self.gridRows = gridRows
@@ -89,6 +100,7 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.cursorRingWidth = cursorRingWidth
     self.targetColumn = targetColumn
     self.targetRow = targetRow
+    self.dwellProgress = dwellProgress
   }
 
   /// The modern 30×30 webgrid (D-01) — 900 cells, NOT the rejected 6×6 (REQUIREMENTS Out-of-Scope).
@@ -108,7 +120,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     viewportWidth: UInt32,
     viewportHeight: UInt32,
     targetColumn: UInt32 = WebgridParams.noTarget,
-    targetRow: UInt32 = WebgridParams.noTarget
+    targetRow: UInt32 = WebgridParams.noTarget,
+    dwellProgress: Float = 0
   ) -> WebgridParams {
     WebgridParams(
       gridColumns: 30,
@@ -118,13 +131,14 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       cursorX: cursorX,
       cursorY: cursorY,
       cursorRadius: 0.020,
-      proximityRadius: 0.12,
+      proximityRadius: 0,
       viewportWidth: viewportWidth,
       viewportHeight: viewportHeight,
       cursorDotRadius: 0.006,
       cursorRingWidth: 0.0035,
       targetColumn: targetColumn,
-      targetRow: targetRow
+      targetRow: targetRow,
+      dwellProgress: dwellProgress
     )
   }
 }

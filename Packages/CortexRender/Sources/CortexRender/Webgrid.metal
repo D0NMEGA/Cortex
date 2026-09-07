@@ -27,6 +27,7 @@ struct WebgridParams {
   float cursorRingWidth;  // ring stroke width, same units
   uint targetColumn;      // active target column, or 0xFFFFFFFF for none
   uint targetRow;         // active target row, or 0xFFFFFFFF for none
+  float dwellProgress;    // dwell-to-select progress in [0,1]; contracts the ring
 };
 
 // "No active target" sentinel. MUST equal WebgridParams.noTarget on the Swift side.
@@ -127,8 +128,19 @@ kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
     //     filled disc at the same center. A NaN cursor position fails every comparison below and
     //     draws nothing (T-06-01-01: defensive — the authoritative clamp lives upstream at the
     //     integrator seam, Plan 02 D-04).
+    //
+    //     DWELL-TO-SELECT: holding inside the acquisition radius contracts the ring toward the dot,
+    //     and committing the selection releases it back to full size (the producer resets progress
+    //     to 0 on the committing tick). The contraction is the standard webgrid selection
+    //     affordance, and it is driven by the SAME 0.30 s continuous-hold criterion the run is
+    //     scored with — so a viewer sees selections happen at the rate they actually happen, which
+    //     for a target-blind decode is the honest answer whatever that rate is.
+    const float dwell = clamp(p.dwellProgress, 0.0, 1.0);
     const float aaC = max(pixelInGrid.x, pixelInGrid.y) * 1.0;
-    const float ringOuter = max(p.cursorRadius, 1e-5);
+    // Contract to 35% of the resting radius at a full hold, never below the dot.
+    const float restingOuter = max(p.cursorRadius, 1e-5);
+    const float minOuter = max(max(p.cursorDotRadius, 1e-5) * 1.6, restingOuter * 0.35);
+    const float ringOuter = mix(restingOuter, min(minOuter, restingOuter), dwell);
     const float ringInner = max(ringOuter - max(p.cursorRingWidth, 1e-5), 0.0);
     // Inside the outer edge AND outside the inner edge.
     const float ringMask =
