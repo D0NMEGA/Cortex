@@ -68,6 +68,8 @@ struct ContentView: View {
         // recorded as real-data evidence is the Pattern-2 trap in capture form.
         Text(blind.sourceLabel)
           .font(.system(.caption, design: .monospaced))
+        Text(blind.decodeLine)
+          .font(.system(.caption, design: .monospaced))
         Text(blind.roundTripLine)
           .font(.system(.caption, design: .monospaced))
         Text(blind.latencyLine)
@@ -147,6 +149,13 @@ final class ClosedLoopDriver {
   private(set) var roundTripLine = "round-trip log empty (no cycles recorded)"
   /// The latest software-timed glass-to-glass sample line (surfaced live, WITH the honest framing).
   private(set) var latencyLine = "software-timed glass-to-glass: warming up…"
+  /// Live decode provenance: how many ticks NDT1 actually decoded, out of every tick run.
+  ///
+  /// `sourceLabel` names the SPIKE source and nothing else. A viewer reading "real:
+  /// indy_20160630_01" beside a moving cursor cannot tell whether NDT1 produced that motion or the
+  /// synthetic fallback did, and the two look identical on screen. The pipeline already counts this
+  /// (`modelBackedTicks` / `totalTicks`) and records why a decode failed; it was simply never shown.
+  private(set) var decodeLine = "decode: warming up…"
 
   /// The real closed loop (D-10): spike window → NDT1 (or synthetic fallback) → ReFIT → integrate.
   /// Seeded deterministically so the demo trajectory is reproducible; the model-backed NDT1 path
@@ -347,6 +356,18 @@ final class ClosedLoopDriver {
     )
     _ = roundTrip.respond(to: scanInfo)
     roundTripLine = roundTrip.log.formattedLastLine()
+
+    // Decode provenance, refreshed live. A shortfall names itself rather than being inferred from a
+    // cursor that looks plausible either way.
+    let backed = pipeline.modelBackedTicks
+    let total = pipeline.totalTicks
+    if total > 0, backed == total {
+      decodeLine = "decode: NDT1 CoreML on \(backed)/\(total) ticks (model in loop)"
+    } else if let reason = pipeline.lastDecodeFailure {
+      decodeLine = "decode: NDT1 on \(backed)/\(total) ticks - SYNTHETIC FALLBACK: \(reason)"
+    } else {
+      decodeLine = "decode: NDT1 on \(backed)/\(total) ticks"
+    }
 
     // Software-timed glass-to-glass sample (D-07): present = next 120Hz boundary after the tick.
     let afterTickNs = Time.machAbsoluteNanoseconds()
