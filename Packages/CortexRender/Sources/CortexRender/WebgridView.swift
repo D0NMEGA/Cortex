@@ -29,6 +29,20 @@ public final class WebgridMetalUIView: UIView {
   public override class var layerClass: AnyClass { CAMetalLayer.self }
   /// The backing `CAMetalLayer` (guaranteed by `layerClass`).
   public var metalLayer: CAMetalLayer { layer as! CAMetalLayer }
+
+  /// Keep `drawableSize` in step with the view's pixel size.
+  ///
+  /// `CAMetalLayer` does NOT track its bounds reliably, so without this the kernel receives a
+  /// viewport extent that disagrees with the layer's on-screen size and its letterboxed square is
+  /// scaled non-uniformly - square cells render as rectangles.
+  public override func layoutSubviews() {
+    super.layoutSubviews()
+    let scale = window?.screen.nativeScale ?? metalLayer.contentsScale
+    metalLayer.contentsScale = scale
+    let pixels = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+    guard pixels.width > 0, pixels.height > 0, metalLayer.drawableSize != pixels else { return }
+    metalLayer.drawableSize = pixels
+  }
 }
 
 /// SwiftUI host for the iOS webgrid surface. Drop into a view tree; pass the `VelocityRing` the
@@ -100,6 +114,32 @@ public final class WebgridMetalNSView: NSView {
 
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+  /// Keep `drawableSize` in step with the view's pixel size.
+  ///
+  /// `CAMetalLayer` does NOT track its bounds reliably, so without this the kernel receives a
+  /// viewport extent that disagrees with the layer's on-screen size and its letterboxed square is
+  /// scaled non-uniformly - square cells render as rectangles. It shows up the moment the view stops
+  /// being the full window (a caption below it, a second pane beside it).
+  public override func layout() {
+    super.layout()
+    updateDrawableSize()
+  }
+
+  public override func viewDidChangeBackingProperties() {
+    super.viewDidChangeBackingProperties()
+    updateDrawableSize()
+  }
+
+  private func updateDrawableSize() {
+    let scale = window?.backingScaleFactor ?? metalLayer.contentsScale
+    metalLayer.contentsScale = scale
+    let pixels = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+    // A zero extent happens during teardown and before first layout; writing it would invalidate the
+    // drawable for no gain.
+    guard pixels.width > 0, pixels.height > 0, metalLayer.drawableSize != pixels else { return }
+    metalLayer.drawableSize = pixels
+  }
 }
 
 /// SwiftUI host for the macOS webgrid surface. Drop into a view tree; pass the `VelocityRing` the
