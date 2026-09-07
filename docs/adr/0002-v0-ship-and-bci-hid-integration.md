@@ -3,6 +3,21 @@
 **Status:** Accepted
 **Date:** 2026-06-23
 **Deciders:** @donovansantine
+**Superseded in part by:** [ADR-0003](0003-photodiode-retirement-and-real-data-v1.md), 2026-08-28
+
+> Two premises below are retired. First, the BPS figures this ADR records -- ReFIT 1.953 Webgrid BPS
+> and the 0.374 Fitts throughput -- were measured on a synthetic seed-locked Poisson replay, which
+> this ADR states plainly and which remains true of them; Phases 9 and 10 replaced them with results
+> measured on real Indy M1 spikes, so they are superseded as the project's reported numbers rather
+> than corrected as records. Second, the rejected-alternatives table below calls the
+> photodiode-instrumented number "the v1 claim"; on 2026-08-28 that path was retired to Future work
+> (LAT-01 through LAT-08) and v1 was re-pointed at real-neural-data decoding.
+>
+> The original text is left verbatim: an ADR records what was decided and on what basis at the time,
+> so a superseded premise gets a forward pointer, never an edit. Per `docs/adr/README.md`
+> "Numbering", a superseded ADR states the supersession in its Status area. The supersession is
+> PARTIAL: the wire-and-gate doctrine, the HID surface decisions and the distribution pipeline below
+> are unaffected and remain Accepted.
 
 ## Context
 

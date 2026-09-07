@@ -3,6 +3,20 @@
 **Status:** Accepted
 **Date:** 2026-04-28
 **Deciders:** @donovansantine
+**Superseded in part by:** [ADR-0003](0003-photodiode-retirement-and-real-data-v1.md), 2026-08-28
+
+> The Context paragraph below names the photodiode-instrumented "24.7 +/- 1.3 ms" figure as the
+> defining project claim. That framing is retired. On 2026-08-28 v1 was re-pointed from
+> photodiode-instrumented latency to real-neural-data decoding, LAT-01 through LAT-08 moved to the
+> ROADMAP's "Future work (retired from v1)" section, and the figure became a retired spec target
+> that was never measured and may not be cited as achieved. ADR-0003 records why.
+>
+> The original sentence is left verbatim: an ADR records what was decided and on what basis at the
+> time, so a superseded premise is corrected by a forward pointer, never by editing the premise out.
+> Per `docs/adr/README.md` "Numbering", a superseded ADR states the supersession in its Status area.
+> The supersession is PARTIAL: the eight foundational decisions below (XcodeGen, Swift 6.2, the
+> macOS 26 / Xcode 26 baseline, the CI shape) are unaffected and remain Accepted; only the claim
+> they were said to serve has changed.
 
 ## Context
 
