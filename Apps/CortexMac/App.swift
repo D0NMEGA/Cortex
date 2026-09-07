@@ -6,9 +6,9 @@
 //
 // project.yml sets SUPPORTS_MACCATALYST: NO on the build settings as defense-in-depth.
 
-import SwiftUI
 import AppKit
 import CortexCore
+import SwiftUI
 
 @main
 struct CortexMacApp: App {
@@ -22,7 +22,7 @@ struct CortexMacApp: App {
 }
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-  func applicationDidFinishLaunching(_ notification: Notification) {
+  func applicationDidFinishLaunching(_: Notification) {
     // Phase 1 placeholder. Phase 2 will spawn the daemon and open the shm region here.
     NSLog("Cortex.app (Mac) launched. App Group: \(CortexCore.AppGroup.identifier)")
   }

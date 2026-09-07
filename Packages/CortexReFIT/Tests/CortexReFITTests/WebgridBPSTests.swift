@@ -1,3 +1,6 @@
+@testable import CortexReFIT
+import simd
+
 // PERF-01 / D-11 / D-13 — the Neuralink/BrainGate Webgrid information-rate BITRATE math.
 //
 // These tests are the REAL correctness guard for the Webgrid BPS formula (08-05-PLAN Task 1,
@@ -25,9 +28,6 @@
 // CortexReFIT dir, so it stays `import simd`-only; `log2` comes from the C math lib via simd). The
 // suite is `nonisolated` (pure value type).
 import Testing
-import simd
-
-@testable import CortexReFIT
 
 @Suite("PERF-01: Webgrid information-rate BPS = max(0, log2(N)·(Sc−Si)/t)")
 struct WebgridBPSTests {
@@ -39,8 +39,8 @@ struct WebgridBPSTests {
 
   /// bitsPerSecond(n:900, correct:100, incorrect:0, seconds:60) = log2(900)·(100−0)/60.
   /// log2(900) ≈ 9.8138 → ≈ 16.3563 bits/s. The formula computes correctly for a clean run.
-  @Test("clean run: B = log2(N)·Sc/t for N=900, Sc=100, Si=0, t=60")
-  func cleanRunValue() {
+  @Test
+  func `clean run: B = log2(N)·Sc/t for N=900, Sc=100, Si=0, t=60`() {
     let b = WebgridBPS.bitsPerSecond(n: 900, correct: 100, incorrect: 0, seconds: 60)
     let expected = log2(900.0) * 100.0 / 60.0
     #expect(abs(b - expected) < Self.tol)
@@ -52,8 +52,8 @@ struct WebgridBPSTests {
 
   /// A net-negative selection count (Sc − Si < 0) must clamp to 0.0 — NEVER a negative bitrate
   /// (08-RESEARCH §0.4; CONTEXT D-11 omitted this clamp). For Sc=5, Si=20 → (5−20)=−15 < 0 → 0.0.
-  @Test("clamp BITES: net-negative (Sc−Si)<0 returns 0.0, not a negative bitrate")
-  func clampBitesOnNetNegative() {
+  @Test
+  func `clamp BITES: net-negative (Sc−Si)<0 returns 0.0, not a negative bitrate`() {
     let b = WebgridBPS.bitsPerSecond(n: 900, correct: 5, incorrect: 20, seconds: 30)
     #expect(b == 0.0)
     // And it is NOT merely small-negative-rounded — the raw unclamped value would be clearly < 0.
@@ -65,8 +65,8 @@ struct WebgridBPSTests {
 
   /// targetBits(n:900) = log2(900) ≈ 9.8138 bits/correct-selection (the log2(N) normalization).
   /// n<2 returns 0 (no log2 of a value ≤ 1, which would be ≤ 0 / non-finite).
-  @Test("targetBits(n) = log2(N); n<2 → 0")
-  func targetBitsLog2WithGuard() {
+  @Test
+  func `targetBits(n) = log2(N); n<2 → 0`() {
     #expect(abs(WebgridBPS.targetBits(n: 900) - log2(900.0)) < Self.tol)
     #expect(abs(WebgridBPS.targetBits(n: 900) - 9.813_781_191_217_037) < 1e-9)
     // Degenerate guards: n = 1 → log2(1) = 0 would be fine, but n ≤ 1 is meaningless for a grid →
@@ -79,8 +79,8 @@ struct WebgridBPSTests {
   // MARK: - Test 4: seconds ≤ 0 guard (no divide-by-zero / non-finite)
 
   /// seconds ≤ 0 → 0 (the divide-by-zero / non-finite guard).
-  @Test("seconds ≤ 0 → 0 (divide-by-zero guard)")
-  func secondsGuard() {
+  @Test
+  func `seconds ≤ 0 → 0 (divide-by-zero guard)`() {
     #expect(WebgridBPS.bitsPerSecond(n: 900, correct: 100, incorrect: 0, seconds: 0) == 0)
     #expect(WebgridBPS.bitsPerSecond(n: 900, correct: 100, incorrect: 0, seconds: -1) == 0)
     // Result is always finite (never NaN/Inf) even at the guard boundary.
@@ -90,8 +90,8 @@ struct WebgridBPSTests {
   // MARK: - Test 5: gridTargetCount(30, 30) == 900 (incl. delete/cancel key)
 
   /// The 30×30 grid INCLUDING the delete/cancel cell is N = 900 selectable targets (08-RESEARCH §6).
-  @Test("gridTargetCount(rows:30, cols:30) == 900 (incl. delete key)")
-  func gridTargetCountIs900() {
+  @Test
+  func `gridTargetCount(rows:30, cols:30) == 900 (incl. delete key)`() {
     #expect(WebgridBPS.gridTargetCount(rows: 30, cols: 30) == 900)
     // Leaderboard anchors: reference literals (D-12). brainGateDenseGridBPS is T5 on the DENSE 9x9
     // grid (Pandarinath 2017, eLife 18554), NOT a 6x6 figure; brainGate6x6T5BPS is that same paper's

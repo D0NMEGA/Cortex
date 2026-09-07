@@ -1,3 +1,5 @@
+import CortexCoreC
+
 // FDChannel — Foundation-free Swift wrapper over the CortexCoreC mach_msg + fileport FD-passing
 // shim (Plan 02-02 Task 3, IPC-03). It moves the shm region fd cross-process via a COMPLEX mach_msg
 // carrying ONE MACH_MSG_PORT_DESCRIPTOR (fileport) — the mandated Mach primitive, with no socket
@@ -12,7 +14,6 @@
 //
 // Foundation-free: `import Darwin` + `import CortexCoreC` only.
 import Darwin
-import CortexCoreC
 
 /// Errors from the FD-passing message dance (Swift 6 typed throws). `code` carries the raw shim
 /// return: for send, a positive mach_msg_return_t or a negative -errno (fileport failure); for
@@ -30,7 +31,8 @@ public enum FDChannel {
   /// right from the rendezvous harness). Throws `.send(code)` on failure.
   public static func send(shmFD: Int32,
                           geometry: ShmRingLayout,
-                          to dest: mach_port_t) throws(FDChannelError) {
+                          to dest: mach_port_t) throws(FDChannelError)
+  {
     // shm_name is implicit here (the production ring uses CORTEX_SHM_NAME). The geometry the
     // receiver needs to map is ring_bytes/slot_stride/slot_depth.
     let rc = CORTEX_SHM_NAME.withCString { namePtr in
@@ -68,8 +70,9 @@ public enum FDChannel {
     let expected = ShmRingLayout()
     let received = ShmRingLayout(channelCount: Int(CORTEX_CHANNEL_COUNT), depth: Int(slotDepth))
     if Int(slotStride) != expected.slotStride
-        || Int(ringBytes) != received.ringBytes
-        || received.slotStride != expected.slotStride {
+      || Int(ringBytes) != received.ringBytes
+      || received.slotStride != expected.slotStride
+    {
       close(fd)
       throw .recv(-1)
     }

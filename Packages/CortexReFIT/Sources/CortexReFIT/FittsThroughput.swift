@@ -18,7 +18,8 @@
 //
 // ## ⚠ This is S&M-2004 Fitts throughput, NOT the Webgrid bitrate (07-RESEARCH §4.3 — load-bearing)
 // `TP = IDe/MT` is a DIFFERENT metric from the Neuralink/BrainGate Webgrid bitrate
-// (`log2(N)·(correct−incorrect)/time`). The 4.16 / 8.5 reference numbers (dense 9x9 and Neuralink P1 respectively) are Webgrid-bitrate; the
+// (`log2(N)·(correct−incorrect)/time`). The 4.16 / 8.5 reference numbers (dense 9x9 and Neuralink P1 respectively) are
+// Webgrid-bitrate; the
 // Phase-7 TP number MUST NOT be compared to them (that apples-to-oranges leaderboard comparison is
 // Phase 8 SC#5 / PERF-01/02, deferred per D-13). See `07-bps-evidence.md` for the framing.
 //

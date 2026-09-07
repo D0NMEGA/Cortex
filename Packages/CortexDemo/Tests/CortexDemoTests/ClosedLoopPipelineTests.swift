@@ -32,8 +32,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 1 — the loop reaches a target cell (a webgrid HIT) in synthetic mode.
 
-  @Test("Test 1: synthetic-mode closed loop reaches the target cell (a webgrid HIT)")
-  func syntheticLoopReachesTarget() {
+  @Test
+  func `1: synthetic-mode closed loop reaches the target cell (a webgrid HIT)`() {
     let pipeline = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     // No CORTEX_MODEL_URL ⇒ the synthetic decode fallback runs (the clean-clone / CI path).
     #expect(!pipeline.isModelBacked, "with no model the pipeline must run the synthetic decode fallback")
@@ -50,8 +50,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 2 — the model-backed NDT1 path is present + compiled; skips cleanly when absent.
 
-  @Test("Test 2: NDT1 model-backed decode path is present + compiled (skips cleanly when no model)")
-  func modelBackedDecodePathPresent() {
+  @Test
+  func `2: NDT1 model-backed decode path is present + compiled (skips cleanly when no model)`() {
     // The .mlpackage is gitignored; resolve from CORTEX_MODEL_URL and SKIP cleanly when absent so the
     // suite stays green on a clean clone / CI (mirrors VelocityOutputTests). The NeuralDecoder.decode
     // call site is COMPILED regardless (in ClosedLoopPipeline.decodeWithModel) — the structural grep in
@@ -84,8 +84,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 3 — determinism: same seed → byte-identical trajectory + same hit/miss.
 
-  @Test("Test 3: deterministic — same seed reproduces the byte-identical trajectory + hit/miss")
-  func deterministicAcrossRuns() {
+  @Test
+  func `3: deterministic — same seed reproduces the byte-identical trajectory + hit/miss`() {
     let first = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
       .runToHit(seed: Self.testSeed, target: Self.reachableTarget)
     let second = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
@@ -103,8 +103,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 4 — the ReFIT-Kalman stage is genuinely applied (vs raw passthrough).
 
-  @Test("Test 4: ReFIT-Kalman is genuinely in the loop — the rotation arm HITs where raw does not")
-  func kalmanGenuinelyApplied() {
+  @Test
+  func `4: ReFIT-Kalman is genuinely in the loop — the rotation arm HITs where raw does not`() {
     // Same synthetic decode + target; the ONLY difference is the filter stage (the Phase-7 ablation).
     let refit = ClosedLoopPipeline.simulate(seed: Self.testSeed, target: Self.reachableTarget, arm: .refit)
     let raw = ClosedLoopPipeline.simulate(seed: Self.testSeed, target: Self.reachableTarget, arm: .raw)
@@ -122,8 +122,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 5 — SyntheticSpikeSource emits (numBins, 96) fp16 windows, deterministic per seed.
 
-  @Test("Test 5: SyntheticSpikeSource emits (numBins, 96) fp16 windows, deterministic per seed")
-  func syntheticSpikeSourceShapeAndDeterminism() {
+  @Test
+  func `5: SyntheticSpikeSource emits (numBins, 96) fp16 windows, deterministic per seed`() {
     let source = SyntheticSpikeSource(seed: Self.testSeed)
     #expect(source.channels == 96, "the spike source models the 96-channel Indy/Loco contract (DEC-02)")
 
@@ -146,8 +146,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 6 — Phase 10 (RD-08): the buffer's seqLen follows the INJECTED source.
 
-  @Test("Test 6: sourceSeqLen follows the injected source (the Pattern-2 trap made observable)")
-  func sourceSeqLenFollowsTheInjectedSource() {
+  @Test
+  func `6: sourceSeqLen follows the injected source (the Pattern-2 trap made observable)`() {
     // The v0 convenience init still builds an 8-bin SyntheticSpikeSource, and 8 is exactly the trap:
     // the shipped real model wants 32, and a mismatch used to become synthetic numbers in silence.
     let synthetic = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
@@ -166,8 +166,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 7 — Phase 10 (RD-08): every tick is counted, so a fallback run cannot be assumed away.
 
-  @Test("Test 7: modelBackedTicks / totalTicks / allTicksModelBacked count the synthetic run honestly")
-  func modelBackedTickCounters() {
+  @Test
+  func `7: modelBackedTicks / totalTicks / allTicksModelBacked count the synthetic run honestly`() {
     let pipeline = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     #expect(pipeline.totalTicks == 0)
     #expect(pipeline.modelBackedTicks == 0)
@@ -183,8 +183,8 @@ struct ClosedLoopPipelineTests {
 
   // MARK: Test 8 — Phase 10 (RD-08): a decode that cannot be wired records WHY (it used to be discarded).
 
-  @Test("Test 8: lastDecodeFailure is nil with no model and non-nil, naming the shapes, when one fails")
-  func lastDecodeFailureIsRecoverable() throws {
+  @Test
+  func `8: lastDecodeFailure is nil with no model and non-nil, naming the shapes, when one fails`() throws {
     let clean = ClosedLoopPipeline(seed: Self.testSeed, target: Self.reachableTarget)
     for _ in 0 ..< 3 {
       _ = clean.tick()

@@ -42,8 +42,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 1 - the recorded source reports the MODEL's window length
 
-  @Test("Test 1: RecordedSpikeSource reports numBins 32, channels 96, windowCount 8 on the fixture")
-  func recordedSourceShape() throws {
+  @Test
+  func `1: RecordedSpikeSource reports numBins 32, channels 96, windowCount 8 on the fixture`() throws {
     let export = try Self.loadFixture()
     let source = RecordedSpikeSource(export: export)
 
@@ -56,8 +56,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 2 - the window is exactly the export's bins, in bin-major order
 
-  @Test("Test 2: window(i) is the export's bins [i*32 ..< (i+1)*32] in bin-major order")
-  func windowMatchesTheExport() throws {
+  @Test
+  func `2: window(i) is the export's bins [i*32 ..< (i+1)*32] in bin-major order`() throws {
     let export = try Self.loadFixture()
     let source = RecordedSpikeSource(export: export)
 
@@ -71,8 +71,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 3 - past the last whole window it clamps rather than reading out of range
 
-  @Test("Test 3: window(_:) past windowCount - 1 clamps to the last whole window")
-  func windowClampsAtTheBoundary() throws {
+  @Test
+  func `3: window(_:) past windowCount - 1 clamps to the last whole window`() throws {
     let export = try Self.loadFixture()
     let source = RecordedSpikeSource(export: export)
     let last = source.window(source.windowCount - 1)
@@ -86,8 +86,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 4 - target and true velocity use the LAST bin of the window
 
-  @Test("Test 4: target(forWindow:) and trueVelocity(forWindow:) take the window's LAST bin")
-  func lastBinConvention() throws {
+  @Test
+  func `4: target(forWindow:) and trueVelocity(forWindow:) take the window's LAST bin`() throws {
     let export = try Self.loadFixture()
     let source = RecordedSpikeSource(export: export)
 
@@ -104,8 +104,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 5 - the synthetic source is byte-identical after the conformance
 
-  @Test("Test 5: SyntheticSpikeSource conforms to SpikeWindowSource with no behavior change")
-  func syntheticSourceUnchanged() {
+  @Test
+  func `5: SyntheticSpikeSource conforms to SpikeWindowSource with no behavior change`() {
     let source: any SpikeWindowSource = SyntheticSpikeSource(seed: Self.testSeed)
     #expect(source.numBins == 8, "the v0 default window length is unchanged (and IS the Pattern-2 trap)")
     #expect(source.channels == 96)
@@ -121,8 +121,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 6 - the pipeline derives its buffer length from the injected source
 
-  @Test("Test 6: ClosedLoopPipeline.sourceSeqLen follows the injected source, 32 recorded vs 8 synthetic")
-  func pipelineSeqLenFollowsTheSource() throws {
+  @Test
+  func `6: ClosedLoopPipeline.sourceSeqLen follows the injected source, 32 recorded vs 8 synthetic`() throws {
     let export = try Self.loadFixture()
     let recorded = ClosedLoopPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
     #expect(recorded.sourceSeqLen == 32, "a recorded source sizes the SpikeInputBuffer at the model's 32 bins")
@@ -133,8 +133,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 7 - every tick is counted, and a fallback run is visible
 
-  @Test("Test 7: modelBackedTicks / totalTicks / allTicksModelBacked count every tick")
-  func modelBackedCountersAreExact() throws {
+  @Test
+  func `7: modelBackedTicks / totalTicks / allTicksModelBacked count every tick`() throws {
     let export = try Self.loadFixture()
     let pipeline = ClosedLoopPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
 
@@ -153,8 +153,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 8 - a decode that cannot be wired records WHY
 
-  @Test("Test 8: lastDecodeFailure is nil until a decode fails, then names both shapes")
-  func lastDecodeFailureIsRecorded() throws {
+  @Test
+  func `8: lastDecodeFailure is nil until a decode fails, then names both shapes`() throws {
     let export = try Self.loadFixture()
     let clean = ClosedLoopPipeline(source: RecordedSpikeSource(export: export), seed: Self.testSeed)
     for _ in 0 ..< 4 {
@@ -186,8 +186,8 @@ struct RecordedSpikeSourceTests {
 
   // MARK: Test 9 - the Pattern-2 trap itself, driven against the real model
 
-  @Test("Test 9: the seqLen mismatch that used to pass silently is now visible on every tick")
-  func theSeqLenTrapIsVisible() throws {
+  @Test
+  func `9: the seqLen mismatch that used to pass silently is now visible on every tick`() throws {
     // The .mlpackage is gitignored; SKIP cleanly when absent (the ClosedLoopPipelineTests Test 2
     // idiom) so this suite stays green on a clean clone. With a real model present this is the direct
     // control for RESEARCH Pattern 2: the SAME export, the SAME model, ONE variable changed - the

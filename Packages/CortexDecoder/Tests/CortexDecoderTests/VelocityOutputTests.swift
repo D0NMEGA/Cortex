@@ -13,11 +13,10 @@
 // This suite is correctness-only — it asserts the output shape/dtype, never a speed/timing number
 // (that claim is owned by Plan 04 in-process + the iPad-M4 canonical artifact; D-18 precedent).
 import CoreML
+@testable import CortexDecoder
 import Foundation
 import Metal
 import Testing
-
-@testable import CortexDecoder
 
 @Suite("DEC-10 output contract + DEC-12 no private API (Swift-side)")
 @MainActor
@@ -25,12 +24,12 @@ struct VelocityOutputTests {
   /// Env var pointing at a self-produced `.mlpackage`/`.mlmodelc` (gitignored). Absent ⇒ skip.
   private static let modelURLEnvKey = "CORTEX_DECODER_MODEL_URL"
 
-  @Test("decode() returns a finite 2-element fp16 (vx,vy) — skips cleanly if no model artifact")
-  func decodeReturnsTwoElementVelocity() throws {
+  @Test
+  func `decode() returns a finite 2-element fp16 (vx,vy) — skips cleanly if no model artifact`() throws {
     // The `.mlpackage` is gitignored; skip cleanly when it (or a Metal device) is absent so the
     // suite stays green in a clean clone / CI without the built artifact.
     guard let raw = ProcessInfo.processInfo.environment[Self.modelURLEnvKey], !raw.isEmpty else {
-      return  // model artifact not built — run the Decoder pytest + export CORTEX_DECODER_MODEL_URL
+      return // model artifact not built — run the Decoder pytest + export CORTEX_DECODER_MODEL_URL
     }
     guard let device = MTLCreateSystemDefaultDevice() else { return }
 
@@ -43,17 +42,17 @@ struct VelocityOutputTests {
     #expect(velocity.y.isFinite)
   }
 
-  @Test("DEC-12: zero _ANEClient anywhere in the CortexDecoder Sources tree")
-  func sourcesContainNoPrivateANEClientSymbol() throws {
+  @Test
+  func `DEC-12: zero _ANEClient anywhere in the CortexDecoder Sources tree`() throws {
     // Assemble the forbidden token from fragments so this assertion's own source is NOT a match.
     let forbidden = "_ANE" + "Client"
 
     let testFileURL = URL(fileURLWithPath: #filePath)
     // .../Tests/CortexDecoderTests/VelocityOutputTests.swift -> .../Sources
     let sourcesDir = testFileURL
-      .deletingLastPathComponent()  // CortexDecoderTests/
-      .deletingLastPathComponent()  // Tests/
-      .deletingLastPathComponent()  // CortexDecoder/  (package root)
+      .deletingLastPathComponent() // CortexDecoderTests/
+      .deletingLastPathComponent() // Tests/
+      .deletingLastPathComponent() // CortexDecoder/  (package root)
       .appendingPathComponent("Sources", isDirectory: true)
 
     let fm = FileManager.default

@@ -16,10 +16,10 @@
 //
 // Foundation-allowed (CortexIPCSession, D-04/D-06). `nonisolated` so it runs off the main actor in
 // the Foundation-free transport regime (the child consumer needs no MainActor/CFRunLoop).
-import Foundation
-import CryptoKit
 import CortexCore
 import CortexIPCTransport
+import CryptoKit
+import Foundation
 
 /// The outcome of a consumer run — used by the in-process correctness test and reported by the child.
 public nonisolated struct HarnessResult: Sendable, Equatable {
@@ -50,7 +50,6 @@ public nonisolated enum HarnessConsumerError: Error, Equatable, Sendable {
 }
 
 public nonisolated enum HarnessConsumer {
-
   /// The deterministic per-channel value the producer wrote for `seq` (mirror of Producer.patternF16):
   /// every channel == Float16(seq & 0xFF). The consumer recomputes it to verify decoded == sent.
   public static func expectedValue(forSeq seq: UInt64) -> Float16 {
@@ -93,14 +92,16 @@ public nonisolated enum HarnessConsumer {
                                 keys: SessionKeys,
                                 lastSeen: UInt64,
                                 scratch: inout [UInt8],
-                                spinBudget: Int = 50_000_000) throws -> UInt64 {
+                                spinBudget: Int = 50_000_000) throws -> UInt64
+  {
     // Busy-poll until a STRICTLY increasing seq appears (forward-only anti-replay, T-02-04-04: an
     // older-or-equal seq would reproduce a used (key,nonce) and is never decoded/acked).
     var seq: UInt64 = 0
     var spun = 0
     while true {
       if let s = (scratch.withUnsafeMutableBytes { ring.pollLatest(into: $0, lastSeen: lastSeen) }),
-         s > lastSeen {
+         s > lastSeen
+      {
         seq = s
         break
       }
@@ -120,8 +121,8 @@ public nonisolated enum HarnessConsumer {
     guard ctLen > 0, tagEnd <= scratch.count else {
       throw HarnessConsumerError.malformedSlot(seq: seq, ciphertextLength: ctLen)
     }
-    let ct = Array(scratch[ctStart..<ctEnd])
-    let tag = Array(scratch[ctEnd..<tagEnd])
+    let ct = Array(scratch[ctStart ..< ctEnd])
+    let tag = Array(scratch[ctEnd ..< tagEnd])
 
     // SC#3: fail-closed AES-GCM open with the seq-derived nonce, then decode + verify decoded == sent.
     let plain = try SessionCrypto.open(ciphertext: ct, tag: tag, keys: keys,
@@ -132,7 +133,9 @@ public nonisolated enum HarnessConsumer {
     }
     let expected = Self.expectedValue(forSeq: seq)
     let ok = sample.withChannelF16 { f16 -> Bool in
-      for v in f16 where v != expected { return false }
+      for v in f16 where v != expected {
+        return false
+      }
       return true
     }
     guard ok else { throw HarnessConsumerError.patternMismatch(seq: seq) }
@@ -148,7 +151,8 @@ public nonisolated enum HarnessConsumer {
   public static func consumeLoop(ring: ShmRing,
                                  keys: SessionKeys,
                                  frameCount: Int,
-                                 spinBudgetPerFrame: Int = 50_000_000) throws -> HarnessResult {
+                                 spinBudgetPerFrame: Int = 50_000_000) throws -> HarnessResult
+  {
     var scratch = [UInt8](repeating: 0, count: ring.layout.slotStride)
     var lastSeen: UInt64 = 0
     var verified = 0

@@ -15,10 +15,10 @@
 //
 // This binary's two-process flow is the LOCAL / Plan-02-05 proof; CI's always-on correctness gate is
 // the in-process HarnessE2ETests (no spawn). Foundation allowed (Apps target).
-import Foundation
 import CortexCore
-import CortexIPCTransport
 import CortexIPCSession
+import CortexIPCTransport
+import Foundation
 
 /// Errors specific to the parent orchestration (spawn / reap). Rendezvous + producer failures
 /// propagate from their own typed-throws layers.
@@ -29,7 +29,6 @@ public enum HarnessError: Error {
 
 /// The parent orchestrator of the two-process proof harness.
 public enum Harness {
-
   /// Run the full two-process round trip: prepare the rendezvous, posix_spawn this binary as the
   /// consumer child, hand off the key + fd, produce `frameCount` frames with the ack-bounce, and reap
   /// the child. Returns the child's exit status (0 == decoded == sent for every frame + all acked).
@@ -74,11 +73,10 @@ public enum Harness {
     while true {
       let w = waitpid(pid, &status, 0)
       if w == pid { break }
-      if w < 0 && errno == EINTR { continue }
+      if w < 0, errno == EINTR { continue }
       throw HarnessError.waitFailed(errno)
     }
     // Extract the child's exit code from the wait status (WEXITSTATUS).
-    let exitCode = (status & 0x7F) == 0 ? ((status >> 8) & 0xFF) : status
-    return exitCode
+    return (status & 0x7F) == 0 ? ((status >> 8) & 0xFF) : status
   }
 }

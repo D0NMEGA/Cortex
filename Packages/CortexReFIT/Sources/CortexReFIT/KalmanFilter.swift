@@ -39,7 +39,7 @@ import simd
 /// `nonisolated final class`: it holds the mutable 6-state and crosses onto the decoder pthread (SC#3,
 /// NOT the MainActor the package defaults to). Reference semantics so the live producer holds one
 /// filter and steps it in place each tick (no per-tick allocation).
-public nonisolated final class KalmanFilter {
+public final nonisolated class KalmanFilter {
   /// The 6-DOF state `[px, py, vx, vy, ax, ay]` packed into a `SIMD8<Float>` (lanes 6,7 unused, kept
   /// zero) so the predict `A · x` is six inlined `simd` dot products against the SIMD8 constant rows —
   /// the exact layout ``KalmanConstants/A`` emits (Plan 01). No heap; the whole state is one register
@@ -83,9 +83,20 @@ public nonisolated final class KalmanFilter {
 
     let a = KalmanConstants.A
     let h = KalmanConstants.H
-    a0 = a[0]; a1 = a[1]; a2 = a[2]; a3 = a[3]; a4 = a[4]; a5 = a[5]
-    h0 = h[0]; h1 = h[1]
-    k0 = k[0]; k1 = k[1]; k2 = k[2]; k3 = k[3]; k4 = k[4]; k5 = k[5]
+    a0 = a[0]
+    a1 = a[1]
+    a2 = a[2]
+    a3 = a[3]
+    a4 = a[4]
+    a5 = a[5]
+    h0 = h[0]
+    h1 = h[1]
+    k0 = k[0]
+    k1 = k[1]
+    k2 = k[2]
+    k3 = k[3]
+    k4 = k[4]
+    k5 = k[5]
   }
 
   /// Sync the filter's position block to the integrator's authoritative clamped cursor position
@@ -101,7 +112,9 @@ public nonisolated final class KalmanFilter {
   /// elements; missing elements are treated as zero. Not on the hot path.
   public func setState(_ x: [Float]) {
     var s = SIMD8<Float>(repeating: 0)
-    for i in 0 ..< min(6, x.count) { s[i] = x[i] }
+    for i in 0 ..< min(6, x.count) {
+      s[i] = x[i]
+    }
     state = s
   }
 

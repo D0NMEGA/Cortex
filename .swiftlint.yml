@@ -32,10 +32,12 @@ included:
 
 excluded:
   - .build
-  - Packages/CortexCore/.build
-  - Packages/CortexIPC/.build
-  - Packages/CortexRender/.build
-  - Packages/CortexDecoder/.build
+  # Glob, not an enumeration. The per-package list this replaces named only the four packages that
+  # existed when it was written, so CortexReFIT/CortexRing/CortexDemo/CortexBCIHID were linted
+  # INSIDE their .build directories once a `swift test` had created them -- i.e. SwiftLint was
+  # reporting violations in vendored dependency checkouts and generated sources. Proven in
+  # 10-lint-baseline.md. A glob cannot go stale as packages are added (Phase 10 / D-18).
+  - Packages/*/.build
   - DerivedData
   - Cortex.xcodeproj
   - Cortex.xcworkspace

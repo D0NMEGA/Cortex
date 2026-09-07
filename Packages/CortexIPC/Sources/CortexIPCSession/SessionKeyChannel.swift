@@ -19,10 +19,10 @@
 // Foundation-allowed (CortexIPCSession, D-04/D-06). `nonisolated` so the off-main-actor consumer can
 // call it. Uses raw mach_msg directly (the same primitive cortex_fdmsg.c uses) — kept in Swift here
 // because it carries only inline bytes (no fileport), so no C shim is needed.
-import Foundation
+import CortexCoreC
 import CryptoKit
 import Darwin
-import CortexCoreC
+import Foundation
 
 /// Errors from the inline-secret mach_msg transfer (Swift 6 typed throws).
 public nonisolated enum SessionKeyChannelError: Error, Equatable, Sendable {
@@ -36,13 +36,12 @@ public nonisolated enum SessionKeyChannelError: Error, Equatable, Sendable {
 
 /// Delivers the 256-bit session secret over the rendezvous mach_msg channel (CF#1 fallback). Stateless.
 public nonisolated enum SessionKeyChannel {
-
   /// The fixed wire size of the session secret: 256 bits = 32 bytes (D-14). Both sides agree at
   /// compile time; the message carries no length field.
   public static let secretByteCount = 32
 
   /// A small marker id distinguishing the key handshake from the fd message ('CKEY').
-  static let messageID: mach_msg_id_t = 0x434B4559
+  static let messageID: mach_msg_id_t = 0x434B_4559
 
   /// An inline-bytes message: a header + a fixed 32-byte secret region. NOT complex (no descriptors).
   private struct KeyMsg {

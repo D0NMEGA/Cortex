@@ -1,3 +1,6 @@
+import CortexCoreC
+import FlatBuffers
+
 // SampleCodec — IPC-04. Build/read the FlatBuffers `Sample { ts_ns; channel_data:[ubyte]; seq; }`
 // wire frame (Cortex.IPC.Sample, vendored gen in generated/sample_generated.swift, flatc 25.12.19
 // matching the FlatBuffers runtime, CF#7).
@@ -18,8 +21,6 @@
 // Foundation-free Transport consumer (Plan 02-04) that opens/decodes frames off the main actor. The
 // CortexIPCSession target sets `.defaultIsolation(MainActor.self)`; `nonisolated` opts these out.
 import Foundation
-import FlatBuffers
-import CortexCoreC
 
 /// Number of f16 channels per frame, as a Swift Int (mirrors the C compile-time `CORTEX_CHANNEL_COUNT`
 /// + its `_Static_assert` in cortex_shm.h, D-11). The wire `channel_data` byte length is `channelCount * 2`.
@@ -27,7 +28,7 @@ import CortexCoreC
 /// `nonisolated` opts this immutable `Int` (trivially Sendable, derived from a compile-time C macro)
 /// out of the target's `.defaultIsolation(MainActor.self)` so the nonisolated codec — and the Plan
 /// 02-04 off-main-actor consumer — can read it; there is no mutable state to race on.
-public nonisolated let cortexChannelCount: Int = Int(CORTEX_CHANNEL_COUNT)
+public nonisolated let cortexChannelCount: Int = .init(CORTEX_CHANNEL_COUNT)
 
 /// Wire byte length of `channel_data`: one IEEE-754 half (2 bytes) per channel (D-10 half-pair invariant).
 public nonisolated let cortexChannelDataByteCount: Int = cortexChannelCount * 2
@@ -84,7 +85,6 @@ public nonisolated struct DecodedSample {
 }
 
 public nonisolated enum SampleCodec {
-
   /// Build a `Sample` FlatBuffer from `channelF16` (exactly `cortexChannelCount` half-floats, D-10),
   /// `tsNs`, and `seq`. The Float16 buffer is reinterpreted as raw bytes (`[ubyte]`) — the encode copy
   /// into the builder is ~200-400 ns/frame and is OFF the measured doorbell hot path (D-06).

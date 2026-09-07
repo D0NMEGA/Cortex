@@ -1,12 +1,12 @@
-import SwiftUI
 import CortexRender
+import SwiftUI
 
-// Phase 6 (RENDER-01/02/07): the iPad ProMotion render surface. The Phase-1 placeholder text is
-// replaced by the live 30×30 webgrid driven via CAMetalDisplayLink at 120Hz (iOSDisplayLinkAdapter),
-// full-bleed so the grid fills the panel. A deterministic LissajousProducer (D-05) pushes synthetic
-// cursor velocity into the shared VelocityRing the display-link callback pops — so the cursor moves
-// at launch with no real decoder yet (the Phase-5 decoder / Phase-7 Kalman become the producer later
-// behind the unchanged D-03 seam).
+/// Phase 6 (RENDER-01/02/07): the iPad ProMotion render surface. The Phase-1 placeholder text is
+/// replaced by the live 30×30 webgrid driven via CAMetalDisplayLink at 120Hz (iOSDisplayLinkAdapter),
+/// full-bleed so the grid fills the panel. A deterministic LissajousProducer (D-05) pushes synthetic
+/// cursor velocity into the shared VelocityRing the display-link callback pops — so the cursor moves
+/// at launch with no real decoder yet (the Phase-5 decoder / Phase-7 Kalman become the producer later
+/// behind the unchanged D-03 seam).
 struct ContentView: View {
   /// The producer→renderer SPSC seam (D-03). The view's display-link callback is the single
   /// consumer; `WebgridDriver` below is the single producer — SPSC discipline upheld.
@@ -14,7 +14,7 @@ struct ContentView: View {
 
   var body: some View {
     WebgridView(ring: driver.ring)
-      .ignoresSafeArea()  // full-bleed: the grid fills the entire ProMotion panel
+      .ignoresSafeArea() // full-bleed: the grid fills the entire ProMotion panel
       .onAppear { driver.start() }
       .onDisappear { driver.stop() }
   }
@@ -34,8 +34,8 @@ final class WebgridDriver {
 
   func start() {
     guard thread == nil else { return }
-    let ring = self.ring
-    let producer = self.producer
+    let ring = ring
+    let producer = producer
     let t = Thread {
       // Deterministic time base: t advances by the fixed 20ms step each push (not a wall clock), so
       // the synthetic path is bit-reproducible for the SC#4 soak (D-05). seq is monotonic.

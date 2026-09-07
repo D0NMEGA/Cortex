@@ -1,3 +1,5 @@
+import CortexCoreC
+
 // ShmRing — Foundation-free fixed-stride POSIX shm ring (Plan 02-02 Task 1, IPC-01).
 //
 // This is the DATA PLANE (D-01): the producer writes an encrypted frame into a fixed-stride slot
@@ -18,7 +20,6 @@
 // NO mutex locks, NO cooperative-dispatch hops — both are hot-path-gate-forbidden and would
 // defeat the busy-poll model (a lock is unbounded; the whole point is a lock-free SPSC counter).
 import Darwin
-import CortexCoreC
 import Synchronization
 
 /// Compile-from-constant geometry of the ring. Every field derives from `CORTEX_CHANNEL_COUNT`
@@ -65,29 +66,29 @@ public struct ShmRingLayout: Sendable, Equatable {
     precondition(depth > 0 && (depth & (depth - 1)) == 0, "ring depth must be a power of two")
     precondition(channelCount > 0, "channel count must be positive")
 
-    let perSlotSeq = 8            // a copy of the frame's seq tag living inside the slot
+    let perSlotSeq = 8 // a copy of the frame's seq tag living inside the slot
     let payload = channelCount * 2 // raw f16 bytes (D-10)
     let framing = ShmRingLayout.flatBuffersFramingHeadroom // FlatBuffers Sample encoding overhead
-    let gcmTag = 16              // AES-GCM tag reserved for Plan 02-03 (D-03)
+    let gcmTag = 16 // AES-GCM tag reserved for Plan 02-03 (D-03)
     let raw = perSlotSeq + payload + framing + gcmTag
-    self.slotStride = (raw + 15) & ~15 // round up to 16
+    slotStride = (raw + 15) & ~15 // round up to 16
 
     self.depth = depth
 
     let cl = ShmRingLayout.cacheLine
-    self.producerSeqOffset = 0
-    self.ackSeqOffset = cl
-    self.headerBytes = 2 * cl // two cache-line-isolated counters
+    producerSeqOffset = 0
+    ackSeqOffset = cl
+    headerBytes = 2 * cl // two cache-line-isolated counters
 
-    self.ringBytes = self.headerBytes + self.slotStride * depth
+    ringBytes = headerBytes + slotStride * depth
   }
 }
 
 /// Errors mapping the three failure points of opening/mapping the ring (Swift 6 typed throws).
 public enum ShmRingError: Error, Equatable {
-  case open(Int32)      // cortex_shm_open failed; payload = errno
-  case truncate(Int32)  // ftruncate failed; payload = errno
-  case map(Int32)       // mmap returned MAP_FAILED; payload = errno
+  case open(Int32) // cortex_shm_open failed; payload = errno
+  case truncate(Int32) // ftruncate failed; payload = errno
+  case map(Int32) // mmap returned MAP_FAILED; payload = errno
   case sizeMismatch(expected: Int, actual: Int) // an adopted fd was too small to hold the ring
 }
 
@@ -106,6 +107,7 @@ public final class ShmRing {
   private var producerSeq: UnsafeMutablePointer<Atomic<UInt64>> {
     base.advanced(by: layout.producerSeqOffset).assumingMemoryBound(to: Atomic<UInt64>.self)
   }
+
   /// Atomic view of the ack sequence counter (D-02).
   private var ackSeq: UnsafeMutablePointer<Atomic<UInt64>> {
     base.advanced(by: layout.ackSeqOffset).assumingMemoryBound(to: Atomic<UInt64>.self)
@@ -148,8 +150,8 @@ public final class ShmRing {
       close(fd)
       throw .map(e)
     }
-    self.base = mapped!
-    self.ownedFD = fd
+    base = mapped!
+    ownedFD = fd
   }
 
   /// Map a ring from a file descriptor received over the FDChannel (consumer side, IPC-03). The fd
@@ -171,8 +173,8 @@ public final class ShmRing {
     if mapped == MAP_FAILED || mapped == nil {
       throw .map(errno)
     }
-    self.base = mapped!
-    self.ownedFD = -1 // borrowed: do not close the adopted fd in deinit
+    base = mapped!
+    ownedFD = -1 // borrowed: do not close the adopted fd in deinit
   }
 
   deinit {
@@ -195,7 +197,9 @@ public final class ShmRing {
   /// returns -1 on a consumer ring (`init(adoptingFD:)` borrows the fd and does not own one to send).
   /// Only the producer (which created the region) sends — closing the 02-02->02-04 cross-plan handoff
   /// item (the fd was intentionally `private let ownedFD`). Read-only: does not transfer ownership.
-  public var fd: Int32 { ownedFD }
+  public var fd: Int32 {
+    ownedFD
+  }
 
   // MARK: - Producer (data plane)
 

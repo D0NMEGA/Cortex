@@ -22,6 +22,6 @@ let package = Package(
     .testTarget(
       name: "CortexRenderTests",
       dependencies: ["CortexRender"]
-    ),
+    )
   ]
 )

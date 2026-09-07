@@ -1,6 +1,6 @@
 import Metal
-import QuartzCore
 import os
+import QuartzCore
 
 // WebgridFrameEncoder — the platform-agnostic core that encodes ONE compute pass writing the 30x30
 // webgrid + cursor into a supplied CAMetalDrawable (RENDER-04). Both display-link adapters (Plan 03:
@@ -85,7 +85,8 @@ public final class WebgridFrameEncoder {
     let height = max(1, pipelineState.maxTotalThreadsPerThreadgroup / width)
     let threadsPerThreadgroup = MTLSize(width: width, height: height, depth: 1)
     let threads = MTLSize(
-      width: drawable.texture.width, height: drawable.texture.height, depth: 1)
+      width: drawable.texture.width, height: drawable.texture.height, depth: 1
+    )
     encoder.dispatchThreads(threads, threadsPerThreadgroup: threadsPerThreadgroup)
     encoder.endEncoding()
   }

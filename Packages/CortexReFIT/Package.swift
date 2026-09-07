@@ -21,21 +21,21 @@ let package = Package(
     .library(name: "CortexReFIT", targets: ["CortexReFIT"]),
     // Plan 07-03 (D-07, SC#3): the headless deterministic 3-way ablation BPS harness + the
     // filter-step tail-latency bench. Mirrors the CortexDecoderBench executable entry.
-    .executable(name: "CortexReFITBench", targets: ["CortexReFITBench"]),
+    .executable(name: "CortexReFITBench", targets: ["CortexReFITBench"])
   ],
   dependencies: [
     // D-14: depend on CortexRender (the seam owner), do not hoist the seam to CortexCore.
     .package(path: "../CortexRender"),
     // Plan 07-03: LatencyHistogram (the SC#3 tail-latency value type) lives in CortexDecoder; the
     // bench reuses it (and the bench-executable pattern) rather than duplicating the histogram math.
-    .package(path: "../CortexDecoder"),
+    .package(path: "../CortexDecoder")
   ],
   targets: [
     .target(
       name: "CortexReFIT",
       dependencies: [
         // The CursorVelocity / VelocityRing seam this filter produces into (D-14 keep-decision).
-        .product(name: "CortexRender", package: "CortexRender"),
+        .product(name: "CortexRender", package: "CortexRender")
       ],
       swiftSettings: [.defaultIsolation(MainActor.self)]
     ),
@@ -51,12 +51,12 @@ let package = Package(
       dependencies: [
         "CortexReFIT",
         .product(name: "CortexRender", package: "CortexRender"),
-        .product(name: "CortexDecoder", package: "CortexDecoder"),
+        .product(name: "CortexDecoder", package: "CortexDecoder")
       ]
     ),
     .testTarget(
       name: "CortexReFITTests",
       dependencies: ["CortexReFIT"]
-    ),
+    )
   ]
 )

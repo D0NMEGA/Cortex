@@ -1,3 +1,7 @@
+@testable import CortexIPCSession
+import Foundation
+import Security
+
 // KeychainTests — IPC-06 / SC#3. SINGLE-process round-trip of the 256-bit session secret through the
 // Keychain (CF#1 fallback: default access group, no team-prefixed kSecAttrAccessGroup). Proves SC#3's
 // "the key round-tripping Keychain" round-trip/not-found/idempotent LOGIC, and asserts the PRODUCTION
@@ -13,24 +17,23 @@
 // Security discipline (T-02-03-04): tests assert byte-equality locally and NEVER print the secret.
 // Each test cleans up its Keychain item in `init`/`defer` for isolation (Swift Testing fresh-instance).
 import Testing
-import Foundation
-import Security
-
-@testable import CortexIPCSession
 
 @Suite("SessionKeychain (IPC-06 / SC#3)", .serialized)
 struct KeychainTests {
-
-  // Round-trip logic is exercised against the legacy file keychain (works on the unentitled host).
+  /// Round-trip logic is exercised against the legacy file keychain (works on the unentitled host).
   private static let testBackend: SessionKeychain.Backend = .legacyFile
 
-  // Fresh instance per test (Swift Testing). Ensure no stale item leaks in or out.
-  init() { try? SessionKeychain.delete(backend: Self.testBackend) }
+  /// Fresh instance per test (Swift Testing). Ensure no stale item leaks in or out.
+  init() {
+    try? SessionKeychain.delete(backend: Self.testBackend)
+  }
 
-  private func cleanup() { try? SessionKeychain.delete(backend: Self.testBackend) }
+  private func cleanup() {
+    try? SessionKeychain.delete(backend: Self.testBackend)
+  }
 
-  @Test("store then load returns the identical 32 secret bytes (SC#3 round-trip)")
-  func roundTripByteEquality() throws {
+  @Test
+  func `store then load returns the identical 32 secret bytes (SC#3 round-trip)`() throws {
     defer { cleanup() }
     let secret = SessionKeys.generateSecret()
     let original = secret.withUnsafeBytes { Array($0) }
@@ -43,8 +46,8 @@ struct KeychainTests {
     #expect(loadedBytes == original)
   }
 
-  @Test("load after delete throws an errSecItemNotFound-derived error (fail-closed)")
-  func notFoundAfterDelete() throws {
+  @Test
+  func `load after delete throws an errSecItemNotFound-derived error (fail-closed)`() throws {
     defer { cleanup() }
     let secret = SessionKeys.generateSecret()
     try SessionKeychain.store(secret: secret, backend: Self.testBackend)
@@ -55,8 +58,8 @@ struct KeychainTests {
     }
   }
 
-  @Test("storing twice (delete-then-add) succeeds without errSecDuplicateItem; second value wins")
-  func idempotentReStore() throws {
+  @Test
+  func `storing twice (delete-then-add) succeeds without errSecDuplicateItem; second value wins`() throws {
     defer { cleanup() }
     let first = SessionKeys.generateSecret()
     let second = SessionKeys.generateSecret()
@@ -70,16 +73,16 @@ struct KeychainTests {
     #expect(loaded == secondBytes)
   }
 
-  @Test("delete is idempotent — deleting a non-existent item does not throw")
-  func deleteIsIdempotent() throws {
+  @Test
+  func `delete is idempotent — deleting a non-existent item does not throw`() throws {
     defer { cleanup() }
     // No item stored. Both calls must succeed (errSecItemNotFound treated as success).
     try SessionKeychain.delete(backend: Self.testBackend)
     try SessionKeychain.delete(backend: Self.testBackend)
   }
 
-  @Test("the PRODUCTION query is the data-protection keychain (kCFBooleanTrue + AfterFirstUnlock, IPC-06/CF#8)")
-  func productionQueryHasDataProtectionAttributes() throws {
+  @Test
+  func `the PRODUCTION query is the data-protection keychain (kCFBooleanTrue + AfterFirstUnlock, IPC-06/CF#8)`() {
     let q = SessionKeychain.baseQuery(backend: .dataProtection)
 
     // kSecUseDataProtectionKeychain must be the CFBoolean true (CF#8), NOT a Swift Bool / NSNumber.

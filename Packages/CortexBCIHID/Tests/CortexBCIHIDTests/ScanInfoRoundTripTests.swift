@@ -1,3 +1,5 @@
+@testable import CortexBCIHID
+
 // ScanInfoRoundTripTests — Phase 8 (SYS-03/04, SC#2): the bidirectional closed-loop round trip over
 // the BCI HID Scan-Info channel (CONTEXT D-05, RESEARCH §0.2/§1.1).
 //
@@ -19,12 +21,10 @@
 //   `@Test("descriptive")` + a camelCase function name (SwiftLint identifier_name-clean).
 import Testing
 
-@testable import CortexBCIHID
-
-// `ScanInfoRoundTrip` + `RoundTripLog` are MainActor-isolated (the package default
-// .defaultIsolation(MainActor.self)); the suite adopts the same isolation to drive them synchronously
-// (mirrors the DaemonRegistrationTests / CortexReFIT KalmanConstantsTests precedent). The intent stays a
-// PURE function regardless of isolation — determinism is asserted by `respondIsDeterministic`.
+/// `ScanInfoRoundTrip` + `RoundTripLog` are MainActor-isolated (the package default
+/// .defaultIsolation(MainActor.self)); the suite adopts the same isolation to drive them synchronously
+/// (mirrors the DaemonRegistrationTests / CortexReFIT KalmanConstantsTests precedent). The intent stays a
+/// PURE function regardless of isolation — determinism is asserted by `respondIsDeterministic`.
 @Suite("ScanInfoRoundTripTests")
 @MainActor
 struct ScanInfoRoundTripTests {
@@ -49,8 +49,8 @@ struct ScanInfoRoundTripTests {
   // 0..<numberOfItems (deterministic for the inputs). NOTE: numberOfItems is a UInt8 on the wire (Apple
   // reference), so the plan's "900" is exercised as the clamp path (Test 5 count=0) + here with a
   // representable count; the focus index is always clamped to 0..<max(1, numberOfItems).
-  @Test("respond returns a valid in-range item selection for a normal scan-info report")
-  func respondReturnsValidItemSelection() {
+  @Test
+  func `respond returns a valid in-range item selection for a normal scan-info report`() {
     let trip = ScanInfoRoundTrip()
     let response = trip.respond(to: scanInfo(selectedItem: 3, numberOfItems: 30, seed: 7))
     // The intent carries an Item-Selection report (RID 4, device->host).
@@ -59,11 +59,11 @@ struct ScanInfoRoundTripTests {
     #expect(response.itemSelection.itemIndex < 30)
   }
 
-  // Test 2 — the response also produces a Pointer report whose position deltas are Int8 in -127...127
-  // (the cursor-intent half of SYS-04). Int8 is structurally bounded to -128...127; we additionally
-  // assert the harness never emits the -128 sentinel, keeping deltas in the documented -127...127.
-  @Test("respond produces a pointer report with deltas in -127...127")
-  func respondProducesPointerInRange() {
+  /// Test 2 — the response also produces a Pointer report whose position deltas are Int8 in -127...127
+  /// (the cursor-intent half of SYS-04). Int8 is structurally bounded to -128...127; we additionally
+  /// assert the harness never emits the -128 sentinel, keeping deltas in the documented -127...127.
+  @Test
+  func `respond produces a pointer report with deltas in -127...127`() {
     let trip = ScanInfoRoundTrip()
     let response = trip.respond(to: scanInfo(selectedItem: 12, numberOfItems: 30, seed: 42))
     #expect(response.pointer.reportId == BCIReportID.pointer.rawValue)
@@ -74,11 +74,11 @@ struct ScanInfoRoundTripTests {
     }
   }
 
-  // Test 3 — each respond(to:) call appends exactly one RoundTripLog entry; the entry records the scan
-  // seed, the selectedItem in, the itemIndex out, and a monotonic ns timestamp; two consecutive entries
-  // have non-decreasing timestamps.
-  @Test("respond appends exactly one instrumented log entry per cycle, with monotonic timestamps")
-  func respondAppendsOneLogEntryPerCycle() {
+  /// Test 3 — each respond(to:) call appends exactly one RoundTripLog entry; the entry records the scan
+  /// seed, the selectedItem in, the itemIndex out, and a monotonic ns timestamp; two consecutive entries
+  /// have non-decreasing timestamps.
+  @Test
+  func `respond appends exactly one instrumented log entry per cycle, with monotonic timestamps`() {
     let trip = ScanInfoRoundTrip()
     #expect(trip.log.entries.isEmpty)
 
@@ -115,11 +115,11 @@ struct ScanInfoRoundTripTests {
     #expect(line.contains("ptr="))
   }
 
-  // Test 4 — the round trip is deterministic: the same Scan-Info input produces the same intent + the
-  // same log fields (excluding the wall-time-independent timestamp, asserted monotonic not exact)
-  // across two independent runs (no entropy source).
-  @Test("respond is deterministic: identical scan-info input yields identical intent across runs")
-  func respondIsDeterministic() {
+  /// Test 4 — the round trip is deterministic: the same Scan-Info input produces the same intent + the
+  /// same log fields (excluding the wall-time-independent timestamp, asserted monotonic not exact)
+  /// across two independent runs (no entropy source).
+  @Test
+  func `respond is deterministic: identical scan-info input yields identical intent across runs`() {
     let input = scanInfo(selectedItem: 17, numberOfItems: 30, seed: 200)
 
     let tripA = ScanInfoRoundTrip()
@@ -152,8 +152,8 @@ struct ScanInfoRoundTripTests {
   // Test 5 — a Scan-Info report with numberOfItems=0 (degenerate) is handled without crash:
   // respond(to:) returns a safe no-selection intent (itemIndex 0, zero pointer delta) and logs the
   // cycle (threat T-08-02-01).
-  @Test("respond handles numberOfItems=0 with a safe no-selection intent and still logs the cycle")
-  func respondHandlesZeroItemsSafely() {
+  @Test
+  func `respond handles numberOfItems=0 with a safe no-selection intent and still logs the cycle`() {
     let trip = ScanInfoRoundTrip()
     let response = trip.respond(to: scanInfo(selectedItem: 250, numberOfItems: 0, seed: 3))
 

@@ -24,9 +24,9 @@
 
 import Foundation
 
-// ── argument parsing (tiny, no dependency) ───────────────────────────────────────────────────────
+/// ── argument parsing (tiny, no dependency) ───────────────────────────────────────────────────────
 struct BenchArgs {
-  var frames = 10_000
+  var frames = 10000
   var warmup = 200
   var width = 2752
   var height = 2064
@@ -46,36 +46,44 @@ struct BenchArgs {
 func parseArgs(_ argv: [String]) -> BenchArgs {
   var a = BenchArgs()
   var i = 0
-  let args = Array(argv.dropFirst())  // drop the executable path
+  let args = Array(argv.dropFirst()) // drop the executable path
   while i < args.count {
     let tok = args[i]
     switch tok {
     case "--warmup":
-      if i + 1 < args.count, let k = Int(args[i + 1]) { a.warmup = max(0, k); i += 1 }
+      if i + 1 < args.count, let k = Int(args[i + 1]) { a.warmup = max(0, k)
+        i += 1
+      }
     case "--soak":
       a.runSoak = true
       // Optional numeric seconds immediately after --soak.
-      if i + 1 < args.count, let s = Double(args[i + 1]) { a.soakSeconds = max(0.1, s); i += 1 }
+      if i + 1 < args.count, let s = Double(args[i + 1]) { a.soakSeconds = max(0.1, s)
+        i += 1
+      }
     case "--out":
-      if i + 1 < args.count { a.outDir = URL(fileURLWithPath: args[i + 1]); i += 1 }
+      if i + 1 < args.count { a.outDir = URL(fileURLWithPath: args[i + 1])
+        i += 1
+      }
     default:
       // Positional: a bare integer is `frames`; a WxH token sets the extent.
       if let f = Int(tok) {
         a.frames = f
       } else if let x = tok.firstIndex(where: { $0 == "x" || $0 == "X" }) {
-        let wStr = String(tok[tok.startIndex..<x])
+        let wStr = String(tok[tok.startIndex ..< x])
         let hStr = String(tok[tok.index(after: x)...])
-        if let w = Int(wStr), let h = Int(hStr), w > 0, h > 0 { a.width = w; a.height = h }
+        if let w = Int(wStr), let h = Int(hStr), w > 0, h > 0 { a.width = w
+          a.height = h
+        }
       }
     }
     i += 1
   }
   // RENDER-05: the GPU-time histogram MUST be over n ≥ 10_000 frames. Clamp up, never silently below.
-  a.frames = max(a.frames, 10_000)
+  a.frames = max(a.frames, 10000)
   return a
 }
 
-// ── ISO-8601 timestamp for the artifacts ──────────────────────────────────────────────────────────
+/// ── ISO-8601 timestamp for the artifacts ──────────────────────────────────────────────────────────
 func isoNow() -> String {
   let f = ISO8601DateFormatter()
   f.formatOptions = [.withInternetDateTime]
@@ -96,25 +104,32 @@ func runBench(_ args: BenchArgs, date: String) throws {
   // RENDER-05 / SC#2 — GPU-time histogram over the real webgrid compute pass.
   print(
     "CortexRenderBench — GPU-time histogram: \(args.frames) frames "
-      + "(\(args.warmup) warmup) @ \(args.width)x\(args.height) offscreen")
+      + "(\(args.warmup) warmup) @ \(args.width)x\(args.height) offscreen"
+  )
   let r = try GPUTimeHistogram.run(
-    frames: args.frames, warmup: args.warmup, width: args.width, height: args.height)
+    frames: args.frames, warmup: args.warmup, width: args.width, height: args.height
+  )
   let s = r.stats
   print("  device      : \(r.deviceName)  (M5 Pro ProMotion — corroborating-canonical, D-11)")
   print("  samples     : \(s.count)")
   print(
     String(
       format: "  GPU time ms : p50=%.4f  p95=%.4f  p99=%.4f  min=%.4f  max=%.4f  mean=%.4f",
-      s.p50Ms, s.p95Ms, s.p99Ms, s.minMs, s.maxMs, s.meanMs))
+      s.p50Ms, s.p95Ms, s.p99Ms, s.minMs, s.maxMs, s.meanMs
+    )
+  )
   let bound = 0.4
   let verdict = s.p99Ms <= bound ? "PASS" : "OVER"
   print(
     String(
       format: "  SC#2 <=%.1fms: %@  (p99=%.4fms, margin=%.4fms / %.1fx)",
-      bound, verdict, s.p99Ms, bound - s.p99Ms, bound / max(s.p99Ms, 1e-9)))
+      bound, verdict, s.p99Ms, bound - s.p99Ms, bound / max(s.p99Ms, 1e-9)
+    )
+  )
   try GPUTimeHistogram.writeJSON(
     to: args.outDir, deviceName: r.deviceName, width: r.width, height: r.height, stats: s,
-    iso8601Date: date)
+    iso8601Date: date
+  )
   print("  wrote       : \(args.outDir.appendingPathComponent("gpu_time_hist.json").path)")
 
   // SC#4 — sustained-throughput soak (optional; --soak). The soak measurement lives in

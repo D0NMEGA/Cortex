@@ -1,3 +1,5 @@
+import CryptoKit
+
 // SessionCrypto — IPC-05. AES-GCM (CryptoKit, FEAT_AES on Apple Silicon) with HKDF-derived
 // per-direction subkeys and a 96-bit DETERMINISTIC nonce that reuses the ring `seq` as its counter.
 //
@@ -23,7 +25,6 @@
 // CortexIPCSession is Foundation-allowed (D-04/D-06); not policed by the hot-path gate. Types are
 // `nonisolated` so the Plan 02-04 consumer can seal/open off the main actor.
 import Foundation
-import CryptoKit
 
 /// The two encrypted directions of the Phase-2 ack-bounce (D-02/D-15). Each carries its own HKDF
 /// `info` label (→ distinct subkey) and a distinct 4-byte nonce prefix (→ distinct nonce domain),
@@ -37,8 +38,8 @@ public nonisolated enum Direction: Sendable, CaseIterable {
   /// HKDF `info` label — domain separation between the two per-direction subkeys (D-15).
   public var infoLabel: String {
     switch self {
-    case .daemonToApp: return "cortex.daemon->app.v1"
-    case .appToAck: return "cortex.app->ack.v1"
+    case .daemonToApp: "cortex.daemon->app.v1"
+    case .appToAck: "cortex.app->ack.v1"
     }
   }
 
@@ -47,8 +48,8 @@ public nonisolated enum Direction: Sendable, CaseIterable {
   /// `0xC0 0x01` = "cortex IPC" epoch tag; the last byte distinguishes the direction (0x01 / 0x02).
   public var noncePrefix: [UInt8] {
     switch self {
-    case .daemonToApp: return [0xC0, 0x01, 0x00, 0x01]
-    case .appToAck: return [0xC0, 0x01, 0x00, 0x02]
+    case .daemonToApp: [0xC0, 0x01, 0x00, 0x01]
+    case .appToAck: [0xC0, 0x01, 0x00, 0x02]
     }
   }
 }
@@ -76,8 +77,8 @@ public nonisolated struct SessionKeys: Sendable {
   /// labels (D-15). The secret is already high-entropy (256 random bits), so HKDF-Expand alone is the
   /// correct RFC 5869 step (no salt/extract needed for a uniformly random PRK).
   public init(secret: SymmetricKey) {
-    self.daemonToAppKey = SessionKeys.deriveSubkey(secret: secret, direction: .daemonToApp)
-    self.appToAckKey = SessionKeys.deriveSubkey(secret: secret, direction: .appToAck)
+    daemonToAppKey = SessionKeys.deriveSubkey(secret: secret, direction: .daemonToApp)
+    appToAckKey = SessionKeys.deriveSubkey(secret: secret, direction: .appToAck)
   }
 
   private static func deriveSubkey(secret: SymmetricKey, direction: Direction) -> SymmetricKey {
@@ -91,14 +92,13 @@ public nonisolated struct SessionKeys: Sendable {
   /// The AES-256 subkey for `direction`.
   public func subkey(for direction: Direction) -> SymmetricKey {
     switch direction {
-    case .daemonToApp: return daemonToAppKey
-    case .appToAck: return appToAckKey
+    case .daemonToApp: daemonToAppKey
+    case .appToAck: appToAckKey
     }
   }
 }
 
 public nonisolated enum SessionCrypto {
-
   /// Encode `seq` as 8 big-endian bytes (the nonce counter, D-16).
   public static func seqBigEndianBytes(_ seq: UInt64) -> [UInt8] {
     withUnsafeBytes(of: seq.bigEndian) { Array($0) }

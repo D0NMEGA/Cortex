@@ -61,8 +61,12 @@ struct ContentView: View {
       .background(.black)
       .foregroundStyle(.white)
     }
-    .onAppear { blind.start(); refit.start() }
-    .onDisappear { blind.stop(); refit.stop() }
+    .onAppear { blind.start()
+      refit.start()
+    }
+    .onDisappear { blind.stop()
+      refit.stop()
+    }
   }
 
   /// One arm's render surface with the label that says what it is and what it is not.
@@ -181,6 +185,7 @@ final class ClosedLoopDriver {
     boxOriginMm = .zero
     boxSideMm = 1
   }
+
   /// The SYS-03/04 in-app host harness: one Scan-Info round trip per tick, instrumented log surfaced.
   private let roundTrip = ScanInfoRoundTrip()
   /// The 120Hz present boundary (the beam-raced present) the software-timed sample snaps to.

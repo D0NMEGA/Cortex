@@ -27,9 +27,9 @@
 //
 // This is Apps-target orchestration (Foundation allowed for the CSV/histogram file write). The
 // Foundation-free transport it drives (ShmRing) stays Foundation-free and hot-path-gate-clean.
-import Foundation
-import Darwin
 import CortexIPCTransport
+import Darwin
+import Foundation
 
 /// The reduced result of a benchmark run: the sample count actually measured (after the warm-up
 /// discard), p50/p99 round-trip nanoseconds, the standard deviation, and the raw per-frame samples
@@ -89,7 +89,7 @@ private func cortexBenchConsumerThread(_ arg: UnsafeMutableRawPointer) -> Unsafe
   scratch.withUnsafeMutableBytes { out in
     while consumed < a.frames {
       if let s = ring.pollLatest(into: out, lastSeen: lastSeen), s > lastSeen {
-        ring.ack(seq: s)                                  // release-store the ack seq (D-02)
+        ring.ack(seq: s) // release-store the ack seq (D-02)
         lastSeen = s
         consumed += 1
       }
@@ -99,7 +99,6 @@ private func cortexBenchConsumerThread(_ arg: UnsafeMutableRawPointer) -> Unsafe
 }
 
 public enum Benchmark {
-
   // MARK: - Monotonic timer (inline, nonisolated, cached timebase)
 
   /// The mach timebase, read ONCE (numer/denom; on this M4 = 125/3, so the conversion is non-trivial
@@ -127,7 +126,7 @@ public enum Benchmark {
   /// observed. The first `warmup` samples are discarded; the rest reduce to p50/p99/σ.
   ///
   /// NO socket-event / control-plane wake call and NO AES-GCM appear in the timed loop (CF#2 / D-01).
-  public static func runRoundTrip(frames: Int = 200_000, warmup: Int = 1_000) -> BenchResult {
+  public static func runRoundTrip(frames: Int = 200_000, warmup: Int = 1000) -> BenchResult {
     precondition(frames > warmup, "frames must exceed the warm-up discard")
 
     // One ring, mapped once; both threads share it. Unique name so concurrent/aborted runs do not
@@ -188,12 +187,13 @@ public enum Benchmark {
   private static func producerLoop(ringHandle: UnsafeMutableRawPointer,
                                    frames: Int,
                                    slot: UnsafeRawBufferPointer,
-                                   out samples: UnsafeMutableBufferPointer<UInt64>) {
+                                   out samples: UnsafeMutableBufferPointer<UInt64>)
+  {
     let ring = Unmanaged<ShmRing>.fromOpaque(ringHandle).takeUnretainedValue()
     var lastAck: UInt64 = 0
-    for i in 0..<frames {
+    for i in 0 ..< frames {
       let t0 = nowNanos()
-      let seq = ring.write(slotBytes: slot)              // release-store the bumped producer seq
+      let seq = ring.write(slotBytes: slot) // release-store the bumped producer seq
       // Busy-poll the ack-bounce: spin until the consumer's ack seq reaches `seq` (acquire-load).
       while true {
         if let a = ring.pollAck(lastSeen: lastAck), a >= seq {
@@ -202,7 +202,7 @@ public enum Benchmark {
         }
       }
       let t1 = nowNanos()
-      samples[i] = t1 &- t0                                // preallocated owned buffer → no allocation
+      samples[i] = t1 &- t0 // preallocated owned buffer → no allocation
     }
   }
 
@@ -223,7 +223,9 @@ public enum Benchmark {
 
     // Mean and population σ in Double to avoid UInt64 overflow on the sum of squares.
     var sum = 0.0
-    for v in measured { sum += Double(v) }
+    for v in measured {
+      sum += Double(v)
+    }
     let mean = sum / Double(n)
     var sumSq = 0.0
     for v in measured {
@@ -283,7 +285,9 @@ public enum Benchmark {
     let csvPath = (path as NSString).deletingPathExtension + ".csv"
     var csv = "round_trip_ns\n"
     csv.reserveCapacity(r.rawSamples.count * 5)
-    for v in r.rawSamples { csv += "\(v)\n" }
+    for v in r.rawSamples {
+      csv += "\(v)\n"
+    }
     do {
       try csv.write(toFile: csvPath, atomically: true, encoding: .utf8)
     } catch {

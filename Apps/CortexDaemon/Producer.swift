@@ -26,12 +26,12 @@
 //
 // SECURITY: the secret bytes are NEVER logged (T-02-04-06); only seq/counts are. This is Apps-target
 // orchestration (Foundation allowed) — the policed hot-path code it calls stays Foundation-free.
-import Foundation
-import Darwin
-import CryptoKit
 import CortexCore
-import CortexIPCTransport
 import CortexIPCSession
+import CortexIPCTransport
+import CryptoKit
+import Darwin
+import Foundation
 
 /// Errors surfaced by the producer setup / round trip (Swift 6 typed throws upstream where possible;
 /// this aggregates the few cross-layer failures that are not already typed).
@@ -72,7 +72,8 @@ public final class Producer {
   /// Plan 10-04 removed from the closed loop, and it would put a synthetic number under a real-data
   /// label. An UNSET variable is the clean-clone path and changes nothing.
   public init(ringName: String = CORTEX_SHM_NAME,
-              keychainBackend: SessionKeychain.Backend = .dataProtection) throws {
+              keychainBackend: SessionKeychain.Backend = .dataProtection) throws
+  {
     // Resolve the replay source FIRST, so a misconfigured export fails before any Keychain write or
     // shm region exists to clean up.
     if let sidecarURL = ReplayExport.sidecarURLFromEnvironment() {
@@ -82,20 +83,24 @@ public final class Producer {
     }
     let secret = SessionKeys.generateSecret()
     self.secret = secret
-    self.keys = SessionKeys(secret: secret)
+    keys = SessionKeys(secret: secret)
     // SC#3: store the secret single-process. The CROSS-PROCESS delivery is over the channel (CF#1
     // fallback) — see handoff(to:). The store proves the IPC-06 Keychain round-trip half of SC#3.
     try SessionKeychain.store(secret: secret, backend: keychainBackend)
-    self.ring = try ShmRing(name: ringName, create: true)
-    self.doorbell = try Doorbell()
+    ring = try ShmRing(name: ringName, create: true)
+    doorbell = try Doorbell()
   }
 
   /// Whether this producer emits REAL exported bins (D-05) rather than the Phase-2 test pattern.
   /// Recorded by the Seam B smoke so a run's data source is a fact in the artifact, not an assumption.
-  public var isReplayBacked: Bool { replay != nil }
+  public var isReplayBacked: Bool {
+    replay != nil
+  }
 
   /// The session the replay is replaying, or nil when running the Phase-2 pattern.
-  public var replaySessionId: String? { replay?.sidecar.sessionId }
+  public var replaySessionId: String? {
+    replay?.sidecar.sessionId
+  }
 
   /// The same fact `isReplayBacked` / `replaySessionId` report, resolved WITHOUT constructing a
   /// producer: no Keychain write, no shm region, no doorbell. That matters because the daemon banner
@@ -114,12 +119,16 @@ public final class Producer {
   }
 
   /// The shm region fd (for the harness/consumer to know what is being shared). Read-only.
-  public var shmFD: Int32 { ring.fd }
+  public var shmFD: Int32 {
+    ring.fd
+  }
 
   /// The producer end of the doorbell (the consumer arms its kqueue on the consumer end). Exposed so
   /// a single-process harness can wire the consumer's doorbell wake; the two-process harness uses the
   /// ring busy-poll as the data path and the doorbell only as the idle wake.
-  public var doorbellProducerFD: Int32 { doorbell.producerFD }
+  public var doorbellProducerFD: Int32 {
+    doorbell.producerFD
+  }
 
   /// Hand the consumer everything it needs to map + decrypt: FIRST the session secret over the
   /// channel (CF#1 fallback — a second mach_msg sent BEFORE the fd message, so the consumer has the
@@ -186,7 +195,7 @@ public final class Producer {
   public func produce(frameCount: Int, ackSpinBudget: Int = 50_000_000) throws -> Int {
     var lastAck: UInt64 = 0
     var acked = 0
-    for _ in 0..<frameCount {
+    for _ in 0 ..< frameCount {
       let seq = ring.loadProducerSeq() &+ 1
       let tsNs = nowNanos()
       let pattern = binF16(forSeq: seq)

@@ -37,7 +37,7 @@ public nonisolated struct CursorPosition: Sendable, Equatable {
 }
 
 /// Integrates a velocity stream into a clamped, always-finite cursor position (D-04).
-public nonisolated final class CursorIntegrator {
+public final nonisolated class CursorIntegrator {
   /// The current cursor position. Updated in-place by `integrate`; always finite and in `[0, 1]`.
   public private(set) var position: CursorPosition
 
