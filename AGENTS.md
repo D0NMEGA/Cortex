@@ -35,7 +35,10 @@ extra, so a bare `uv run pytest` in a fresh worktree fails with a misleading
 
 ```bash
 uv sync --project Decoder --extra dev
-uv run --project Decoder pytest            # add -m slow for the evidence runs
+uv run --project Decoder pytest Decoder/tests -m "not slow" -q   # drop -m for the slow evidence runs
+# The path is required when invoking from the repo root: pytest resolves `testpaths = ["tests"]`
+# against its own rootdir, so the bare form collects Decoder/checkpoints and errors on the nested
+# .mlpackage directories left by the compile_model shutil.move defect. CI uses the scoped form.
 ```
 
 `coremltools` is pinned at 9.0. The training/eval dataset lives in the gitignored `Decoder/data/`

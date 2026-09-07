@@ -140,7 +140,7 @@ xcodegen generate
 
 # Python decoder environment (the dev extra is required)
 uv sync --project Decoder --extra dev
-uv run --project Decoder pytest -q
+uv run --project Decoder pytest Decoder/tests -m "not slow" -q
 
 # Materialize the dataset from the committed checksum manifest (not committed)
 uv run --project Decoder python Decoder/scripts/download_indy.py
