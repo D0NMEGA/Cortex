@@ -78,7 +78,7 @@ iPad-Pro-M4 capture is HUMAN-UAT (D-08). No estimated-compositor-offset fudge. P
 
 The standard Neuralink / Bliss-Chapman Webgrid information-rate bitrate
 `B = max(0, log2(N) * (Sc - Si) / t)` (N = 900 for the 30×30 grid incl. the delete/cancel key,
-`log2(N)`-normalized so it is comparable to BrainGate's 6×6 4.16) is the leaderboard-comparable
+`log2(N)`-normalized so it is comparable to BrainGate's T5 dense 9x9 4.16) is the leaderboard-comparable
 metric. The mandatory `max(0, ...)` clamp is unit-tested to bite. The Phase-7 S&M-2004 Fitts
 throughput is **retained as a secondary cross-check** (PERF-03), emitted side by side. This
 closes the Phase-7 D-13 deferral, which explicitly postponed the 4.16/8.5 comparison precisely
@@ -167,3 +167,22 @@ disclosed as an `incorrect_model` so the BPS reads as an honest upper-bound, not
   software-timed glass-to-glass), 08-04 (distribution pipeline), 08-05 (Webgrid BPS)
 - Apple — BCI HID reference; `com.apple.developer.hid.virtual.device` entitlement;
   `CAMetalDisplayLink.Update.targetPresentationTimestamp`; `SMAppService` (08-RESEARCH Sources)
+
+## Amendment (2026-09-07, Phase 10 / RD-09)
+
+Two factual corrections applied to this ADR. The decisions it records are unchanged.
+
+**1. BrainGate reference condition (Task 2, Plan 10-11).** The cited figure 4.16 BPS was labeled
+as a "6x6" result throughout this document and its source files. Verified against Pandarinath et
+al. 2017 (eLife 18554) 2026-09-07: 4.16 +/- 0.39 bps is the participant **T5 on the DENSE 9x9
+grid**, not a 6x6 condition. The same paper's T5 6x6 figure is 3.7 +/- 0.4 bps. Inline references
+corrected to "T5 dense 9x9". The `brainGate6x6BPS` Swift constant was renamed `brainGateDenseGridBPS`;
+`brainGate6x6T5BPS = 3.7` was added. The `brain_gate_6x6_bps` artifact key was renamed
+`brain_gate_dense_9x9_bps`; `brain_gate_6x6_t5_bps: 3.7` was added. No measured values changed.
+
+**2. GlassToGlassTimer.methodologyLabel (Task 1, Plan 10-11).** The verbatim label quoted in
+section 3 of this ADR was the correct label at the time of writing. Plan 10-11 (commit cfab16d)
+subsequently changed the label: the trailing clause "which is exactly the delta the v1 photodiode
+rig (Phases 9-10) quantifies" was replaced with "measuring that delta needs a photodiode rig, which
+is retired to Future work (LAT-01..LAT-08) and was never built". The em dash was changed to an ASCII
+hyphen. The historical quote in section 3 is preserved as written; this amendment records the change.

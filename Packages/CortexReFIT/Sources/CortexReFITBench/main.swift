@@ -403,8 +403,9 @@ struct WebgridBPSReport: Codable {
   let seconds: Double // t on the ReFIT arm (summed elapsed across reaches).
   let seed: String // hex string (UInt64 seed) — matches refit_bps.json.
   let reference_peak_bps: Double // Neuralink P1 verified peak (8.5) — the honest gap target (D-12).
-  let brain_gate_6x6_bps: Double // BrainGate 6×6 (4.16) — the classic reference (NOT a pass bar — D-12).
-  let caveat: String // synthetic-replay (not live-human), honest gap to 8.5, NOT tuned toward 4.16.
+  let brain_gate_dense_9x9_bps: Double // BrainGate T5 dense 9x9 (4.16) — Pandarinath 2017 (NOT a pass bar — D-12).
+  let brain_gate_6x6_t5_bps: Double   // Same paper's 6x6 figure for T5 (3.7) — exposed for like-for-like comparison.
+  let caveat: String // synthetic-replay (not live-human), honest gap to 8.5, NOT tuned toward 4.16 — D-12.
 }
 
 func writeWebgridJSON(_ payload: WebgridBPSReport, to url: URL) throws {
@@ -531,7 +532,9 @@ let payload = RefitBPS(
 // carried alongside (PERF-03). Si is the DISCLOSED structural 0 (single-target dwell-to-select has no
 // mis-selection path ⇒ the BPS is an honest upper-bound, NOT "measured zero errors" — D-12/T-08-05-07).
 let incorrectModelDisclosure = "none — single-target dwell-to-select; Si structurally 0; BPS is upper-bound"
-let webgridCaveat = "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference peak 8.5 BPS; honest measured number, NOT tuned toward 4.16 — D-12"
+// D-4 disclosure: comparison against BrainGate is not like-for-like on three independent grounds (formula,
+// grid, Si-structural-zero) plus a fourth against Neuralink (click-types term). See WebgridBPS.nonComparabilityDisclosure.
+let webgridCaveat = "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference peak 8.5 BPS; honest measured number, NOT tuned toward 4.16 (T5 dense 9x9) — D-12. " + WebgridBPS.nonComparabilityDisclosure
 let webgridPayload = WebgridBPSReport(
   raw_webgrid_bps: rawResult.webgridBPS,
   kalman_only_webgrid_bps: kalmanOnlyResult.webgridBPS,
@@ -546,7 +549,8 @@ let webgridPayload = WebgridBPSReport(
   seconds: refitResult.seconds, // t on the ReFIT arm.
   seed: String(format: "0x%llX", seed),
   reference_peak_bps: WebgridBPS.referencePeakBPS, // 8.5 — the honest gap target.
-  brain_gate_6x6_bps: WebgridBPS.brainGate6x6BPS, // 4.16 — reference, NOT a pass bar.
+  brain_gate_dense_9x9_bps: WebgridBPS.brainGateDenseGridBPS, // 4.16 T5 dense 9x9 — reference, NOT a pass bar.
+  brain_gate_6x6_t5_bps: WebgridBPS.brainGate6x6T5BPS, // 3.7 T5 6x6 — for like-for-like comparison.
   caveat: webgridCaveat
 )
 
@@ -589,7 +593,7 @@ print("  kalman_only_webgrid_bps = \(kalmanOnlyResult.webgridBPS)")
 print("  refit_webgrid_bps       = \(refitResult.webgridBPS)  (Sc=\(refitResult.correct), Si=\(refitResult.incorrect), t=\(String(format: "%.3f", refitResult.seconds))s)")
 print("  Fitts-TP cross-check (PERF-03): raw=\(rawResult.fittsTP)  refit=\(refitResult.fittsTP)")
 print("  incorrect_model: \(incorrectModelDisclosure)")
-print("  gap to Neuralink P1 peak (\(WebgridBPS.referencePeakBPS) BPS): ReFIT is \(String(format: "%.3f", refitGapTo85)) BPS short (BrainGate 6×6 ref = \(WebgridBPS.brainGate6x6BPS)).")
+print("  gap to Neuralink P1 peak (\(WebgridBPS.referencePeakBPS) BPS): ReFIT is \(String(format: "%.3f", refitGapTo85)) BPS short (BrainGate T5 dense 9x9 ref = \(WebgridBPS.brainGateDenseGridBPS)).")
 print("  caveat: \(webgridCaveat)")
 print("  wrote: \(webgridJSONURL.path)")
 

@@ -18,8 +18,8 @@
 //
 // ## ⚠ This is the Webgrid BITRATE — DISTINCT from FittsThroughput's TP = IDe/MT (the metric-naming
 // honesty mirrored from Phase 7). The Webgrid BPS is the leaderboard-comparable metric (vs BrainGate
-// 6×6 4.16 / Neuralink P1 8.5); the S&M-2004 Fitts-TP is the secondary cross-check (PERF-03). The
-// `log2(N)` normalization is exactly what makes a 30×30 result comparable to a 6×6 one.
+// T5 dense 9x9 4.16 / Neuralink P1 8.5); the S&M-2004 Fitts-TP is the secondary cross-check (PERF-03).
+// The `log2(N)` normalization is what makes a 30×30 result comparable to a 9x9 one.
 //
 // WebgridBPS is pure value math (Foundation-free `import simd` — it lives in the hotpath-policed
 // CortexReFIT dir, so it stays `import simd`-only; `log2` comes from the C math lib via simd). The
@@ -93,8 +93,17 @@ struct WebgridBPSTests {
   @Test("gridTargetCount(rows:30, cols:30) == 900 (incl. delete key)")
   func gridTargetCountIs900() {
     #expect(WebgridBPS.gridTargetCount(rows: 30, cols: 30) == 900)
-    // And the leaderboard anchors are the documented Webgrid-bitrate reference literals (D-12).
+    // Leaderboard anchors: reference literals (D-12). brainGateDenseGridBPS is T5 on the DENSE 9x9
+    // grid (Pandarinath 2017, eLife 18554), NOT a 6x6 figure; brainGate6x6T5BPS is that same paper's
+    // 6x6 result for the same participant.
     #expect(WebgridBPS.referencePeakBPS == 8.5)
-    #expect(WebgridBPS.brainGate6x6BPS == 4.16)
+    #expect(WebgridBPS.brainGateDenseGridBPS == 4.16)
+    #expect(WebgridBPS.brainGate6x6T5BPS == 3.7)
+    // Non-comparability disclosure: all four grounds must be present so a future edit cannot quietly
+    // drop one (Review D-4, RD-09).
+    #expect(WebgridBPS.nonComparabilityDisclosure.contains("log2(N-1)"))
+    #expect(WebgridBPS.nonComparabilityDisclosure.contains("9x9"))
+    #expect(WebgridBPS.nonComparabilityDisclosure.contains("structurally zero"))
+    #expect(WebgridBPS.nonComparabilityDisclosure.contains("click-types"))
   }
 }

@@ -50,7 +50,7 @@ Cortex.app is a **Neuralink-quality iPad/Mac BCI input pipeline clone**. The dec
 
 | Metric | Source | Target |
 |---|---|---|
-| BrainGate Webgrid 6×6 | Pandarinath 2017 | 4.16 BPS |
+| BrainGate T5 dense 9x9 (Pandarinath 2017, eLife 18554) | Pandarinath 2017 | 4.16 +/- 0.39 BPS |
 | Neuralink P1 Noland Arbaugh peak | PRIME study, May 2024 | **8.5 BPS verified** |
 | Decoder inference latency | NDT1 / ANE estimate | <2 ms p99 |
 | Webgrid grid size | Lex Fridman / Bliss Chapman | 30×30 (NOT 6×6) |
@@ -166,13 +166,15 @@ A defensible single-line claim: *"Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ
 
 | Subject | BPS | Source |
 |---|---|---|
-| BrainGate (Pandarinath 2017) | 4.16 | High-performance communication paper |
+| BrainGate T5 dense 9x9 (Pandarinath 2017, eLife 18554) | 4.16 +/- 0.39 | High-performance communication paper. This is the T5 DENSE 9x9 condition; same paper's T5 6x6 is 3.7 +/- 0.4. |
 | Indy / Loco NHP | 3.7-8.5 | O'Doherty dataset |
 | ReFIT-Kalman (humans, closed-loop) | 3.7-8.5 | Gilja 2012 |
 | **Neuralink Noland Arbaugh peak** | **8.5 verified** | PRIME study blog, May 2024 |
 | Brad Smith (third Neuralink patient, ALS) | reported >8 | Bloomberg / Vance, Core Memory |
 
-**Cortex.app target:** match BrainGate (4.16 BPS) on synthetic Indy-spike replay in v0. Real BCI not in scope.
+**Cortex.app posture (D-12, RD-09):** report the honest gap to the BrainGate T5 dense 9x9 reference (4.16 +/- 0.39 bps, Pandarinath 2017) on synthetic Indy-spike replay. The comparison is not a pass bar; the number is never engineered toward. Real BCI not in scope.
+
+**Non-comparability (Review D-4):** this repo's Webgrid BPS is not like-for-like with either reference: the formula differs (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's current published score adds a click-types term this single-click-type harness omits.
 
 ---
 

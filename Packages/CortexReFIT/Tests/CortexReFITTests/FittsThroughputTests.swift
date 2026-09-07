@@ -2,7 +2,7 @@
 //
 // These tests pin the load-bearing BPS math the headless harness (Task 2) drives. The metric is the
 // S&M-2004 ISO 9241-9 Fitts THROUGHPUT (`TP = IDe/MT`, effective-width method) — NOT the
-// Neuralink/BrainGate Webgrid bitrate (07-RESEARCH §4.3; the 4.16/8.5 comparison is deferred to
+// Neuralink/BrainGate Webgrid bitrate (07-RESEARCH §4.3; the 4.16/8.5 comparison (dense 9x9 and Neuralink P1 respectively) is deferred to
 // Phase 8, D-13). The five behaviors (07-RESEARCH §4.2 + VALIDATION §6 row 4):
 //
 //   1. IDe = log2(De/We + 1) for known De/We → hand-computed bits (Shannon effective ID).

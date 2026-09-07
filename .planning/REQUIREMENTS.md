@@ -121,7 +121,7 @@ achieved a build failure.
 
 ### Performance Targets (PERF)
 
-- [ ] **PERF-01**: Match BrainGate Webgrid 6×6 BPS (4.16 BPS) on synthetic Indy-spike replay
+- [ ] **PERF-01**: Report Webgrid BPS against the BrainGate reference, stating its condition: 4.16 +/- 0.39 bps is Pandarinath 2017 (eLife 18554) participant T5 on the DENSE 9x9 grid, not 6x6; the 6x6 figure for T5 is 3.7 +/- 0.4 bps. Reported honestly, never engineered toward as a pass bar. (Wording corrected Phase 10 / RD-09.)
 - [ ] **PERF-02**: Document path toward Neuralink P1 verified peak (8.5 BPS) — what gaps remain
 - [ ] **PERF-03**: Webgrid metric methodology mirrors Soukoreff & MacKenzie 2004 ISO 9241-9 Fitts throughput
 - [ ] **PERF-04**: P99 decoder + render + present budget remains under 25ms glass-to-glass
