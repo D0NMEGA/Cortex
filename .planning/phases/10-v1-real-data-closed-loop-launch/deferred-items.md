@@ -171,3 +171,12 @@ Plan 10-06 left every new file at or below the sibling baseline and added no new
 after; `RollingSpikeWindow.swift` and the new smoke are clean under both tools apart from the same
 snake_case-JSON-key and file-length idioms `CortexReplayBench` already established. The repo-wide
 sweep is still owed before the first PR.
+
+## Plan 10-12 deferred item
+
+**PERF-02 wording in REQUIREMENTS.md (line 125)**
+- File: `.planning/REQUIREMENTS.md`
+- Line: `- [ ] **PERF-02**: Document path toward Neuralink P1 verified peak (8.5 BPS) -- what gaps remain`
+- Issue: "verified peak" applies authority to the 8.5 figure that D-17 explicitly denies ("not independently sourceable to a Neuralink primary; an access date does not authenticate a number"). Should read "retrieved / not independently sourceable" consistent with README and PROJECT.md.
+- Out of scope for 10-12: REQUIREMENTS.md not in this plan's file list.
+- Route to: Plan 10-14 honesty-sweep.sh (already reads REQUIREMENTS.md for LAT-0N check).
