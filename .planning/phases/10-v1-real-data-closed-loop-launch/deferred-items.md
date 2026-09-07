@@ -180,3 +180,28 @@ sweep is still owed before the first PR.
 - Issue: "verified peak" applies authority to the 8.5 figure that D-17 explicitly denies ("not independently sourceable to a Neuralink primary; an access date does not authenticate a number"). Should read "retrieved / not independently sourceable" consistent with README and PROJECT.md.
 - Out of scope for 10-12: REQUIREMENTS.md not in this plan's file list.
 - Route to: Plan 10-14 honesty-sweep.sh (already reads REQUIREMENTS.md for LAT-0N check).
+
+## Widen honesty-sweep.sh to the .planning root tracking files
+
+**Deferred from:** Plan 10-14 residue, orchestrator follow-up 2026-09-07
+**Blocking:** nothing. The residue it would have caught is already fixed by hand.
+
+`honesty-sweep.sh` excludes all of `.planning/` from its label scan. `.planning/phases/` is correctly
+excluded (bannered historical evidence, owned by assertion (b)). The three root tracking files
+(`ROADMAP.md`, `PROJECT.md`, `REQUIREMENTS.md`) are a different case: they are read as current truth
+and become public at Plan 10-17.
+
+Two things were established by test, not assumed:
+
+- The stated reason for excluding them ("machine-maintained ... so a label added there by hand is not
+  durable") does not hold for the phase-completion bullets. `donny-tools roadmap
+  update-plan-progress 10` rewrites only the progress-table row; hand-added labels on lines 30/32/33
+  survived it intact.
+- With the seven labels added on 2026-09-07 (ROADMAP 30/32/33, PROJECT 61/153, REQUIREMENTS 47/49) a
+  widened scan that excludes only `.planning/phases/` and `.planning/STATE.md` reports zero findings.
+
+So widening is now free of content churn. It was not done here because a scan-scope change needs its
+own negative control in the same commit, which is plan work rather than an orchestrator edit. Pick it
+up in a v1.1 hardening plan: exclude `.planning/phases/` and `.planning/STATE.md` instead of
+`.planning/`, and add a control that puts an unlabeled superseded number into a root tracking file
+and requires exit 1.

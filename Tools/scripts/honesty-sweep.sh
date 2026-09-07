@@ -134,9 +134,13 @@ COLLISION_FORMS=("0.1615" "0.1618" "0.161 ms")
 #                         .planning/phases/ is HISTORICAL EVIDENCE: per project convention those
 #                         artifacts are never retroactively edited, they are BANNERED -- assertion
 #                         (b) owns that tree. The .planning/ root tracking files (ROADMAP, STATE,
-#                         PROJECT, REQUIREMENTS) are machine-maintained by the workflow tooling,
-#                         which rewrites phase-completion bullets and progress rows, so a label added
-#                         there by hand is not durable. They are NOT invisible to this gate:
+#                         PROJECT, REQUIREMENTS) are partly machine-maintained. NOTE, tested
+#                         2026-09-07: `donny-tools roadmap update-plan-progress` rewrites ONLY the
+#                         progress-table row, not the phase-completion bullets -- hand-added labels
+#                         in those bullets DO survive it. So durability is not the reason to keep
+#                         them out of scope, and with the seven tracking-file labels added that day
+#                         the widened scan is clean. Widening remains deferred only because it needs
+#                         its own control. They are NOT invisible to this gate:
 #                         assertion (c) asserts LAT-01..LAT-08 in ROADMAP.md and REQUIREMENTS.md, and
 #                         assertion (g) scans REQUIREMENTS.md and PROJECT.md for unearned authority.
 #                         RD-09's own criterion names README, ADRs and every *-evidence.md; all three
@@ -217,10 +221,16 @@ is_excluded() {
 
 # ---- sweep_files: every regular file under SWEEP_ROOT, build and VCS noise pruned. ------------
 # `find` rather than `git ls-files` so the self-test's temp tree walks identically to the real one
+# `.agent` is pruned because `.agent/worktrees/` holds full checkouts of OTHER branches. Without
+# the prune this gate reports findings from whatever branch happens to be checked out there and its
+# verdict depends on untracked local state: on 2026-09-07 three agent worktrees produced 655 findings
+# against a clean tree. It cannot be caught from inside a worktree (nested worktrees do not exist
+# there) or in CI (fresh checkout), which is exactly why it is pruned rather than left to chance.
 # and the gate has no VCS dependency. `grep -I` below skips anything binary that survives the prune.
 sweep_files() {
   find "$SWEEP_ROOT" \
     \( -name '.git' \
+       -o -name '.agent' \
        -o -name '.build' \
        -o -name 'build' \
        -o -name 'DerivedData' \
