@@ -1,5 +1,25 @@
 # Phase 8 PERF-01/02/03 Evidence — Webgrid information-rate BPS on synthetic Indy replay
 
+## Amendment (2026-09-07, Phase 10 / RD-09)
+
+Plan 10-11 (Task 2) corrected a factual mislabel in the Pandarinath 2017 reference condition:
+
+- The artifact key `brain_gate_6x6_bps` was renamed to `brain_gate_dense_9x9_bps`. The value
+  (4.16) is unchanged. The original label was wrong: 4.16 +/- 0.39 bps is Pandarinath et al.
+  2017 (eLife 18554), participant T5 on the DENSE 9x9 grid, not 6x6.
+- A new key `brain_gate_6x6_t5_bps: 3.7` was added, exposing the same paper's 6x6 figure
+  for the same participant (T5 3.7 +/- 0.4 bps).
+- The `caveat` field was extended with the canonical `nonComparabilityDisclosure` from
+  `WebgridBPS.nonComparabilityDisclosure` (Review D-4, RD-09).
+- Every measured value in this artifact (`refit_webgrid_bps`, `raw_webgrid_bps`,
+  `kalman_only_webgrid_bps`, `refit_fitts_tp`, `raw_fitts_tp`, `correct`, `incorrect`,
+  `seconds`, `seed`) is UNCHANGED. The measured numbers this artifact reports are not
+  retroactively edited.
+
+---
+
+
+
 **Date:** 2026-06-23
 **Result:** ✅ **MEASURED & REPORTED HONESTLY** — on the fixed seed-locked synthetic replay the
 **ReFIT (Kalman + intent-rotation)** Webgrid information-rate bitrate is

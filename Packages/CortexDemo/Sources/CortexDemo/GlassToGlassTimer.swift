@@ -13,12 +13,13 @@
 // the BCI HID report timestamp — §1.3 / CortexCore.Time.machAbsoluteNanoseconds()).
 //
 // ## Honesty discipline (D-07 — no compositor-offset fudge, threat T-08-03-03)
-// This is the SOFTWARE number that SETS UP the v1 photodiode claim; it is NOT the final glass-to-glass
-// figure. The verbatim methodology label is EMBEDDED in the type (`methodologyLabel`) so it is gate-
-// checkable and CANNOT be dropped — it must travel with every reported number. The label states the
-// software measurement excludes the compositor's 1-3 frames of scanout, which is exactly the delta the
-// v1 photodiode rig (Phases 9-10) quantifies. The canonical iPad-M4 capture is the Plan 07 never-auto-
-// approve HUMAN-UAT gate (D-08); the M5-Pro headless number is CORROBORATING (threat T-08-03-04).
+// This is the SOFTWARE-TIMED number; it is NOT the final glass-to-glass figure because it excludes
+// the compositor's 1-3 frames of scanout. The verbatim methodology label is EMBEDDED in the type
+// (`methodologyLabel`) so it is gate-checkable and CANNOT be dropped — it must travel with every
+// reported number. The label records that measuring the compositor-scanout delta requires a photodiode
+// rig, retired to Future work (LAT-01..LAT-08, never built). The canonical iPad-M4 capture is the
+// Plan 07 never-auto-approve HUMAN-UAT gate (D-08); the M5-Pro headless number is CORROBORATING
+// (threat T-08-03-04).
 //
 // Foundation-only (for the LatencyHistogram helper) — no Metal/CoreML dependency, so the conversion +
 // percentile math are unit-testable with no display link (mirrors LatencyHistogram's model-free posture).
@@ -32,11 +33,11 @@ import Foundation
 public nonisolated enum GlassToGlassTimer {
   /// The VERBATIM D-07 honesty label — embedded so it is gate-checkable and cannot be dropped (threat
   /// T-08-03-03). It must accompany every reported software-timed number (printed by the bench, written
-  /// to the JSON, surfaced in the GUI). It states the software measurement excludes the compositor's
-  /// scanout, which is precisely the delta the v1 photodiode rig quantifies (NO compositor-offset fudge).
+  /// to the JSON, surfaced in the GUI). It states that measuring the compositor's scanout delta requires
+  /// a photodiode rig, retired to Future work (LAT-01..LAT-08, never built); no compositor-offset fudge.
   public static let methodologyLabel =
-    "software-timed pipeline latency — excludes the compositor's 1-3 frames of scanout, " +
-    "which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies"
+    "software-timed pipeline latency - excludes the compositor's 1-3 frames of scanout; " +
+    "measuring that delta needs a photodiode rig, which is retired to Future work (LAT-01..LAT-08) and was never built"
 
   /// Nanoseconds per second (the `CFTimeInterval`-seconds → ns conversion factor).
   private static let nanosecondsPerSecond: Double = 1_000_000_000

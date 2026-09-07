@@ -366,7 +366,7 @@ call. It is flagged here, as `10-PREREGISTRATION.md` section 15 requires, and no
   `10-HUMAN-UAT.md`, DEFERRED, prerequisite "iPad Pro M4 not provisioned".
 - It is **not** a photodiode measurement. The glass-to-glass figures on screen are software-timed and
   carry the verbatim D-07 label, "software-timed pipeline latency — excludes the compositor's 1-3 frames
-  of scanout, which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies". The retired
+  of scanout, which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies". (Amendment, Plan 10-11, commit cfab16d: `GlassToGlassTimer.methodologyLabel` was subsequently changed to "software-timed pipeline latency - excludes the compositor's 1-3 frames of scanout; measuring that delta needs a photodiode rig, which is retired to Future work (LAT-01..LAT-08) and was never built".) The retired
   24.7 ms spec target is not claimed as achieved here or anywhere else in this phase.
 - It is **not** a closed-loop result. `open-loop replay of a recorded session; the subject was not in the
   loop`: the animal's spikes were recorded in 2016 and cannot respond to what the decoder does with them.

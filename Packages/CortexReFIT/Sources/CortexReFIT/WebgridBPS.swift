@@ -7,7 +7,7 @@
 // ```
 // - `N`  = number of selectable targets INCLUDING the delete/cancel key. For a 30×30 webgrid,
 //          N = 900 ⇒ `log2(900) ≈ 9.81` bits/correct-selection. This `log2(N)` normalization is
-//          what makes a 30×30 result comparable to BrainGate's 6×6 (the 4.16 reference).
+//          what makes a 30×30 result comparable to BrainGate's 4.16 reference (T5 dense 9x9 grid).
 // - `Sc` = correct selections, `Si` = incorrect selections, `t` = elapsed seconds.
 // - **The `max(0, …)` clamp is MANDATORY** (08-RESEARCH §0.4) — never report a negative bitrate.
 //   CONTEXT D-11 OMITTED this clamp; RESEARCH §0.4 corrects it. This is load-bearing: a net-negative
@@ -33,16 +33,52 @@ import simd
 /// every function is a closed-form transform of its inputs, deterministic, no I/O. DISTINCT from
 /// ``FittsThroughput`` (TP = IDe/MT): this is the `log2(N)`-normalized bitrate, the leaderboard metric.
 public nonisolated enum WebgridBPS {
-  /// Neuralink P1 (Noland Arbaugh) "verified peak" Webgrid bitrate the project anchors against —
-  /// **8.5 BPS** on a 30×30 grid (08-RESEARCH §6 / docs/cortex-spec.md §8). Exposed so the evidence
-  /// artifact and tests reference the SAME literal. The honest synthetic-replay number is reported
-  /// WITH the gap toward this peak — NOT tuned toward it (D-12).
+  /// Neuralink P1 (Noland Arbaugh) Webgrid bitrate this repo has cited since Phase 7 - **8.5 BPS**.
+  /// This figure is NOT independently sourceable to a Neuralink primary: Neuralink's own May-2024
+  /// post reports 8 BPS. Treat as an unsourced historical repo reference, not a confirmed measurement.
+  /// Current public statement, neuralink.com/webgrid, retrieved 2026-09-05: "Our clinical trial
+  /// participants have achieved over 10 BPS controlling a computer with their brain."
+  /// Exposed so the evidence artifact and tests reference the SAME literal. The honest
+  /// synthetic-replay number is reported WITH the gap toward this figure - NOT tuned toward it (D-12).
   public static let referencePeakBPS = 8.5
 
-  /// BrainGate (Pandarinath 2017) 6×6 Webgrid bitrate — **4.16 BPS** (08-RESEARCH §6). The classic
-  /// reference; the `log2(N)` normalization is what makes a 30×30 result comparable to this 6×6 number.
-  /// Reported honestly, NOT engineered toward as a pass bar (D-12).
-  public static let brainGate6x6BPS = 4.16
+  /// BrainGate (Pandarinath et al. 2017, eLife 18554) Webgrid bitrate - **4.16 +/- 0.39 bps**,
+  /// participant **T5 on the DENSE 9x9 grid**, 8 evaluation blocks. Verified against the paper's
+  /// full text 2026-09-05. This is NOT a 6x6 number: the same paper's 6x6 figures are T6
+  /// 2.2 +/- 0.4, T5 3.7 +/- 0.4 and T7 1.4 +/- 0.1 bps, and the 9x9 result "was significantly
+  /// greater than the 6 x 6 performance". Reported honestly, NOT engineered toward as a pass bar
+  /// (D-12). The repo previously labeled this constant `brainGate6x6BPS`; RD-09 corrected it.
+  public static let brainGateDenseGridBPS = 4.16
+
+  /// The same paper's 6x6 figure for the SAME participant (T5): **3.7 +/- 0.4 bps**. Exposed so a
+  /// comparison against a 6x6 condition uses the 6x6 number rather than the 9x9 one.
+  public static let brainGate6x6T5BPS = 3.7
+
+  /// Why this repo's Webgrid BPS is NOT like-for-like with the reference figures it is reported
+  /// beside. Verified against primary sources 2026-09-05 and against this repo's own harness.
+  /// Three independent grounds, plus a fourth against Neuralink specifically:
+  ///
+  ///  1. FORMULA. Pandarinath et al. 2017 (eLife 18554) computes achieved bitrate with
+  ///     `log2(N - 1)`. This repo pins `log2(N)`. Matching the `(correct - incorrect)` numerator
+  ///     does not make them the same metric.
+  ///  2. GRID. 4.16 is the participant-T5 DENSE 9x9 figure, not a 6x6 figure. The paper's 6x6
+  ///     numbers are T6 2.2, T5 3.7, T7 1.4.
+  ///  3. TASK. `CortexReFITBench/main.swift:283-285` makes incorrect selections STRUCTURALLY ZERO,
+  ///     so `Si` is always 0 and this metric cannot express the speed-accuracy tradeoff that a
+  ///     human point-and-click bitrate measures. `CortexReplayBench` inherits the same property.
+  ///  4. NEURALINK. neuralink.com/webgrid describes its score as derived from net correct targets
+  ///     per minute, grid size, AND the number of click types. This harness is single-click-type
+  ///     and its disclosed formula omits that term.
+  ///
+  /// This is a DISCLOSURE, not a formula change: `Tools/scripts/bps-policy.sh` pins the formula and
+  /// byte-diffs the Phase-7 `refit_bps.json` fixture, which D-09 exists to protect. Editing the
+  /// formula to chase parity would break that fixture and destroy the regression signal.
+  public static let nonComparabilityDisclosure = """
+    this repo's Webgrid BPS is not like-for-like with either reference: the formula differs \
+    (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), \
+    the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's \
+    current published score adds a click-types term this single-click-type harness omits
+    """
 
   /// `log2(N)` — the bits-per-correct-selection normalization (the information content of choosing
   /// one of `N` equiprobable targets). For N = 900 (a 30×30 grid incl. the delete key) ≈ 9.81 bits.

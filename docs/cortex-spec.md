@@ -43,15 +43,15 @@ Cortex.app is a **Neuralink-quality iPad/Mac BCI input pipeline clone**. The dec
 
 ### 2.4 Filter on top of decoder
 
-- **ReFIT-Kalman closed-loop recalibration** (Gilja 2012, Nature Neuroscience). Adds online intent re-estimation; this is what gets BrainGate from 4.16 → 8.5 BPS in humans.
+- **ReFIT-Kalman closed-loop recalibration** (Gilja et al. 2012, Nature Neuroscience). Adds online intent re-estimation. Gilja 2012 reports its improvement over a velocity Kalman filter within the SAME system; the 4.16 and 8.5 figures in the table below come from two DIFFERENT systems (BrainGate's T5 on a dense 9x9 grid, and Neuralink's N1 in a different participant with a different array and a different decoder generation), so the difference between them is not attributable to ReFIT.
 - Implementation: 6-DOF state, intent-rotation step every cursor update. Pure linear algebra; runs on the Swift side post-CoreML.
 
 ### 2.5 Reference targets
 
 | Metric | Source | Target |
 |---|---|---|
-| BrainGate Webgrid 6×6 | Pandarinath 2017 | 4.16 BPS |
-| Neuralink P1 Noland Arbaugh peak | PRIME study, May 2024 | **8.5 BPS verified** |
+| BrainGate T5 dense 9x9 (Pandarinath 2017, eLife 18554) | Pandarinath 2017 | 4.16 +/- 0.39 BPS |
+| Neuralink P1 Noland Arbaugh (PRIME study, May 2024) | as cited by this repo since Phase 7; not independently sourceable (source reports 8 BPS; current page: "over 10 BPS", retrieved 2026-09-05) | **8.5 BPS** |
 | Decoder inference latency | NDT1 / ANE estimate | <2 ms p99 |
 | Webgrid grid size | Lex Fridman / Bliss Chapman | 30×30 (NOT 6×6) |
 
@@ -166,13 +166,17 @@ A defensible single-line claim: *"Glass-to-glass latency 24.7 ± 1.3 ms (p50, σ
 
 | Subject | BPS | Source |
 |---|---|---|
-| BrainGate (Pandarinath 2017) | 4.16 | High-performance communication paper |
+| BrainGate T5 dense 9x9 (Pandarinath 2017, eLife 18554) | 4.16 +/- 0.39 | High-performance communication paper. This is the T5 DENSE 9x9 condition; same paper's T5 6x6 is 3.7 +/- 0.4. |
 | Indy / Loco NHP | 3.7-8.5 | O'Doherty dataset |
 | ReFIT-Kalman (humans, closed-loop) | 3.7-8.5 | Gilja 2012 |
-| **Neuralink Noland Arbaugh peak** | **8.5 verified** | PRIME study blog, May 2024 |
+| **Neuralink Noland Arbaugh (PRIME study, May 2024)** | **8.5 BPS** (as cited by this repo since Phase 7; not independently sourceable - source reports 8 BPS; current page: "over 10 BPS", retrieved 2026-09-05) | as cited by this repo since Phase 7; not independently sourceable |
 | Brad Smith (third Neuralink patient, ALS) | reported >8 | Bloomberg / Vance, Core Memory |
 
-**Cortex.app target:** match BrainGate (4.16 BPS) on synthetic Indy-spike replay in v0. Real BCI not in scope.
+**Note on Neuralink BPS formula:** Neuralink's current published score includes a click-types term (`log2(click_types)`) that this repo's harness omits. Cortex.app is a SINGLE-CLICK-TYPE harness and its disclosed formula omits that term, so the comparison to the Neuralink figure is not full formula parity.
+
+**Cortex.app posture (D-12, RD-09):** report the honest gap to the BrainGate T5 dense 9x9 reference (4.16 +/- 0.39 bps, Pandarinath 2017) on synthetic Indy-spike replay. The comparison is not a pass bar; the number is never engineered toward. Real BCI not in scope.
+
+**Non-comparability (Review D-4):** this repo's Webgrid BPS is not like-for-like with either reference: the formula differs (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's current published score adds a click-types term this single-click-type harness omits.
 
 ---
 
@@ -310,7 +314,7 @@ URLs were captured in a second-pass dump from the "Research sources" sub-view. B
 - "High-performance brain-to-text communication via handwriting" — Nature
 - Falcon Challenge: `snel-repo/falcon-challenge` — github.com
 - Webgrid measurement methodology: "How does Neuralink measure the performance of its interface?" — elonx.net
-- Neuralink: "PRIME Study Progress Update — User Experience" — neuralink.com (Noland Arbaugh 8 BPS verified)
+- Neuralink: "PRIME Study Progress Update — User Experience" — neuralink.com (Noland Arbaugh 8 BPS reported by Neuralink; this repo's long-standing reference of 8.5 BPS is not sourceable to this post; current public page says "over 10 BPS" as retrieved 2026-09-05)
 - Bliss Chapman tweet: "9.5 BPS is >2x previous world record for cursor control with BCI. Congrats to @ModdedQuad" — x.com
 - DJ Seo tweet: "Score to beat at Neuralink is over 17 bps with a mouse" — x.com
 - Soukoreff & MacKenzie 2004, ISO 9241-9 Fitts throughput — yorku.ca, springer
