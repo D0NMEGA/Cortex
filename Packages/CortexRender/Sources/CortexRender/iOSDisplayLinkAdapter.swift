@@ -32,7 +32,7 @@
   /// Drives the shared `WebgridFrameEncoder` from a `CAMetalDisplayLink` at a locked 120Hz with one
   /// frame in flight (RENDER-01/02/07).
   @MainActor
-  public final class iOSDisplayLinkAdapter: NSObject, CAMetalDisplayLinkDelegate {
+  public final class iOSDisplayLinkAdapter: NSObject, @preconcurrency CAMetalDisplayLinkDelegate {
     private let layer: CAMetalLayer
     private let encoder: WebgridFrameEncoder
     private let queue: MTLCommandQueue
@@ -107,19 +107,23 @@
     /// Called by the link once per refresh with a READY drawable (`update.drawable`) — no
     /// `nextDrawable()` on iOS (RESEARCH #1). Runs on the main run-loop thread.
     ///
-    /// `nonisolated` so the framework's nonisolated protocol requirement is satisfied without an
-    /// actor-isolation mismatch; it then assumes the main-actor run-loop context (the link was added
-    /// to `.main`) to touch the adapter's collaborators. All collaborators are `Sendable`, so no data
-    /// race: the encoder/queue are immutable, the synchronizer + ring are `@unchecked Sendable`
-    /// SPSC/semaphore primitives, and `lastPresentationTimestamp` is only ever read/written on this
-    /// one callback thread.
-    public nonisolated func metalDisplayLink(
+    /// The conformance is `@preconcurrency` and this method inherits the class's `@MainActor`
+    /// isolation, which is what the link actually delivers: it was added to the `.main` run loop in
+    /// `start()`, so every callback arrives on the main thread. `@preconcurrency` inserts the runtime
+    /// check that asserts it rather than trusting a comment.
+    ///
+    /// The earlier shape -- `nonisolated` plus `MainActor.assumeIsolated { self.render(update:) }` --
+    /// does not compile under Swift 6 in this module. `CortexRender` sets
+    /// `.defaultIsolation(MainActor.self)`, so `render` is main-actor isolated, and
+    /// `CAMetalDisplayLink.Update` is not `Sendable`; passing it into the closure is a
+    /// "sending 'update' risks causing data races" error. It went unnoticed until 2026-09-07 because
+    /// the iOS target had never been compiled anywhere: `swift build` only builds the macOS slice,
+    /// where this file is `#if os(iOS)`-excluded, and CI had never reached the CortexiOS step.
+    public func metalDisplayLink(
       _: CAMetalDisplayLink,
       needsUpdate update: CAMetalDisplayLink.Update
     ) {
-      MainActor.assumeIsolated {
-        self.render(update: update)
-      }
+      render(update: update)
     }
 
     /// The per-frame encode body. Main-actor isolated (assumed from the run-loop thread). No await, no
