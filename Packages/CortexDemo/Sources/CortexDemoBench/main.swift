@@ -189,7 +189,16 @@ if isReal {
     exit(1)
   }
 
-  let realPipeline = ClosedLoopPipeline(source: realSource, seed: seed, modelURL: realModelURL)
+  // NDT1 emits cm/s; the filter, integrator and webgrid run in grid-units/s. This bench times the
+  // pipeline rather than scoring its trajectory, so the conversion does not move the published
+  // latency (one scalar multiply per tick, far under the run-to-run spread) - it is applied because
+  // leaving a known unit error in a second call site is how the first one survived.
+  let realPipeline = ClosedLoopPipeline(
+    source: realSource,
+    seed: seed,
+    modelURL: realModelURL,
+    modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm)
+  )
   var realSamplesNs = [UInt64]()
   realSamplesNs.reserveCapacity(realTickCount)
 

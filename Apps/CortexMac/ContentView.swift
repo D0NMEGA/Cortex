@@ -100,7 +100,14 @@ final class ClosedLoopDriver {
       do {
         let export = try ReplayExport(sidecarURL: exportURL)
         let source = RecordedSpikeSource(export: export)
-        pipeline = ClosedLoopPipeline(source: source, seed: 0xC0FFEE, modelURL: modelURL)
+        // NDT1 emits cm/s; the filter, integrator and webgrid run in grid-units/s. Without this the
+        // demo cursor runs about 17x too fast on the pre-registered box.
+        pipeline = ClosedLoopPipeline(
+          source: source,
+          seed: 0xC0FFEE,
+          modelURL: modelURL,
+          modelVelocityGridUnitsPerCm: Float(export.sidecar.workspace.gridUnitsPerCm)
+        )
         sourceLabel = "spike source: real: \(export.sidecar.sessionId)"
         recordedSource = source
         // The pre-registered `cursor_bbox_square`: the square of side `sideMm` centred on the

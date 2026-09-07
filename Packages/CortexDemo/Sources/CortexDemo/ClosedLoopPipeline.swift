@@ -97,6 +97,13 @@ public final class ClosedLoopPipeline {
   public private(set) var target: SIMD2<Float>
   /// The deterministic seed driving the synthetic decode fallback.
   public let seed: UInt64
+  /// Grid-units per centimetre, applied to the MODEL's decoded velocity only.
+  ///
+  /// NDT1 emits cm/s while the filter, the integrator and the webgrid run in grid-units/s, so a
+  /// real-data caller passes the export's `workspace.gridUnitsPerCm` here. Defaults to `1.0`, which
+  /// is the identity the synthetic path wants, so callers that never touch a real export are
+  /// unchanged.
+  public let modelVelocityGridUnitsPerCm: Float
   /// The monotonic streaming tick index (drives the deterministic synthetic decode).
   private var tickIndex: Int = 0
 
@@ -145,10 +152,12 @@ public final class ClosedLoopPipeline {
     seed: UInt64,
     start: SIMD2<Float> = SIMD2<Float>(0.5, 0.5),
     target: SIMD2<Float> = SIMD2<Float>((13.0 + 0.5) / 30.0, (13.0 + 0.5) / 30.0),
-    modelURL: URL? = nil
+    modelURL: URL? = nil,
+    modelVelocityGridUnitsPerCm: Float = 1.0
   ) {
     self.seed = seed
     self.target = target
+    self.modelVelocityGridUnitsPerCm = modelVelocityGridUnitsPerCm
     spikeSource = source
 
     // Wire the model-backed decode path when a model URL is supplied AND the model + a shared-surface
@@ -242,7 +251,12 @@ public final class ClosedLoopPipeline {
     // NDT1 GENUINELY in the loop (D-10) when the model produced a velocity; otherwise the deterministic
     // synthetic decoded-velocity (the CortexReFITBench idiom): a closed-form noisy readout pointing
     // toward the target, so raw scatters and the Kalman/rotation arm recovers it.
-    let velocity = modelVelocity
+    // NDT1 emits cm/s; the filter, the integrator and the webgrid all run in grid-units/s. The same
+    // conversion `CortexReplayBench` applies at its decode site, and it applies ONLY to the model
+    // output: `syntheticDecodedVelocity` is a closed-form readout already expressed in grid-units/s.
+    // Without it the loop integrates cm/s as grid-units/s and the cursor runs
+    // `1 / gridUnitsPerCm` times too fast (about 17x on the pre-registered box).
+    let velocity = modelVelocity.map { $0 * modelVelocityGridUnitsPerCm }
       ?? Self.syntheticDecodedVelocity(seed: seed, tick: tick, cursor: cursor, target: target)
     let byModel = modelVelocity != nil
 
