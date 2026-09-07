@@ -420,10 +420,23 @@ jobs:
       # fragments so THIS step's own line is not a self-hit, and the Tests/tests dirs are excluded
       # because the DEC-12 negative-control tests (VelocityOutputTests.swift, test_*_package.py)
       # legitimately NAME the symbol in order to forbid it.
+      #
+      # The gate scripts are excluded for exactly the same reason, added 2026-09-07. readme-policy.sh
+      # REQUIRES the README to name _ANEClient as a rejected alternative (DIST-04), so it carries the
+      # token in three places. That made this control fail from Phase 8's 9b3013c onward -- it was
+      # satisfiable when Phase 5 wrote it, when the only hits were under Tests/. Two phases shipped
+      # over a broken negative control because CI had never executed. The exclusion is narrow on
+      # purpose: bash gate scripts cannot call an ANE API, while Tools/ still holds real Swift source
+      # (the spikes) that IS scanned.
+      # .build is excluded because compiled test binaries embed the string from the very
+      # negative-control tests that are already excluded as source. On the runner this happened to be
+      # invisible at step 37, since no package had been tested yet and no .build existed; that is
+      # step ordering, not a property worth relying on.
       - name: No _ANEClient private API (DEC-12 negative control)
         run: |
           FORBIDDEN="_ANE""Client"
-          if grep -rn --exclude-dir=Tests --exclude-dir=tests "$FORBIDDEN" \
+          if grep -rn --exclude-dir=Tests --exclude-dir=tests --exclude-dir=.build \
+               --exclude='*-policy.sh' --exclude='*-sweep.sh' "$FORBIDDEN" \
                Packages Apps Decoder Tools 2>/dev/null; then
             echo "ERROR: $FORBIDDEN found in production source — DEC-12 forbids the Apple-private ANE API (App Store rejection). Use MLModelConfiguration.computeUnits + MLComputePlan." >&2
             exit 1
