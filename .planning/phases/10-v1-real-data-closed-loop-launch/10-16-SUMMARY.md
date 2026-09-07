@@ -332,3 +332,48 @@ lines rather than nothing. None is a blanket disable - four are documented `disa
 (one of which predates this plan) and the fifth is the generated file now excluded from linting. The
 grep is line-scoped and cannot associate a `disable` with its `enable`. `blanket_disable_command`,
 the rule that actually detects the failure this grep approximates, reports 0.
+
+---
+
+## Amendment (orchestrator, 2026-09-07): triage of the seven Next Phase Readiness items
+
+Each was checked against `main` at the 10-16 merge. Two of the three called out as most likely to
+redden the first CI run do not reproduce; one previously unquantified item is confirmed and is worse
+than described.
+
+**1. `xcodebuild -workspace Cortex.xcworkspace` -- DOES NOT REPRODUCE.** All three invocations read
+`-project Cortex.xcodeproj`, at `ci.yml:494`, `:510` and `:526`. Plan 10-09 corrected this and it is
+intact; the 10-16 branch does not touch `ci.yml` at all (empty diff). The cited lines `435/451/467`
+do not correspond to this file's current content. Not a blocker for 10-17.
+
+**2. `build-rust.sh` ordering -- DOES NOT REPRODUCE.** `./Tools/scripts/build-rust.sh` runs at
+`ci.yml:141` and the Xcode steps at `:493`, `:509`, `:526`. The workflow has exactly two jobs,
+`build-and-lint` (22-614) and `decoder-python` (615+), so all four steps are in the same job in the
+correct order. Not a blocker for 10-17.
+
+**3. `xcodegen generate` strips tracked `Info.plist` keys -- CONFIRMED, and it is a latent Phase-8
+defect rather than a Phase-10 one.** Measured: `xcodegen generate` rewrites both tracked plists,
+removing 8 lines from each, and drops exactly two keys per file:
+
+    CortexBCIHIDProtocolVersion
+    NSAccessibilityUsageDescription
+
+Mechanism: XcodeGen *regenerates* `Info.plist` from `project.yml`'s `info.properties` block rather
+than merging into the existing file, so any key absent from `project.yml` is dropped on every run.
+
+Provenance, established from history rather than inferred: both keys entered the tracked plists in
+`2cdb878` (2026-06-23, Plan 08-01) and `project.yml` has **never** carried either one -- zero commits
+across all refs touch them there. They were written to the generator's OUTPUT instead of its INPUT,
+so every `xcodegen generate` since 2026-06-23 has silently dropped them.
+
+`NSAccessibilityUsageDescription` is a required purpose string for an assistive-input application.
+**No gate asserts either key** -- `grep` over `Tools/scripts/` and `.github/workflows/` returns
+nothing -- so CI builds an app without them and stays green. That is why it survived eight phases.
+
+The fix is two entries in `project.yml`'s `info.properties` for `CortexMac` and `CortexiOS`, plus a
+gate assertion so it cannot regress. It was NOT applied here: `project.yml` is outside the execution
+boundary for this phase, and this is not Phase-10 work. It is carried to the Plan 10-17 checkpoint
+for the user's decision, since 10-17 is the first push and the first CI run.
+
+The remaining item, that `CortexiOS` has never been compiled anywhere because the iOS 26.2 platform
+is not installed locally, stands as reported and is genuinely first-exercised by CI.
