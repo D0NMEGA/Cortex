@@ -402,7 +402,7 @@ struct WebgridBPSReport: Codable {
   let incorrect: Int // Si — structurally 0 (disclosed by `incorrect_model`).
   let seconds: Double // t on the ReFIT arm (summed elapsed across reaches).
   let seed: String // hex string (UInt64 seed) — matches refit_bps.json.
-  let reference_peak_bps: Double // Neuralink P1 verified peak (8.5) — the honest gap target (D-12).
+  let reference_peak_bps: Double // Neuralink P1 figure (8.5, as cited by this repo since Phase 7; not independently sourceable) — the honest gap target (D-12).
   let brain_gate_dense_9x9_bps: Double // BrainGate T5 dense 9x9 (4.16) — Pandarinath 2017 (NOT a pass bar — D-12).
   let brain_gate_6x6_t5_bps: Double   // Same paper's 6x6 figure for T5 (3.7) — exposed for like-for-like comparison.
   let caveat: String // synthetic-replay (not live-human), honest gap to 8.5, NOT tuned toward 4.16 — D-12.
@@ -534,7 +534,7 @@ let payload = RefitBPS(
 let incorrectModelDisclosure = "none — single-target dwell-to-select; Si structurally 0; BPS is upper-bound"
 // D-4 disclosure: comparison against BrainGate is not like-for-like on three independent grounds (formula,
 // grid, Si-structural-zero) plus a fourth against Neuralink (click-types term). See WebgridBPS.nonComparabilityDisclosure.
-let webgridCaveat = "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference peak 8.5 BPS; honest measured number, NOT tuned toward 4.16 (T5 dense 9x9) — D-12. " + WebgridBPS.nonComparabilityDisclosure
+let webgridCaveat = "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference figure 8.5 BPS (Neuralink P1, as cited since Phase 7; not independently sourceable); honest measured number, NOT tuned toward 4.16 (T5 dense 9x9) — D-12. " + WebgridBPS.nonComparabilityDisclosure
 let webgridPayload = WebgridBPSReport(
   raw_webgrid_bps: rawResult.webgridBPS,
   kalman_only_webgrid_bps: kalmanOnlyResult.webgridBPS,

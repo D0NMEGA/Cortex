@@ -1,7 +1,7 @@
 {
   "brain_gate_6x6_t5_bps" : 3.7,
   "brain_gate_dense_9x9_bps" : 4.16,
-  "caveat" : "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference peak 8.5 BPS; honest measured number, NOT tuned toward 4.16 (T5 dense 9x9) — D-12. this repo's Webgrid BPS is not like-for-like with either reference: the formula differs (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's current published score adds a click-types term this single-click-type harness omits",
+  "caveat" : "synthetic Indy replay, NOT a live-human two-stage ReFIT retrain; reference figure 8.5 BPS (Neuralink P1, as cited since Phase 7; not independently sourceable); honest measured number, NOT tuned toward 4.16 (T5 dense 9x9) — D-12. this repo's Webgrid BPS is not like-for-like with either reference: the formula differs (log2(N) here versus log2(N-1) in eLife 18554), the grid differs (T5 dense 9x9, not 6x6), the harness makes incorrect selections structurally zero so Si is always 0, and Neuralink's current published score adds a click-types term this single-click-type harness omits",
   "correct" : 103,
   "formula" : "B = max(0, log2(N)*(Sc-Si)/t)",
   "incorrect" : 0,

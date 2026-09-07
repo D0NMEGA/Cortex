@@ -33,10 +33,13 @@ import simd
 /// every function is a closed-form transform of its inputs, deterministic, no I/O. DISTINCT from
 /// ``FittsThroughput`` (TP = IDe/MT): this is the `log2(N)`-normalized bitrate, the leaderboard metric.
 public nonisolated enum WebgridBPS {
-  /// Neuralink P1 (Noland Arbaugh) "verified peak" Webgrid bitrate the project anchors against —
-  /// **8.5 BPS** on a 30×30 grid (08-RESEARCH §6 / docs/cortex-spec.md §8). Exposed so the evidence
-  /// artifact and tests reference the SAME literal. The honest synthetic-replay number is reported
-  /// WITH the gap toward this peak — NOT tuned toward it (D-12).
+  /// Neuralink P1 (Noland Arbaugh) Webgrid bitrate this repo has cited since Phase 7 - **8.5 BPS**.
+  /// This figure is NOT independently sourceable to a Neuralink primary: Neuralink's own May-2024
+  /// post reports 8 BPS. Treat as an unsourced historical repo reference, not a confirmed measurement.
+  /// Current public statement, neuralink.com/webgrid, retrieved 2026-09-05: "Our clinical trial
+  /// participants have achieved over 10 BPS controlling a computer with their brain."
+  /// Exposed so the evidence artifact and tests reference the SAME literal. The honest
+  /// synthetic-replay number is reported WITH the gap toward this figure - NOT tuned toward it (D-12).
   public static let referencePeakBPS = 8.5
 
   /// BrainGate (Pandarinath et al. 2017, eLife 18554) Webgrid bitrate - **4.16 +/- 0.39 bps**,
