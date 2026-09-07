@@ -79,9 +79,9 @@ completed: 2026-06-21
 
 Each task was committed atomically (with `--no-verify`, per worktree-parallel execution alongside 04-03):
 
-1. **Task 1: Channel-count source-of-truth + cross-repo reconcile (closes D-11)** — `940ac73` (feat)
-2. **Task 2: .mat (h5py) loader + 20 ms binning + chronological split + IndySpikeDataset** — `92c4c81` (feat)
-3. **Task 3: Reproducible session manifest + checksum-verified Zenodo downloader** — `f6fa32a` (feat)
+1. **Task 1: Channel-count source-of-truth + cross-repo reconcile (closes D-11)** — `8a71386` (feat)
+2. **Task 2: .mat (h5py) loader + 20 ms binning + chronological split + IndySpikeDataset** — `40da9e0` (feat)
+3. **Task 3: Reproducible session manifest + checksum-verified Zenodo downloader** — `2b372ac` (feat)
 
 _Plan metadata commit (SUMMARY) made separately after self-check. Tasks 1 & 2 were TDD: the test was authored first and confirmed RED (`ModuleNotFoundError: No module named 'ndt1.channel_count'` / `'ndt1.data'`) via `uv run --project Decoder pytest` before the implementation landed; test+impl committed together as the GREEN commit since the implementations are cohesive single units._
 
@@ -111,7 +111,7 @@ The plan executed essentially as written. Two minor implementation adjustments w
 - **Fix:** Kept the typed constant `CORTEX_CHANNEL_COUNT: int = 96` (honoring the project type-hint rule + the template) AND placed the exact literal `CORTEX_CHANNEL_COUNT = 96` in the module docstring (the "literal width" line), so both the grep gate and the type rule are satisfied.
 - **Files modified:** `Decoder/src/ndt1/channel_count.py`
 - **Verification:** `grep -q 'CORTEX_CHANNEL_COUNT = 96'` → PASS; ruff clean; reconcile tests green.
-- **Committed in:** `940ac73`
+- **Committed in:** `8a71386`
 
 **2. [Rule 3 - Blocking] `scipy` token in docstrings vs the no-scipy structural gate**
 - **Found during:** Task 2
@@ -119,7 +119,7 @@ The plan executed essentially as written. Two minor implementation adjustments w
 - **Fix:** Reworded both docstring mentions to "the legacy MATLAB-reader path / legacy SciPy reader cannot read v7.3" without the literal `scipy` token, in both `data.py` and `test_data.py`. Intent (h5py for v7.3, never the legacy reader) is preserved.
 - **Files modified:** `Decoder/src/ndt1/data.py`, `Decoder/tests/test_data.py`
 - **Verification:** `grep -n scipy Decoder/src/ndt1/data.py` → NONE; h5py present (6 occurrences); tests green.
-- **Committed in:** `92c4c81`
+- **Committed in:** `40da9e0`
 
 **3. [Rule 1 - Bug] Type-narrowing in the manifest test helper**
 - **Found during:** Task 3
@@ -127,7 +127,7 @@ The plan executed essentially as written. Two minor implementation adjustments w
 - **Fix:** Added a typed `_sessions(manifest) -> list[dict[str, Any]]` accessor and switched the helper return to `dict[str, Any]`, clearing the narrowing warnings while keeping runtime behavior identical.
 - **Files modified:** `Decoder/tests/test_manifest.py`
 - **Verification:** 5 manifest tests green; ruff clean.
-- **Committed in:** `f6fa32a`
+- **Committed in:** `2b372ac`
 
 ---
 
@@ -163,7 +163,7 @@ No new network endpoints, auth paths, or trust boundaries introduced — the dow
 ## Self-Check: PASSED
 
 - All 7 created files exist on disk (verified below) + this SUMMARY.
-- All 3 task commits exist in git history: `940ac73` (Task 1), `92c4c81` (Task 2), `f6fa32a` (Task 3).
+- All 3 task commits exist in git history: `8a71386` (Task 1), `40da9e0` (Task 2), `2b372ac` (Task 3).
 - Plan `<verification>` all green: quick suite 24 passed/1 skipped, no bare/blind except (NONE), no scipy in data.py (NONE), ruff clean across src+scripts+tests.
 
 ---

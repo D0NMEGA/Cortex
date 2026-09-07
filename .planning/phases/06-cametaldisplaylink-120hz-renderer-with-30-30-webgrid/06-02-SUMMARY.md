@@ -63,8 +63,8 @@ completed: 2026-06-22
 ## Performance
 
 - **Duration:** ~5 min
-- **Started:** 2026-06-22T02:32:28Z (RED Task 1, `8031fcc`)
-- **Completed:** 2026-06-22T02:37:47Z (GREEN Task 2, `d343323`)
+- **Started:** 2026-06-22T02:32:28Z (RED Task 1, `ed0979a`)
+- **Completed:** 2026-06-22T02:37:47Z (GREEN Task 2, `7f324ba`)
 - **Tasks:** 2 (both TDD — 4 commits: RED→GREEN ×2)
 - **Files modified:** 6 (6 created, 0 modified)
 
@@ -80,10 +80,10 @@ completed: 2026-06-22
 
 Each task was committed atomically (both TDD → RED then GREEN):
 
-1. **Task 1 (RED): failing CursorVelocity + CursorIntegrator tests** — `8031fcc` (test)
-2. **Task 1 (GREEN): CursorVelocity fp16 seam + CursorIntegrator** — `52200e9` (feat)
-3. **Task 2 (RED): failing VelocityRing + LissajousProducer tests** — `9520072` (test)
-4. **Task 2 (GREEN): VelocityRing SPSC + LissajousProducer + cross-thread stress test** — `d343323` (feat)
+1. **Task 1 (RED): failing CursorVelocity + CursorIntegrator tests** — `ed0979a` (test)
+2. **Task 1 (GREEN): CursorVelocity fp16 seam + CursorIntegrator** — `7725032` (feat)
+3. **Task 2 (RED): failing VelocityRing + LissajousProducer tests** — `b0b7855` (test)
+4. **Task 2 (GREEN): VelocityRing SPSC + LissajousProducer + cross-thread stress test** — `7f324ba` (feat)
 
 _Plan metadata commit owned by the orchestrator (executor does not write STATE/ROADMAP/REQUIREMENTS)._
 
@@ -116,7 +116,7 @@ No REFACTOR commits — both GREEN implementations were already minimal and clea
 - **Fix:** Reworded both comments to "no randomness, no wall-clock read" / "no clock, no RNG" without the standalone `Date()`/`Random`/`.random(` literals. Meaning preserved; the gate now passes.
 - **Files modified:** `Packages/CortexRender/Sources/CortexRender/LissajousProducer.swift`
 - **Verification:** `grep -qE 'Date\(\)|SystemRandomNumberGenerator|\.random\('` over the file returns nothing; full suite still 19/19 green.
-- **Committed in:** `d343323` (Task 2 GREEN commit)
+- **Committed in:** `7f324ba` (Task 2 GREEN commit)
 
 **2. [Rule 2 - Missing Critical] `VelocityRing` could not cross the producer/consumer thread boundary it is designed for — added `@unchecked Sendable`**
 - **Found during:** Task 2 (building the cross-thread stress test under Swift 6 strict concurrency)
@@ -124,7 +124,7 @@ No REFACTOR commits — both GREEN implementations were already minimal and clea
 - **Fix:** Marked `VelocityRing: @unchecked Sendable` with a rigorous justification comment: safety rests on (1) `Atomic` head/tail Release-publish/Acquire-observe (no torn read), (2) the invariant that only the producer writes a slot + advances `tail` and only the consumer reads a slot + advances `head`, and (3) `CursorVelocity` being a trivial value type (no shared heap state). This mirrors how the Phase-3 `CortexRing` is treated — the SPSC guarantee is a caller-upheld discipline, not type-system-enforced.
 - **Files modified:** `Packages/CortexRender/Sources/CortexRender/VelocityRing.swift`
 - **Verification:** `swift build --build-tests` clean (no Sendable warnings); the cross-thread stress test (200k frames) passes 6/6 consecutive runs with zero corruption.
-- **Committed in:** `d343323` (Task 2 GREEN commit)
+- **Committed in:** `7f324ba` (Task 2 GREEN commit)
 
 **3. [Rule 2 - Missing Critical] Added a cross-thread SPSC stress test for the core concurrency claim**
 - **Found during:** Task 2 (GREEN — the single-thread tests pin FIFO/bounded but not the actual cross-thread torn-read mitigation)
@@ -132,7 +132,7 @@ No REFACTOR commits — both GREEN implementations were already minimal and clea
 - **Fix:** Added `spscCrossThreadStrictFIFO` — one producer thread pushes 200k monotonic-seq frames (vx encodes seq) while the consumer drains on the test thread, asserting strict FIFO, zero loss, and `vx`-matches-`seq` (a torn slot would mismatch). This is the multi-threaded analogue of the Phase-3 ring's 1M-frame strict-FIFO zero-loss test. (Two minor test-mechanic fixes inside this addition: failable `init?` required `try #require(...)` unwraps on the four ring bindings; `Thread.yield()` does not exist in Swift Foundation → used POSIX `sched_yield()` via `import Darwin`.)
 - **Files modified:** `Packages/CortexRender/Tests/CortexRenderTests/VelocityRingTests.swift`
 - **Verification:** Passes 6/6 consecutive runs (`--filter spscCrossThreadStrictFIFO`); `corrupt == 0`, all 200k frames observed exactly once in order.
-- **Committed in:** `d343323` (Task 2 GREEN commit)
+- **Committed in:** `7f324ba` (Task 2 GREEN commit)
 
 ---
 
@@ -165,7 +165,7 @@ None - no external service configuration required. No new dependency was added (
 ## Self-Check: PASSED
 
 - All 6 created source/test files verified on disk.
-- All 4 task commits (`8031fcc`, `52200e9`, `9520072`, `d343323`) verified in `git log`.
+- All 4 task commits (`ed0979a`, `7725032`, `b0b7855`, `7f324ba`) verified in `git log`.
 - `swift test --package-path Packages/CortexRender` 19/19 green (debug); `swift build -c release` clean under complete strict concurrency (no warnings); the full plan `<verification>` block passes; the cross-thread SPSC stress test green 6/6.
 - STATE.md / ROADMAP.md / REQUIREMENTS.md NOT modified by this executor (orchestrator-owned).
 

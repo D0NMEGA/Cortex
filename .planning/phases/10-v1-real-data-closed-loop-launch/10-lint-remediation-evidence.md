@@ -7,7 +7,7 @@ emitted JSON byte and every serialized key unchanged.
 **Toolchain, pinned by `Tools/toolchain-versions.env` and gated by `Tools/scripts/toolchain-policy.sh`:**
 SwiftLint 0.63.3, SwiftFormat 0.61.1. Both confirmed with `swiftlint version` / `swiftformat --version`
 before the sweep. The baseline in `10-lint-baseline.md` was taken under these same two versions.
-**Date.** 2026-09-07. **Base commit.** `c3d406a`.
+**Date.** 2026-09-07. **Base commit.** `46ab4c3`.
 
 ---
 
@@ -26,7 +26,7 @@ SwiftFormat sweep and before the orchestrator's post-merge fix. Two things moved
   display strings into backticked function names. Disabling `swiftTestingTestCaseNames` in
   `.swiftformat` removed them again, taking the roster from 546 to 471.
 
-Re-measured on `c3d406a` at the start of this plan: **471**. That is the honest starting point and
+Re-measured on `46ab4c3` at the start of this plan: **471**. That is the honest starting point and
 every "before" figure below is against it.
 
 ### 1.2 By rule
@@ -167,7 +167,7 @@ base-commit control.** Neither is a direct generator emission: `10-refit-real.js
 emits, and `10-replay.json`'s 22 top-level keys merge a Seam A and a Seam B run. Diffing a merged
 artifact against one generator's output measures the merge, not the rename. The control that isolates
 the rename is to run the SAME generator on the SAME inputs at the base commit and at HEAD and diff
-the two outputs; `c3d406a` was extracted with `git archive` into a scratch tree for this.
+the two outputs; `46ab4c3` was extracted with `git archive` into a scratch tree for this.
 
 ```
 CORTEX_REPLAY_EXPORT=Decoder/exports/indy_20160630_01.replay.json \
@@ -337,7 +337,7 @@ flagged on the first attempt.
 
 ### 4.2 Pre-existing, not added here (6)
 
-Confirmed present at `c3d406a`: three `empty_count` `disable:next` in
+Confirmed present at `46ab4c3`: three `empty_count` `disable:next` in
 `CortexDemoTests/RollingSpikeWindowTests.swift`, one `large_tuple` `disable:this` in
 `CortexSeamBSmoke/main.swift:275`, one paired `large_tuple` disable/enable in
 `CortexBCIHID/BCIHIDReports.swift:56`-`:124`, and the `swiftlint:disable all` in the flatc-generated
@@ -519,7 +519,7 @@ iOS app target has not been compiled by anything, here or in CI history.
 **Two `10-refit-real.json` blocks are not reproducible from `CortexReplayBench`.** Discovered while
 building the base-commit control in 2.4(b) and recorded in `deferred-items.md`. The committed
 artifact contains `ceiling_ref`, `phase9_bounds`, and two `env` entries (`ticks_model_backed`,
-`ticks_total`) that **no version of the bench emits** - not this one and not `c3d406a`'s. The diff is
+`ticks_total`) that **no version of the bench emits** - not this one and not `46ab4c3`'s. The diff is
 17 added lines, zero modified and zero removed, so nothing this plan did caused it and no number in
 the artifact is contradicted. But the artifact is a superset of what its generator produces, which
 means "regenerate and diff" is not currently a complete reproducibility check for it. That predates

@@ -69,8 +69,8 @@ completed: 2026-06-23
 
 Each task was committed atomically:
 
-1. **Task 1: Swap fastlane to real appstore lanes + write notarize.sh (notarytool + stapler, no altool)** — `324657f` (feat)
-2. **Task 2: Build notarize-policy.sh + match-policy.sh structural gates with self-tests, and wire into CI** — `2431343` (feat)
+1. **Task 1: Swap fastlane to real appstore lanes + write notarize.sh (notarytool + stapler, no altool)** — `b624c2f` (feat)
+2. **Task 2: Build notarize-policy.sh + match-policy.sh structural gates with self-tests, and wire into CI** — `02e5361` (feat)
 
 _Note: the Task-1 commit's Matchfile still carried three bare forbidden literals in its comments; Task 2 reworded them (the match-policy.sh gate that polices the Matchfile lands in Task 2, and the reword is what makes that gate pass the real tree). See Deviations._
 
@@ -101,7 +101,7 @@ _Note: the Task-1 commit's Matchfile still carried three bare forbidden literals
 - **Fix:** Reworded the comments to describe the forbidden tool by intent ("the deprecated legacy App Store uploader" / "the retired tool") so the bare token never appears in the policed files. The `notarize-policy.sh` self-test injects the real `altool` literal into a synthetic tree, so the gate is still proven to bite on a genuine regression.
 - **Files modified:** Tools/scripts/notarize.sh, fastlane/Fastfile
 - **Verification:** `grep -rn "altool" Tools/scripts/notarize.sh fastlane/Fastfile` returns nothing; `ruby -c` + `bash -n` still clean.
-- **Committed in:** 324657f (Task 1 commit)
+- **Committed in:** b624c2f (Task 1 commit)
 
 **2. [Rule 1 - Bug] Reworded Matchfile comments to avoid the bare `file://` literal**
 - **Found during:** Task 1 (acceptance criterion: `grep -n "file://" fastlane/Matchfile` must return nothing)
@@ -109,7 +109,7 @@ _Note: the Task-1 commit's Matchfile still carried three bare forbidden literals
 - **Fix:** Reworded the comments to "the old local-disk git URL" / "a local-only path under ~/Library" (intent, not the literal). The actual `git_url` uses `https://` only. match-policy.sh's self-test injects the real local-disk-URL literal to prove the gate bites.
 - **Files modified:** fastlane/Matchfile
 - **Verification:** `grep -n "file://" fastlane/Matchfile` returns nothing; Matchfile still parses and still has `type("appstore")` + the https git_url.
-- **Committed in:** 324657f (Task 1 commit)
+- **Committed in:** b624c2f (Task 1 commit)
 
 **3. [Rule 1 - Bug] Reworded Matchfile comments to avoid bare `git@github.com:` + literal-`MATCH_PASSWORD=` tokens**
 - **Found during:** Task 2 (`match-policy.sh` ran RED on the real tree: the ssh-form and literal-passphrase forbidden checks bit on the Matchfile's own comments at lines 11/15/32)
@@ -117,7 +117,7 @@ _Note: the Task-1 commit's Matchfile still carried three bare forbidden literals
 - **Fix:** Reworded those comments to describe the forbidden forms by intent ("the ssh remote form (a user@host:path remote)", "an inline string assignment", "an exported MATCH_PASSWORD environment variable"). Kept the legitimate `ENV["MATCH_PASSWORD"]` reference (the REQUIRED ENV form). match-policy.sh's self-test injects the real ssh-URL + literal-assignment forms to prove the gate bites.
 - **Files modified:** fastlane/Matchfile (folded into the Task 2 commit, since match-policy.sh — the gate that polices it — lands in Task 2)
 - **Verification:** `match-policy.sh` exits 0 on the real tree; Matchfile still parses + retains appstore/https/ENV[MATCH_PASSWORD]; the self-test still bites on all negative controls.
-- **Committed in:** 2431343 (Task 2 commit)
+- **Committed in:** 02e5361 (Task 2 commit)
 
 **4. [Rule 1 - Bug] Fixed a non-biting match-policy.sh self-test negative control**
 - **Found during:** Task 2 (`match-policy.sh --self-test` ran RED: the "inject literal MATCH_PASSWORD= (Fastfile)" control returned exit 0 instead of 1)
@@ -125,7 +125,7 @@ _Note: the Task-1 commit's Matchfile still carried three bare forbidden literals
 - **Fix:** Changed the injection to the bare `MATCH_PASSWORD = "supersecret"` form the check actually targets (the ENV-default-fallback case is covered by a separate dedicated control). The self-test now bites correctly.
 - **Files modified:** Tools/scripts/match-policy.sh
 - **Verification:** `match-policy.sh --self-test` exits 0 with every negative control showing exit=1 (PASS).
-- **Committed in:** 2431343 (Task 2 commit)
+- **Committed in:** 02e5361 (Task 2 commit)
 
 ---
 
@@ -151,7 +151,7 @@ None for this plan's deliverables (CI runs structural gates + parse only). The L
 
 - Created files verified on disk: `Tools/scripts/notarize.sh`, `Tools/scripts/notarize-policy.sh`, `Tools/scripts/match-policy.sh`, `fastlane/asc_api_key.json.example`, `08-04-SUMMARY.md` — all FOUND.
 - Modified files verified on disk: `fastlane/Fastfile`, `fastlane/Matchfile`, `fastlane/Appfile`, `.github/workflows/ci.yml`, `.gitignore` — all FOUND.
-- Task commits verified in git history: `324657f` (Task 1), `2431343` (Task 2) — both FOUND.
+- Task commits verified in git history: `b624c2f` (Task 1), `02e5361` (Task 2) — both FOUND.
 - Plan `<verification>` block: ruby -c x3 + bash -n clean; notarytool submit + stapler staple present + zero deprecated-uploader; appstore + https git_url + no file:// + MATCH_PASSWORD-from-ENV; both gates exit 0 on the real tree + all self-test negative controls bite; no real key/.p8 tracked; CI runs no live lane.
 
 ---

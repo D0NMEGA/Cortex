@@ -45,7 +45,7 @@ uv run --project Decoder ruff check Decoder                          -> All chec
 ./Tools/scripts/bps-policy.sh                                        -> exit 0
 git status --porcelain Decoder/data Decoder/checkpoints Packages/CortexDecoder/.bench -> (empty)
 git ls-files | grep -E '\.pt$|\.mlpackage|\.mlmodelc'                 -> (no matches)
-git show --stat 774d3c6 6b77957 43ac421                               -> confirms 09-10's file scope
+git show --stat b489fdf b52cd6e 0675ccc                               -> confirms 09-10's file scope
 ```
 
 ## Threat Verification
@@ -114,9 +114,9 @@ git show --stat 774d3c6 6b77957 43ac421                               -> confirm
 | T-09-09-06 | Elevation of Privilege | mitigate | closed | `Tools/scripts/check_decoder_provenance.py:37-39` imports only `json`, `sys`, `pathlib.Path` (verified by reading the full file) — the underlying property holds today. Caveat (see Accepted Risks): no grep/test anywhere in `Decoder/tests/` or `Tools/` enforces "stdlib-only" as an ongoing regression check, despite the plan's mitigation text claiming this is "asserted by a grep on its import list." A future third-party import added to this script would not be caught by CI. Recommend adding the grep the plan describes (e.g. alongside `test_no_unguarded_torch_load`'s pattern) or correcting the plan's mitigation text. |
 | T-09-09-07 | Information disclosure | mitigate | closed | `ci.yml:573-576` `cache-dependency-glob` scoped to `Decoder/uv.lock` and `Decoder/pyproject.toml` only, with an explicit `cache-suffix: decoder-py312`. |
 | T-09-10-01 | Repudiation | mitigate | closed | `.planning/PROJECT.md:41,55` — both `0.3804` citations carry explicit `synthetic`/`defective-objective` labels pointing at the real `0.4096` figure and `09-training-evidence.md`. |
-| T-09-10-02 | Tampering | mitigate | closed | `git show --stat 774d3c6` (verified live): 3 files changed, 70 insertions(+), **0 deletions**, touching only the three Phase-4/5 evidence artifacts. |
+| T-09-10-02 | Tampering | mitigate | closed | `git show --stat b489fdf` (verified live): 3 files changed, 70 insertions(+), **0 deletions**, touching only the three Phase-4/5 evidence artifacts. |
 | T-09-10-03 | Tampering | mitigate | closed | Spot-checked transcribed numbers (`0.4096`, `239/239`, `0.141083 ms`) all trace to `09-decoder-metrics.json` / `09-*-evidence.md`, consistent with `decoder-policy.sh`'s live passing run. |
-| T-09-10-04 | Denial of Service | mitigate | closed | `git show --stat 6b77957` (verified live): only `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md` touched — no README, ADR, or `*-policy.sh`. Live re-run of `readme-policy.sh` and `bps-policy.sh`: both exit 0. |
+| T-09-10-04 | Denial of Service | mitigate | closed | `git show --stat b52cd6e` (verified live): only `PROJECT.md`, `REQUIREMENTS.md`, `ROADMAP.md` touched — no README, ADR, or `*-policy.sh`. Live re-run of `readme-policy.sh` and `bps-policy.sh`: both exit 0. |
 | T-09-10-05 | Repudiation | mitigate | closed | `.planning/REQUIREMENTS.md:97` RD-03 checked `[x]` with the committed value and artifact cited; `:101-104` RD-07..RD-10 remain `[ ]` unchecked. |
 | T-09-10-06 | Tampering | mitigate | closed | All three forward-pointer targets (`09-training-evidence.md`, `09-coreml-evidence.md`, `09-velocity-evidence.md`) confirmed present in the phase directory listing. |
 | T-09-11-01 | Spoofing | mitigate | closed | `09-HUMAN-UAT.md` "The iPad Air M2 capture" is a distinct, separately labeled section; "The committed M5 Pro number is untouched by this capture... Both are corroborating, on different devices, and neither is canonical." |
@@ -162,7 +162,7 @@ the same plan directs to commit whole contains all three.
 
 **2. Whether the equivalent Phase-5 report is also committed:** yes.
 `.planning/phases/05-ndt1-coreml-deployment-with-ane-residency-verified/05-perf-report-ipad-m2.json`
-is git-tracked (`git ls-files` confirms), committed 2026-06-21 (`b426467`), predating this phase by
+is git-tracked (`git ls-files` confirms), committed 2026-06-21 (`c8696df`), predating this phase by
 about ten weeks. A field-by-field comparison confirms it is the **same physical device**:
 `deviceID`, `serialNumber`, and `displayName` are byte-identical between the Phase-5 and Phase-9
 reports. This substantiates the plan's implicit claim (stated in `09-HUMAN-UAT.md`'s own prose, not
@@ -261,17 +261,17 @@ The operator chose remediation over a widened accept-rationale. What was done:
 | Measured data preserved | `deviceResults`, `modelMetadata`, `computeUnit` untouched; `modelName` "iPad Air 11-inch (M2)" and `osNameAndVersionWithoutBuildNumber` "iPadOS 18.7.8" retained, so the device-labeling discipline (D-17) still holds |
 
 Context that shaped the choice: the repository is PRIVATE and `git ls-remote --heads origin` returns
-nothing - the last push was 2026-06-19, two days BEFORE commit `b426467` introduced
+nothing - the last push was 2026-06-19, two days BEFORE commit `c8696df` introduced
 `05-perf-report-ipad-m2.json`. Neither report has ever left the machine, so this was remediated
 before any exposure occurred rather than after.
 
 ### Residual risk, stated plainly
 
-The identifiers remain in local git history (from `b426467`, 2026-06-21). They were NOT removed by
+The identifiers remain in local git history (from `c8696df`, 2026-06-21). They were NOT removed by
 rewriting history, and that was a deliberate call, not an oversight: rewriting would rewrite the 197
-commits since `b426467`, and 196 of the 199 short commit SHAs cited across `.planning/` resolve to
+commits since `c8696df`, and 196 of the 199 short commit SHAs cited across `.planning/` resolve to
 real commits today. Every one of those citations would break, in a repo whose summaries self-verify
-with lines like "Commit `774d3c6` FOUND". The evidence chain was judged worth more than removing
+with lines like "Commit `b489fdf` FOUND". The evidence chain was judged worth more than removing
 identifiers from an unpushed local history.
 
 This means the residual risk is real but narrow: anyone who obtains the full repository with history

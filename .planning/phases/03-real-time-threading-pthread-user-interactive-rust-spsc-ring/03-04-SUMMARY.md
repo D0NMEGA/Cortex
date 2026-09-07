@@ -81,8 +81,8 @@ completed: 2026-06-20
 
 Each task was committed atomically (TDD: tests-first; `--no-verify` per parallel-executor protocol):
 
-1. **Task 1: Safe RAII Swift wrapper (CortexRing) over the cbindgen C ABI** — `e9b8f0f` (feat)
-2. **Task 2: SC#4 Swift integration test — produce 1000 frames, pop+verify value+order** — `2c793b9` (test)
+1. **Task 1: Safe RAII Swift wrapper (CortexRing) over the cbindgen C ABI** — `a8ab81f` (feat)
+2. **Task 2: SC#4 Swift integration test — produce 1000 frames, pop+verify value+order** — `48945b0` (test)
 
 **Plan metadata:** (final docs commit — this SUMMARY)
 
@@ -126,7 +126,7 @@ SPSC contract: the wrapper does NOT enforce thread-affinity — one producer (`p
 - **Fix:** Stored the handle as `OpaquePointer` (the plan's contract) and bridged: `OpaquePointer(raw)` on create, `UnsafeMutablePointer<CortexSpsc>(handle)` at each `push`/`pop`/`destroy` call site. Verified the bridge compiles AND runs (a standalone link+run probe returned a correct push/pop round-trip).
 - **Files modified:** Packages/CortexRing/Sources/CortexRing/Ring.swift
 - **Verification:** `swift build` clean; `grep` proofs (import CortexRingFFI + all four `cortex_spsc_*`) pass; the wrapper handle is an `OpaquePointer` as the acceptance requires.
-- **Committed in:** `e9b8f0f` (Task 1)
+- **Committed in:** `a8ab81f` (Task 1)
 
 **2. [Rule 1 - Bug] `init?(capacity:)` converts Int → UInt at the C boundary**
 - **Found during:** Task 1 (first `swift build`)
@@ -134,7 +134,7 @@ SPSC contract: the wrapper does NOT enforce thread-affinity — one producer (`p
 - **Fix:** Kept the idiomatic `init?(capacity: Int)` public signature and added `guard capacity > 0, let raw = cortex_spsc_create(UInt(capacity))` — the `> 0` guard prevents bit-casting a negative `Int` (which can never be a valid power-of-two capacity).
 - **Files modified:** Packages/CortexRing/Sources/CortexRing/Ring.swift
 - **Verification:** `swift build` clean; `CortexRing(capacity: 0)` test → `nil`.
-- **Committed in:** `e9b8f0f` (Task 1)
+- **Committed in:** `a8ab81f` (Task 1)
 
 **3. [Rule 2 - Missing critical] `@_exported import CortexRingFFI` so the public API is usable**
 - **Found during:** Task 2 (first `swift test` — test target imports `CortexRing` but `CortexFrame` was not in scope)
@@ -142,7 +142,7 @@ SPSC contract: the wrapper does NOT enforce thread-affinity — one producer (`p
 - **Fix:** Changed the wrapper's import to `@_exported import CortexRingFFI`, re-exporting the repr(C) `CortexFrame` (re-export, NOT re-declare — D-R6 preserved).
 - **Files modified:** Packages/CortexRing/Sources/CortexRing/Ring.swift
 - **Verification:** `swift test` builds and all 7 tests pass; `CortexFrame` resolves in the test with only `import CortexRing`.
-- **Committed in:** `e9b8f0f` (Task 1)
+- **Committed in:** `a8ab81f` (Task 1)
 
 **4. [Rule 1 - Bug] swiftformat/swiftlint conformance on the new Swift files (CI gates)**
 - **Found during:** SUMMARY prep (running the repo's actual `swiftformat --lint` / `swiftlint --strict` CI commands)
@@ -150,7 +150,7 @@ SPSC contract: the wrapper does NOT enforce thread-affinity — one producer (`p
 - **Fix:** Ran the project `swiftformat` (autofix → `self` removed, header stripped, trailing comma normalized) and renamed the short identifiers to descriptive names (`frameCount`, `lhsFrame`/`rhsFrame`/`lhsBytes`/`rhsBytes`). The lost top-of-file prose was redundant with the rich `///` doc comments retained on the type.
 - **Files modified:** Packages/CortexRing/Sources/CortexRing/Ring.swift, Packages/CortexRing/Tests/CortexRingTests/RingIntegrationTests.swift, Packages/CortexRing/Package.swift
 - **Verification:** `swiftformat --lint` → 0/3 require formatting; `swiftlint --strict` → 0 violations; `swift test` still 7/7 green.
-- **Committed in:** `e9b8f0f` (Task 1 files) + `2c793b9` (Task 2 test file)
+- **Committed in:** `a8ab81f` (Task 1 files) + `48945b0` (Task 2 test file)
 
 ---
 
@@ -188,7 +188,7 @@ None — no external service configuration. The only prerequisite is the Rust to
 
 - Created files verified present on disk: `Sources/CortexRing/Ring.swift`, `Tests/CortexRingTests/RingIntegrationTests.swift`.
 - Modified file verified: `Package.swift` (CortexRing target + product).
-- Both task commit hashes verified in git history: `e9b8f0f` (Task 1), `2c793b9` (Task 2).
+- Both task commit hashes verified in git history: `a8ab81f` (Task 1), `48945b0` (Task 2).
 - Gate replay: `swift build` clean; `swift test --package-path Packages/CortexRing` → 7/7 green (SC#4 round-trip 1000 frames value+order + 4 edge/RAII tests + 2 Ping smoke); `swiftformat --lint` 0/3; `swiftlint --strict` 0 violations; cbindgen drift gate clean; whole package builds (parallel targets undisturbed).
 
 ---

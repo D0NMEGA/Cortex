@@ -122,7 +122,7 @@ completed: 2026-06-20
 - **Fix:** Added `public var fd: Int32 { ownedFD }` (returns the real fd for a created ring, -1 for an adopted/borrowed one). No `import Foundation`, no forbidden tokens.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCTransport/ShmRing.swift`
 - **Verification:** hot-path gate exits 0; RingTests 5/5 still pass.
-- **Committed in:** `de5626e` (Task 2)
+- **Committed in:** `757d6c7` (Task 2)
 
 **2. [Rule 1 - Bug] ShmRing slot stride omitted FlatBuffers framing → encrypted frame overflowed the slot**
 - **Found during:** Task 3 (in-process test crashed: Array index out of range / GCM authenticationFailure)
@@ -130,7 +130,7 @@ completed: 2026-06-20
 - **Fix:** Added `ShmRingLayout.flatBuffersFramingHeadroom = 64` to the stride formula → stride 224→288 (holds 232 B with margin). Updated `RingTests.constantStride` to include the headroom. Gate-clean (no forbidden tokens). This is a correctness requirement for the plan's entire deliverable, scoped to the stride only.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCTransport/ShmRing.swift`, `Packages/CortexIPC/Tests/CortexIPCTransportTests/RingTests.swift`
 - **Verification:** hot-path gate 0; all RingTests + the in-process round trip pass; the two-process probe verified 64/64.
-- **Committed in:** `c80da05` (Task 3)
+- **Committed in:** `7a91ab3` (Task 3)
 
 **3. [Rule 1 - Bug] FlatBuffers Sample is variable-length → fixed-length slot split was wrong**
 - **Found during:** Task 3 (in-process test: ciphertext length 248 ≠ probed 216)
@@ -138,7 +138,7 @@ completed: 2026-06-20
 - **Fix:** Defined the slot payload as `[4B LE ciphertext length][ciphertext][16B tag]` (`HarnessConsumer.packSlot` / the length-prefix parse in `consumeOne`); the producer and the in-process test both use `packSlot`. Removed the obsolete constant.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCSession/HarnessConsumer.swift`, `Apps/CortexDaemon/Producer.swift`, `Packages/CortexIPC/Tests/CortexIPCSessionTests/HarnessE2ETests.swift`
 - **Verification:** in-process round trip verifies 256/256; two-process probe 64/64.
-- **Committed in:** `c80da05` (Task 3)
+- **Committed in:** `7a91ab3` (Task 3)
 
 **4. [Rule 3 - Blocking] CortexDaemon target lacked the CortexIPC dependency**
 - **Found during:** Task 2 (Producer/main.swift import CortexIPCTransport + CortexIPCSession; the daemon target depended only on CortexCore)
@@ -146,7 +146,7 @@ completed: 2026-06-20
 - **Fix:** Added `CortexIPCTransport` + `CortexIPCSession` products to the CortexDaemon target in `project.yml` (the bare CortexIPC product was split in Plan 02-01, so both products are named). Validated with `xcodegen generate` (the .xcodeproj is gitignored, not committed).
 - **Files modified:** `project.yml`
 - **Verification:** `xcodegen generate` exits 0; daemon Apps sources type-check clean against the package modules under `-swift-version 6`.
-- **Committed in:** `de5626e` (Task 2)
+- **Committed in:** `757d6c7` (Task 2)
 
 **5. [Rule 1 - Bug] Producer called MainActor-isolated Time.machAbsoluteNanoseconds() from a nonisolated context**
 - **Found during:** Task 3 (type-checking the Apps daemon sources)
@@ -154,7 +154,7 @@ completed: 2026-06-20
 - **Fix:** Replicated the identical `mach_absolute_time()`→ns conversion inline in `Producer.nowNanos()` (Darwin, nonisolated) — no MainActor hop, no change to CortexCore.
 - **Files modified:** `Apps/CortexDaemon/Producer.swift`
 - **Verification:** daemon sources type-check clean.
-- **Committed in:** `c80da05` (Task 3)
+- **Committed in:** `7a91ab3` (Task 3)
 
 **6. [Rule 1 - Literal-token-grep contradiction] Reworded comments embedding `SCM_RIGHTS` / `ShmCheck`**
 - **Found during:** Task 2 (the `! grep ShmCheck` acceptance) and Task 3 (the SC#2 `! grep SCM_RIGHTS|cmsg(` invariant)
@@ -162,7 +162,7 @@ completed: 2026-06-20
 - **Fix:** Reworded the comments to describe the no-rights-transfer invariant / the Phase-1 shm-open helper without the literal tokens. The code genuinely uses mach_msg + fileport (no socket control message) and zero references to the deleted helper.
 - **Files modified:** `Apps/CortexDaemon/main.swift`, `Apps/CortexDaemon/Producer.swift`, `Packages/CortexIPC/Sources/CortexIPCSession/HarnessConsumer.swift`, `Packages/CortexIPC/Sources/CortexIPCSession/SessionKeyChannel.swift`
 - **Verification:** `! grep 'ShmCheck' main.swift` passes; `! grep -rE 'SCM_RIGHTS|cmsg(' Sources CortexCoreC Apps` clean.
-- **Committed in:** `de5626e` (Task 2) + `c80da05` (Task 3)
+- **Committed in:** `757d6c7` (Task 2) + `7a91ab3` (Task 3)
 
 ### Authorized scope additions (beyond the plan's declared files_modified)
 
@@ -196,7 +196,7 @@ None. The two-process spawn test is XCTSkip-guarded (not a stub — the real pat
 ## Self-Check: PASSED
 
 - All 8 created source/test files exist on disk (cortex_rendezvous.h/.c, Rendezvous.swift, SessionKeyChannel.swift, HarnessConsumer.swift, Producer.swift, Harness.swift, HarnessE2ETests.swift) + this SUMMARY — VERIFIED
-- All 3 task commits exist (`b9a79ac`, `de5626e`, `c80da05`) — VERIFIED via `git log`
+- All 3 task commits exist (`5d55a35`, `757d6c7`, `7a91ab3`) — VERIFIED via `git log`
 - Modified files reflect their changes: ShmRing.fd accessor present, main.swift has zero ShmCheck references, the framing-headroom stride fix is in place — VERIFIED
 - Both packages build (CortexCore + CortexIPC exit 0); full CortexIPC test suite green (5 Swift Testing suites / 26 tests + XCTest HarnessE2ETests 3 tests / 1 XCTSkip / 0 failures); hot-path gate exits 0; SC#2 grep (`SCM_RIGHTS|cmsg(`) clean across CortexIPC/Sources + CortexCoreC + Apps — VERIFIED
 - Daemon Apps sources type-check clean under `-swift-version 6` (Plan 02-05 xcodebuild readiness); the two-process flow verified 3/3 end-to-end via a temporary SwiftPM probe (reverted) — VERIFIED

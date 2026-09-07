@@ -78,9 +78,9 @@ completed: 2026-06-22
 
 ## Accomplishments
 
-- **Pure S&M-2004 effective-width throughput math (Task 1, REFIT-03 / D-09 — `15305cd`).** `FittsThroughput` implements `TP = IDe/MT`, `IDe = log2(De/We + 1)`, `We = 4.133·SDx` (the 96%-spread constant) and `meanOfMeans` aggregation, plus `conditionThroughput(trials:)` that derives `SDx` from the **realized endpoint scatter on the movement axis** (effective width, not nominal — the reviewer-defensible method). `WebgridAcquisition` is the dwell-to-select + per-trial-timeout model over the 30×30 grid (continuous-hold dwell, index-driven movement time, documented defaults dwell=0.3 s / r_acq=0.5/30 cell / timeout=5 s). 5 TDD tests (RED→GREEN) cover IDe / We / TP / **mean-of-means-vs-pooled** (catches a regression to pooling) / **HIT + TIMEOUT**.
-- **Headless deterministic 3-way ablation harness + SC#3 latency bench (Task 2, D-07/D-12/SC#3 — `a095986`).** The `CortexReFITBench` executable replays a seed-locked sequence through **raw / Kalman-only / Kalman+rotation** (the three arms differ ONLY in the filter stage) → `CursorIntegrator` → 30×30 `WebgridAcquisition` → S&M-2004 throughput, with external position sync (`setCursorPosition` before each step) and a warm filter carried across reaches. Determinism is seed/index-driven (SplitMix64 closed form, **no clock/RNG** in the sim). A `--latency` mode times the filter step over **10 000 ticks INLINE** (no new thread) into a device-annotated `LatencyHistogram`. Clean-clone safe: no data + no `--smoke` → usage/skip exit 0.
-- **Committed evidence + deterministic CI uplift guard (Task 3, D-10/D-13 — `c6bd725`).** `refit_bps.json` (raw 0.161 / kalman_only 0.155 / refit 0.374, Δ=+0.213, n=120, seed=0xC0FFEE, dt=0.020) is **byte-identical** to the bench output. `07-bps-evidence.md` carries the **metric-naming disclaimer** (S&M-2004 Fitts throughput, MUST NOT compare to Webgrid 4.16/8.5 → Phase-8/D-13 deferral), the **ReFIT-inspired** honesty framing, the **3-way ablation table**, and the **SC#3 device-annotated p50/p99 + iPad-M4-Manual-Only note**. `check_refit_uplift.py` + a new `ci.yml` step fail the build unless `refit_bps >= raw_bps` (and re-assert byte-identical reproduction of the JSON) — mirroring the Phase-4 co-bps>null gate.
+- **Pure S&M-2004 effective-width throughput math (Task 1, REFIT-03 / D-09 — `171f890`).** `FittsThroughput` implements `TP = IDe/MT`, `IDe = log2(De/We + 1)`, `We = 4.133·SDx` (the 96%-spread constant) and `meanOfMeans` aggregation, plus `conditionThroughput(trials:)` that derives `SDx` from the **realized endpoint scatter on the movement axis** (effective width, not nominal — the reviewer-defensible method). `WebgridAcquisition` is the dwell-to-select + per-trial-timeout model over the 30×30 grid (continuous-hold dwell, index-driven movement time, documented defaults dwell=0.3 s / r_acq=0.5/30 cell / timeout=5 s). 5 TDD tests (RED→GREEN) cover IDe / We / TP / **mean-of-means-vs-pooled** (catches a regression to pooling) / **HIT + TIMEOUT**.
+- **Headless deterministic 3-way ablation harness + SC#3 latency bench (Task 2, D-07/D-12/SC#3 — `2e1440d`).** The `CortexReFITBench` executable replays a seed-locked sequence through **raw / Kalman-only / Kalman+rotation** (the three arms differ ONLY in the filter stage) → `CursorIntegrator` → 30×30 `WebgridAcquisition` → S&M-2004 throughput, with external position sync (`setCursorPosition` before each step) and a warm filter carried across reaches. Determinism is seed/index-driven (SplitMix64 closed form, **no clock/RNG** in the sim). A `--latency` mode times the filter step over **10 000 ticks INLINE** (no new thread) into a device-annotated `LatencyHistogram`. Clean-clone safe: no data + no `--smoke` → usage/skip exit 0.
+- **Committed evidence + deterministic CI uplift guard (Task 3, D-10/D-13 — `53912be`).** `refit_bps.json` (raw 0.161 / kalman_only 0.155 / refit 0.374, Δ=+0.213, n=120, seed=0xC0FFEE, dt=0.020) is **byte-identical** to the bench output. `07-bps-evidence.md` carries the **metric-naming disclaimer** (S&M-2004 Fitts throughput, MUST NOT compare to Webgrid 4.16/8.5 → Phase-8/D-13 deferral), the **ReFIT-inspired** honesty framing, the **3-way ablation table**, and the **SC#3 device-annotated p50/p99 + iPad-M4-Manual-Only note**. `check_refit_uplift.py` + a new `ci.yml` step fail the build unless `refit_bps >= raw_bps` (and re-assert byte-identical reproduction of the JSON) — mirroring the Phase-4 co-bps>null gate.
 - **The uplift is honest, not rigged.** It is driven by **target-acquisition success** (the canonical Gilja mechanism: acq 61→100 / 120), with **Kalman-only ≈ raw** isolating the rotation's contribution from the smoothing's (exactly what D-12's ablation is designed to expose).
 - **21/21 CortexReFIT tests green** (KalmanConstants 6 + IntentRotation 5 + KalmanFilter 5 + FittsThroughput 5); `hotpath-policy.sh` + `--self-test` green; the harness is byte-deterministic across two same-seed runs.
 
@@ -88,9 +88,9 @@ completed: 2026-06-22
 
 Each task was committed atomically (with `--no-verify` per the isolated-worktree parallel-execution protocol):
 
-1. **Task 1: S&M-2004 effective-width throughput + dwell-to-select acquisition (REFIT-03, D-08/D-09)** — `15305cd` (feat) — _single atomic TDD commit; RED (`cannot find 'FittsThroughput' in scope`) → GREEN (5 tests pass) exercised in-session before staging._
-2. **Task 2: headless 3-way ablation harness + SC#3 filter-step latency bench (D-07/D-12, SC#3)** — `a095986` (feat)
-3. **Task 3: ReFIT BPS evidence + refit_bps.json + deterministic CI uplift guard (D-10/D-13, REFIT-03)** — `c6bd725` (feat)
+1. **Task 1: S&M-2004 effective-width throughput + dwell-to-select acquisition (REFIT-03, D-08/D-09)** — `171f890` (feat) — _single atomic TDD commit; RED (`cannot find 'FittsThroughput' in scope`) → GREEN (5 tests pass) exercised in-session before staging._
+2. **Task 2: headless 3-way ablation harness + SC#3 filter-step latency bench (D-07/D-12, SC#3)** — `2e1440d` (feat)
+3. **Task 3: ReFIT BPS evidence + refit_bps.json + deterministic CI uplift guard (D-10/D-13, REFIT-03)** — `53912be` (feat)
 
 ## Files Created/Modified
 
@@ -122,7 +122,7 @@ Each task was committed atomically (with `--no-verify` per the isolated-worktree
 - **Fix:** Rewrote aggregation to bin trials into **amplitude conditions** and use `FittsThroughput.conditionThroughput` with the **genuine across-trial `SDx`** (effective width from realized scatter, §4.2/§7 pitfall 3); **kept all trials** — a timed-out reach contributes the full-timeout MT + its scattered endpoint (an honest low-throughput outcome). Also carried the Kalman filter **warm across reaches** (the continuous closed loop is never reset; a per-reach cold velocity reset injected a startup-ramp artifact that crawled the Kalman arms).
 - **Files modified:** `Packages/CortexReFIT/Sources/CortexReFITBench/main.swift`
 - **Verification:** With a realistic decoder-noise level, the ablation now reflects the canonical Gilja mechanism — raw acq 61/120, ReFIT acq 100/120 → `refit_bps (0.374) >= raw_bps (0.161)`, `kalman_only (0.155) ≈ raw` isolating the rotation. Deterministic + byte-identical across runs.
-- **Committed in:** `a095986` (Task 2 commit)
+- **Committed in:** `2e1440d` (Task 2 commit)
 
 **2. [Rule 3 - Blocking] hotpath-policy.sh false-positived on a comment containing the literal `import Foundation`**
 - **Found during:** Task 1 (first `hotpath-policy.sh` run after writing `FittsThroughput.swift`)
@@ -130,7 +130,7 @@ Each task was committed atomically (with `--no-verify` per the isolated-worktree
 - **Fix:** Reworded the comment to avoid the literal forbidden token (referring to "the simd module" / "no Obj-C-runtime framework import"), matching the established Plan-02 KalmanFilter convention.
 - **Files modified:** `Packages/CortexReFIT/Sources/CortexReFIT/FittsThroughput.swift`
 - **Verification:** `./Tools/scripts/hotpath-policy.sh` exit 0; `--self-test` exit 0; no literal forbidden tokens remain in either new policed-dir file.
-- **Committed in:** `15305cd` (Task 1 commit)
+- **Committed in:** `171f890` (Task 1 commit)
 
 **3. [Rule 2 - Missing Critical] Bench run-artifact dir not gitignored**
 - **Found during:** Task 2 (post-build `git status`)
@@ -138,7 +138,7 @@ Each task was committed atomically (with `--no-verify` per the isolated-worktree
 - **Fix:** Added `Packages/CortexReFIT/.bench/` to `.gitignore` (with a Phase-7 rationale comment), mirroring the CortexDecoder entry.
 - **Files modified:** `.gitignore`
 - **Verification:** `git check-ignore Packages/CortexReFIT/.bench/refit_bps.json` confirms it is ignored; working tree is clean.
-- **Committed in:** `a095986` (Task 2 commit)
+- **Committed in:** `2e1440d` (Task 2 commit)
 
 ---
 
@@ -171,7 +171,7 @@ None — no external service configuration required. (A future data-grounded run
 ## Self-Check: PASSED
 
 - Created files verified present on disk: `FittsThroughput.swift`, `WebgridAcquisition.swift`, `CortexReFITBench/main.swift`, `FittsThroughputTests.swift`, `07-bps-evidence.md`, `refit_bps.json`, `Tools/scripts/check_refit_uplift.py` — all FOUND.
-- Commits verified in `git log`: `15305cd` (Task 1), `a095986` (Task 2), `c6bd725` (Task 3) — all FOUND.
+- Commits verified in `git log`: `171f890` (Task 1), `2e1440d` (Task 2), `53912be` (Task 3) — all FOUND.
 - `swift test --package-path Packages/CortexReFIT` → 21/21 PASS; `swift run … CortexReFITBench --smoke` exit 0 (no data); two same-seed runs byte-identical; committed `refit_bps.json` == bench output; `python3 Tools/scripts/check_refit_uplift.py` exit 0 (negative control → exit 1, restored); `./Tools/scripts/hotpath-policy.sh` + `--self-test` exit 0.
 
 ---

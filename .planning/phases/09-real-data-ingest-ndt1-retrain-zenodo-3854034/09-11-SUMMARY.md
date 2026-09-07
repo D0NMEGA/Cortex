@@ -84,10 +84,10 @@ completed: 2026-09-02
 
 ## Task Commits
 
-1. **Task 1: Write 09-HUMAN-UAT.md, the runbook and the prerequisites** - `1a88d9e` (docs)
-2. **Task 1 follow-up: point the runbook at the artifact the phase now ships** - `f617b68` (docs)
-3. **Task 2 presented; plan summary recorded** - `033aba4` (docs)
-4. **Task 2 resolved: record the iPad Air M2 capture, canonical M4 gate stays deferred** - `cb5f7cb` (docs)
+1. **Task 1: Write 09-HUMAN-UAT.md, the runbook and the prerequisites** - `d1ac2d0` (docs)
+2. **Task 1 follow-up: point the runbook at the artifact the phase now ships** - `21d004d` (docs)
+3. **Task 2 presented; plan summary recorded** - `4795278` (docs)
+4. **Task 2 resolved: record the iPad Air M2 capture, canonical M4 gate stays deferred** - `3b78d15` (docs)
 
 ## Files Created/Modified
 
@@ -182,9 +182,9 @@ p99 sits inside the 2 ms decoder budget with about 3.5x headroom regardless of p
 
 **1. [Rule 1 - Bug] The runbook named an artifact the phase had just stopped shipping**
 
-- **Found during:** Task 1, after the artifact was first committed at `1a88d9e`.
+- **Found during:** Task 1, after the artifact was first committed at `d1ac2d0`.
 - **Issue:** The plan's runbook points `CORTEX_DECODER_MODEL_URL` at `ndt1_real_vel_4bit.mlpackage`.
-  While this plan was executing, the concurrent 09-08 palettization follow-up committed `a222bca`,
+  While this plan was executing, the concurrent 09-08 palettization follow-up committed `603a535`,
   which settles the deployment artifact on **fp16** (4-bit per-tensor collapses held-out velocity R2
   to -1.786971; per-channel recovers it only to +0.191784) and adds a third latency candidate at p99
   0.165042 ms. A canonical capture measuring a package the project had decided not to ship would be
@@ -195,7 +195,7 @@ p99 sits inside the 2 ms decoder budget with about 3.5x headroom regardless of p
 - **Files modified:** `09-HUMAN-UAT.md`
 - **Verification:** the plan's Task-1 automated verify re-ran green; every numeric latency token in
   the file was enumerated and matched against committed values.
-- **Committed in:** `f617b68`
+- **Committed in:** `21d004d`
 
 **2. [Rule 2 - Missing Critical] The runbook forbade transcribing identifiers that the committed evidence format carries**
 
@@ -213,7 +213,7 @@ p99 sits inside the 2 ms decoder budget with about 3.5x headroom regardless of p
 - **Files modified:** `09-HUMAN-UAT.md`, `deferred-items-09-11.md`
 - **Verification:** confirmed by reading the Phase-5 committed report, which carries the identical
   `deviceID` `[redacted-device-id]` and `serialNumber`.
-- **Committed in:** `cb5f7cb`
+- **Committed in:** `3b78d15`
 
 **Total deviations:** 2 auto-fixed (1 bug, 1 missing critical).
 **Impact on plan:** contained to this plan's own files. No scope creep; files owned by other plans
@@ -231,7 +231,7 @@ were read but never written.
   bundle name uses U+2019. Located by `find` and copied; the committed file's sha256 matches the
   source byte for byte.
 - A concurrent agent held uncommitted changes to `09-decoder-metrics.json` for part of this run and
-  committed them at `a222bca` before any commit here. Files were staged individually and the donny
+  committed them at `603a535` before any commit here. Files were staged individually and the donny
   `commit` wrapper was avoided in favor of plain git, because a state-sync step that reverts
   uncommitted `.planning` edits is a documented hazard in this repo and would have destroyed the
   other agent's in-flight work. Every commit here was verified to contain only its intended files.
@@ -274,7 +274,7 @@ created documentation and one raw measurement artifact.
 - All three files exist at their specified paths: FOUND (`09-HUMAN-UAT.md` 386 lines,
   `09-perf-report-ipad-m2.json` 1,049,291 bytes, `deferred-items-09-11.md` 50 lines). All ASCII
   except the raw JSON report, which is committed byte-identical to the tool's output.
-- Commits `1a88d9e`, `f617b68`, `033aba4`, `cb5f7cb` all exist; each was verified to contain only
+- Commits `d1ac2d0`, `21d004d`, `4795278`, `3b78d15` all exist; each was verified to contain only
   its intended files.
 - Plan Task-1 automated verify: PASSED (all required tokens present; committed `p99_ms` 0.141083
   transcribed verbatim; zero matches for either of the two retired v1 glass-to-glass tokens the plan

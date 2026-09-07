@@ -62,7 +62,7 @@ completed: 2026-06-23
 
 ## Task Commits
 
-1. **Task 1 (autonomous half): Author the 3 never-auto-approve HUMAN-UAT runbooks** - `cfdc885` (docs)
+1. **Task 1 (autonomous half): Author the 3 never-auto-approve HUMAN-UAT runbooks** - `0ec0872` (docs)
 2. **Disposition recorded (DEFERRED ×3) into 08-HUMAN-UAT.md** - committed with phase-completion docs
 
 ## Files Created/Modified

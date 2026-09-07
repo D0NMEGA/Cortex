@@ -91,9 +91,9 @@ provenance triple and ADR-0003 recording why the photodiode path was retired.**
 ## Task Commits
 
 1. **Task 1: rewrite readme-policy.sh with the three-rule 24.7 gate, the provenance triple, and the
-   adversarial corpus** -- `deb874c` (feat). Includes the README reflow that Rule A requires.
-2. **Task 2: ADR-0003, why the photodiode path was retired and what replaced it** -- `76d20f3` (docs)
-3. **Deviation fix: stale ci.yml comment for the rewritten gate** -- `28197e3` (fix)
+   adversarial corpus** -- `0c87df6` (feat). Includes the README reflow that Rule A requires.
+2. **Task 2: ADR-0003, why the photodiode path was retired and what replaced it** -- `ea89c6e` (docs)
+3. **Deviation fix: stale ci.yml comment for the rewritten gate** -- `2d2a5a6` (fix)
 
 ## Files Created/Modified
 
@@ -273,7 +273,7 @@ Confirmed present and unmodified. `.planning/ROADMAP.md` lines 266 and 273 carry
 `**Requirements**: LAT-01, LAT-02, LAT-03, LAT-04` and
 `**Requirements**: LAT-05, LAT-06, LAT-07, LAT-08` under "Future work (retired from v1)", and
 `.planning/REQUIREMENTS.md` carries all eight checkbox lines with LAT-07's verbatim spec-target
-wording. Neither file appears in this plan's diff (`git diff --numstat e71f09c..HEAD` lists only
+wording. Neither file appears in this plan's diff (`git diff --numstat 2a0759f..HEAD` lists only
 `ci.yml`, `README.md`, `readme-policy.sh`, the new ADR and the ADR index), so preservation is
 structural rather than asserted.
 
@@ -321,7 +321,7 @@ same-line pairing**
 - **Files modified:** `README.md`
 - **Verification:** `./Tools/scripts/readme-policy.sh` -> exit 0 with all three D-13 rules reporting
   `ok`; all 21 assertion lines green; `--self-test` still exits 0.
-- **Committed in:** `deb874c` (Task 1 commit, same commit as the gate itself)
+- **Committed in:** `0c87df6` (Task 1 commit, same commit as the gate itself)
 
 **2. [Rule 1 - Bug] The ci.yml comment introducing this gate still described the pre-RD-10 required
 set**
@@ -331,7 +331,7 @@ set**
   latency claim (the verbatim `software-timed pipeline latency` phrase NEXT TO the v1 photodiode
   SPEC-TARGET `24.7`)" and "the honest-gate disclosure (... ANE-eligible, photodiode, synthetic,
   entitlement)", and named "the disclosure-strip (photodiode/software-timed/24.7/synthetic/8.5)"
-  negative controls. All of that became false in commit `deb874c`. A comment that names the removed
+  negative controls. All of that became false in commit `0c87df6`. A comment that names the removed
   tokens as required is not cosmetic drift: it is an instruction to a future maintainer to restore
   precisely what the v1 re-point removed.
 - **Fix:** Rewrote the comment block to describe the new required set, the three context rules and
@@ -341,7 +341,7 @@ set**
 - **Verification:** `git diff` filtered to non-comment lines shows exactly one changed line, the
   step `name:`. The `run:` block, the bare-gate + `--self-test` invocation contract and the
   `README_FILE` env override are untouched. `ci.yml` still parses as YAML.
-- **Committed in:** `28197e3`
+- **Committed in:** `2d2a5a6`
 
 **Total deviations:** 2 auto-fixed (1 blocking, 1 bug).
 **Impact on plan:** Both were caused directly by this plan's own change and both are strictly
@@ -412,9 +412,9 @@ No blockers. One open item for the orchestrator: the requirement-tracking decisi
 - `docs/adr/README.md` -- FOUND, index entry present exactly once
 - `README.md` -- FOUND, gate exits 0 against it
 - `.github/workflows/ci.yml` -- FOUND, parses as YAML, invocation contract intact
-- Commit `deb874c` -- FOUND in `git log`
-- Commit `76d20f3` -- FOUND in `git log`
-- Commit `28197e3` -- FOUND in `git log`
+- Commit `0c87df6` -- FOUND in `git log`
+- Commit `ea89c6e` -- FOUND in `git log`
+- Commit `2d2a5a6` -- FOUND in `git log`
 
 *Phase: 10-v1-real-data-closed-loop-launch*
 *Completed: 2026-09-07*

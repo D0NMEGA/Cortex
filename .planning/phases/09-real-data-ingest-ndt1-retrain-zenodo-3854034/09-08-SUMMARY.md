@@ -277,14 +277,14 @@ weights.
 
 ## Task Commits
 
-1. **Blocking fix** - `94db2e7` (fix): scan the model the run built, not a stale compiled artifact
-2. **Task 1 RED** - `7408fdc` (test): failing tests for the provenance label
-3. **Task 1 GREEN** - `1c4ca71` (feat): `real_checkpoint.py`
-4. **Blocking dependency** - `f6c385b` (fix): scikit-learn, required to palettize real weights
-5. **Task 2** - `35e92b9` (feat): provenance recorded in the three slow CoreML tests
-6. **Task 3 pre-registration** - `f9dc848` (feat): `rederive_coreml.py`, before its numbers
-7. **Task 3 measurement** - `e212769` (feat): the palettization, ANE and latency sections
-8. **Task 3 reporting** - `5cbcc61` (docs): the evidence and its deferred items
+1. **Blocking fix** - `b0d97f9` (fix): scan the model the run built, not a stale compiled artifact
+2. **Task 1 RED** - `bcb55a2` (test): failing tests for the provenance label
+3. **Task 1 GREEN** - `7660238` (feat): `real_checkpoint.py`
+4. **Blocking dependency** - `3affe0f` (fix): scikit-learn, required to palettize real weights
+5. **Task 2** - `7fce8a1` (feat): provenance recorded in the three slow CoreML tests
+6. **Task 3 pre-registration** - `778cd8d` (feat): `rederive_coreml.py`, before its numbers
+7. **Task 3 measurement** - `c1e6749` (feat): the palettization, ANE and latency sections
+8. **Task 3 reporting** - `e20ad35` (docs): the evidence and its deferred items
 
 Ordering verified with `git merge-base --is-ancestor`: the RED tests precede the implementation, the
 script precedes the commit carrying its numbers, and the stale-compile fix precedes the op tally it
@@ -302,7 +302,7 @@ makes trustworthy.
 - **Fix:** build every package and compile under the test's own `tmp_path`.
 - **Verification:** the discriminating experiment (224 vs 226 to one destination returns 224 twice),
   then 5 random-weight and 3 real-weight runs with byte-identical verdicts.
-- **Committed in:** `94db2e7`
+- **Committed in:** `b0d97f9`
 
 **2. [Rule 1 - Bug] The plan's `random init` label would have defeated its own guard**
 
@@ -312,7 +312,7 @@ makes trustworthy.
   wording contains that substring, so the guard would have passed on random weights.
 - **Fix:** the label reads `"random init (no checkpoint at <path>)"`. It still names the path, so
   the file is still identified.
-- **Committed in:** `1c4ca71`
+- **Committed in:** `7660238`
 
 **3. [Rule 2 - Missing critical] A corrupt checkpoint escaped uncontextualized**
 
@@ -321,7 +321,7 @@ makes trustworthy.
   `(RuntimeError, EOFError)` set `ndt1.train.load_checkpoint` catches, so it propagated bare.
 - **Fix:** caught explicitly and re-raised with context. The load still never falls back to random
   weights after a failure.
-- **Committed in:** `1c4ca71`
+- **Committed in:** `7660238`
 
 **4. [Rule 3 - Blocking] scikit-learn was missing and the plan could not execute without it**
 
@@ -332,7 +332,7 @@ makes trustworthy.
 - **Fix:** added `scikit-learn>=1.5` to `Decoder/pyproject.toml`, which is coremltools' own
   documented remedy, rather than forcing `kmeans1d` and changing the algorithm under comparison.
 - **Files modified outside `files_modified`:** `Decoder/pyproject.toml`, `Decoder/uv.lock`
-- **Committed in:** `f6c385b`
+- **Committed in:** `3affe0f`
 
 **5. [Rule 2 - Missing critical] A fresh-destination guard in the new script**
 
@@ -340,7 +340,7 @@ makes trustworthy.
 - **Issue:** `rederive_coreml.py` writes to `Decoder/checkpoints` by default, so a second run would
   hit the same stale-compile bug the tests were just fixed for.
 - **Fix:** remove any existing `.mlmodelc` destination, then assert no nested compile appeared.
-- **Committed in:** `f9dc848`
+- **Committed in:** `778cd8d`
 
 ### Non-issue deviations
 
@@ -364,7 +364,7 @@ plan's own deferred item 1, executed rather than deferred. It stays inside the p
 `files_modified` plus the two documents this plan owns, adds only
 `palettization.granularity_sweep` and `latency.per_channel_4bit_comparison` to the metrics JSON, and
 leaves every per-tensor number exactly as measured, because the comparison between them is the
-finding. The grid was committed in `9b86739` before the run that produced the published numbers. A
+finding. The grid was committed in `9573af0` before the run that produced the published numbers. A
 `--smoke` wiring check on 1,024 rows ran before that commit, so smoke-scale values were seen before
 the full run; the grid was not changed afterwards, and the only edits between were a LUT-count
 diagnostic and a smoke-mode file path.
@@ -536,8 +536,8 @@ Files claimed created, verified present on disk:
 - `.planning/phases/09-.../deferred-items-09-08.md` FOUND (55 lines)
 - `.planning/phases/09-.../09-decoder-metrics.json` FOUND (modified, 173 insertions, 0 deletions)
 
-All eight commits verified present in `git log e4aed82..HEAD`: `94db2e7`, `7408fdc`, `1c4ca71`,
-`f6c385b`, `35e92b9`, `f9dc848`, `e212769`, `5cbcc61`.
+All eight commits verified present in `git log 2a8d561..HEAD`: `b0d97f9`, `bcb55a2`, `7660238`,
+`3affe0f`, `7fce8a1`, `778cd8d`, `c1e6749`, `e20ad35`.
 
 Commit ORDERING verified with `git merge-base --is-ancestor`, all three exiting 0: the RED tests
 precede the implementation, `rederive_coreml.py` precedes the commit carrying its numbers, and the
@@ -554,7 +554,7 @@ The determinism claim was verified by comparing full verdict files, not by readi
 five random-weight verdicts hash to one value and the three real-weight verdicts hash to one value,
 each including the complete per-op-type histogram.
 
-File discipline verified with `git diff --name-only e4aed82..HEAD`. Files this plan did NOT touch,
+File discipline verified with `git diff --name-only 2a8d561..HEAD`. Files this plan did NOT touch,
 as required: `kinematics.py`, `qc.py`, `sessions.py`, `train.py`, `loss.py`, `compute_plan.py`,
 `model_ane.py`, `velocity_head.py`, `STATE.md`, `ROADMAP.md`, `REQUIREMENTS.md`, `PROJECT.md`, the
 shared `deferred-items.md`, and every Phase-4 and Phase-5 artifact. The two files changed outside

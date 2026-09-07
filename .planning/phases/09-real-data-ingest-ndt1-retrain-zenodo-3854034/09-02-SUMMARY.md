@@ -79,9 +79,9 @@ completed: 2026-08-31
 
 ## Task Commits
 
-1. **Task 1: Generate and commit the tiny v7.3 fixture (D-20)** - `72453fe` (chore)
-2. **Task 2: Fix load_session (TDD)** - `523b9c2` (test, RED) then `cd9cf08` (fix, GREEN)
-3. **Task 3: Fixture test module** - `ce0c12d` (test)
+1. **Task 1: Generate and commit the tiny v7.3 fixture (D-20)** - `eb66745` (chore)
+2. **Task 2: Fix load_session (TDD)** - `b7a3c5c` (test, RED) then `3342a60` (fix, GREEN)
+3. **Task 3: Fixture test module** - `5d6c85e` (test)
 
 No refactor commit: the Task 2 changes were already minimal and no cleanup was warranted.
 
@@ -110,7 +110,7 @@ No refactor commit: the Task 2 changes were already minimal and no cleanup was w
 - **Fix:** Used 2501 samples, which spans exactly `[0.0, 10.0]` and yields exactly 500 bins, honoring the stated intent.
 - **Files modified:** `Decoder/scripts/make_tiny_v73.py`
 - **Verification:** `t_end` is exactly 10.0 and `binned.shape == (500, 96)`; `test_trailing_partial_bin_is_clipped_into_the_last_bin` cross-checks against `int(np.floor((t_end - t_start) / 0.020))`.
-- **Committed in:** `72453fe`
+- **Committed in:** `eb66745`
 
 **2. [Rule 2 - Missing Critical] Added a `finger6` variant to cover the `(6, k)` layout**
 - **Found during:** Task 3
@@ -118,7 +118,7 @@ No refactor commit: the Task 2 changes were already minimal and no cleanup was w
 - **Fix:** Added a fifth generator variant and `test_six_row_finger_pos_uses_the_same_planar_rows`, asserting the extra azimuth/elevation/roll rows do not shift the planar indices.
 - **Files modified:** `Decoder/scripts/make_tiny_v73.py`, `Decoder/tests/test_fixture_v73.py`
 - **Verification:** The test passes, and mutation 2 below fails it alongside the two `(3, k)` tests.
-- **Committed in:** `72453fe`, `ce0c12d`
+- **Committed in:** `eb66745`, `5d6c85e`
 
 **3. [Rule 1 - Bug] `MATLAB_class` written on variables, not on the root group**
 - **Found during:** Task 1
@@ -126,7 +126,7 @@ No refactor commit: the Task 2 changes were already minimal and no cleanup was w
 - **Fix:** `MATLAB_class` is set on `spikes`, `wf`, `chan_names` (`cell`), `t` and `finger_pos` (`double`), and on every `#refs#` payload (`double` or `char`), matching real MATLAB.
 - **Files modified:** `Decoder/scripts/make_tiny_v73.py`
 - **Verification:** The loader's `MATLAB_empty` discriminator reads these attributes and all fixture tests pass; no acceptance criterion covers root attributes.
-- **Committed in:** `72453fe`
+- **Committed in:** `eb66745`
 
 ### Non-issue deviations
 
@@ -204,7 +204,7 @@ Files claimed created, verified present:
 - `Decoder/tests/test_fixture_v73.py` FOUND
 
 Commits claimed, verified in `git log`:
-- `72453fe` FOUND, `523b9c2` FOUND, `cd9cf08` FOUND, `ce0c12d` FOUND
+- `eb66745` FOUND, `b7a3c5c` FOUND, `3342a60` FOUND, `5d6c85e` FOUND
 
 Working tree clean after the final regeneration check; the regenerated fixture is byte-identical to the committed one.
 

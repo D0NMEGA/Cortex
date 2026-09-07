@@ -75,9 +75,9 @@ completed: 2026-09-07
 
 ## Task Commits
 
-1. **Task 1: Rewrite README as v1 credibility artifact** - `7fac1f1` (docs)
-2. **Task 2: Update AGENTS.md and PROJECT.md** - `3395eec` (docs)
-3. **Task 3: Five superseded banners** - `cf7eeaf` (docs)
+1. **Task 1: Rewrite README as v1 credibility artifact** - `f447234` (docs)
+2. **Task 2: Update AGENTS.md and PROJECT.md** - `c3fb403` (docs)
+3. **Task 3: Five superseded banners** - `f6c82b3` (docs)
 
 ## Test Suite Results (verbatim)
 
@@ -137,7 +137,7 @@ All six gates and all six self-tests exit 0. No new policy regressions.
 - **Issue:** The plan references `.planning/phases/05-ndt1-coreml-deployment-ane-eligible-sub-2ms-verified/05-placement-evidence.md` but the actual directory is `05-ndt1-coreml-deployment-with-ane-residency-verified/`.
 - **Fix:** Used the correct path. No file was created at the wrong path.
 - **Files modified:** `05-ndt1-coreml-deployment-with-ane-residency-verified/05-placement-evidence.md`
-- **Committed in:** `cf7eeaf` (Task 3 commit)
+- **Committed in:** `f6c82b3` (Task 3 commit)
 
 ### AGENTS.md management choice
 
@@ -180,7 +180,7 @@ Verified:
 - `05-placement-evidence.md` at correct path `05-ndt1-coreml-deployment-with-ane-residency-verified/` -- FOUND
 - `07-bps-evidence.md` contains new banner -- FOUND
 - `08-bps-evidence.md` contains new banner above amendment block -- FOUND
-- Commits `7fac1f1`, `3395eec`, `cf7eeaf` -- all present in `git log`
+- Commits `f447234`, `c3fb403`, `f6c82b3` -- all present in `git log`
 - All 6 policy gates exit 0
 - All 4 test suites: 288+1skip/44/32/19 all passed
 - Entitlements and project.yml untouched

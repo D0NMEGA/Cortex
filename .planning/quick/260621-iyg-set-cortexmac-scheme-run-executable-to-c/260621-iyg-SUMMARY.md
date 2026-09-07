@@ -3,7 +3,7 @@ quick_id: 260621-iyg
 slug: set-cortexmac-scheme-run-executable-to-c
 date: 2026-06-21
 status: complete
-commit: eab61b4
+commit: c0a3b2c
 ---
 
 # Quick Task 260621-iyg — Summary
@@ -40,4 +40,4 @@ Then `xcodegen generate` regenerated the project in the main working tree.
   (a Phase-1 status view). The daemon's standalone IPC-handshake exit-70 is
   unrelated to the app window and is separate Phase-2+ work.
 
-**Commit:** `eab61b4` — `project.yml` only (1 line + comment).
+**Commit:** `c0a3b2c` — `project.yml` only (1 line + comment).

@@ -63,7 +63,7 @@ completed: 2026-06-19
 
 - **Duration:** ~95 min (the Xcode 26.3 ~15 GB download/unxip dominated; active work ~25 min)
 - **Completed:** 2026-06-19
-- **Tasks:** 2/2 (Task 1 ShmCheck surface — done earlier at 2f116bc + upgraded; Task 2 human-verify checkpoint — PASS)
+- **Tasks:** 2/2 (Task 1 ShmCheck surface — done earlier at 14efb9e + upgraded; Task 2 human-verify checkpoint — PASS)
 - **Environment:** Apple M5 Pro, macOS 26, Xcode 26.3 (17C529), Swift 6.2.4, Personal Team 57YW6M29S7
 
 ## Accomplishments
@@ -80,12 +80,12 @@ Phase 1 (01-01…01-06) was authored on CommandLineTools only; the real Xcode 26
 
 | # | Defect | Severity | Fix | Commit |
 |---|--------|----------|-----|--------|
-| 1 | `shm_open` variadic → unimportable in Swift | build break | `cortex_shm_open` C shim | 35dc1e8 |
-| 2 | `String(cString:)` deprecation ×2 | warning | use `CORTEX_SHM_NAME` directly | 35dc1e8 |
-| 3 | test target missing MainActor isolation | test build break | mirror `.defaultIsolation` | 35dc1e8 |
-| 4 | Info.plist drift vs xcodegen output | hygiene | commit idempotent plists | 36646c7 |
-| 5 | CortexDaemon `type: bundle` can't run/entitle standalone | blocking (SC#2) | `type: tool` (mh_execute) | 5ed2558 |
-| 6 | inode proof degenerate on Darwin (st_ino=0) | blocking (credibility) | mmap sentinel proof | ca23b4f |
+| 1 | `shm_open` variadic → unimportable in Swift | build break | `cortex_shm_open` C shim | eb6623e |
+| 2 | `String(cString:)` deprecation ×2 | warning | use `CORTEX_SHM_NAME` directly | eb6623e |
+| 3 | test target missing MainActor isolation | test build break | mirror `.defaultIsolation` | eb6623e |
+| 4 | Info.plist drift vs xcodegen output | hygiene | commit idempotent plists | bc14251 |
+| 5 | CortexDaemon `type: bundle` can't run/entitle standalone | blocking (SC#2) | `type: tool` (mh_execute) | e23564c |
+| 6 | inode proof degenerate on Darwin (st_ino=0) | blocking (credibility) | mmap sentinel proof | fcc08aa |
 
 Also closed in passing: the **deferred Plan 01-02 dynamic xcodebuild smoke** (CortexMac + CortexDaemon `BUILD SUCCEEDED` on Xcode 26.3) and the Plan 01-01/01-02 toolchain-deferral items that were waiting on an Xcode 26 environment.
 

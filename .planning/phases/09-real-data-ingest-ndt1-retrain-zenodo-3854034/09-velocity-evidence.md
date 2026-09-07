@@ -1,7 +1,7 @@
 # Phase 9 RD-02 evidence: the velocity readout, fit and scored on real finger_pos kinematics
 
 **Date:** 2026-09-02 (Plan 09-07). Read the pre-registration in
-`Decoder/scripts/fit_velocity_real.py`, committed in `ba47798` before the run, before the numbers.
+`Decoder/scripts/fit_velocity_real.py`, committed in `790b664` before the run, before the numbers.
 **Result:** pooled held-out **R2 = 0.4238** on real `finger_pos` cursor velocity against a constant
 **TRAIN-split** mean-velocity null, over 56,943 held-out 20 ms bins from four O'Doherty/Makin Indy
 M1 sessions (Zenodo record 3854034). All four sessions are positive against their own train means:

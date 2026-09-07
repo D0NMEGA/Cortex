@@ -79,8 +79,8 @@ completed: 2026-06-23
 
 Each task was committed atomically:
 
-1. **Task 1: README + ADR-0002** — `9c61b64` (docs) — README.md rewrite + docs/adr/0002-v0-ship-and-bci-hid-integration.md + docs/adr/README.md index entry.
-2. **Task 2: readme-policy.sh + CI wiring** — `13c7ae1` (chore) — Tools/scripts/readme-policy.sh (mode 100755) + the ci.yml "README credibility + no-leak gate" step.
+1. **Task 1: README + ADR-0002** — `e6e5720` (docs) — README.md rewrite + docs/adr/0002-v0-ship-and-bci-hid-integration.md + docs/adr/README.md index entry.
+2. **Task 2: readme-policy.sh + CI wiring** — `9b3013c` (chore) — Tools/scripts/readme-policy.sh (mode 100755) + the ci.yml "README credibility + no-leak gate" step.
 
 ## Files Created/Modified
 
@@ -115,7 +115,7 @@ None — the README cites only real committed numbers; no placeholder/empty valu
 
 ## Self-Check: PASSED
 
-All claimed files exist on disk — `README.md`, `docs/adr/0002-v0-ship-and-bci-hid-integration.md`, `docs/adr/README.md`, `Tools/scripts/readme-policy.sh` (FOUND ×4). Both task commit hashes exist in git history — `9c61b64`, `13c7ae1` (FOUND ×2). Final verification sweep green: `readme-policy.sh` → exit 0 on the real README (13 required + 4 forbidden checks pass); `readme-policy.sh --self-test` → exit 0 (clean README passes; 5 disclosure-strip + 4 secret-injection controls all bite); README contains `software-timed`/`rejected`/`24.7`; `grep -n readme-policy ci.yml` matches the gate run + `--self-test` (lines 288-289); all 10 sampled prior CI gate steps present (no job overwritten); STATE.md / ROADMAP.md NOT touched by either of my commits (orchestrator-owned).
+All claimed files exist on disk — `README.md`, `docs/adr/0002-v0-ship-and-bci-hid-integration.md`, `docs/adr/README.md`, `Tools/scripts/readme-policy.sh` (FOUND ×4). Both task commit hashes exist in git history — `e6e5720`, `9b3013c` (FOUND ×2). Final verification sweep green: `readme-policy.sh` → exit 0 on the real README (13 required + 4 forbidden checks pass); `readme-policy.sh --self-test` → exit 0 (clean README passes; 5 disclosure-strip + 4 secret-injection controls all bite); README contains `software-timed`/`rejected`/`24.7`; `grep -n readme-policy ci.yml` matches the gate run + `--self-test` (lines 288-289); all 10 sampled prior CI gate steps present (no job overwritten); STATE.md / ROADMAP.md NOT touched by either of my commits (orchestrator-owned).
 
 ---
 *Phase: 08-apple-bci-hid-integration-distribution-v0-ship*

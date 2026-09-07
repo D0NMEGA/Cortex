@@ -107,15 +107,15 @@ completed: 2026-04-28
 - **All four SwiftPM packages well-formed.** CortexCore (mixed Swift+C with testTarget), CortexIPC / CortexRender / CortexDecoder (single-source-file stubs reserved for Phases 2, 6, 5 respectively). Each manifest pins `swift-tools-version: 6.2`, declares `[.macOS(.v26), .iOS(.v26)]` platforms, and applies `.defaultIsolation(MainActor.self)` per Approachable Concurrency.
 - **Swift API surface bootstrapped.** `import CortexCore` gives consumers `Cortex.shmName` (String wrapper of the C constant), `AppGroup.identifier` / `AppGroup.containerURL()` (per D-07 `group.com.donovansantine.cortex.shared`), and `Time.machAbsoluteNanoseconds()` (the call-site that CA92.1 in PrivacyInfo.xcprivacy will declare). The `@_exported import CortexCoreC` line in CortexCore.swift is load-bearing for downstream consumers.
 - **Repo hygiene baseline established.** `.gitignore` covers Apple/SwiftPM artifacts (`DerivedData/`, `.build/`, `.swiftpm/`, `xcuserdata/`, `*.xcuserstate`), generated XcodeGen output (`Cortex.xcodeproj/`, `Cortex.xcworkspace/`), Phase-1-threat-model-mandated signing exclusions (`*.p8`, `*.p12`, `*.cer`, `*.mobileprovision`, `*.provisionprofile`, `fastlane/Matchfile.local`, `fastlane/.env`), editor noise, coverage artifacts, and Python `__pycache__` for any decoder training side-tooling.
-- **`cortex-spec.md` moved to `docs/cortex-spec.md`** via `git mv` (single rename operation in git status; `git log --follow docs/cortex-spec.md` shows the original tracking commit `0818df0` is preserved). Downstream plans (01-05 README, 01-05 ADR, 01-06 CI workflow) now reference the canonical `docs/` path.
+- **`cortex-spec.md` moved to `docs/cortex-spec.md`** via `git mv` (single rename operation in git status; `git log --follow docs/cortex-spec.md` shows the original tracking commit `4605b83` is preserved). Downstream plans (01-05 README, 01-05 ADR, 01-06 CI workflow) now reference the canonical `docs/` path.
 
 ## Task Commits
 
 Each task was committed atomically with conventional-commits scope `({phase}-{plan})`:
 
-1. **Task 1: CortexCore mixed Swift+C package with _Static_assert and Swift Testing cases** — `a586b9e` (feat)
-2. **Task 2: _Static_assert negative test executed + reverted; three empty stub packages added** — `cb605e1` (feat)
-3. **Task 3: .gitignore + cortex-spec.md → docs/cortex-spec.md via git mv** — `682dda2` (chore)
+1. **Task 1: CortexCore mixed Swift+C package with _Static_assert and Swift Testing cases** — `368dabf` (feat)
+2. **Task 2: _Static_assert negative test executed + reverted; three empty stub packages added** — `96fc1c6` (feat)
+3. **Task 3: .gitignore + cortex-spec.md → docs/cortex-spec.md via git mv** — `7f424e4` (chore)
 
 **Plan metadata commit:** _to follow after STATE.md / ROADMAP.md / REQUIREMENTS.md updates_
 
@@ -144,7 +144,7 @@ Each task was committed atomically with conventional-commits scope `({phase}-{pl
 - **Manifest version stays at 6.2 verbatim.** The local executor environment is Swift 6.0.3 (`swift --version` returns `Apple Swift version 6.0.3 / Target: x86_64-apple-macosx14.0`), but the plan's acceptance criterion #1 for Task 1 is literal: *"the first non-comment line is exactly `// swift-tools-version: 6.2`"*. Downgrading to 6.0 would violate the artifact contract and rebreak the Phase 1 contract that "every commit builds cleanly under the 2026 Apple toolchain." The Phase 1 CI workflow (Plan 01-06) pins Xcode 26.3 via `setup-xcode@v1` per Pitfall #1 — that's the canonical execution environment for Swift-side smoke and tests.
 - **`.defaultIsolation(MainActor.self)` retained per Assumption A9.** Plan A9 says drop *only if* Xcode 26.3 rejects the syntax. Xcode 26.3 has not yet been attempted on this environment, so there is no evidence of rejection — keeping the syntax preserves the Approachable-Concurrency intent across all four packages.
 - **`_Static_assert` diagnostic message includes the authoritative reference inline.** The error text reads *"...exceeds Darwin PSHMNAMLEN (31 bytes + null terminator). See cortex-spec.md §9 and Packages/CortexCore/Sources/CortexCoreC/include/cortex_shm.h."* — combined with the multi-line comment block above the assert (which forbids runtime-check or unit-test replacements), this raises the cost of a silent regression to nearly zero.
-- **`git mv` for the spec relocation.** Plan acceptance criterion required rename detection; `git status` shows `R cortex-spec.md -> docs/cortex-spec.md` and `git log --follow docs/cortex-spec.md` traces back to commit `0818df0` (the prep commit that initially tracked cortex-spec.md). History intact.
+- **`git mv` for the spec relocation.** Plan acceptance criterion required rename detection; `git status` shows `R cortex-spec.md -> docs/cortex-spec.md` and `git log --follow docs/cortex-spec.md` traces back to commit `4605b83` (the prep commit that initially tracked cortex-spec.md). History intact.
 
 ## Deviations from Plan
 
@@ -241,9 +241,9 @@ Verification of artifacts and commits claimed in this Summary:
 - MISSING: cortex-spec.md at repo root (CORRECT — it was renamed)
 
 **Commits exist (`git log --oneline`):**
-- FOUND: a586b9e — Task 1 (feat: CortexCore mixed Swift+C package)
-- FOUND: cb605e1 — Task 2 (feat: stub packages + negative test)
-- FOUND: 682dda2 — Task 3 (chore: .gitignore + spec move)
+- FOUND: 368dabf — Task 1 (feat: CortexCore mixed Swift+C package)
+- FOUND: 96fc1c6 — Task 2 (feat: stub packages + negative test)
+- FOUND: 7f424e4 — Task 3 (chore: .gitignore + spec move)
 
 **Negative test executed and reverted:**
 - FOUND: clang diagnostic output captured (exit 1 with `static assertion failed ... '53 <= 32'`)

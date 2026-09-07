@@ -90,9 +90,9 @@ completed: 2026-06-23
 
 Each task was committed atomically:
 
-1. **Task 1: Port BCI HID report structs + descriptor + button enum** - `a8f5ad5` (feat) — TDD: tests + impl landed together for the value-type port
-2. **Task 2: Declare-and-gate entitlements + Info.plist mirror + VirtualDeviceGate + DaemonRegistration** - `2cdb878` (feat)
-3. **Task 3: hid-surface-policy.sh structural gate + CI wiring** - `572862a` (chore)
+1. **Task 1: Port BCI HID report structs + descriptor + button enum** - `9c396f4` (feat) — TDD: tests + impl landed together for the value-type port
+2. **Task 2: Declare-and-gate entitlements + Info.plist mirror + VirtualDeviceGate + DaemonRegistration** - `647f14e` (feat)
+3. **Task 3: hid-surface-policy.sh structural gate + CI wiring** - `e19b1c1` (chore)
 
 _(Plan metadata commit — SUMMARY only — owned by the orchestrator per this plan's sequential-executor contract; STATE.md/ROADMAP.md not modified here.)_
 
@@ -125,7 +125,7 @@ _(Plan metadata commit — SUMMARY only — owned by the orchestrator per this p
 - **Fix:** Pulled the authoritative `BCIDescriptor[]` via Context7 (Apple Accessibility docs) and ported it verbatim — repeated Usage Page + separate item-selection-input / scan-info-output Logical collections. Updated the descriptor test to assert the verified canonical header.
 - **Files modified:** BCIHIDDescriptor.swift, BCIHIDDescriptorTests.swift
 - **Verification:** `swift test` descriptor suite green; `hid-surface-policy.sh` asserts the `0x05,0x60` Usage-Page pair (present, twice).
-- **Committed in:** a8f5ad5 (Task 1) + 2cdb878 (Task 2 verbatim completion)
+- **Committed in:** 9c396f4 (Task 1) + 647f14e (Task 2 verbatim completion)
 
 **2. [Rule 3 - Blocking] MainActor isolation vs nonisolated value types**
 - **Found during:** Task 1 (first test build) + Task 2 (DaemonRegistrationTests build)
@@ -133,7 +133,7 @@ _(Plan metadata commit — SUMMARY only — owned by the orchestrator per this p
 - **Fix:** Marked the pure value types `nonisolated public` (report/descriptor/button); kept the daemon-registration types MainActor-isolated (they are service-management-adjacent) and gave `DaemonRegistrationTests` `@MainActor` — the CortexReFIT KalmanConstantsTests precedent.
 - **Files modified:** BCIHIDReports.swift, BCIHIDDescriptor.swift, BCIHIDButtonAction.swift, DaemonRegistrationTests.swift
 - **Verification:** `swift build` (default) + 19 tests green.
-- **Committed in:** a8f5ad5 (Task 1), 2cdb878 (Task 2)
+- **Committed in:** 9c396f4 (Task 1), 647f14e (Task 2)
 
 **3. [Rule 3 - Blocking] Live-path imports + IOKit symbol availability**
 - **Found during:** Task 2 (gated-build probe `swift build -DCORTEX_HID_LIVE`)
@@ -141,7 +141,7 @@ _(Plan metadata commit — SUMMARY only — owned by the orchestrator per this p
 - **Fix:** Hoisted the live imports (`Darwin`/`Foundation`/`IOKit`) to file scope under their own `#if CORTEX_HID_LIVE` (fixing the default build); documented that the live path's IOKit symbols require the Plan-07 C-interop bridging module (or CoreHID `HIDVirtualDevice`) — verified `import CoreHID` + `HIDVirtualDevice` parse on macOS 26 as the modern fallback. The default build is OFF and links no live symbol (confirmed via `nm` on the built objects).
 - **Files modified:** VirtualDeviceGate.swift
 - **Verification:** default `swift build` clean; `nm` on the built `.o` shows no live symbol; `hid-surface-policy.sh` confirms the symbol is gated.
-- **Committed in:** 2cdb878 (Task 2)
+- **Committed in:** 647f14e (Task 2)
 
 **4. [Rule 1 - Tooling conflict] SwiftLint large_tuple on the ported fixed-size arrays**
 - **Found during:** Task 1 (SwiftLint --strict)
@@ -149,7 +149,7 @@ _(Plan metadata commit — SUMMARY only — owned by the orchestrator per this p
 - **Fix:** Scoped `// swiftlint:disable large_tuple` / `enable` bracketing ONLY the two tuple-using structs, with a rationale comment (faithful fixed-arity port, not an ad-hoc large tuple).
 - **Files modified:** BCIHIDReports.swift
 - **Verification:** SwiftLint --strict 0 violations on all 5 files.
-- **Committed in:** a8f5ad5 (Task 1)
+- **Committed in:** 9c396f4 (Task 1)
 
 **5. [Rule 3 - Tooling conflict] Test-naming form (acceptance grep vs SwiftFormat/SwiftLint)**
 - **Found during:** Task 1 (SwiftFormat + SwiftLint on tests)
@@ -157,7 +157,7 @@ _(Plan metadata commit — SUMMARY only — owned by the orchestrator per this p
 - **Fix:** Kept tests in the CI-passing CortexReFIT convention (`@Test("desc")` + camelCase func, variables >=3 chars); the acceptance grep was satisfied at the struct-NAME level (which is what the Task-3 gate — the real CI enforcement — asserts). Did NOT modify repo-wide `.swiftformat`/`.swiftlint.yml` (the existing CortexReFIT tests prove CI accepts this form).
 - **Files modified:** BCIHIDReportTests.swift, BCIHIDDescriptorTests.swift
 - **Verification:** `swift test` 19/19 green; SwiftLint --strict 0 violations on the 5 files; SwiftFormat `--lint` 0/3 on sources.
-- **Committed in:** a8f5ad5 (Task 1)
+- **Committed in:** 9c396f4 (Task 1)
 
 ---
 
@@ -182,7 +182,7 @@ None - no external service configuration required. The live HID activation (enti
 ## Self-Check: PASSED
 
 - All 10 created files verified present on disk (6 sources + 3 test files + Package.swift + hid-surface-policy.sh) + the SUMMARY.
-- All 3 task commits verified in git log: `a8f5ad5`, `2cdb878`, `572862a`.
+- All 3 task commits verified in git log: `9c396f4`, `647f14e`, `e19b1c1`.
 - Full plan verification green: 19 tests (3 suites), `hid-surface-policy.sh` + `--self-test` both exit 0, `plutil -lint` 5/5 OK, default `swift build` clean (no live HID symbol in objects), all grep-present invariants hold.
 
 ---

@@ -221,16 +221,16 @@ flake on the metric's own sampling noise. Eleven quick tests bind the four-link 
 
 ## Task Commits
 
-1. **RED for the forward-pass overflow, plus inert `stable_exp` plumbing** - `e079218` (test)
-2. **The linearized `exp` wired into the objective** - `f3dd2a2` (fix)
-3. **The trajectory, the 200-epoch cap, `--only-loso`, `--plateau-stop`** - `033393e` (feat)
-4. **The run plan pre-registered, committed before the run** - `06eb61f` (docs)
-5. **The 09-06c numbers labeled superseded, by code, before re-running** - `f2835e0` (docs)
-6. **Every co-bps re-measured at the cap, with the trajectory** - `967f38e` (feat)
-7. **The evidence rewritten around what the trajectory shows** - `15c9817` (docs)
+1. **RED for the forward-pass overflow, plus inert `stable_exp` plumbing** - `737a5e6` (test)
+2. **The linearized `exp` wired into the objective** - `6be5f5e` (fix)
+3. **The trajectory, the 200-epoch cap, `--only-loso`, `--plateau-stop`** - `1f6da74` (feat)
+4. **The run plan pre-registered, committed before the run** - `3f10714` (docs)
+5. **The 09-06c numbers labeled superseded, by code, before re-running** - `6c07a57` (docs)
+6. **Every co-bps re-measured at the cap, with the trajectory** - `3f47293` (feat)
+7. **The evidence rewritten around what the trajectory shows** - `c10f65d` (docs)
 8. **This summary and the deferred items** - see `git log`
 
-Commit ordering is the audit trail: `06eb61f` (the pre-registration) precedes `967f38e` (the
+Commit ordering is the audit trail: `3f10714` (the pre-registration) precedes `3f47293` (the
 numbers), and the run did not start until 11:22 on 2026-09-01.
 
 ## Deviations from Plan
@@ -248,7 +248,7 @@ numbers), and the run did not start until 11:22 on 2026-09-01.
   each row to a gitignored JSONL sidecar as it is measured.
 - **Verification:** `--only-loso` was validated end to end against a scratch JSON at
   `--loso-epoch-cap 1` before the real run was launched.
-- **Committed in:** `033393e`
+- **Committed in:** `1f6da74`
 
 **2. [Rule 3 - Blocking] The machine slept for two hours mid-run**
 
@@ -407,11 +407,11 @@ Files claimed, verified present:
 - `Decoder/tests/test_heldout_cobps.py`, `test_cobps_margin.py` FOUND (modified)
 - `.planning/phases/09-.../09-decoder-metrics.json`, `09-training-evidence.md` FOUND (modified)
 
-Commits claimed, verified in `git log`: `e079218`, `f3dd2a2`, `033393e`, `06eb61f`, `f2835e0`,
-`967f38e`, `15c9817` all FOUND.
+Commits claimed, verified in `git log`: `737a5e6`, `6be5f5e`, `1f6da74`, `3f10714`, `6c07a57`,
+`3f47293`, `c10f65d` all FOUND.
 
 Commit ORDERING verified, which is the load-bearing claim of this task:
-`git merge-base --is-ancestor 06eb61f 967f38e` exits 0, so the run plan was committed before the
+`git merge-base --is-ancestor 3f10714 3f47293` exits 0, so the run plan was committed before the
 commit carrying the numbers it produced, and the training process did not start until after.
 
 Number provenance verified rather than trusted: the committed `co_bps.trajectory` array was checked

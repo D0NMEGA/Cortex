@@ -25,7 +25,7 @@ durations and bin counts are properties of the files, not of the host.
 | **Interpreter** | CPython **3.12.13** (`uv`-managed, `uv 0.11.21`) |
 | **numpy** | **2.4.6** |
 | **h5py** | **3.16.0** (used only for the header cross-check in the session table) |
-| **Fetch tool** | `Decoder/scripts/download_indy.py` at commit `6a3267d` (Plan 09-01), stdlib `urllib.request`, 1 MiB streamed chunks |
+| **Fetch tool** | `Decoder/scripts/download_indy.py` at commit `e81d5d8` (Plan 09-01), stdlib `urllib.request`, 1 MiB streamed chunks |
 | **Source** | Zenodo record 3854034, O'Doherty / Cardoso / Makin / Sabes 2020, CC-BY-4.0. Files immutable since 2020-05-26. |
 | **Determinism** | Not seeded and not needed. SHA-256 over fixed bytes is deterministic by construction; the run was repeated and produced identical digests. |
 

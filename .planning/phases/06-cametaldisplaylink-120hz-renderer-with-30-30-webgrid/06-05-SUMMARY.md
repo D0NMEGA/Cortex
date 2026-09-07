@@ -104,8 +104,8 @@ completed: 2026-06-22
 
 Each task was committed atomically:
 
-1. **Task 1: GPU-time histogram bench (gpuEndTime − gpuStartTime over n≥10k frames)** — `9a113be` (feat) — `GPUTimeHistogram.swift` + `main.swift`
-2. **Task 2: 60s sustained-throughput soak + device-annotated evidence** — `aca6caf` (feat) — `FrameSoak.swift` + `06-render-evidence.md` + `gpu_time_hist.json` + `soak_log.json`
+1. **Task 1: GPU-time histogram bench (gpuEndTime − gpuStartTime over n≥10k frames)** — `b6eed6d` (feat) — `GPUTimeHistogram.swift` + `main.swift`
+2. **Task 2: 60s sustained-throughput soak + device-annotated evidence** — `5d1e119` (feat) — `FrameSoak.swift` + `06-render-evidence.md` + `gpu_time_hist.json` + `soak_log.json`
 
 _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (this sequential executor does not write them)._
 
@@ -135,7 +135,7 @@ _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (th
 - **Fix:** Annotated `GPUTimeHistogram.run`, `FrameSoak.run`, and `runFrameSoak` `@MainActor`, and wrapped `main.swift`'s execution in `MainActor.assumeIsolated { … }`. Sound: the bench is single-threaded with no other actors, and a `type: tool` executable's top-level code runs on the main thread. Not an architectural change — the encoder's isolation is pre-existing; this conforms the bench to it.
 - **Files modified:** `Apps/CortexRenderBench/{GPUTimeHistogram,FrameSoak,main}.swift`
 - **Verification:** `xcodebuild build -scheme CortexRenderBench … CODE_SIGNING_ALLOWED=NO` → **BUILD SUCCEEDED**; the bench then ran and produced genuine numbers.
-- **Committed in:** `9a113be` (Task 1) for GPUTimeHistogram/main; `aca6caf` (Task 2) for FrameSoak.
+- **Committed in:** `b6eed6d` (Task 1) for GPUTimeHistogram/main; `5d1e119` (Task 2) for FrameSoak.
 
 **2. [Rule 3 - Blocking] Promoted `OffscreenDrawable` from `private` to module-internal**
 - **Found during:** Task 2 (`xcodebuild build` after adding FrameSoak.swift)
@@ -143,9 +143,9 @@ _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (th
 - **Fix:** Changed `private final class` → `final class` (module-internal) so both `GPUTimeHistogram` and `FrameSoak` share the one wrapper (they measure the same encode path, just frame-count vs duration).
 - **Files modified:** `Apps/CortexRenderBench/GPUTimeHistogram.swift`
 - **Verification:** `xcodebuild build` → **BUILD SUCCEEDED**; both bench files compiled.
-- **Committed in:** `aca6caf` (Task 2 — the visibility change is in GPUTimeHistogram.swift, but it was already committed in Task 1 with the `final class` form, so Task 2 only added FrameSoak.swift; see note below).
+- **Committed in:** `5d1e119` (Task 2 — the visibility change is in GPUTimeHistogram.swift, but it was already committed in Task 1 with the `final class` form, so Task 2 only added FrameSoak.swift; see note below).
 
-> Note on commit boundary: `OffscreenDrawable` was authored module-internal before the Task-1 commit (the visibility fix was applied while iterating on the build, prior to staging), so it is in `9a113be`. FrameSoak.swift (which consumes it) is in `aca6caf`. Both per-task verifications were run against the working tree (which always had both source files present, as `xcodebuild` compiles the whole target) — the standard sequential-executor verify-against-working-tree pattern.
+> Note on commit boundary: `OffscreenDrawable` was authored module-internal before the Task-1 commit (the visibility fix was applied while iterating on the build, prior to staging), so it is in `b6eed6d`. FrameSoak.swift (which consumes it) is in `5d1e119`. Both per-task verifications were run against the working tree (which always had both source files present, as `xcodebuild` compiles the whole target) — the standard sequential-executor verify-against-working-tree pattern.
 
 ---
 
@@ -178,7 +178,7 @@ None - no external service configuration required. The bench runs locally via `x
 ## Self-Check: PASSED
 
 - All created files verified on disk: `Apps/CortexRenderBench/GPUTimeHistogram.swift`, `Apps/CortexRenderBench/FrameSoak.swift`, `.planning/.../06-render-evidence.md`, `.planning/.../gpu_time_hist.json`, `.planning/.../soak_log.json`; `main.swift` modified.
-- Both task commits verified in `git log`: `9a113be` (Task 1), `aca6caf` (Task 2).
+- Both task commits verified in `git log`: `b6eed6d` (Task 1), `5d1e119` (Task 2).
 - Full plan `<verification>` re-run green: `xcodebuild build -scheme CortexRenderBench … CODE_SIGNING_ALLOWED=NO` → **BUILD SUCCEEDED** (both bench files compiled); `gpuStartTime`/`gpuEndTime` over n=10 000 → p50/p95/p99 (RENDER-05); `FrameSoak` flags > 8.33 ms over 60 s driven by deterministic Lissajous (SC#4, D-05); `06-render-evidence.md` exists, device-annotated `M5 Pro` (D-11), iPad-M4 deferred (`06-HUMAN-UAT`/optional/future, D-12). **`render-policy.sh` exits 0** (the CI structural gate stays green).
 - The committed numbers are genuinely measured on this M5 Pro (not fabricated/estimated): GPU p99 = 0.1618 ms (SC#2 PASS, 2.5× margin); 60 s soak 243 724 frames / 4062 Hz / 0 over-budget (SC#4 throughput PASS).
 - STATE.md / ROADMAP.md / REQUIREMENTS.md NOT modified by this executor (orchestrator-owned).

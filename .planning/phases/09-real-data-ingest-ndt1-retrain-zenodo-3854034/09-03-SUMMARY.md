@@ -79,9 +79,9 @@ completed: 2026-08-31
 
 ## Task Commits
 
-1. **Task 1: kinematics.py - velocity, 20 ms aggregation, whole-bin lag (TDD)** - `b85ba1b` (test, RED) then `1ce63ef` (feat, GREEN)
-2. **Task 2: heldout_r2 against a TRAIN-mean null (TDD)** - `e551963` (test, RED) then `f68b1c9` (feat, GREEN)
-3. **Task 3: complete the test module** - `147e339` (test)
+1. **Task 1: kinematics.py - velocity, 20 ms aggregation, whole-bin lag (TDD)** - `803b1c0` (test, RED) then `9385d72` (feat, GREEN)
+2. **Task 2: heldout_r2 against a TRAIN-mean null (TDD)** - `7b42286` (test, RED) then `962e0d4` (feat, GREEN)
+3. **Task 3: complete the test module** - `4ac4a31` (test)
 
 No refactor commit: both GREEN implementations were already minimal and no cleanup was warranted.
 
@@ -130,7 +130,7 @@ No control is vacuous. The floor-to-ceil mutation is the reason the bin-count te
 - **Fix:** `from ndt1.data import BIN_MS` and `bin_ms: float = BIN_MS`. The value is unchanged at 20.0, so every call site and every stated behavior is identical; only the source of the constant moved.
 - **Files modified:** `Decoder/src/ndt1/kinematics.py`
 - **Verification:** `test_bin_count_matches_bin_spikes` calls both binners and compares row counts; mutation 5 above proves it bites on a drift.
-- **Committed in:** `1ce63ef`
+- **Committed in:** `9385d72`
 
 **2. [Rule 2 - Missing Critical] Five tests added beyond the plan's named list**
 - **Found during:** Tasks 1-3
@@ -138,7 +138,7 @@ No control is vacuous. The floor-to-ceil mutation is the reason the bin-count te
 - **Fix:** Added `test_lag_sweep_constant_spans_zero_to_160_ms`, `test_duplicate_timestamp_raises`, `test_bin_velocity_rejects_mismatched_rows`, `test_heldout_r2_rejects_bad_shapes`, and `test_behavior_hz_is_250`.
 - **Files modified:** `Decoder/tests/test_kinematics.py`
 - **Verification:** All 24 tests pass; the count exceeds the plan's floor of 15.
-- **Committed in:** `b85ba1b`, `e551963`
+- **Committed in:** `803b1c0`, `7b42286`
 
 **3. [Rule 2 - Missing Critical] `test_bin_count_matches_bin_spikes` parametrized over two window spans**
 - **Found during:** Task 3 mutation verification
@@ -146,7 +146,7 @@ No control is vacuous. The floor-to-ceil mutation is the reason the bin-count te
 - **Fix:** Parametrized over 751 samples (a 3.0 s span, a whole number of bins) and 750 samples (a 2.996 s span, a dropped partial trailing bin).
 - **Files modified:** `Decoder/tests/test_kinematics.py`
 - **Verification:** Mutation 5 fails only the `[750]` case, confirming the second parameter is the load-bearing one.
-- **Committed in:** `b85ba1b`
+- **Committed in:** `803b1c0`
 
 ### Non-issue deviations
 
@@ -154,7 +154,7 @@ No control is vacuous. The floor-to-ceil mutation is the reason the bin-count te
 
 **5. `_AXIS_NAMES` is a local `("vx", "vy")` constant rather than an import of `velocity_head.VELOCITY_DIM`.** Importing the shared constant would have required `from ndt1.velocity_head import VELOCITY_DIM, ridge_fit`, which does not contain the substring the plan's acceptance criterion greps for (`from ndt1.velocity_head import ridge_fit`). The local tuple serves double duty as the axis width for the shape checks and as the result-dict keys, so the two cannot disagree.
 
-**6. The RED commit `b85ba1b` carries one transient ruff `I001`.** Ruff classifies `ndt1.kinematics` as first-party only once the file exists on disk, so during RED it sorted the import into the third-party block. Its `--fix` output was discarded in favor of the repo's existing idiom; the classification and the lint both resolve in the GREEN commit. `ruff check Decoder` exits 0 at HEAD.
+**6. The RED commit `803b1c0` carries one transient ruff `I001`.** Ruff classifies `ndt1.kinematics` as first-party only once the file exists on disk, so during RED it sorted the import into the third-party block. Its `--fix` output was discarded in favor of the repo's existing idiom; the classification and the lint both resolve in the GREEN commit. `ruff check Decoder` exits 0 at HEAD.
 
 ---
 
@@ -190,8 +190,8 @@ Files claimed created, verified present on disk and tracked:
 - `Decoder/src/ndt1/kinematics.py` FOUND (332 lines)
 - `Decoder/tests/test_kinematics.py` FOUND (376 lines)
 
-Commits claimed, verified in `git log b789fb1..HEAD`:
-- `b85ba1b` FOUND, `1ce63ef` FOUND, `e551963` FOUND, `f68b1c9` FOUND, `147e339` FOUND
+Commits claimed, verified in `git log d9e532b..HEAD`:
+- `803b1c0` FOUND, `9385d72` FOUND, `7b42286` FOUND, `962e0d4` FOUND, `4ac4a31` FOUND
 
 Exports verified by import at runtime: `planar_velocity_250hz`, `bin_velocity`, `apply_lag`, `heldout_r2`, `lag_sweep_r2`, `LAG_BINS_SWEEP` all present; `LAG_BINS_SWEEP == (0, 1, 2, 3, 4, 5, 6, 7, 8)` and `BEHAVIOR_HZ == 250.0`.
 

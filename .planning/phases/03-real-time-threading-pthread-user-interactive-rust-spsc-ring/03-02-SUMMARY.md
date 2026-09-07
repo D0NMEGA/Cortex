@@ -87,9 +87,9 @@ completed: 2026-06-20
 
 Each task was committed atomically (TDD: tests-first within each task; `--no-verify` per parallel-executor protocol):
 
-1. **Task 1: SPSC ring + loom shim — 128B-padded head/tail, Release/Acquire, Producer/Consumer split** — `89c37d3` (feat)
-2. **Task 2: loom permutation test (SC#3a) + 1M-frame stress test (SC#3b) + criterion bench — D-R5 two-test split** — `8984936` (test)
-3. **Task 3: wire the frozen extern "C" ABI to the real ring — create/push/pop/destroy + pointer safety** — `b8f8c1c` (feat)
+1. **Task 1: SPSC ring + loom shim — 128B-padded head/tail, Release/Acquire, Producer/Consumer split** — `c37f9cd` (feat)
+2. **Task 2: loom permutation test (SC#3a) + 1M-frame stress test (SC#3b) + criterion bench — D-R5 two-test split** — `078bfac` (test)
+3. **Task 3: wire the frozen extern "C" ABI to the real ring — create/push/pop/destroy + pointer safety** — `9c5958e` (feat)
 
 **Plan metadata:** (final docs commit — this SUMMARY)
 
@@ -138,7 +138,7 @@ No `SeqCst` (D-R4, Pitfall #5 — loom models it as AcqRel and cannot soundly ve
 - **Fix:** Added `[lints.rust] unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)', 'cfg(loom_negative_control)'] }` to `Cargo.toml` (the canonical loom/thingbuf approach).
 - **Files modified:** Packages/CortexRing/rust/Cargo.toml
 - **Verification:** `cargo build`/`cargo clippy -- -D warnings` clean; loom build clean.
-- **Committed in:** `89c37d3` (Task 1)
+- **Committed in:** `c37f9cd` (Task 1)
 
 **2. [Rule 1 - Bug] Avoided `Result::unwrap()` on `push` in tests (CortexFrame is not `Debug`)**
 - **Found during:** Task 1 (first compile of the unit tests)
@@ -146,7 +146,7 @@ No `SeqCst` (D-R4, Pitfall #5 — loom models it as AcqRel and cannot soundly ve
 - **Fix:** Used `assert!(... .is_ok())` / `.unwrap_err().seq` only where the payload field is read, and asserted on field values rather than the whole frame. Did NOT touch the frozen `CortexFrame`.
 - **Files modified:** Packages/CortexRing/rust/src/spsc.rs (tests only)
 - **Verification:** 7 unit tests compile and pass; header unchanged.
-- **Committed in:** `89c37d3` (Task 1)
+- **Committed in:** `c37f9cd` (Task 1)
 
 **3. [Rule 3 - Blocking] `#[allow(clippy::not_unsafe_ptr_arg_deref)]` on the 3 deref `extern "C"` exports**
 - **Found during:** Task 3 (clippy `-D warnings` on the real ffi bodies)
@@ -154,7 +154,7 @@ No `SeqCst` (D-R4, Pitfall #5 — loom models it as AcqRel and cannot soundly ve
 - **Fix:** `#[allow(clippy::not_unsafe_ptr_arg_deref)]` on push/pop/destroy, with a comment citing the frozen signature + the null-guards/SAFETY notes. The attribute does not appear in the generated header.
 - **Files modified:** Packages/CortexRing/rust/src/ffi.rs
 - **Verification:** `cargo clippy --all-targets -- -D warnings` exits 0; C declarations byte-identical to Plan 01.
-- **Committed in:** `b8f8c1c` (Task 3)
+- **Committed in:** `9c5958e` (Task 3)
 
 **4. [Rule 3 - Blocking] Committed the regenerated cbindgen header (doc-comments propagated)**
 - **Found during:** Task 3 (header drift check after `cargo build`)
@@ -162,7 +162,7 @@ No `SeqCst` (D-R4, Pitfall #5 — loom models it as AcqRel and cannot soundly ve
 - **Fix:** Committed the regenerated header. Proved the **C declarations are byte-identical** to Plan 01 (signatures/structs/`#define` diff-clean — only doc prose differs) and the regen is **idempotent** vs the brew `cbindgen 0.29.4` CLI the gate uses. The ABI is frozen; the gate passes post-commit.
 - **Files modified:** Packages/CortexRing/rust/include/cortex_ring.h
 - **Verification:** `diff` of stripped C declarations old-vs-new is empty; `cbindgen` CLI regen == committed header.
-- **Committed in:** `b8f8c1c` (Task 3)
+- **Committed in:** `9c5958e` (Task 3)
 
 ---
 
@@ -202,7 +202,7 @@ None — no external service configuration. The Rust toolchain (`rustup` + `cbin
 ## Self-Check: PASSED
 
 - All 4 created files + 5 modified files verified present on disk.
-- All 3 task commit hashes verified in git history: `89c37d3` (Task 1), `8984936` (Task 2), `b8f8c1c` (Task 3).
+- All 3 task commit hashes verified in git history: `c37f9cd` (Task 1), `078bfac` (Task 2), `9c5958e` (Task 3).
 - Full suite green: 11 unit (7 spsc + 4 ffi) + 1 stress (1M) under `cargo test --release`; loom green under `--cfg loom` (negative control FAILS as required); header drift gate clean; benches build (default + rtrb-xcheck); clippy `--all-targets [--features rtrb-xcheck] -D warnings` exits 0; all files rustfmt-clean.
 
 ---

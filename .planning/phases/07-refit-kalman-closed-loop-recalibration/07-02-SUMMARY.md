@@ -72,8 +72,8 @@ completed: 2026-06-23
 
 ## Accomplishments
 
-- **Gilja-2012 intent-rotation on the measurement (REFIT-02, Task 1 — `9ebeabb`).** `IntentRotation.rotate(measurement:cursor:target:acquisitionRadius:)` aligns the decoded velocity's DIRECTION fully onto cursor→target while PRESERVING its decoded speed, gated to target-active AND `dist > r_acq` AND `speed > eps`. All four gating branches (outside r_acq rotates, inside r_acq passthrough, no target passthrough, zero-velocity guard) plus magnitude-preservation and finiteness are unit-tested (5 tests).
-- **6-DOF steady-state constant-gain Kalman step (REFIT-01, Task 2 — `bd0deb4`).** `KalmanFilter.step(measurement:target:acquisitionRadius:)` runs the exact RESEARCH §2.2 ordering — `x⁻ = A·x` (six inlined `simd_dot` over the SIMD8 constant rows) → sync the synced cursor into `x⁻[px,py]` BEFORE the rotation → `rotate` the measurement → `x = x⁻ + K·(z_rot − H·x⁻)` → emit `(vx,vy)`. Constants-only (no runtime Riccati, no covariance propagation, D-02); zero per-tick allocation.
+- **Gilja-2012 intent-rotation on the measurement (REFIT-02, Task 1 — `e40a400`).** `IntentRotation.rotate(measurement:cursor:target:acquisitionRadius:)` aligns the decoded velocity's DIRECTION fully onto cursor→target while PRESERVING its decoded speed, gated to target-active AND `dist > r_acq` AND `speed > eps`. All four gating branches (outside r_acq rotates, inside r_acq passthrough, no target passthrough, zero-velocity guard) plus magnitude-preservation and finiteness are unit-tested (5 tests).
+- **6-DOF steady-state constant-gain Kalman step (REFIT-01, Task 2 — `5202a96`).** `KalmanFilter.step(measurement:target:acquisitionRadius:)` runs the exact RESEARCH §2.2 ordering — `x⁻ = A·x` (six inlined `simd_dot` over the SIMD8 constant rows) → sync the synced cursor into `x⁻[px,py]` BEFORE the rotation → `rotate` the measurement → `x = x⁻ + K·(z_rot − H·x⁻)` → emit `(vx,vy)`. Constants-only (no runtime Riccati, no covariance propagation, D-02); zero per-tick allocation.
 - **Numerical correctness proven over propagation, not one step.** `KalmanFilterTests` checks one step against a hand-computed update AND a 64-tick trajectory against an INDEPENDENT plain nested-loop `[Float]` reference reading the same committed constants (`‖x_swift − x_ref‖ < 2e-3` at every tick, full 6-state) — a wrong inlined dot-product would drift and fail (threat T-07-02-04). Also asserts external position-sync (two synced positions ⇒ two rotated measurements; the synced p — not a double-integrated one — feeds the rotation) and rotation-wiring (active-target output differs from the no-rotation path, and projects further along cursor→target).
 - **Hot-path discipline established for CortexReFIT (SC#3).** `Packages/CortexReFIT/Sources/CortexReFIT` added to `hotpath-policy.sh` `DIRS_ARRAY`; the gate scans it clean and the negative-control `--self-test` still bites on every forbidden token — so a future `import Foundation`/lock/heap on the filter path is a build-failing code policy (threat T-07-02-01). Both source files are `import simd`-only.
 - **16/16 CortexReFIT tests green** (KalmanConstants 6 + IntentRotation 5 + KalmanFilter 5) under Swift 6.2.4 / Xcode 26.3.
@@ -82,8 +82,8 @@ completed: 2026-06-23
 
 Each task was committed atomically (with `--no-verify` per the isolated-worktree parallel-execution protocol):
 
-1. **Task 1: IntentRotation — gated full-direction-align, speed-preserving (REFIT-02)** — `9ebeabb` (feat) _[prior executor; the executor died on an API-stream timeout after this commit, before Task 2]_
-2. **Task 2: KalmanFilter step + hotpath-policy coverage (REFIT-01, SC#3)** — `bd0deb4` (feat)
+1. **Task 1: IntentRotation — gated full-direction-align, speed-preserving (REFIT-02)** — `e40a400` (feat) _[prior executor; the executor died on an API-stream timeout after this commit, before Task 2]_
+2. **Task 2: KalmanFilter step + hotpath-policy coverage (REFIT-01, SC#3)** — `5202a96` (feat)
 
 _Task 2 is a single atomic TDD commit (test + impl + policy + CI + the nonisolated blocking-fix) per the continuation orchestrator's "commit Task 2 atomically" instruction — RED→GREEN was run in-session before staging (tests confirmed failing for "cannot find 'KalmanFilter' in scope", then passing)._
 
@@ -114,7 +114,7 @@ _Task 2 is a single atomic TDD commit (test + impl + policy + CI + the nonisolat
 - **Fix:** Marked the enum `public nonisolated enum KalmanConstants` (the values are immutable `Sendable` compile-time simd `let`-arrays, so `nonisolated` is sound — no data race). Applied the identical one-token change to BOTH the generated `KalmanConstants.swift` AND its emitter `Decoder/scripts/fit_kalman_gain.py` (line 277 template) so regeneration produces byte-consistent output — no code-gen drift (the generator and its output agree). Mirrors how `IntentRotation` / `CursorVelocity` opt out of the package-default MainActor.
 - **Files modified:** `Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift`, `Decoder/scripts/fit_kalman_gain.py`
 - **Verification:** `swift build` + `swift test --package-path Packages/CortexReFIT` green (16/16); `KalmanConstantsTests` (still `@MainActor`) still compiles — a MainActor context reads a nonisolated value fine. The emitter change is a Swift-string-literal edit only (no Python logic/import/type touched).
-- **Committed in:** `bd0deb4` (Task 2 commit)
+- **Committed in:** `5202a96` (Task 2 commit)
 
 **2. [Rule 3 - Blocking] `SIMD8<Float>` has no `.x`/`.y` member accessors**
 - **Found during:** Task 2 (KalmanFilter first build)
@@ -122,7 +122,7 @@ _Task 2 is a single atomic TDD commit (test + impl + policy + CI + the nonisolat
 - **Fix:** Used subscript indexing `state[0]` / `state[1]` for the position lanes (consistent with the rest of the lane access in `step`).
 - **Files modified:** `Packages/CortexReFIT/Sources/CortexReFIT/KalmanFilter.swift`
 - **Verification:** `swift build` proceeds past these lines; full suite green.
-- **Committed in:** `bd0deb4` (Task 2 commit)
+- **Committed in:** `5202a96` (Task 2 commit)
 
 ---
 
@@ -146,7 +146,7 @@ None — no external service configuration required. (The data-grounded Q/R fit 
 ## Self-Check: PASSED
 
 - Created files verified present: `IntentRotation.swift`, `KalmanFilter.swift`, `IntentRotationTests.swift`, `KalmanFilterTests.swift` — all FOUND on disk.
-- Commits verified in `git log`: `9ebeabb` (Task 1) FOUND, `bd0deb4` (Task 2) FOUND.
+- Commits verified in `git log`: `e40a400` (Task 1) FOUND, `5202a96` (Task 2) FOUND.
 - `swift test --package-path Packages/CortexReFIT` → 16/16 PASS; `./Tools/scripts/hotpath-policy.sh` exit 0; `--self-test` exit 0.
 
 ---

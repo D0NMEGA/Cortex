@@ -3,7 +3,7 @@
 **Date:** 2026-06-22
 **Device:** Apple **M5 Pro** MacBook Pro — built-in **Liquid Retina XDR ProMotion** panel (genuine 120 Hz Apple Silicon)
 **OS / toolchain:** macOS **26.5** (build 25F71) · Xcode **26.3** · Swift **6.2.4** (swiftlang-6.2.4.1.4)
-**Bench:** `CortexRenderBench` (`Apps/CortexRenderBench/{main,GPUTimeHistogram,FrameSoak}.swift`), commit base `9a113be`
+**Bench:** `CortexRenderBench` (`Apps/CortexRenderBench/{main,GPUTimeHistogram,FrameSoak}.swift`), commit base `b6eed6d`
 **Result:** ✅ **MEASURED (M5 Pro-corroborating).** GPU compute time over **n = 10 000** frames of the **real 30×30 / 900-cell `webgrid` compute pass** at a representative 2752×2064 drawable extent: **p50 = 0.0798 ms, p95 = 0.0801 ms, p99 = 0.1618 ms** — **PASS vs the ≤ 0.4 ms SC#2 bound, ~2.5× margin**. A **60 s** deterministic-Lissajous-driven sustained-throughput soak completed **243 724 frames (4062 Hz achieved, 34× the 120 Hz target)** with **zero intervals > 8.33 ms** — **PASS SC#4 (throughput)**. Both numbers are **honestly attributed to the M5 Pro corroborating-canonical surface (D-11)**; the spec's **canonical iPad-Pro-M4 ≤0.4 ms + 60 s on-panel 120 Hz capture is the deferred optional/future datapoint (`06-HUMAN-UAT.md`, D-12)** — never assumed from this run. Artifacts: `gpu_time_hist.json` + `soak_log.json`.
 
 > **SC#2 (ROADMAP):** "GPU compute time for the 30×30 webgrid ≤ 0.4 ms (p99), measured on Apple Silicon."

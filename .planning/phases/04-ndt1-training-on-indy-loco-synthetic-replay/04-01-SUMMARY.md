@@ -74,8 +74,8 @@ completed: 2026-06-21
 
 Each task was committed atomically (with `--no-verify`, per worktree-parallel execution):
 
-1. **Task 1: Initialize the uv-managed Decoder/ subsystem with a pinned interpreter and locked deps** — `7294392` (chore)
-2. **Task 2: Author shared seeded test fixtures + an env smoke test, and gitignore binary artifacts** — `60a629f` (test)
+1. **Task 1: Initialize the uv-managed Decoder/ subsystem with a pinned interpreter and locked deps** — `cc1d761` (chore)
+2. **Task 2: Author shared seeded test fixtures + an env smoke test, and gitignore binary artifacts** — `d534b5b` (test)
 
 _Plan metadata commit (SUMMARY) made separately after self-check._
 
@@ -126,7 +126,7 @@ None. The `__all__: list[str] = []` in `src/ndt1/__init__.py` is an intentional 
 ## Self-Check: PASSED
 
 - All 9 created files + `.gitignore` + `04-01-SUMMARY.md` exist on disk (11/11 FOUND).
-- Both task commits exist in git history: `7294392` (Task 1), `60a629f` (Task 2).
+- Both task commits exist in git history: `cc1d761` (Task 1), `d534b5b` (Task 2).
 - All 4 plan `<verification>` checks green: import smoke (3.12.13), quick suite (3 passed), ruff (exit 0), no artifacts in `git status`.
 
 ---

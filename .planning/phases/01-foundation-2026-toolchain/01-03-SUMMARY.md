@@ -89,8 +89,8 @@ completed: 2026-04-28
 
 Each task was committed atomically with conventional-commits scope `({phase}-{plan})`:
 
-1. **Task 1: Two PrivacyInfo.xcprivacy plists with CA92.1 reason code** — `3db6dc2` (feat)
-2. **Task 2: validate-privacy-manifest.sh CI gate + negative-control proof** — `901eddb` (feat)
+1. **Task 1: Two PrivacyInfo.xcprivacy plists with CA92.1 reason code** — `72b2524` (feat)
+2. **Task 2: validate-privacy-manifest.sh CI gate + negative-control proof** — `3362c43` (feat)
 
 **Plan metadata commit:** _to follow after STATE.md / ROADMAP.md / REQUIREMENTS.md updates_
 
@@ -193,8 +193,8 @@ Verification of artifacts and commits claimed in this Summary:
 - MISSING: Apps/CortexDaemon/PrivacyInfo.xcprivacy (CORRECT — intentionally absent per RESEARCH.md Q5; daemon has no required-reason API usage in Phase 1)
 
 **Commits exist (`git log --oneline`):**
-- FOUND: 3db6dc2 — Task 1 (feat: PrivacyInfo.xcprivacy with CA92.1 for both app targets)
-- FOUND: 901eddb — Task 2 (feat: validate-privacy-manifest.sh CI gate)
+- FOUND: 72b2524 — Task 1 (feat: PrivacyInfo.xcprivacy with CA92.1 for both app targets)
+- FOUND: 3362c43 — Task 2 (feat: validate-privacy-manifest.sh CI gate)
 
 **Verification clauses re-executed:**
 - Task 1 automated verify: both lint OK, both contain CA92.1 — PASS

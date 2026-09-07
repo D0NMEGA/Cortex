@@ -105,9 +105,9 @@ Explicit for the verifier (T-02-05-01 mitigation):
 
 ## Task Commits
 
-1. **Task 1: Shm-polled round-trip benchmark (CF#2)** — `8e472bb` (feat) [refined by `4bb908b`]
-2. **Task 2: Wire Phase-2 correctness gates into ci.yml** — `d5e37c2` (chore)
-3. **Task 3: Measure SC#1 on M-series → sc1-evidence.md (+ Benchmark compiler-crash fix)** — `4bb908b` (feat)
+1. **Task 1: Shm-polled round-trip benchmark (CF#2)** — `3a59ff3` (feat) [refined by `d2f192f`]
+2. **Task 2: Wire Phase-2 correctness gates into ci.yml** — `11cc1c0` (chore)
+3. **Task 3: Measure SC#1 on M-series → sc1-evidence.md (+ Benchmark compiler-crash fix)** — `d2f192f` (feat)
 
 _(Plan metadata commit owned by the orchestrator per this run's instructions — STATE.md/ROADMAP.md not touched here.)_
 
@@ -132,7 +132,7 @@ See frontmatter `key-decisions`. Headline: timed path = shm busy-poll + ack-boun
 - **Fix:** Declared the entry with the EXACT non-optional C signature `@convention(c) (UnsafeMutableRawPointer) -> UnsafeMutableRawPointer?` and passed the thread context as a POD `BenchThreadArg` struct of raw handles (an `Unmanaged<ShmRing>` opaque handle + Ints) — NO Swift class crosses the `@convention(c)` boundary as a region-tracked value. Removed the earlier `BenchContext` class. The measured semantics (QoS-pinned shm busy-poll + ack-bounce, n/warmup/percentiles) are unchanged; the hot path (`producerLoop`/the consumer entry) stays fully optimized.
 - **Files modified:** `Apps/CortexDaemon/Benchmark.swift`
 - **Verification:** `swift build -c release` of the (sha-identical) probe completes; the binary RAN and produced the committed numbers; grep assertions + hot-path gate + `swift build` (CortexIPC) + Swift-6 `-typecheck` all green.
-- **Committed in:** `4bb908b` (Task 3)
+- **Committed in:** `d2f192f` (Task 3)
 
 **2. [Rule 1 - Literal-token-grep contradiction] Reworded comments embedding `kevent`/`recvmsg`/`Doorbell`**
 - **Found during:** Task 1 (the CF#2 acceptance grep `! grep -qE 'kevent|recvmsg|Doorbell'`)
@@ -140,7 +140,7 @@ See frontmatter `key-decisions`. Headline: timed path = shm busy-poll + ack-boun
 - **Fix:** Reworded to "socketpair-backed idle-wake primitive" / "control-plane wake" without the literal tokens; the code genuinely contains none.
 - **Files modified:** `Apps/CortexDaemon/Benchmark.swift`
 - **Verification:** `! grep -qE 'kevent|recvmsg|Doorbell' Benchmark.swift` passes.
-- **Committed in:** `8e472bb` (Task 1)
+- **Committed in:** `3a59ff3` (Task 1)
 
 **3. [Rule 1 - Literal-token-grep contradiction] Reworded a ci.yml comment that matched the no-timing-assertion grep**
 - **Found during:** Task 2 (the verifier's negative grep `! grep -iE 'assert.*(p99|latency|sub-.?s|nanos)'`)
@@ -148,7 +148,7 @@ See frontmatter `key-decisions`. Headline: timed path = shm busy-poll + ack-boun
 - **Fix:** Reworded to "checks no performance number … never checked on the M1 runner" — no `assert`-then-timing-word collision; ci.yml now has zero timing vocabulary.
 - **Files modified:** `.github/workflows/ci.yml`
 - **Verification:** `grep -inE 'assert.*(p99|latency|sub-.?s|nanos)' ci.yml` returns NO MATCH; `grep -inE 'p99|latency|nanos|sub-µs'` returns nothing.
-- **Committed in:** `d5e37c2` (Task 2)
+- **Committed in:** `11cc1c0` (Task 2)
 
 ### Authorized scope additions (pre-approved by this run's instructions)
 
@@ -208,12 +208,12 @@ None. `Benchmark.swift` is complete and produced real measurements; the CI steps
 ## Self-Check: PASSED
 
 - All 4 created files exist on disk (Benchmark.swift, sc1-evidence.md, sc1-histogram.txt, sc1-histogram.csv) + this SUMMARY — VERIFIED
-- All 3 task commits exist (`8e472bb`, `d5e37c2`, `4bb908b`) — VERIFIED via `git log 3fcb0ca..HEAD`
+- All 3 task commits exist (`3a59ff3`, `11cc1c0`, `d2f192f`) — VERIFIED via `git log 298f256..HEAD`
 - Benchmark.swift: grep assertions pass (QoS pin, pthread_create, pollLatest/pollAck, machAbsoluteNanoseconds ref, p99, warmup; NO kevent/recvmsg/Doorbell; NO AES.GCM API; preallocation; default n=200k); CortexIPC builds; hot-path gate exits 0; Swift-6 typecheck clean; release build runs and produced the committed numbers — VERIFIED
 - ci.yml: valid YAML; CortexIPC test step + no-SCM_RIGHTS/cmsg grep over both trees + existing hot-path step present; NO timing assertion (negative grep clean) — VERIFIED
 - The CI correctness gate passes locally: `swift test --package-path Packages/CortexIPC` = 26 Swift Testing tests (5 suites) + HarnessE2ETests (testInProcessRoundTrip + testForwardOnlyAntiReplay pass, testTwoProcessSpawnRoundTrip XCTSkips); SC#2 grep clean — VERIFIED
 - sc1-evidence.md has numeric p50/p99/σ + M-series/Xcode-26 environment + methodology (QoS/warmup/CF#2) + artifact references + D-18 statement + honest verdict — VERIFIED
-- Temporary probe scaffolding reverted; working tree clean; base unchanged (3fcb0ca) — VERIFIED
+- Temporary probe scaffolding reverted; working tree clean; base unchanged (298f256) — VERIFIED
 
 ---
 *Phase: 02-ipc-primitive-kqueue-recvmsg-flatbuffers-aes-gcm*

@@ -83,8 +83,8 @@ completed: 2026-06-23
 
 Each task was committed atomically (with `--no-verify` per the isolated-worktree parallel-execution protocol):
 
-1. **Task 1: Decoder/ observable-block DARE solver + Q/R fit script + pytest** — `23e858f` (feat)
-2. **Task 2: CortexReFIT package scaffold + committed KalmanConstants.swift + seam decision** — `1a5057c` (feat)
+1. **Task 1: Decoder/ observable-block DARE solver + Q/R fit script + pytest** — `a9052e5` (feat)
+2. **Task 2: CortexReFIT package scaffold + committed KalmanConstants.swift + seam decision** — `d36e6bf` (feat)
 
 _The Task-1 `fit_kalman_gain.py` was further refined in the Task-2 commit (SIMD8 layout + Foundation-comment fix) because the emitter and the Swift struct it generates are coupled (D-15)._
 
@@ -116,7 +116,7 @@ _The Task-1 `fit_kalman_gain.py` was further refined in the Task-2 commit (SIMD8
 - **Fix:** Each 6-wide A/H row is stored as `SIMD8<Float>` with the last 2 lanes zero-padded (the pad lanes contribute nothing to an inlined `simd_dot`). The plan explicitly delegated the simd layout to "implementer's discretion ... `simd` has no 6×6," so this is the intended discretionary choice. Updated the Python emitter (`_simd_rows` now zero-pads to `simd_width`) so regeneration is correct by construction; A/H/H-doc/render docstring all reflect SIMD8.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`, `Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift`
 - **Verification:** `swift build` + `swift test` green; no `SIMD6<Float>` type usage in the generated file.
-- **Committed in:** `1a5057c` (Task 2 commit)
+- **Committed in:** `d36e6bf` (Task 2 commit)
 
 **2. [Rule 2 - Missing Critical] Generated Swift must pass the swiftformat lint gate by construction**
 - **Found during:** Task 1/2 (KalmanConstants.swift generation)
@@ -124,7 +124,7 @@ _The Task-1 `fit_kalman_gain.py` was further refined in the Task-2 commit (SIMD8
 - **Fix:** Made the emitter produce swiftformat-clean output by construction — 4-space element indent, `--commas inline` (no trailing comma on the last array element), and `textwrap`-prewrapped provenance comments under `--maxwidth 120`. The fresh-generated file now passes `swiftformat --lint` with 0 changes.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`
 - **Verification:** `swiftformat --lint Packages/CortexReFIT/.../KalmanConstants.swift` → `0/1 files require formatting` directly after regeneration.
-- **Committed in:** `1a5057c` (Task 2 commit)
+- **Committed in:** `d36e6bf` (Task 2 commit)
 
 **3. [Rule 2 - Missing Critical] Removed a latent `import Foundation` substring from the generated comment (forward-proofs Plan 02's hotpath gate)**
 - **Found during:** Task 2 (acceptance grep `! grep -q 'import Foundation'`)
@@ -132,7 +132,7 @@ _The Task-1 `fit_kalman_gain.py` was further refined in the Task-2 commit (SIMD8
 - **Fix:** Reworded the emitter's comment to "Foundation-free (uses `import simd` only, never the Obj-C runtime)" — no `import Foundation` substring. Verified with `DIRS=Packages/CortexReFIT/Sources/CortexReFIT ./Tools/scripts/hotpath-policy.sh` → clean.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`, `Packages/CortexReFIT/Sources/CortexReFIT/KalmanConstants.swift`
 - **Verification:** Acceptance grep passes; forward-scan of the CortexReFIT source dir by hotpath-policy is clean.
-- **Committed in:** `1a5057c` (Task 2 commit)
+- **Committed in:** `d36e6bf` (Task 2 commit)
 
 ---
 
@@ -161,7 +161,7 @@ None — no external service configuration required. (The data-grounded Q/R fit 
 
 ## Self-Check: PASSED
 
-All 7 created source files + SUMMARY + deferred-items log verified present on disk; both task commits (`23e858f`, `1a5057c`) verified in `git log`.
+All 7 created source files + SUMMARY + deferred-items log verified present on disk; both task commits (`a9052e5`, `d36e6bf`) verified in `git log`.
 
 ---
 *Phase: 07-refit-kalman-closed-loop-recalibration*

@@ -94,10 +94,10 @@ completed: 2026-06-20
 
 ## Task Commits
 
-1. **Task 1: cortex_ring crate — frozen ABI, repr(C) Frame, panic guard, loom config** — `99f3c00` (feat)
-2. **Task 2: build-rust.sh + xcframework + .binaryTarget + cortex_ping smoke (Spike A)** — `9ef752c` (feat)
-3. **Task 3: pre-arm all Phase-3 CI gates** — `890875e` (ci)
-4. **Lint fix (Rule 1): swiftformat/swiftlint on the Swift glue** — `93ab143` (style)
+1. **Task 1: cortex_ring crate — frozen ABI, repr(C) Frame, panic guard, loom config** — `a6eef1c` (feat)
+2. **Task 2: build-rust.sh + xcframework + .binaryTarget + cortex_ping smoke (Spike A)** — `7387e3b` (feat)
+3. **Task 3: pre-arm all Phase-3 CI gates** — `4da9880` (ci)
+4. **Lint fix (Rule 1): swiftformat/swiftlint on the Swift glue** — `b7e3d75` (style)
 
 **Plan metadata:** (final docs commit — this SUMMARY + deferred-items.md)
 
@@ -153,7 +153,7 @@ See `key-files` frontmatter. Highlights:
 - **Fix:** Pinned `[build-dependencies] cbindgen = "0.29"`. Verified the `generate()`/`write_to_file()` API and `cbindgen.toml` schema (language=C, include_guard, pragma_once, export.include) are unchanged via Context7.
 - **Files modified:** Packages/CortexRing/rust/Cargo.toml
 - **Verification:** `cargo build --release` regenerates the header; drift gate (`git diff --exit-code`) returns 0.
-- **Committed in:** `99f3c00`
+- **Committed in:** `a6eef1c`
 
 **2. [Rule 3 - Blocking] Added benches/throughput.rs placeholder so the manifest parses**
 - **Found during:** Task 1 (first `cargo build`)
@@ -161,7 +161,7 @@ See `key-files` frontmatter. Highlights:
 - **Fix:** Created `benches/throughput.rs` with an empty `main` (`harness = false`). Plan 02 fills it with the real throughput + `rtrb` cross-check benchmark.
 - **Files modified:** Packages/CortexRing/rust/benches/throughput.rs (new)
 - **Verification:** `cargo build --release` and `cargo test --release` both exit 0.
-- **Committed in:** `99f3c00`
+- **Committed in:** `a6eef1c`
 
 **3. [Rule 3 - Blocking] Added Rust build-artifact .gitignore entries in Task 1**
 - **Found during:** Task 1 (pre-commit)
@@ -169,7 +169,7 @@ See `key-files` frontmatter. Highlights:
 - **Fix:** Added `Packages/CortexRing/rust/target/` (Task-1 need) and `Packages/CortexRing/CortexRingFFI.xcframework/` (Task-2 deliverable) to `.gitignore` in one edit.
 - **Files modified:** .gitignore
 - **Verification:** `git check-ignore` confirms `target/`+xcframework excluded; the committed cbindgen header is NOT ignored (D-13).
-- **Committed in:** `99f3c00`
+- **Committed in:** `a6eef1c`
 
 **4. [Rule 1 - Bug] Reformatted CortexRing Swift to pass the existing swiftformat/swiftlint gates**
 - **Found during:** SUMMARY prep (running the repo's actual `swiftformat --lint`/`swiftlint --strict` CI commands)
@@ -177,7 +177,7 @@ See `key-files` frontmatter. Highlights:
 - **Fix:** Applied the project `.swiftformat` (autofix → backtick-identifier `@Test` names, trailing commas, `self` removal), renamed `x`→`value`/`input`, and added `Packages/CortexRing/.build` to the `.swiftformat` exclude (mirrors the other packages).
 - **Files modified:** Package.swift, Ping.swift, PingSmokeTests.swift, .swiftformat
 - **Verification:** `swiftformat --lint` (0/3) + `swiftlint --strict` (0 violations) on my files; `swift test` still 2/2 green.
-- **Committed in:** `93ab143`
+- **Committed in:** `b7e3d75`
 
 ---
 
@@ -187,7 +187,7 @@ See `key-files` frontmatter. Highlights:
 
 - **xcodegen produces no standalone `Cortex.xcworkspace`** (only the embedded `project.xcworkspace`); the existing CI's `-workspace Cortex.xcworkspace` invocation is affected equally on the base commit. Worked around for local Spike-A verification by using `-project Cortex.xcodeproj`/`-scheme CortexRingPing`. Logged to deferred-items.md (pre-existing, not Plan-03-01 scope).
 - **`nm` LLVM-version warnings** on Rust std/compiler_builtins objects (Rust 1.96/LLVM22 vs Xcode 26.3 nm/LLVM17). Confirmed display-only: the 5 `cortex_*` symbols still resolve under Xcode `nm`, and `xcodebuild` links the archive cleanly (BUILD SUCCEEDED, zero `ld:` errors). Worth noting for Plan 02/04 (`nm`-based checks are noisy; the link/test gates are authoritative).
-- **Pre-existing repo-wide lint debt** (`swiftformat --lint .` reports 34/40 files, e.g. Benchmark.swift) and the **pre-existing CortexIPC `Float16` xcodebuild deferral** are both present on base `2a0b42a` and out of scope; logged to deferred-items.md.
+- **Pre-existing repo-wide lint debt** (`swiftformat --lint .` reports 34/40 files, e.g. Benchmark.swift) and the **pre-existing CortexIPC `Float16` xcodebuild deferral** are both present on base `0f4a106` and out of scope; logged to deferred-items.md.
 
 ## Out-of-Scope / Deferred
 
@@ -213,7 +213,7 @@ None — no external service configuration. The only setup is the Rust toolchain
 ## Self-Check: PASSED
 
 - All 20 claimed files verified present on disk (crate sources, header, Swift glue, build-rust.sh, ci.yml, project.yml, .gitignore, .swiftformat, SUMMARY, deferred-items).
-- All 4 commit hashes verified in git history: `99f3c00` (Task 1), `9ef752c` (Task 2), `890875e` (Task 3), `93ab143` (lint fix).
+- All 4 commit hashes verified in git history: `a6eef1c` (Task 1), `7387e3b` (Task 2), `4da9880` (Task 3), `b7e3d75` (lint fix).
 
 ---
 *Phase: 03-real-time-threading-pthread-user-interactive-rust-spsc-ring*

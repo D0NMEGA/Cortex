@@ -84,9 +84,9 @@ completed: 2026-06-21
 
 Each task was committed atomically (`--no-verify`, per worktree-parallel execution):
 
-1. **Task 1: ANE attention (bchq,bkhc->bkhq einsum) + LayerNormANE + masked-Poisson loss** — `5e3a9b3` (feat)
-2. **Task 2: NDT1ANE model (Conv2d read-in/readout, 6 PRE_NORM layers) + SC1 structural & param tests** — `279ff1e` (feat)
-3. **Task 3: SC3 BC1S forward-hook + zero-nn.Linear + (B,S,C) negative control** — `421008c` (test; also reworded `model_ane.py` phase-boundary docstring to satisfy the no-Phase-5-scope grep)
+1. **Task 1: ANE attention (bchq,bkhc->bkhq einsum) + LayerNormANE + masked-Poisson loss** — `c9fbf8c` (feat)
+2. **Task 2: NDT1ANE model (Conv2d read-in/readout, 6 PRE_NORM layers) + SC1 structural & param tests** — `e80ddeb` (feat)
+3. **Task 3: SC3 BC1S forward-hook + zero-nn.Linear + (B,S,C) negative control** — `b925892` (test; also reworded `model_ane.py` phase-boundary docstring to satisfy the no-Phase-5-scope grep)
 
 _Plan metadata commit (SUMMARY) made separately after self-check._
 
@@ -116,7 +116,7 @@ _Plan metadata commit (SUMMARY) made separately after self-check._
 - **Fix:** Wrote a **guarded import** — `try: from ndt1.channel_count import CORTEX_CHANNEL_COUNT` / `except ImportError: CORTEX_CHANNEL_COUNT = 96`. This (a) satisfies the `grep -q 'CORTEX_CHANNEL_COUNT'` acceptance criterion, (b) honors the import contract so 04-02's source-of-truth wins after the orchestrator merges both worktrees, (c) does NOT create or touch `channel_count.py` (disjoint-files rule respected), and (d) lets this plan's suite run green standalone. The fallback value 96 was verified to match all three repo homes (`cortex_shm.h`, `cortex_ring.h`, `frame.rs`) and the conftest `CHANNELS=96` constant. `except ImportError` is a *specific* exception (not bare/blind), so it passes the ruff `BLE` gate and the AGENTS.md no-bare-except rule.
 - **Files modified:** `Decoder/src/ndt1/model_ane.py`
 - **Verification:** Probe printed `channel src: 96`; 23/23 tests green; ruff clean; `grep -q 'CORTEX_CHANNEL_COUNT' model_ane.py` passes.
-- **Committed in:** `279ff1e` (Task 2 commit)
+- **Committed in:** `e80ddeb` (Task 2 commit)
 
 **2. [Rule 1 - Bug] Reworded negative-assertion comments to satisfy literal acceptance/verification greps**
 - **Found during:** Tasks 1 and 3
@@ -124,7 +124,7 @@ _Plan metadata commit (SUMMARY) made separately after self-check._
 - **Fix:** Reworded the prose to avoid the forbidden literals while preserving the documented intent ("Conv2d, not dense fully-connected layers"; "no cursor-kinematics readout head … no Neural-Engine compute-unit targeting"). Also normalized `random_mask`'s default to the literal `mask_ratio: float = 0.25` so the `mask_ratio…=0.25` grep matches directly (kept `DEFAULT_MASK_RATIO = 0.25` as the named constant). The runtime guarantees are unchanged and are enforced by the SC3b `isinstance`-based no-`nn.Linear` test, not the prose.
 - **Files modified:** `Decoder/src/ndt1/attention.py`, `Decoder/src/ndt1/loss.py`, `Decoder/src/ndt1/model_ane.py`
 - **Verification:** All acceptance greps for Tasks 1/2/3 pass (7/7, 10/10, 10/10); SC3b runtime test confirms zero `nn.Linear` submodules regardless of prose.
-- **Committed in:** `5e3a9b3` (Task 1), `279ff1e` (Task 2), `421008c` (Task 3)
+- **Committed in:** `c9fbf8c` (Task 1), `e80ddeb` (Task 2), `b925892` (Task 3)
 
 ---
 
@@ -151,7 +151,7 @@ None. Every public symbol (`ANEAttention`, `LayerNormANE`, `masked_poisson_nll`,
 ## Self-Check: PASSED
 
 - All 8 created source/test files + `04-03-SUMMARY.md` exist on disk (9/9 FOUND).
-- All 3 task commits exist in git history: `5e3a9b3` (Task 1), `279ff1e` (Task 2), `421008c` (Task 3).
+- All 3 task commits exist in git history: `c9fbf8c` (Task 1), `e80ddeb` (Task 2), `b925892` (Task 3).
 - Plan `<verification>` green: 23/23 quick tests pass; `ruff check Decoder/src Decoder/tests` exit 0; no bare/blind except in `Decoder/src/ndt1` + `Decoder/tests`; `bchq,bkhc->bkhq` present in `attention.py`; no ANE/velocity tokens in `model_ane.py`/`attention.py`.
 
 ---

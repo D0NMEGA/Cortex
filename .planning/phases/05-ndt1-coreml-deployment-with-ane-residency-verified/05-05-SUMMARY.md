@@ -10,7 +10,7 @@ checkpoint: human-verify (resolved via M2-corroborating capture, 2026-06-21)
 
 ## What shipped
 
-The iPad HUMAN-UAT runbook (`05-HUMAN-UAT.md`) and DEC-08 disposition (`05-placement-evidence.md`) were authored (Tasks 1–2, commits `f139e57`, `6b10b14`), then the blocking `checkpoint:human-verify` (Task 3) was **resolved by an on-device capture** — on an **iPad Air 11-inch (M2), iPadOS 18.7.8** (the user's always-available hardware; an iPad Pro **M4** was not available — M4 access is rare/borrowed). Captured via the Xcode Core ML Performance Report (runbook option b). The M2 is a valid **corroborating tier** (same M2-class Neural Engine as the iPad Pro M2; iPadOS 18 runs Core ML profiling fine).
+The iPad HUMAN-UAT runbook (`05-HUMAN-UAT.md`) and DEC-08 disposition (`05-placement-evidence.md`) were authored (Tasks 1–2, commits `5a3d8b4`, `89d32ca`), then the blocking `checkpoint:human-verify` (Task 3) was **resolved by an on-device capture** — on an **iPad Air 11-inch (M2), iPadOS 18.7.8** (the user's always-available hardware; an iPad Pro **M4** was not available — M4 access is rare/borrowed). Captured via the Xcode Core ML Performance Report (runbook option b). The M2 is a valid **corroborating tier** (same M2-class Neural Engine as the iPad Pro M2; iPadOS 18 runs Core ML profiling fine).
 
 ## Measured verdict (iPad Air M2, `computeUnits=.all`, n=120 predictions)
 

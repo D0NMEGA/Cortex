@@ -85,10 +85,10 @@ completed: 2026-06-21
 
 Each task was committed atomically (normal commits — sole sequential executor on main, no `--no-verify`):
 
-1. **Task 1 (RED): failing LatencyHistogram tests** — `aae093c` (test)
-2. **Task 1 (GREEN): LatencyHistogram implementation** — `8f86985` (feat)
-3. **Task 2: CortexDecoderBench executable + rank-4/compile inference-path fixes + rank-4 tests** — `ec08e61` (feat)
-4. **Task 3: 05-latency-evidence.md (Mac corroborating + iPad canonical)** — `bd713fc` (docs)
+1. **Task 1 (RED): failing LatencyHistogram tests** — `35994a5` (test)
+2. **Task 1 (GREEN): LatencyHistogram implementation** — `d6ae409` (feat)
+3. **Task 2: CortexDecoderBench executable + rank-4/compile inference-path fixes + rank-4 tests** — `8c1c514` (feat)
+4. **Task 3: 05-latency-evidence.md (Mac corroborating + iPad canonical)** — `9e6571c` (docs)
 
 **Plan metadata:** committed separately with STATE.md / ROADMAP.md / REQUIREMENTS.md (this SUMMARY).
 
@@ -122,7 +122,7 @@ _Task 1 followed the TDD RED→GREEN cycle (no REFACTOR commit — the GREEN imp
 - **Fix:** Declared `public nonisolated struct LatencyHistogram` — it is pure data + pure math with no main-actor state, so it is correctly isolation-free (and the plan requires it to "cross isolation boundaries"). Better than forcing `@MainActor` on the tests.
 - **Files modified:** `LatencyHistogram.swift`
 - **Verification:** `LatencyHistogramTests` 7/7 green.
-- **Committed in:** `8f86985` (Task 1 GREEN).
+- **Committed in:** `d6ae409` (Task 1 GREEN).
 
 **2. [Rule 3 - Blocking] The bench's free functions could not call the MainActor-isolated decoder API**
 - **Found during:** Task 2 (first `swift build` of the bench)
@@ -130,7 +130,7 @@ _Task 1 followed the TDD RED→GREEN cycle (no REFACTOR commit — the GREEN imp
 - **Fix:** Marked `runBench()` and `deviceAnnotation()` `@MainActor` (the canonical way to drive that API — Plan-03 precedent); for the plan load, read the compute-units VALUE from `productionConfiguration()` and apply it to a fresh local `MLModelConfiguration` so the non-Sendable object is not sent across actors.
 - **Files modified:** `main.swift`
 - **Verification:** `swift build` clean (zero warnings).
-- **Committed in:** `ec08e61` (Task 2).
+- **Committed in:** `8c1c514` (Task 2).
 
 **3. [Rule 1 - Bug] The model rejected the rank-2 zero-copy input ("must be of rank 4")**
 - **Found during:** Task 2 (first real prediction through `SpikeInputBuffer`)
@@ -138,7 +138,7 @@ _Task 1 followed the TDD RED→GREEN cycle (no REFACTOR commit — the GREEN imp
 - **Fix:** Added `makeModelInputMultiArray()` — a rank-4 `(1,C,1,S)` zero-copy view via `MLMultiArray(dataPointer:shape:dataType:strides:deallocator:nil)` over the same surface base with `bytesPerRow`-aware strides; `decode` now feeds it. Still zero host copy (`dataPointer == surface base`, test-proven).
 - **Files modified:** `ZeroCopyInput.swift`, `NeuralDecoder.swift`, `ZeroCopyInputTests.swift` (+2 tests)
 - **Verification:** the bench ran 10,000 real predictions producing finite `(vx,vy)`; +2 rank-4 view tests green; full suite 19/19.
-- **Committed in:** `ec08e61` (Task 2).
+- **Committed in:** `8c1c514` (Task 2).
 
 **4. [Rule 2 - Missing Critical] Core ML could not load a raw `.mlpackage` at runtime**
 - **Found during:** Task 2 (loading the built `.mlpackage`)
@@ -146,7 +146,7 @@ _Task 1 followed the TDD RED→GREEN cycle (no REFACTOR commit — the GREEN imp
 - **Fix:** `NeuralDecoder.init` now detects a `.mlpackage` and compiles it via the synchronous `MLModel.compileModel(at:)` before loading; a `.mlmodelc` loads directly. Centralizes the fix for both the bench and the model-backed test.
 - **Files modified:** `NeuralDecoder.swift`
 - **Verification:** the bench loads + runs the 4-bit `.mlpackage`; the model-backed `decode()` test loads it (then is limited only by the separate Plan-03 seqLen-fixture issue, logged to `deferred-items.md`).
-- **Committed in:** `ec08e61` (Task 2).
+- **Committed in:** `8c1c514` (Task 2).
 
 **5. [Rule 1 - Bug] Self-introduced literal-grep collisions in comments (the documented Phase-4 pattern)**
 - **Found during:** Task 1 + Task 2 (acceptance-criteria greps)
@@ -154,7 +154,7 @@ _Task 1 followed the TDD RED→GREEN cycle (no REFACTOR commit — the GREEN imp
 - **Fix:** Reworded the comments to convey the same intent without the forbidden literal tokens (the established Plan-03 Deviation-3 / Phase-4 literal-grep-reword pattern). No behavior change.
 - **Files modified:** `LatencyHistogram.swift`, `main.swift`
 - **Verification:** both acceptance greps return clean; builds + tests still green.
-- **Committed in:** `8f86985` (Task 1), `ec08e61` (Task 2).
+- **Committed in:** `d6ae409` (Task 1), `8c1c514` (Task 2).
 
 ---
 
@@ -188,7 +188,7 @@ No stub patterns. `CortexDecoderBench` runs real predictions and writes a real d
 ## Self-Check: PASSED
 
 - All 5 created files + 5 modified files present on disk (`LatencyHistogram.swift`, `main.swift`, `LatencyHistogramTests.swift`, `05-latency-evidence.md`, `deferred-items.md`; `Package.swift`, `NeuralDecoder.swift`, `ZeroCopyInput.swift`, `ZeroCopyInputTests.swift`, `.gitignore`).
-- All 4 task commits found in git history (`aae093c` RED, `8f86985` GREEN, `ec08e61` Task 2, `bd713fc` Task 3).
+- All 4 task commits found in git history (`35994a5` RED, `d6ae409` GREEN, `8c1c514` Task 2, `9e6571c` Task 3).
 - Plan-level verification green: `swift build` exits 0; `swift test --package-path Packages/CortexDecoder` = 19 tests / 4 suites pass (incl. the 7 pure `LatencyHistogram` tests + 2 rank-4 zero-copy view tests; the Plan-03 suite still green); `CortexDecoderBench` exits 0 with no model (usage/skip) and ran a real 10k-pass histogram with a built model (`p50=123250 ns p99=139333 ns device=CPU`); `10_000` + `warmup` + `ContinuousClock` literally present in `main.swift`; the histogram JSON carries `deviceAnnotation`; NO timing measurement or latency-threshold assertion anywhere in the test suite (D-18); `.bench/` artifacts gitignored.
 
 ---

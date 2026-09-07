@@ -94,9 +94,9 @@ completed: 2026-09-05
 
 ## Task Commits
 
-1. **Task 1: 10-PREREGISTRATION.md** - `864259b` (docs)
-2. **Task 2: webgrid_ceiling.py, TDD** - `274c909` (test, RED) -> `ec1fccd` (feat, GREEN) -> `2dbc0d1` (fix, containment defect found in Task 3)
-3. **Task 3: run and publish the reference** - `69ccd6f` (docs, both artifacts in one commit)
+1. **Task 1: 10-PREREGISTRATION.md** - `a72344b` (docs)
+2. **Task 2: webgrid_ceiling.py, TDD** - `25c7e08` (test, RED) -> `7bf9f7e` (feat, GREEN) -> `ea69482` (fix, containment defect found in Task 3)
+3. **Task 3: run and publish the reference** - `b3eeba2` (docs, both artifacts in one commit)
 
 ## Files Created
 
@@ -149,7 +149,7 @@ Beyond the pre-registered decisions listed in the frontmatter, three were made d
 - **Verification:** `test_square_box_containment_is_exact_on_the_governing_axis` pins the exactness
   with `==` rather than `approx`, because `approx` would pass under the very defect it guards. It
   covers both axis orders. 13 tests green; the run then produced the number.
-- **Committed in:** `2dbc0d1`
+- **Committed in:** `ea69482`
 
 **2. [Rule 3 - Blocking] The gitignored dataset is absent in the worktree**
 
@@ -173,7 +173,7 @@ Beyond the pre-registered decisions listed in the frontmatter, three were made d
   and it reads better.
 - **Files modified:** `.planning/phases/10-v1-real-data-closed-loop-launch/10-ceiling-evidence.md`
 - **Verification:** The acceptance check now passes; no number changed.
-- **Committed in:** `69ccd6f`
+- **Committed in:** `b3eeba2`
 
 **Total deviations:** 3 auto-fixed (2 bugs, 1 blocking)
 **Impact on plan:** All three were necessary to produce the plan's own artifacts. No scope creep,
@@ -225,7 +225,7 @@ All seven mitigations in the plan's register are implemented, not just planned:
 | Threat ID | How it is closed |
 |---|---|
 | T-10-01-01 | `session_entry` refuses a `PENDING` or non-64-hex digest; the emitted JSON carries the full digest and `manifest_path`; the acceptance check compares the two files |
-| T-10-01-02 | The pre-registration's frontmatter carries the `rule:` prohibition, and `864259b` precedes `69ccd6f`, which precedes every decoded-number commit |
+| T-10-01-02 | The pre-registration's frontmatter carries the `rule:` prohibition, and `a72344b` precedes `b3eeba2`, which precedes every decoded-number commit |
 | T-10-01-03 | `load_tracks` indexes only `target_pos` and `cursor_pos` and closes the file; `test_the_script_never_reads_the_waveform_array` asserts the dataset name set structurally |
 | T-10-01-04 | The dwell rules are pinned on synthetic arrays with hand-known answers; nothing was adjusted to reproduce the expected table, and all twelve cells agreed anyway |
 | T-10-01-05 | Only aggregate counts are committed; the dataset link is gitignored, verified with `git check-ignore`, and the suite is proven to pass with the dataset absent |
@@ -256,5 +256,5 @@ network call is made.
 ## Self-Check: PASSED
 
 All 5 created artifacts and both source files exist on disk. All 5 task commits resolve as commit
-objects. The ordering claim holds: `864259b` (the pre-registration) is an ancestor of `69ccd6f`
+objects. The ordering claim holds: `a72344b` (the pre-registration) is an ancestor of `b3eeba2`
 (the measured number), so the contract is provably older than the result it governs (T-10-01-02).

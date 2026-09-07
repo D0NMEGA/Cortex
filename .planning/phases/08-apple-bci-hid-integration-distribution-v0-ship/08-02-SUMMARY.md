@@ -71,9 +71,9 @@ completed: 2026-06-23
 
 Each task was committed atomically (Task 1 is TDD: test → feat):
 
-1. **Task 1 (RED): failing round-trip tests** - `3972278` (test)
-2. **Task 1 (GREEN): Scan-Info round trip + instrumented log** - `4deae6d` (feat)
-3. **Task 2: note SYS-03/04 round-trip coverage in CI step** - `5ff63a4` (chore)
+1. **Task 1 (RED): failing round-trip tests** - `ff393a2` (test)
+2. **Task 1 (GREEN): Scan-Info round trip + instrumented log** - `c45d5b3` (feat)
+3. **Task 2: note SYS-03/04 round-trip coverage in CI step** - `122a939` (chore)
 
 **Plan metadata:** (final docs commit — this SUMMARY)
 
@@ -100,7 +100,7 @@ _Note: Task 1 was TDD (test → feat); no refactor commit was needed (implementa
 - **Fix:** Reworded to "NOT an entropy-backed generator" / "a fixed integer mix, NOT an entropy-backed generator" — meaning preserved, literal token gone.
 - **Files modified:** Packages/CortexBCIHID/Sources/CortexBCIHID/ScanInfoRoundTrip.swift
 - **Verification:** `grep -cE "Date\(\)|random|arc4random" ScanInfoRoundTrip.swift` → 0.
-- **Committed in:** `4deae6d` (Task 1 GREEN commit)
+- **Committed in:** `c45d5b3` (Task 1 GREEN commit)
 
 **2. [Rule 3 - Blocking] MainActor isolation on the test suite**
 - **Found during:** Task 1 (GREEN — first test run failed to compile)
@@ -108,7 +108,7 @@ _Note: Task 1 was TDD (test → feat); no refactor commit was needed (implementa
 - **Fix:** Annotated the suite `@Suite(...) @MainActor` — the exact precedent the package's own `DaemonRegistrationTests` uses. The intent stays a pure function regardless of isolation (asserted by `respondIsDeterministic`).
 - **Files modified:** Packages/CortexBCIHID/Tests/CortexBCIHIDTests/ScanInfoRoundTripTests.swift
 - **Verification:** `swift test --filter ScanInfoRoundTripTests` → 5/5 green.
-- **Committed in:** `4deae6d` (Task 1 GREEN commit)
+- **Committed in:** `c45d5b3` (Task 1 GREEN commit)
 
 **3. [Rule 3 - Blocking] SwiftLint identifier_name on short names**
 - **Found during:** Task 1 (GREEN — SwiftLint --strict, the CI gate)
@@ -116,7 +116,7 @@ _Note: Task 1 was TDD (test → feat); no refactor commit was needed (implementa
 - **Fix:** Renamed to `deltaX`/`deltaY`/`state` and `isqrtCeil(_ itemCount:)`. (The test file's short locals were also rewritten to descriptive names, e.g. `e0`→`firstEntry`, `a`→`responseA`.)
 - **Files modified:** ScanInfoRoundTrip.swift, ScanInfoRoundTripTests.swift
 - **Verification:** `swiftlint lint --strict` (CI way, from root) → no violations in the new files.
-- **Committed in:** `4deae6d` (Task 1 GREEN commit)
+- **Committed in:** `c45d5b3` (Task 1 GREEN commit)
 
 ---
 
@@ -139,9 +139,9 @@ None - no external service configuration required. (The live IOHIDUserDevice reg
 - FOUND: Packages/CortexBCIHID/Sources/CortexBCIHID/ScanInfoRoundTrip.swift
 - FOUND: Packages/CortexBCIHID/Sources/CortexBCIHID/RoundTripLog.swift
 - FOUND: Packages/CortexBCIHID/Tests/CortexBCIHIDTests/ScanInfoRoundTripTests.swift
-- FOUND commit: 3972278 (test — RED)
-- FOUND commit: 4deae6d (feat — GREEN)
-- FOUND commit: 5ff63a4 (chore — CI)
+- FOUND commit: ff393a2 (test — RED)
+- FOUND commit: c45d5b3 (feat — GREEN)
+- FOUND commit: 122a939 (chore — CI)
 - VERIFY: `swift test --package-path Packages/CortexBCIHID` → 24 tests / 4 suites passed (incl. 5 ScanInfoRoundTripTests)
 - VERIFY: `grep -n "CortexBCIHID" .github/workflows/ci.yml` matches; no `--filter` on the CortexBCIHID swift-test step; ci.yml is valid YAML
 

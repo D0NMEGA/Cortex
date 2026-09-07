@@ -83,7 +83,7 @@ iPad-Pro-M4 number and none may be quoted as one.
 | `refit_reversed_target` | `reversed_track` | 2, target-determined by construction |
 
 Recorded-cursor replay reference: 147 of 1,025 at acquisition radius 2.8613660406415042 mm and
-dwell 0.30 s, committed at `864259b` before any decoded number existed.
+dwell 0.30 s, committed at `a72344b` before any decoded number existed.
 
 ### The real-data decoder, from Phase 9
 

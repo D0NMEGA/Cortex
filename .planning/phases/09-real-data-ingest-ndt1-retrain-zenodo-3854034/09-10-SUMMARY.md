@@ -77,9 +77,9 @@ completed: 2026-09-02
 
 | Task | Name | Commit | Files |
 | ---- | ---- | ------ | ----- |
-| 1 | Superseded banners on the three historical evidence artifacts | `774d3c6` | 04-training-evidence.md, 04-palettization-evidence.md, 05-velocity-head-evidence.md |
-| 2 | Label the synthetic numbers on the three decoder-owned planning surfaces | `6b77957` | PROJECT.md, ROADMAP.md, REQUIREMENTS.md |
-| - | Out-of-scope discoveries logged | `43ac421` | deferred-items-09-10.md |
+| 1 | Superseded banners on the three historical evidence artifacts | `b489fdf` | 04-training-evidence.md, 04-palettization-evidence.md, 05-velocity-head-evidence.md |
+| 2 | Label the synthetic numbers on the three decoder-owned planning surfaces | `b52cd6e` | PROJECT.md, ROADMAP.md, REQUIREMENTS.md |
+| - | Out-of-scope discoveries logged | `0675ccc` | deferred-items-09-10.md |
 
 ## What changed
 
@@ -125,7 +125,7 @@ Nothing else in ROADMAP.md was touched. The Milestones block, the Future work se
 - **Issue:** The plan instructed the banner to say `test_convert_velocity_output.py:55` generates labels as `last_bin @ w_true + 0.01 * noise`. That instruction was inherited from `09-velocity-evidence.md:69` and `Decoder/scripts/fit_velocity_real.py:13`, which say the same thing. But `velocity_r2.json`, the file `05-velocity-head-evidence.md` sources 0.99985 from, is written by `Decoder/tests/test_velocity_head.py:155`, in `test_load_ridge_reproduces_linear_map_and_records_r2`. That test uses `n = 800` with `split = 600`, giving the `n=200` the Phase-5 artifact reports; `test_convert_velocity_output.py` uses `n_windows = 64`.
 - **Fix:** The banner cites the correct producer and its actual label construction, `x_all @ w_true + b_true + 0.01 * noise`. The substance of the Phase-9 claim is unaffected, since both tests build labels as a seeded linear map of the design matrix plus noise and are therefore both self-consistency checks. Only the file reference was wrong.
 - **Files modified:** `05-velocity-head-evidence.md`
-- **Commit:** `774d3c6`
+- **Commit:** `b489fdf`
 - **Deferred:** correcting the two Phase-9 references is logged as item 5 in `deferred-items-09-10.md`; both files are outside this plan's `files_modified`.
 
 **2. [Rule 2 - Missing critical labeling] Extended the sweep past the two lines the interfaces table named**
@@ -134,7 +134,7 @@ Nothing else in ROADMAP.md was touched. The Milestones block, the Future work se
 - **Issue:** The plan's `<interfaces>` table located two PROJECT.md lines (41 and 55). Three more decoder-owned lines on the same surfaces cite numbers this phase invalidated: PROJECT.md's DEC-05 palettization bullet, its Active-list palettization twin, and the Key Decisions CoreML row with its 226 tally. REQUIREMENTS DEC-06 and DEC-08 carry the same 226. Leaving them unlabeled is exactly threat T-09-10-01, an unlabeled synthetic number reading as a real-data result, and the prompt's success criteria require the 226 correction explicitly.
 - **Fix:** Labeled all five, each with the real-data replacement and its artifact. Every edit is an in-place clause append; no line was restructured or reformatted.
 - **Files modified:** `.planning/PROJECT.md`, `.planning/REQUIREMENTS.md`
-- **Commit:** `6b77957`
+- **Commit:** `b52cd6e`
 
 **3. [Rule 3 - Blocking] Rephrased an RD-03 cross-reference that would have broken the plan's own acceptance check**
 
@@ -142,7 +142,7 @@ Nothing else in ROADMAP.md was touched. The Milestones block, the Future work se
 - **Issue:** The RD-03 line originally ended "README and ADR-0002 remain for RD-09". The plan's acceptance check finds each requirement's line with `if rid in l`, so the literal `RD-09` inside the RD-03 line made the RD-09 lookup match RD-03's checked line and fail the assertion. A committed doc should not trip a documented gate.
 - **Fix:** Rephrased to "remain for the Phase-10 repo-wide sweep". The plan's verification block now passes verbatim.
 - **Files modified:** `.planning/REQUIREMENTS.md`
-- **Commit:** `6b77957`
+- **Commit:** `b52cd6e`
 
 ### Plan facts verified rather than transcribed
 
@@ -193,6 +193,6 @@ The Key Decisions table's Outcome column marks a validated decision with a check
 
 - `.planning/phases/09-real-data-ingest-ndt1-retrain-zenodo-3854034/09-10-SUMMARY.md` FOUND
 - `.planning/phases/09-real-data-ingest-ndt1-retrain-zenodo-3854034/deferred-items-09-10.md` FOUND
-- Commit `774d3c6` FOUND
-- Commit `6b77957` FOUND
-- Commit `43ac421` FOUND
+- Commit `b489fdf` FOUND
+- Commit `b52cd6e` FOUND
+- Commit `0675ccc` FOUND

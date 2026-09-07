@@ -285,7 +285,7 @@ a failed or skipped capture would have left the requirement's basis untouched.
 | Evidence | Artifact | What it establishes | Needs a GUI? |
 |---|---|---|---|
 | The webgrid hit count on real spikes, four arms | `10-refit-real.json`: `raw` 0, `kalman_only` 0, `refit` 70, `refit_reversed_target` 2, of 1025 | The RD-08 hit criterion itself | No |
-| The recorded-cursor replay reference it is scored against | `10-ceiling.json`, 147 of 1025 at radius 2.8613660406415042 mm and dwell 0.3 s, committed in `864259b` before any decoded number existed | That the count is interpretable | No |
+| The recorded-cursor replay reference it is scored against | `10-ceiling.json`, 147 of 1025 at radius 2.8613660406415042 mm and dwell 0.3 s, committed in `a72344b` before any decoded number existed | That the count is interpretable | No |
 | The full D-05 chain, decode through cursor integration to HID pointer-report encode | Seam B in `10-replay.json`: 73,128 decodes succeeded, 73,128 pointer reports encoded, 0 frames dropped, `model_backed` and `spike_buffer_backed` true, plus the `--tamper` control that failed closed on a flipped AES-GCM tag byte | That the loop closes end to end | No |
 | Seam A software-timed p99 on the real-data path, every tick model-backed | Seam A in `10-replay.json`: p50 4,753,046 ns, p99 8,831,017 ns over n = 2286, debug, with `ticks_model_backed` 2294 of `ticks_total` 2294 | The re-derived latency RD-08 asks for | No |
 | Decoder throughput on the real Phase-9 model | `CortexDecoderBench`, n = 10,000, p50 132,291 ns, p99 376,417 ns, device CPU, Mac-corroborating | That the shipped model runs on real input | No |
@@ -366,7 +366,7 @@ call. It is flagged here, as `10-PREREGISTRATION.md` section 15 requires, and no
   `10-HUMAN-UAT.md`, DEFERRED, prerequisite "iPad Pro M4 not provisioned".
 - It is **not** a photodiode measurement. The glass-to-glass figures on screen are software-timed and
   carry the verbatim D-07 label, "software-timed pipeline latency — excludes the compositor's 1-3 frames
-  of scanout, which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies". (Amendment, Plan 10-11, commit cfab16d: `GlassToGlassTimer.methodologyLabel` was subsequently changed to "software-timed pipeline latency - excludes the compositor's 1-3 frames of scanout; measuring that delta needs a photodiode rig, which is retired to Future work (LAT-01..LAT-08) and was never built".) The retired
+  of scanout, which is exactly the delta the v1 photodiode rig (Phases 9-10) quantifies". (Amendment, Plan 10-11, commit 78756ee: `GlassToGlassTimer.methodologyLabel` was subsequently changed to "software-timed pipeline latency - excludes the compositor's 1-3 frames of scanout; measuring that delta needs a photodiode rig, which is retired to Future work (LAT-01..LAT-08) and was never built".) The retired
   24.7 ms spec target is not claimed as achieved here or anywhere else in this phase.
 - It is **not** a closed-loop result. `open-loop replay of a recorded session; the subject was not in the
   loop`: the animal's spikes were recorded in 2016 and cannot respond to what the decoder does with them.

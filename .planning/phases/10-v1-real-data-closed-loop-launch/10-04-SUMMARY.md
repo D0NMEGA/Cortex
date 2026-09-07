@@ -81,12 +81,12 @@ completed: 2026-09-05
 
 | # | Task | Commit | Type |
 |---|---|---|---|
-| 1 | ReplayExport contract test (RED) | `6f96ddd` | test |
-| 1 | CortexCore.ReplayExport (GREEN) | `5bb164d` | feat |
-| 2 | Seam and counter tests (RED) | `fe53217` | test |
-| 2 | SpikeWindowSource, RecordedSpikeSource, the pipeline changes (GREEN) | `778776c` | feat |
-| 3 | CortexDemoBench --real, Seam A | `5b251d5` | feat |
-| 2 | The D-13 determinism contract on the seam | `f2bbac5` | docs |
+| 1 | ReplayExport contract test (RED) | `b4e0270` | test |
+| 1 | CortexCore.ReplayExport (GREEN) | `4f96ace` | feat |
+| 2 | Seam and counter tests (RED) | `7aba246` | test |
+| 2 | SpikeWindowSource, RecordedSpikeSource, the pipeline changes (GREEN) | `7bc008d` | feat |
+| 3 | CortexDemoBench --real, Seam A | `6842682` | feat |
+| 2 | The D-13 determinism contract on the seam | `28890a3` | docs |
 
 ## Task 1: one Swift reader of the D-06 export
 
@@ -243,7 +243,7 @@ measures a strictly wider boundary and is comparable to neither.
 - **Fix:** located the token in `08-SECURITY.md:56` and `08-VALIDATION.md:50` as `LissajousProducer`
   and checked all three new/modified pipeline files against it.
 - **Verification:** zero occurrences in the three files; `render-policy.sh` and `--self-test` exit 0.
-- **Committed in:** `778776c`
+- **Committed in:** `7bc008d`
 
 **2. [Rule 2 - Missing critical] `n_bins * 424` could overflow before the size check**
 
@@ -254,7 +254,7 @@ measures a strictly wider boundary and is comparable to neither.
   test alone does not close it.
 - **Fix:** a second guard, `nBins <= Int.max / recordBytes`, with its own `.malformedSidecar` reason.
 - **Files:** `ReplayExport.swift`
-- **Committed in:** `5bb164d`
+- **Committed in:** `4f96ace`
 
 **3. [Rule 2 - Missing critical] A model that never loads reported no reason at all**
 
@@ -270,7 +270,7 @@ measures a strictly wider boundary and is comparable to neither.
   it runs on a clean clone with no model" - implementable: an unloadable model URL now produces a
   recorded reason with no `.mlpackage` present.
 - **Files:** `ClosedLoopPipeline.swift`
-- **Committed in:** `778776c`
+- **Committed in:** `7bc008d`
 
 **4. [Rule 2 - Missing critical] A short window would have trapped instead of falling back**
 
@@ -279,7 +279,7 @@ measures a strictly wider boundary and is comparable to neither.
   shorter than `numBins * channels` would trap mid-run rather than degrade.
 - **Fix:** a length guard that records the mismatch and returns nil, so it is a legible fallback.
 - **Files:** `ClosedLoopPipeline.swift`
-- **Committed in:** `778776c`
+- **Committed in:** `7bc008d`
 
 **5. [Rule 2 - Missing critical] `CortexCore` was an undeclared transitive import in the test target**
 
@@ -289,7 +289,7 @@ measures a strictly wider boundary and is comparable to neither.
   dependency.
 - **Fix:** `.product(name: "CortexCore", package: "CortexCore")` added to the test target.
 - **Files:** `Packages/CortexDemo/Package.swift`
-- **Committed in:** `778776c`
+- **Committed in:** `7bc008d`
 
 **6. [Rule 2 - Missing critical] The T-10-04-03 mitigation had no executed control for the actual trap**
 
@@ -302,7 +302,7 @@ measures a strictly wider boundary and is comparable to neither.
   nil; at 8 zero ticks are model-backed and the reason names `seqLen 8` and `numBins 8`. It skips
   cleanly with no `CORTEX_MODEL_URL`, and it passes with the shipped fp16 model wired.
 - **Files:** `RecordedSpikeSourceTests.swift`
-- **Committed in:** `5b251d5`
+- **Committed in:** `6842682`
 
 **7. [Rule 3 - Blocking] `--real` was unreachable through the no-flag guard**
 
@@ -312,7 +312,7 @@ measures a strictly wider boundary and is comparable to neither.
 - **Fix:** `!isReal` added to that condition, plus a `--real` paragraph in the usage string. These are
   the only two pre-existing lines touched, and neither is in the measurement path.
 - **Files:** `CortexDemoBench/main.swift`
-- **Committed in:** `5b251d5`
+- **Committed in:** `6842682`
 
 **8. [Rule 3 - Blocking] A bare `Decoder/exports` symlink left the worktree dirty**
 
@@ -332,7 +332,7 @@ measures a strictly wider boundary and is comparable to neither.
   and `centre_y_mm`.
 - **Fix:** all 13 are decoded.
 - **Files:** `ReplayExport.swift`
-- **Committed in:** `5bb164d`
+- **Committed in:** `4f96ace`
 
 **10. [Rule 2 - Missing critical] A zero-window export would have reported percentiles over no samples**
 
@@ -341,7 +341,7 @@ measures a strictly wider boundary and is comparable to neither.
   have proceeded to a histogram over an empty array.
 - **Fix:** a guard that names the bin count and refuses, rather than reporting.
 - **Files:** `CortexDemoBench/main.swift`
-- **Committed in:** `5b251d5`
+- **Committed in:** `6842682`
 
 **Total: 10 auto-fixed (6 missing-critical, 3 blocking, 1 bug). No Rule 4 escalation.**
 
@@ -374,7 +374,7 @@ pre-existing.** With `CORTEX_MODEL_URL` set to `ndt1_real_vel_sweep_fp16.mlpacka
 `Expectation failed: anyModelTick`. It builds the pipeline with the default 8-bin `SyntheticSpikeSource`
 and asserts NDT1 ran; the model's input is `(1, 96, 1, 32)`, so it structurally cannot.
 
-This was **proven**, not argued: the pre-change tree at commit `5bb164d` was rebuilt with
+This was **proven**, not argued: the pre-change tree at commit `4f96ace` was rebuilt with
 `git archive` and produced the identical failure. The `try?` the old code used and the `do`/`catch`
 the new code uses both return nil and both fall back, so the observable outcome is unchanged.
 
@@ -450,7 +450,7 @@ Xcode 26.3.
 | `git status --short` | clean; nothing from `Decoder/exports/` or `.bench/` |
 | `Tools/scripts/bps-policy.sh` | **exit 1**, RED - pre-existing, Plan 10-05 owns it |
 | `Tools/scripts/bps-policy.sh --self-test` | **exit 0**, the gate itself is intact |
-| `swift test --package-path Packages/CortexDemo` with `CORTEX_MODEL_URL` set | **1 failure**, `ClosedLoopPipelineTests` Test 2 - proven pre-existing on `5bb164d`, deferred |
+| `swift test --package-path Packages/CortexDemo` with `CORTEX_MODEL_URL` set | **1 failure**, `ClosedLoopPipelineTests` Test 2 - proven pre-existing on `4f96ace`, deferred |
 
 ### Acceptance criteria greps
 
@@ -503,12 +503,12 @@ Files claimed as modified, all confirmed changed in the commits below:
 `ClosedLoopPipelineTests.swift`, `Packages/CortexDemo/Package.swift`, `deferred-items.md`.
 
 Commits claimed, all resolving as commit objects on top of the expected base
-`657e6a7d9aa055085019044490da16e9984046ca`: `6f96ddd`, `5bb164d`, `fe53217`, `778776c`, `5b251d5`,
-`f2bbac5`.
+`657e6a7d9aa055085019044490da16e9984046ca`: `b4e0270`, `4f96ace`, `7aba246`, `7bc008d`, `6842682`,
+`28890a3`.
 
 The two load-bearing claims were executed, not asserted: `--real` reported **2294 of 2294** ticks
 model-backed against the real export and the shipped fp16 model and exited **0**, and the
-`ClosedLoopPipelineTests` Test 2 failure was reproduced on a rebuilt pre-change tree at `5bb164d`
+`ClosedLoopPipelineTests` Test 2 failure was reproduced on a rebuilt pre-change tree at `4f96ace`
 before being deferred.
 
 *Phase: 10-v1-real-data-closed-loop-launch*

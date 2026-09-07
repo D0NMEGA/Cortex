@@ -84,8 +84,8 @@ completed: 2026-04-30
 
 Each task was committed atomically:
 
-1. **Task 1: SwiftFormat + SwiftLint + hot-path policy script** -- `4cf9ac2` (feat)
-2. **Task 2: CI workflow `.github/workflows/ci.yml`** -- `672148d` (feat)
+1. **Task 1: SwiftFormat + SwiftLint + hot-path policy script** -- `fcd50ec` (feat)
+2. **Task 2: CI workflow `.github/workflows/ci.yml`** -- `1679da3` (feat)
 
 **Plan metadata commit:** `_to be added with this SUMMARY.md_` (docs)
 
@@ -115,7 +115,7 @@ Each task was committed atomically:
 - **Files modified:** `Tools/scripts/hotpath-policy.sh` only
 - **Verification:** Self-test re-ran and now passes both halves -- synthetic violation in /tmp triggers exit 1; default Phase 1 invocation exits 0 with `"OK: hot-path policy clean across 1 dir(s)"`
 - **Why Rule 1 (not Rule 4 architectural):** The deviation does not change the project's architecture, threat model, or library choices. It only narrows the script's default scope to match Plan 01-01's actual layout. The plan's CONTEXT.md D-15 explicitly anticipates that DIRS_ARRAY will evolve as future phases add hot-path code, so this fits the documented evolution pattern.
-- **Committed in:** `4cf9ac2` (Task 1 commit; deviation comment is part of the script content)
+- **Committed in:** `fcd50ec` (Task 1 commit; deviation comment is part of the script content)
 
 ---
 
@@ -191,7 +191,7 @@ Phase 8 follow-up (when paid Apple Developer Program enrollment lands):
 - Hot-path policy self-test: synthetic violation in `/tmp/cortex-policy-test/violator.swift` triggered exit 1 with both `dispatch_async` and `import Foundation` errors logged; default invocation against Phase 1 dirs exits 0 with `"OK: hot-path policy clean across 1 dir(s)"` -- VERIFIED
 - File `.github/workflows/ci.yml` exists and parses as valid YAML (`python3 -c 'import yaml; yaml.safe_load(...)'`) -- VERIFIED
 - All 15 structural acceptance criteria from Plan 01-06 Task 2 verified via grep against ci.yml -- VERIFIED
-- Two atomic commits: `4cf9ac2` (Task 1), `672148d` (Task 2) -- VERIFIED via `git log --oneline -5`
+- Two atomic commits: `fcd50ec` (Task 1), `1679da3` (Task 2) -- VERIFIED via `git log --oneline -5`
 
 ---
 *Phase: 01-foundation-2026-toolchain*

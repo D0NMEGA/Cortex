@@ -78,10 +78,10 @@ completed: 2026-06-22
 
 ## Task Commits
 
-1. **Task 1 (RED): failing WebgridParams layout tests** — `d92c733` (test)
-2. **Task 1 (GREEN): WebgridParams uniforms struct** — `f663e62` (feat)
-3. **Task 2: Webgrid.metal 30×30 compute shader** — `6f78353` (feat)
-4. **Task 3: WebgridFrameEncoder + MetalLayerConfig + Package wiring** — `20fe4dc` (feat)
+1. **Task 1 (RED): failing WebgridParams layout tests** — `9b59ad1` (test)
+2. **Task 1 (GREEN): WebgridParams uniforms struct** — `ea26359` (feat)
+3. **Task 2: Webgrid.metal 30×30 compute shader** — `198ec02` (feat)
+4. **Task 3: WebgridFrameEncoder + MetalLayerConfig + Package wiring** — `b221975` (feat)
 
 _Plan metadata commit owned by the orchestrator (executor does not write STATE/ROADMAP/REQUIREMENTS)._
 
@@ -111,7 +111,7 @@ _Plan metadata commit owned by the orchestrator (executor does not write STATE/R
 - **Fix:** Declared `resources: [.process("Webgrid.metal")]` on the target (the plan explicitly permitted "add a `resources:`/`.process` entry only if required"). This generates the module's `resource_bundle_accessor.swift` (`Bundle.module`) and, under the Apple/Xcode build system, compiles the shader into `default.metallib` inside the module bundle.
 - **Files modified:** `Packages/CortexRender/Package.swift`
 - **Verification:** `swift build` warning gone ("Copying Webgrid.metal" → resource bundle); standalone `xcrun metal -c` + `metallib` link both OK; encoder loads via `.module`.
-- **Committed in:** `6f78353` (Task 2 commit)
+- **Committed in:** `198ec02` (Task 2 commit)
 
 **2. [Rule 1 - Bug] `half` is a reserved MSL type — renamed the SDF parameter**
 - **Found during:** Task 2 (standalone shader validation)
@@ -119,7 +119,7 @@ _Plan metadata commit owned by the orchestrator (executor does not write STATE/R
 - **Fix:** Renamed the parameter `half` → `halfExtent` (positional call site unchanged).
 - **Files modified:** `Packages/CortexRender/Sources/CortexRender/Webgrid.metal`
 - **Verification:** `xcrun metal -c` + `metallib` link both succeed after the rename.
-- **Committed in:** `6f78353` (Task 2 commit)
+- **Committed in:** `198ec02` (Task 2 commit)
 
 **3. [Rule 1 - Bug] `WebgridParams` members unreadable under MainActor default isolation — marked `nonisolated`**
 - **Found during:** Task 1 (GREEN)
@@ -127,7 +127,7 @@ _Plan metadata commit owned by the orchestrator (executor does not write STATE/R
 - **Fix:** Marked `public nonisolated struct WebgridParams` — correct for a trivial `Sendable` uniforms payload that must be constructed/read from any context (the callback thread).
 - **Files modified:** `Packages/CortexRender/Sources/CortexRender/WebgridParams.swift`
 - **Verification:** `swift test` GREEN (3/3); `swift build` clean under strict concurrency with no warnings.
-- **Committed in:** `f663e62` (Task 1 GREEN commit)
+- **Committed in:** `ea26359` (Task 1 GREEN commit)
 
 **4. [Rule 3 - Blocking] Reworded a comment to avoid a false-positive `storageModeManaged` grep gate**
 - **Found during:** Task 3 (acceptance-criteria check)
@@ -135,7 +135,7 @@ _Plan metadata commit owned by the orchestrator (executor does not write STATE/R
 - **Fix:** Reworded the comment to "no CPU-managed storage mode" / "options:.storageModeShared" without the standalone `storageModeManaged` literal. Meaning preserved; criterion now passes.
 - **Files modified:** `Packages/CortexRender/Sources/CortexRender/WebgridFrameEncoder.swift`
 - **Verification:** `grep -rq 'storageModeManaged' Packages/CortexRender/Sources` returns nothing; rebuild + retest green.
-- **Committed in:** `20fe4dc` (Task 3 commit)
+- **Committed in:** `b221975` (Task 3 commit)
 
 ### Environment setup (not a code deviation)
 
@@ -169,7 +169,7 @@ None - no external service configuration required. (Local note: building/validat
 ## Self-Check: PASSED
 
 - All 5 created source/test files verified on disk + the SUMMARY.
-- All 4 task commits (`d92c733`, `f663e62`, `6f78353`, `20fe4dc`) verified in `git log`.
+- All 4 task commits (`9b59ad1`, `ea26359`, `198ec02`, `b221975`) verified in `git log`.
 - `swift build` + `swift test` (3/3) green; full plan `<verification>` block passes; `Webgrid.metal` validated via standalone `xcrun metal -c` + `metallib`.
 
 ---

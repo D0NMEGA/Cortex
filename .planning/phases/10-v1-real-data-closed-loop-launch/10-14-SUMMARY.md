@@ -101,16 +101,16 @@ exist solely to prove the exclusions are not blanket holes.**
 ## Task Commits
 
 1. **Defects 1 and 2: PERF-02's unearned "verified", plus dated supersession notes on ADR-0001 and
-   ADR-0002** -- `886bb14` (fix). Committed first so every commit leaves the tree green: these three
+   ADR-0002** -- `6f0dc3a` (fix). Committed first so every commit leaves the tree green: these three
    corrections stand on their own and the gate that asserts them does not exist yet.
 2. **Task 1: `honesty-sweep.sh` -- the token scan, the banner check, the preservation checks, and
-   the seven assertions' controls** -- `adee068` (feat). Includes the nine label fixes and the
+   the seven assertions' controls** -- `b4be2de` (feat). Includes the nine label fixes and the
    missing evidence banner, which are what make Task 1's own acceptance criterion ("exits 0 on the
    real tree") true.
-3. **Task 2: wire the honesty sweep into CI** -- `3f0429c` (ci).
+3. **Task 2: wire the honesty sweep into CI** -- `66d590a` (ci).
 
 `.planning/ROADMAP.md` and `.planning/STATE.md` are untouched, per the execution boundary:
-`git diff --name-only b6e4551..HEAD | grep -E 'ROADMAP|STATE'` returns nothing.
+`git diff --name-only b3bbb97..HEAD | grep -E 'ROADMAP|STATE'` returns nothing.
 
 ## Files Created/Modified
 
@@ -485,7 +485,7 @@ comments. See the note to 10-16 below.
 
 ### LAT-01 through LAT-08 preserved verbatim
 
-`git diff --name-only b6e4551..HEAD` does not list `.planning/ROADMAP.md`, so ROADMAP preservation is
+`git diff --name-only b3bbb97..HEAD` does not list `.planning/ROADMAP.md`, so ROADMAP preservation is
 structural rather than asserted. `.planning/REQUIREMENTS.md` changed on line 125 only (PERF-02); the
 eight LAT checkbox lines at 111-120 are byte-identical, including LAT-07's verbatim spec-target
 wording. Assertion (c) now checks all eight identifiers in both files on every commit, with controls
@@ -537,7 +537,7 @@ wording. Assertion (c) now checks all eight identifiers in both files on every c
 - **Files modified:** `Tools/scripts/honesty-sweep.sh`
 - **Verification:** `./Tools/scripts/honesty-sweep.sh` -> exit 0; controls 3, 3b and 9 prove
   `.planning/` files can still redden the build.
-- **Committed in:** `adee068`
+- **Committed in:** `b4be2de`
 
 **2. [Rule 2 - Missing Critical] The ADR exclusion the third defect requires would have been an
 unpaid hole**
@@ -553,7 +553,7 @@ unpaid hole**
 - **Files modified:** `Tools/scripts/honesty-sweep.sh`, `docs/adr/0001-*.md`, `docs/adr/0002-*.md`
 - **Verification:** `ok [supersede] every superseded ADR points forward, dated`; controls 8 and 8b
   both exit 1.
-- **Committed in:** `886bb14` (the notes), `adee068` (the assertion)
+- **Committed in:** `6f0dc3a` (the notes), `b4be2de` (the assertion)
 
 **3. [Rule 2 - Missing Critical] The defect-1 class needed an assertion the plan does not specify**
 
@@ -565,7 +565,7 @@ unpaid hole**
 - **Files modified:** `Tools/scripts/honesty-sweep.sh`
 - **Verification:** Control 9 exits 1; the gate reported `.planning/REQUIREMENTS.md:125` verbatim on
   the pre-fix tree.
-- **Committed in:** `adee068`
+- **Committed in:** `b4be2de`
 
 **4. [Rule 1 - Bug] `0.161` as a bare token flagged three real measurements**
 
@@ -581,7 +581,7 @@ unpaid hole**
 - **Files modified:** `Tools/scripts/honesty-sweep.sh`
 - **Verification:** `ok [banner]` on the real tree; control 11 exits 1 on a bare `0.161` in the same
   file whose `0.1618` is exempt.
-- **Committed in:** `adee068`
+- **Committed in:** `b4be2de`
 
 **5. [Rule 1 - Bug] `05-ane-eligibility-evidence.md` carried the superseded 226/226 tally with no
 banner**
@@ -594,7 +594,7 @@ banner**
 - **Files modified:** `.planning/phases/05-.../05-ane-eligibility-evidence.md`
 - **Verification:** `ok [banner] every superseded evidence artifact points forward`; control 2
   proves banner removal bites.
-- **Committed in:** `adee068`
+- **Committed in:** `b4be2de`
 
 **6. [Rule 1 - Bug] The plan's roll-call invokes `validate-privacy-manifest.sh` with no arguments**
 
@@ -617,7 +617,7 @@ banner**
   and to point at the gate's header for the enumerated reasons. Not exempted.
 - **Files modified:** `.github/workflows/ci.yml`
 - **Verification:** gate exit 0 after the reword; ci.yml still parses.
-- **Committed in:** `3f0429c`
+- **Committed in:** `66d590a`
 
 **Total deviations:** 7 auto-fixed (1 blocking, 2 missing-critical, 4 bugs).
 **Impact on plan:** Every one is caused directly by this plan's own change or by a premise in the
@@ -667,7 +667,7 @@ creates and removes; it takes no input from outside the repository.
 4. **10-17 (first push, first CI run): the workflow now has 58 steps, and two of them are new since
    the last summary.** The honesty sweep runs twice (gate, then `--self-test`) in `build-and-lint`
    between the README gate and the 120Hz plist check. Every one of the ten gates plus their
-   self-tests is green locally at `3f0429c`; that transcript is above and it is what the README's
+   self-tests is green locally at `66d590a`; that transcript is above and it is what the README's
    CI-status sentence currently rests on.
 5. **10-17: the pre-push audit greps should include `./Tools/scripts/honesty-sweep.sh`.** It is the
    only gate that scans the whole tree, so it is the cheapest single check that nothing published
@@ -691,7 +691,7 @@ None - no external service configuration required.
 
 ## Next Phase Readiness
 
-Plan 10-14 is complete and all ten gates plus their self-tests are green at `3f0429c`. Wave 10 is
+Plan 10-14 is complete and all ten gates plus their self-tests are green at `66d590a`. Wave 10 is
 done; 10-15 (the toolchain pin and the SwiftFormat sweep) is unblocked. The one thing 10-15 and 10-16
 need from this plan is note 2 above: a bulk reformat can split a token off its label, so run the
 sweep before committing.
@@ -711,9 +711,9 @@ information rather than a blocker.
 - `.planning/phases/05-.../05-ane-eligibility-evidence.md` -- FOUND, banner present
 - `.planning/REQUIREMENTS.md` -- FOUND, PERF-02 reworded, all eight LAT lines byte-identical
 - `.planning/ROADMAP.md`, `.planning/STATE.md` -- NOT in this plan's diff, as required
-- Commit `886bb14` -- FOUND in `git log`
-- Commit `adee068` -- FOUND in `git log`
-- Commit `3f0429c` -- FOUND in `git log`
+- Commit `6f0dc3a` -- FOUND in `git log`
+- Commit `b4be2de` -- FOUND in `git log`
+- Commit `66d590a` -- FOUND in `git log`
 
 *Phase: 10-v1-real-data-closed-loop-launch*
 *Completed: 2026-09-07*

@@ -260,9 +260,9 @@ held-out co-bps remains 0.4096 on the D-12 path.
 
 | Task | Name | Commit | Files |
 |---|---|---|---|
-| 1 | decoder-policy.sh + check_decoder_provenance.py with a four-case self-test | `5dcf816` | `Tools/scripts/decoder-policy.sh`, `Tools/scripts/check_decoder_provenance.py` |
-| 2 | test_metrics_schema.py, the committed artifact's contract | `1e6b7df` | `Decoder/tests/test_metrics_schema.py` |
-| 3 | the decoder-python CI job (D-18, RD-06c) | `288910a` | `.github/workflows/ci.yml` |
+| 1 | decoder-policy.sh + check_decoder_provenance.py with a four-case self-test | `a1f1a31` | `Tools/scripts/decoder-policy.sh`, `Tools/scripts/check_decoder_provenance.py` |
+| 2 | test_metrics_schema.py, the committed artifact's contract | `c3cf8af` | `Decoder/tests/test_metrics_schema.py` |
+| 3 | the decoder-python CI job (D-18, RD-06c) | `a0b0fd8` | `.github/workflows/ci.yml` |
 
 ## Deviations from Plan
 
@@ -283,7 +283,7 @@ held-out co-bps remains 0.4096 on the D-12 path.
   `release`; `prune-cache` now defaults to false) do not apply. The substitution and its reasoning
   are in the job's comment block, not silent.
 - **Files modified:** `.github/workflows/ci.yml`
-- **Commit:** `288910a`
+- **Commit:** `a0b0fd8`
 
 **2. [Rule 2 - Missing correctness] A declared exclusion must not have to lie to pass**
 
@@ -297,7 +297,7 @@ held-out co-bps remains 0.4096 on the D-12 path.
   `metrics.excluded_sessions`. With no exclusions, which is the committed case, this reduces exactly
   to the set equality the plan specified, and the self-test's checksum case is unaffected.
 - **Files modified:** `Tools/scripts/check_decoder_provenance.py`, `Decoder/tests/test_metrics_schema.py`
-- **Commits:** `5dcf816`, `1e6b7df`
+- **Commits:** `a1f1a31`, `c3cf8af`
 
 **3. [Rule 2 - Missing correctness] The latency test asserts the linked invariant, not a literal status**
 
@@ -310,7 +310,7 @@ held-out co-bps remains 0.4096 on the D-12 path.
   canonical. On today's artifact that resolves to `status == "corroborating"`, so it asserts exactly
   what the plan asked for, and it survives an honest iPad capture instead of forbidding one.
 - **Files modified:** `Decoder/tests/test_metrics_schema.py`
-- **Commit:** `1e6b7df`
+- **Commit:** `c3cf8af`
 
 ### Non-issue deviations
 
@@ -420,7 +420,7 @@ FOUND: .github/workflows/ci.yml
 All three task commits exist in the repository:
 
 ```
-FOUND: 5dcf816   FOUND: 1e6b7df   FOUND: 288910a
+FOUND: a1f1a31   FOUND: c3cf8af   FOUND: a0b0fd8
 ```
 
 Every measured value quoted in this summary was produced by a command run in this session and is

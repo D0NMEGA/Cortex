@@ -88,9 +88,9 @@ completed: 2026-06-20
 
 Each task was committed atomically (--no-verify, isolated worktree executor):
 
-1. **Task 1: split CortexIPC + CORTEX_CHANNEL_COUNT assert + gate re-scope** — `4402bd0` (feat)
-2. **Task 2: CF#1 keychain access-group spike (FAIL → fallback)** — `21975e2` (test)
-3. **Task 3: CF#3 rendezvous spike (PASS, ADOPT-WITH-RATIONALE)** — `24e9978` (test)
+1. **Task 1: split CortexIPC + CORTEX_CHANNEL_COUNT assert + gate re-scope** — `6a87b93` (feat)
+2. **Task 2: CF#1 keychain access-group spike (FAIL → fallback)** — `9459f56` (test)
+3. **Task 3: CF#3 rendezvous spike (PASS, ADOPT-WITH-RATIONALE)** — `a750150` (test)
 
 **Plan metadata:** committed with this SUMMARY (docs).
 
@@ -125,7 +125,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md writes after the wave complet
 - **Fix:** Created `Tests/CortexIPCTransportTests/Placeholder.swift` and `Tests/CortexIPCSessionTests/Placeholder.swift` as minimal Swift Testing stubs (each links its target and passes); Plan 02-02/02-03 replace them with real tests.
 - **Files modified:** the two new test placeholder files
 - **Verification:** `swift build --build-tests` and `swift test` both pass (2 tests, 0 failures)
-- **Committed in:** `4402bd0` (Task 1)
+- **Committed in:** `6a87b93` (Task 1)
 
 **2. [Rule 1 - Plan internal contradiction] Reworded Transport placeholder comment to not contain the literal `import Foundation`**
 - **Found during:** Task 1 (Step 5, gate self-test)
@@ -133,7 +133,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md writes after the wave complet
 - **Fix:** Reworded the comment to describe the five forbidden tokens without embedding any of their literal fixed strings (`dispatch async`, `lazy stored properties`, `pthread locks`, `Foundation/ObjectiveC imports`). Intent preserved; file still compiles.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCTransport/Placeholder.swift`
 - **Verification:** gate now exits 0 on the real dir; still exits 1 on synthetic violations. Mirrors the Plan 01-02 precedent of rewording comments to satisfy literal-token greps.
-- **Committed in:** `4402bd0` (Task 1)
+- **Committed in:** `6a87b93` (Task 1)
 
 **3. [Rule 1 - Plan internal contradiction] Renamed the SwiftPM package `CortexIPC` -> `CortexIPCPackage`**
 - **Found during:** Task 1 (Step 5, acceptance grep)
@@ -141,7 +141,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md writes after the wave complet
 - **Fix:** Renamed only the SwiftPM package `name:` to `CortexIPCPackage` (products/targets unchanged). Safe: no consumer references the package by name (`.package(name:)`); project.yml references it by PATH (`Packages/CortexIPC`), and the directory name is unchanged. Added a comment documenting the rename (worded to avoid the `name: "CortexIPC"` substring).
 - **Files modified:** `Packages/CortexIPC/Package.swift`
 - **Verification:** `grep -c 'name: "CortexIPC"'` now returns 0; both products + all targets present; build clean.
-- **Committed in:** `4402bd0` (Task 1)
+- **Committed in:** `6a87b93` (Task 1)
 
 **4. [Rule 3 - Blocking] Entitlements file could not contain an XML-markup comment**
 - **Found during:** Task 2 (CF#1 spike signing)
@@ -149,7 +149,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md writes after the wave complet
 - **Fix:** Stripped the comment from the entitlements plist (kept it minimal + `plutil -lint`-clean) and moved the team-prefix rationale, the `$(AppIdentifierPrefix)` Xcode-equivalent note, and the free-team caveat into a sibling `Tools/spikes/keychain-access-group-spike/README.md` so no knowledge was lost.
 - **Files modified:** `spike.entitlements`, new `README.md`
 - **Verification:** `codesign --entitlements` succeeded; `codesign -d --entitlements -` shows both `keychain-access-groups` (Y4A54395NZ.) and the App Group.
-- **Committed in:** `21975e2` (Task 2)
+- **Committed in:** `9459f56` (Task 2)
 
 ---
 
@@ -182,7 +182,7 @@ The two source placeholders are **intentional and plan-mandated** (the plan's St
 
 - All 11 created files exist on disk (4 placeholders, Package.resolved, 3 keychain-spike files, rendezvous main.c, 02-SPIKES.md, this SUMMARY) — VERIFIED
 - All 3 modified files exist (cortex_shm.h, CortexIPC/Package.swift, hotpath-policy.sh) — VERIFIED
-- All 3 task commits exist (`4402bd0`, `21975e2`, `24e9978`) — VERIFIED via `git log`
+- All 3 task commits exist (`6a87b93`, `9459f56`, `a750150`) — VERIFIED via `git log`
 - CortexCore + CortexIPC both build (exit 0); gate bites on 5/5 forbidden tokens (exit 1) and clean on the real dir (exit 0); placeholder tests pass (2/2) — VERIFIED
 - CF#1 verdict (FAIL, errSecMissingEntitlement -34018 / AMFI 137) and CF#3 verdict (PASS, posix_spawnattr_setspecialport_np) recorded in 02-SPIKES.md with binding directives for Plans 02-03 and 02-04 — VERIFIED
 

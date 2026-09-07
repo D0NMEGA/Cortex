@@ -166,7 +166,7 @@ test: per-epoch rather than the window mean, on the absolute value so a worsenin
 called converged, and relative so the rule means the same thing at any loss scale. It is pinned
 against the committed 09-06b curve, where it correctly says "not converged at 12".
 
-Commit `a3d5f3c` (the rule) precedes commit `9fb00c3` (the numbers). `git log` is the check.
+Commit `247372b` (the rule) precedes commit `2f63312` (the numbers). `git log` is the check.
 
 ### The run, and the honest reading of it
 
@@ -253,17 +253,17 @@ replaced it.
 
 ## Task Commits
 
-1. **RED: the failing gradient-clipping test plus behaviour-preserving opt-in plumbing** - `7025ed0` (test)
-2. **The clip on by default at max_norm 1.0** - `c08178b` (fix)
-3. **The loss-only convergence rule** - `5ddbd11` (feat)
-4. **The pre-registered stopping rule, committed before the run** - `a3d5f3c` (docs)
-5. **The 09-06b numbers labeled superseded, by code, before re-running** - `81e31cc` (docs)
-6. **Per-epoch progress logging for a multi-hour run** - `d6644b0` (chore)
-7. **The divergence diagnosis clipping did not fix, and its committed probe** - `27dcb1a` (fix)
-8. **The supplementary budget probe, pre-registered before running** - `57687a3` (docs)
-9. **Every co-bps re-measured under the clipped, rule-stopped run** - `9fb00c3` (feat)
-10. **The evidence rewritten around what the run showed** - `5f53f35` (docs)
-11. **The budget-probe result and the rewrite it forced** - `0b74d84` (docs)
+1. **RED: the failing gradient-clipping test plus behaviour-preserving opt-in plumbing** - `4c78025` (test)
+2. **The clip on by default at max_norm 1.0** - `763739c` (fix)
+3. **The loss-only convergence rule** - `8044eb5` (feat)
+4. **The pre-registered stopping rule, committed before the run** - `247372b` (docs)
+5. **The 09-06b numbers labeled superseded, by code, before re-running** - `0ff1659` (docs)
+6. **Per-epoch progress logging for a multi-hour run** - `287779c` (chore)
+7. **The divergence diagnosis clipping did not fix, and its committed probe** - `e9c0bdd` (fix)
+8. **The supplementary budget probe, pre-registered before running** - `8e0b092` (docs)
+9. **Every co-bps re-measured under the clipped, rule-stopped run** - `2f63312` (feat)
+10. **The evidence rewritten around what the run showed** - `0354a55` (docs)
+11. **The budget-probe result and the rewrite it forced** - `bfd2523` (docs)
 12. **This summary** - see `git log`
 
 ## Deviations from Plan
@@ -281,7 +281,7 @@ replaced it.
 - **Verification:** the run was restarted one minute in, and the budget probe later reproduced all
   12 of the restarted run's epoch losses to full double precision, including the
   460088591144.742004 transient, so the hook changed nothing.
-- **Committed in:** `d6644b0`
+- **Committed in:** `287779c`
 
 **2. [Rule 2 - Missing critical] `stop_reason` could not distinguish a real plateau from a floor**
 
@@ -293,7 +293,7 @@ replaced it.
   rule inspected, and `fired_at_floor`. Computed by a shared helper used by the payload builder and
   by `--annotate-convergence`, so the record for this run was derived from the committed curve
   rather than typed.
-- **Committed in:** `9fb00c3`
+- **Committed in:** `2f63312`
 
 **3. [Rule 2 - Missing critical] `_carry_superseded` would have dropped the middle link**
 
@@ -302,7 +302,7 @@ replaced it.
   the first on the next re-run.
 - **Fix:** carry every `superseded_*` key by prefix, plus a quick test that every superseded record
   says what replaced it.
-- **Committed in:** `a3d5f3c`
+- **Committed in:** `247372b`
 
 ### Deliberate departures
 
@@ -455,13 +455,13 @@ Files claimed, verified present:
 - `.planning/phases/09-.../09-decoder-metrics.json` FOUND (modified)
 - `.planning/phases/09-.../09-training-evidence.md` FOUND (modified)
 
-Commits claimed, verified in `git log`: `7025ed0`, `c08178b`, `5ddbd11`, `a3d5f3c`, `81e31cc`,
-`d6644b0`, `27dcb1a`, `57687a3`, `9fb00c3`, `5f53f35` all FOUND.
+Commits claimed, verified in `git log`: `4c78025`, `763739c`, `8044eb5`, `247372b`, `0ff1659`,
+`287779c`, `e9c0bdd`, `8e0b092`, `2f63312`, `0354a55` all FOUND.
 
 Commit ORDERING verified, which is the load-bearing claim of this task:
-`git merge-base --is-ancestor a3d5f3c 9fb00c3` exits 0, so the stopping rule was committed
+`git merge-base --is-ancestor 247372b 2f63312` exits 0, so the stopping rule was committed
 (23:08:09) before the commit carrying the numbers it produced (02:26:52). The budget probe's
-pre-registration `57687a3` (23:35:32) is likewise an ancestor of the numbers, and the probe process
+pre-registration `8e0b092` (23:35:32) is likewise an ancestor of the numbers, and the probe process
 did not start until 02:25:06.
 
 Number provenance verified rather than trusted: the committed `losses` array was checked
@@ -470,4 +470,4 @@ built on it, and it differs from the `superseded_truncated_budget` curve at both
 
 `git status --porcelain Decoder/checkpoints Decoder/data` returns 0 lines. `git ls-files` matches no
 `.pt` and exactly one `.mat`, `Decoder/tests/fixtures/tiny_v73.mat`, which is the Plan 09-02 CI
-fixture committed in `72453fe` and untouched by this task.
+fixture committed in `eb66745` and untouched by this task.

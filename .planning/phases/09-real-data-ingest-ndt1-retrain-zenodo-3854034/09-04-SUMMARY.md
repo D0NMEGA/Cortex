@@ -98,9 +98,9 @@ completed: 2026-08-31
 
 ## Task Commits
 
-1. **Task 1: `ndt1/qc.py` (TDD)** - `52a20af` (test, RED) then `3043d11` (feat, GREEN)
-2. **Task 2: `ndt1/sessions.py` (TDD)** - `0bbf1cd` (test, RED) then `9fdb2ca` (feat, GREEN)
-3. **Task 3: the P5 repair** - `1a6c032` (fix)
+1. **Task 1: `ndt1/qc.py` (TDD)** - `bd01732` (test, RED) then `3f4c772` (feat, GREEN)
+2. **Task 2: `ndt1/sessions.py` (TDD)** - `17ee739` (test, RED) then `7c53484` (feat, GREEN)
+3. **Task 3: the P5 repair** - `b58bf5c` (fix)
 
 No refactor commits: both modules were minimal as first written and no cleanup was warranted.
 
@@ -137,21 +137,21 @@ No refactor commits: both modules were minimal as first written and no cleanup w
 - **Issue:** The plan specified only the "fewer than two" guard. A repeated id would place the same session in both `train_ids` and `held_out` of the same fold, which is precisely the leakage T-09-04-05 says `loso_folds` guarantees against, and it would happen silently -- the fold count and the `train_ids` lengths would both still look right.
 - **Fix:** Explicit `ValueError` naming the duplicates, plus `test_loso_rejects_duplicate_session_ids`.
 - **Files modified:** `Decoder/src/ndt1/sessions.py`, `Decoder/tests/test_sessions.py`
-- **Commit:** `0bbf1cd`, `9fdb2ca`
+- **Commit:** `17ee739`, `7c53484`
 
 **3. [Rule 2 - Missing critical] `firing_rate_stats` also rejects zero channels and non-positive `bin_ms`**
 - **Found during:** Task 1
 - **Issue:** The plan requires `ValueError` on a non-2-D input and on `num_bins == 0`. A `(500, 0)` matrix passes both checks and then makes `np.median` return `nan` with a `RuntimeWarning`, while `bin_ms <= 0` divides by zero. A `nan` flowing out of a quality gate is worse than having no gate, which is the whole thesis of this module.
 - **Fix:** Both are explicit `ValueError`s with messages naming the offending value.
 - **Files modified:** `Decoder/src/ndt1/qc.py`
-- **Commit:** `3043d11`
+- **Commit:** `3f4c772`
 
 **4. [Rule 3 - Blocking] `cast(float, ...)` instead of a bare `float(...)` on the loader's dict**
 - **Found during:** Task 2
 - **Issue:** `load_session` is annotated `-> dict[str, object]`, so `float(session["t_start"])` is an `invalid-argument-type` error under the repo's ambient type checker. This was a NEW diagnostic introduced by this plan, unlike the pre-existing `unresolved-import` noise.
 - **Fix:** `typing.cast` with a comment stating that these two entries are floats by `load_session`'s documented contract. Zero runtime cost, and no runtime validation added for a value the loader builds with `float()` two functions away (YAGNI). The array fields already narrow through `np.asarray(..., dtype=...)`, which both types and validates them.
 - **Files modified:** `Decoder/src/ndt1/sessions.py`
-- **Commit:** `9fdb2ca`
+- **Commit:** `7c53484`
 
 ### Coverage added beyond the plan's test lists
 
@@ -230,8 +230,8 @@ Files claimed, verified present:
 - `Decoder/tests/test_heldout_cobps.py` FOUND (6,556 bytes, modified)
 - `Decoder/tests/test_data.py` FOUND (7,458 bytes, modified)
 
-Commits claimed, verified in `git log b789fb1..HEAD`:
-- `52a20af` FOUND, `3043d11` FOUND, `0bbf1cd` FOUND, `9fdb2ca` FOUND, `1a6c032` FOUND
+Commits claimed, verified in `git log d9e532b..HEAD`:
+- `bd01732` FOUND, `3f4c772` FOUND, `17ee739` FOUND, `7c53484` FOUND, `b58bf5c` FOUND
 
 `Decoder/data/` verified absent after the Task 3 P5 proof. Working tree clean apart from this summary.
 

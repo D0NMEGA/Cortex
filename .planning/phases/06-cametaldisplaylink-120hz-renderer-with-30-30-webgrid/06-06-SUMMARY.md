@@ -67,9 +67,9 @@ completed: 2026-06-22
 
 ## Task Commits
 
-1. **Task 2: reframe ROADMAP/REQUIREMENTS + write 06-HUMAN-UAT.md** — `205abc6` (docs)
+1. **Task 2: reframe ROADMAP/REQUIREMENTS + write 06-HUMAN-UAT.md** — `89dbb77` (docs)
 
-_Task 1 was a checkpoint:decision resolved by the orchestrator (approve-reframe) — no separate commit. The reframe edits ARE the sign-off-gated change, committed together with the UAT runbook in `205abc6`._
+_Task 1 was a checkpoint:decision resolved by the orchestrator (approve-reframe) — no separate commit. The reframe edits ARE the sign-off-gated change, committed together with the UAT runbook in `89dbb77`._
 
 ## Files Created/Modified
 
@@ -94,7 +94,7 @@ _Task 1 was a checkpoint:decision resolved by the orchestrator (approve-reframe)
 - **Fix:** Committed the docs-only change with `--no-verify`. This is a documentation-only change (no code, no lint/type/security surface), so skipping hooks carries no code-quality risk; it purely prevents an unwanted STATE.md mutation. Verified post-commit that STATE.md still reads `milestone: v1.0` + `status: executing` and is NOT part of the commit.
 - **Files modified:** none beyond the three intended (ROADMAP.md, REQUIREMENTS.md, 06-HUMAN-UAT.md)
 - **Verification:** `grep '^milestone:\|^status:' .planning/STATE.md` → `v1.0` / `executing`; `git show --stat HEAD` does not list STATE.md; working tree clean.
-- **Committed in:** `205abc6`
+- **Committed in:** `89dbb77`
 
 ---
 
@@ -125,7 +125,7 @@ None - no external service configuration required.
 - `06-06-SUMMARY.md` exists on disk ✅
 - `.planning/ROADMAP.md` (reframed) exists on disk ✅
 - `.planning/REQUIREMENTS.md` (reframed) exists on disk ✅
-- Commit `205abc6` exists in git history ✅
+- Commit `89dbb77` exists in git history ✅
 - STATE.md untouched (`milestone: v1.0`, `status: executing` intact; not in commit) ✅
 
 ---

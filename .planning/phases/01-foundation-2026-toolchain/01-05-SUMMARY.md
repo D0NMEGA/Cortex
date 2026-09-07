@@ -123,8 +123,8 @@ completed: 2026-04-30
 
 Each task committed atomically:
 
-1. **Task 1: README.md + docs/adr/README.md + .github/pull_request_template.md** -- `e658665` (docs)
-2. **Task 2: docs/adr/0001-foundation-and-2026-toolchain.md** -- `f749e4d` (docs)
+1. **Task 1: README.md + docs/adr/README.md + .github/pull_request_template.md** -- `08cd3d1` (docs)
+2. **Task 2: docs/adr/0001-foundation-and-2026-toolchain.md** -- `3423e88` (docs)
 
 ## Files Created/Modified
 
@@ -219,8 +219,8 @@ Phase-1 deferral documented in CONTEXT.md Deferred Ideas, not a stub.
 
 **Commits exist:**
 
-- FOUND: `e658665` -- docs(01-05): add README, ADR index/template, and PR template
-- FOUND: `f749e4d` -- docs(01-05): add ADR-0001 foundation and 2026 toolchain
+- FOUND: `08cd3d1` -- docs(01-05): add README, ADR index/template, and PR template
+- FOUND: `3423e88` -- docs(01-05): add ADR-0001 foundation and 2026 toolchain
 
 **Cross-phase notes honored:**
 

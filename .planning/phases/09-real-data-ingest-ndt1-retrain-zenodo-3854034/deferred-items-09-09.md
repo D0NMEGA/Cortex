@@ -10,7 +10,7 @@ Logged, not fixed. Written to a plan-scoped file for the same reason 09-06, 09-0
 plan by `deferred-items-09-06c.md` item 2 as a red test with two tangled problems. It was measured
 rather than assumed, and one of the two is closed.
 
-Run at HEAD 288910a on Apple M5 Pro, macOS-26.5-arm64, python 3.12.13, numpy 2.4.6, torch 2.12.1,
+Run at HEAD a0b0fd8 on Apple M5 Pro, macOS-26.5-arm64, python 3.12.13, numpy 2.4.6, torch 2.12.1,
 seed 0, the committed 12-epoch configuration, real sessions:
 
 ```

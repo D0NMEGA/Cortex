@@ -79,7 +79,7 @@ completed: 2026-04-28
 
 Each task was committed atomically:
 
-1. **Task 1: Write Gemfile + 3 fastlane placeholder files + run bundle install** -- `d14195a` (feat)
+1. **Task 1: Write Gemfile + 3 fastlane placeholder files + run bundle install** -- `8fdce53` (feat)
 
 **Plan metadata commit:** _to be added with this SUMMARY.md_ (docs)
 
@@ -109,7 +109,7 @@ Each task was committed atomically:
 - **Files modified:** None in repo; environmental change (`/usr/local/Cellar/ruby/4.0.3` installed via Homebrew). The repo's Gemfile and Gemfile.lock are unaffected -- the lockfile contains no Ruby version pin, so any modern Ruby (>= 3.0) can replay the resolution
 - **Verification:** `/usr/local/opt/ruby/bin/ruby --version` reports `ruby 4.0.3`; `bundle install` exits 0 with `Bundle complete! 1 Gemfile dependency, 95 gems now installed`; `Gemfile.lock` contains `fastlane (2.233.0)` plus 94 transitive deps with sha256 checksums
 - **Why Rule 3 (not Rule 4 architectural):** The fix did not change the project's architecture, schema, or library choices -- it only repaired the developer-machine Ruby environment so the existing Gemfile could resolve. No code-level decisions changed
-- **Committed in:** `d14195a` (the Gemfile.lock written under brew Ruby is the artifact recording the successful resolution)
+- **Committed in:** `8fdce53` (the Gemfile.lock written under brew Ruby is the artifact recording the successful resolution)
 
 ### Cross-phase notes intentionally surfaced for Plan 05 and Phase 8
 
@@ -182,7 +182,7 @@ These are explicitly deferred per D-09/D-10 and are NOT a Phase-1 user setup ite
 - File `/Users/donmega/Desktop/Cortex/fastlane/Fastfile` exists -- FOUND
 - File `/Users/donmega/Desktop/Cortex/fastlane/Matchfile` exists -- FOUND
 - File `/Users/donmega/Desktop/Cortex/fastlane/Appfile` exists -- FOUND
-- Commit `d14195a` exists in `git log` -- FOUND
+- Commit `8fdce53` exists in `git log` -- FOUND
 - All four Ruby files pass `ruby -c` syntax check -- VERIFIED
 - All 16 acceptance probes from `<verify>` return OK -- VERIFIED
 - No signing material (.p8, .cer, .mobileprovision) created in this plan -- VERIFIED via find

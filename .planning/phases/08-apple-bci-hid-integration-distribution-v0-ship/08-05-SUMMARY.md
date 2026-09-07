@@ -79,9 +79,9 @@ completed: 2026-06-23
 
 Each task was committed atomically:
 
-1. **Task 1: Implement WebgridBPS.swift (clamp + tests, TDD)** — `73b7cc0` (feat)
-2. **Task 2: Extend bench to emit Webgrid BPS + Fitts-TP, write evidence + JSON** — `52d4296` (feat)
-3. **Task 3: bps-policy.sh (formula + determinism) + self-test + CI wiring** — `1148d4b` (chore)
+1. **Task 1: Implement WebgridBPS.swift (clamp + tests, TDD)** — `3aa1fed` (feat)
+2. **Task 2: Extend bench to emit Webgrid BPS + Fitts-TP, write evidence + JSON** — `5b7c326` (feat)
+3. **Task 3: bps-policy.sh (formula + determinism) + self-test + CI wiring** — `d0408df` (chore)
 
 _Task 1 was TDD: the failing `WebgridBPSTests` (RED) and the `WebgridBPS.swift` implementation (GREEN) were authored together and committed as one `feat` once green._
 
@@ -110,7 +110,7 @@ _Task 1 was TDD: the failing `WebgridBPSTests` (RED) and the `WebgridBPS.swift` 
 - **Fix:** Replaced with the exact value `16.356_301_985_361_73` (verified via `python3`), tolerance tightened to `1e-9`.
 - **Files modified:** Packages/CortexReFIT/Tests/CortexReFITTests/WebgridBPSTests.swift
 - **Verification:** All 5 WebgridBPSTests green.
-- **Committed in:** `73b7cc0` (Task 1 commit)
+- **Committed in:** `3aa1fed` (Task 1 commit)
 
 **2. [Rule 1 - Bug] Untyped the leaderboard-anchor constants so the plan's acceptance grep matches**
 - **Found during:** Task 1 (acceptance-criteria verification)
@@ -118,7 +118,7 @@ _Task 1 was TDD: the failing `WebgridBPSTests` (RED) and the `WebgridBPS.swift` 
 - **Fix:** Dropped the explicit `: Double` annotation on both anchors (the literal `8.5`/`4.16` infer to `Double`; Test 5's `== 8.5`/`== 4.16` still hold).
 - **Files modified:** Packages/CortexReFIT/Sources/CortexReFIT/WebgridBPS.swift
 - **Verification:** The plan's exact grep now matches; all 5 tests still green.
-- **Committed in:** `73b7cc0` (Task 1 commit)
+- **Committed in:** `3aa1fed` (Task 1 commit)
 
 **3. [Rule 1 - Bug] JSON forward-slash escaping broke the documented formula literal**
 - **Found during:** Task 2 (acceptance-criteria verification)
@@ -126,7 +126,7 @@ _Task 1 was TDD: the failing `WebgridBPSTests` (RED) and the `WebgridBPS.swift` 
 - **Fix:** Added `.withoutEscapingSlashes` to the NEW `writeWebgridJSON` encoder ONLY (the Phase-7 `writeJSON` is untouched, so `refit_bps.json` stays byte-identical). Re-verified determinism + the Phase-7 byte-identical guard after the change.
 - **Files modified:** Packages/CortexReFIT/Sources/CortexReFITBench/main.swift
 - **Verification:** The plan's literal grep now matches; `webgrid_bps.json` byte-identical across two runs; `refit_bps.json` still byte-identical to the Phase-7 committed copy.
-- **Committed in:** `52d4296` (Task 2 commit)
+- **Committed in:** `5b7c326` (Task 2 commit)
 
 ---
 
@@ -149,7 +149,7 @@ None — no external service configuration required. The metric is device-indepe
 
 ## Self-Check: PASSED
 
-All 6 created files verified present on disk; all 3 task commit hashes (`73b7cc0`, `52d4296`, `1148d4b`) verified in git history. The Phase-7 `refit_bps.json` byte-identical diff guard exits 0; `bps-policy.sh` + `--self-test` exit 0; `WebgridBPSTests` 5/5 green; `CortexReFITBench --smoke` exits 0.
+All 6 created files verified present on disk; all 3 task commit hashes (`3aa1fed`, `5b7c326`, `d0408df`) verified in git history. The Phase-7 `refit_bps.json` byte-identical diff guard exits 0; `bps-policy.sh` + `--self-test` exit 0; `WebgridBPSTests` 5/5 green; `CortexReFITBench --smoke` exits 0.
 
 ---
 *Phase: 08-apple-bci-hid-integration-distribution-v0-ship*

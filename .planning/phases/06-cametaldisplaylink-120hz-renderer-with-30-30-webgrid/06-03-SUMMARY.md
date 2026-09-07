@@ -86,8 +86,8 @@ completed: 2026-06-22
 
 Each task was committed atomically:
 
-1. **Task 1: FrameSynchronizer (value:1) + iOS CAMetalDisplayLink adapter** — `d10892b` (feat)
-2. **Task 2: macOS NSView.displayLink adapter + WebgridView + app ContentViews** — `9848e8d` (feat)
+1. **Task 1: FrameSynchronizer (value:1) + iOS CAMetalDisplayLink adapter** — `bd68b3c` (feat)
+2. **Task 2: macOS NSView.displayLink adapter + WebgridView + app ContentViews** — `3c2e4ba` (feat)
 
 _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (this sequential executor does not write them)._
 
@@ -119,7 +119,7 @@ _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (th
 - **Fix:** Added `- package: CortexRender` to the `dependencies:` of both `CortexiOS` and `CortexMac` in `project.yml`, then re-ran `xcodegen generate`. (The renderer was already registered as a package, so no `packages:` change was needed.)
 - **Files modified:** `project.yml`
 - **Verification:** `xcodegen generate` clean; `xcodebuild` package graph now resolves `CortexRender` for BOTH app targets (visible in the "Resolved source packages" list for the iOS scheme); `CortexMac` app build SUCCEEDED.
-- **Committed in:** `9848e8d` (Task 2 commit)
+- **Committed in:** `3c2e4ba` (Task 2 commit)
 
 **2. [Rule 3 - Blocking] Literal-grep false-positives in the iOS adapter's explanatory comments — reworded**
 - **Found during:** Task 1 (acceptance-criteria check)
@@ -127,7 +127,7 @@ _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (th
 - **Fix:** Reworded the comments to describe the prohibited APIs by intent ("the legacy per-screen display-link timer class", "the timed/timestamp-targeting present variants", "the stdout console call") without the standalone literal tokens. Meaning fully preserved; the actual code is unchanged (vended `update.drawable`, plain `cb.present(drawable)`, `os.Logger`).
 - **Files modified:** `Packages/CortexRender/Sources/CortexRender/iOSDisplayLinkAdapter.swift`
 - **Verification:** All three negative greps now return empty over the iOS adapter; `swift build` + the iOS-SDK type-check both stayed green after the edit.
-- **Committed in:** `d10892b` (Task 1 commit)
+- **Committed in:** `bd68b3c` (Task 1 commit)
 
 ---
 
@@ -160,7 +160,7 @@ None - no external service configuration required. (Local note: a dynamic iOS-de
 ## Self-Check: PASSED
 
 - All 4 created source files verified on disk (FrameSynchronizer 71L, iOSDisplayLinkAdapter 174L, MacDisplayLinkAdapter 164L, WebgridView 151L); WebgridView exceeds the frontmatter `min_lines: 40`.
-- Both task commits verified in `git log` (`d10892b`, `9848e8d`).
+- Both task commits verified in `git log` (`bd68b3c`, `3c2e4ba`).
 - `swift build --package-path Packages/CortexRender` green; `swift test` 19/19 green (no regression); `CortexMac` app `xcodebuild` BUILD SUCCEEDED; iOS slice `swiftc -typecheck` against the iOS 26 SDK EXIT 0; all 5 plan `<verification>` checks + all task `<acceptance_criteria>` pass.
 - STATE.md / ROADMAP.md / REQUIREMENTS.md NOT modified by this executor (orchestrator-owned).
 

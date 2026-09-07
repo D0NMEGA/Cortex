@@ -62,7 +62,7 @@ completed: 2026-08-31
 
 ## Accomplishments
 
-### Task 1 - Four sessions materialized, three pins filled, one verified (commit `dc10571`)
+### Task 1 - Four sessions materialized, three pins filled, one verified (commit `ca6e1bb`)
 
 Disk was checked first: 112 GB free against the plan's 3 GB floor. The pre-fetched
 `indy_20160630_01.mat` was moved (not copied) out of the research scratchpad into `Decoder/data/`,
@@ -93,7 +93,7 @@ proven nothing. The manifest was committed first, then the downloader re-run: ex
 lines, zero `manifest updated` lines, and `git diff --stat Decoder/manifests/indy_sessions.json`
 empty.
 
-### Task 2 - Five negative controls on a real fetched file (commit `8d7efd3`)
+### Task 2 - Five negative controls on a real fetched file (commit `d92e849`)
 
 All controls ran against a copy of the smallest session (106,555,127 bytes) in a `mktemp -d` scratch
 tree with a session-scoped `--manifest` and `--out`. `Decoder/data/` was never placed in a corrupted
@@ -161,7 +161,7 @@ All five plan success criteria are met.
   `checksum mismatch for indy_20160915_01`. Both transcripts are committed and the artifact states
   plainly which layer caught which, and why 1b's manifest was mutated.
 - **Files modified:** `09-ingest-evidence.md`
-- **Commit:** `8d7efd3`
+- **Commit:** `d92e849`
 
 **2. [Rule 3 - Blocking] Idempotence check was unsatisfiable in the plan's stated order**
 
@@ -175,7 +175,7 @@ All five plan success criteria are met.
   relative to what was pinned. Both the pre-commit run (four `verified`, no `manifest updated`) and
   the post-commit run (empty diff) are recorded.
 - **Files modified:** none beyond the commit ordering
-- **Commit:** `dc10571`
+- **Commit:** `ca6e1bb`
 
 ### Deliberate departures from a stated style rule
 
@@ -228,8 +228,8 @@ already built into `_download`.
 
 | Task | Commit | Message |
 |------|--------|---------|
-| 1 | `dc10571` | feat(09-05): fill the three PENDING sha256 pins from verified fetched bytes |
-| 2 | `8d7efd3` | docs(09-05): record the RD-01 ingest with five negative-control transcripts |
+| 1 | `ca6e1bb` | feat(09-05): fill the three PENDING sha256 pins from verified fetched bytes |
+| 2 | `d92e849` | docs(09-05): record the RD-01 ingest with five negative-control transcripts |
 
 ## Status rationale
 
@@ -244,6 +244,6 @@ formatting note above, which lives in a file this plan was not permitted to touc
 - `.planning/phases/09-.../09-ingest-evidence.md` present, 253 lines (min 90)
 - `.planning/phases/09-.../deferred-items-09-05.md` present
 - `Decoder/data/*.mat` present, 4 files, 1,767,820,363 bytes, all four digests re-verified from disk
-- Commits `dc10571` and `8d7efd3` both present in `git log`
+- Commits `ca6e1bb` and `d92e849` both present in `git log`
 - No `.mat` staged or tracked beyond `Decoder/tests/fixtures/tiny_v73.mat`
 - `.planning/STATE.md`, `.planning/ROADMAP.md` and `.planning/config.json` left modified-but-unstaged, as the orchestrator owns them

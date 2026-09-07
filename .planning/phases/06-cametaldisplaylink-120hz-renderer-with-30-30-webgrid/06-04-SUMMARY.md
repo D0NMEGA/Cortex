@@ -83,9 +83,9 @@ completed: 2026-06-22
 
 Each task was committed atomically:
 
-1. **Task 1: project.yml — 120Hz plist key + MTL_HUD scheme env + CortexRenderBench target** — `56b7794` (feat)
-2. **Task 2: render-policy.sh structural gate + negative-control self-test** — `a37c035` (feat)
-3. **Task 3: wire render-policy.sh + plist 120Hz check into CI** — `2cae78b` (ci)
+1. **Task 1: project.yml — 120Hz plist key + MTL_HUD scheme env + CortexRenderBench target** — `a05e406` (feat)
+2. **Task 2: render-policy.sh structural gate + negative-control self-test** — `27d86d3` (feat)
+3. **Task 3: wire render-policy.sh + plist 120Hz check into CI** — `009f091` (ci)
 
 _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (this sequential executor does not write them)._
 
@@ -115,7 +115,7 @@ _Plan metadata commit + STATE/ROADMAP/REQUIREMENTS owned by the orchestrator (th
 - **Fix:** Reworded the comment to describe Plan 05's bench by intent — "Plan 05's dedicated GPU-time bench executable" — without the bare `CortexRenderBench` literal. Meaning fully preserved; no executable step changed.
 - **Files modified:** `.github/workflows/ci.yml`
 - **Verification:** `grep -E 'soak|gpuStartTime|gpuEndTime|CortexRenderBench|preferredFrameRateRange' .github/workflows/ci.yml` now returns empty (AC5 clean on a naive grep too); the only render-related `run:` invocations are `render-policy.sh` (+ `--self-test`) and the `plutil` plist check; YAML still parses.
-- **Committed in:** `2cae78b` (Task 3 commit)
+- **Committed in:** `009f091` (Task 3 commit)
 
 ---
 
@@ -148,7 +148,7 @@ None - no external service configuration required. (The CI gates run on the exis
 
 - All created files verified on disk: `Tools/scripts/render-policy.sh` (executable `100755`, contains `self-test`), `Apps/CortexRenderBench/main.swift`, `06-04-SUMMARY.md`.
 - All modified files carry their changes: `project.yml` (`CADisableMinimumFrameDurationOnPhone: true`), `Apps/CortexiOS/Info.plist` (merged `<true/>`, plutil-confirmed), `.github/workflows/ci.yml` (`render-policy.sh` step).
-- All three task commits verified in `git log`: `56b7794` (Task 1), `a37c035` (Task 2), `2cae78b` (Task 3).
+- All three task commits verified in `git log`: `a05e406` (Task 1), `27d86d3` (Task 2), `009f091` (Task 3).
 - Full plan `<verification>` re-run green: `xcodegen generate` exit 0; `render-policy.sh` real-tree exit 0; `render-policy.sh --self-test` exit 0 (all 9 required strips + 3 forbidden injections bite, macOS CADisplayLink scoping-control passes); `ci.yml` wires `render-policy.sh` + the 120Hz plist check and parses under `yaml.safe_load`; no live soak/GPU step in CI.
 - STATE.md / ROADMAP.md / REQUIREMENTS.md NOT modified by this executor (orchestrator-owned).
 

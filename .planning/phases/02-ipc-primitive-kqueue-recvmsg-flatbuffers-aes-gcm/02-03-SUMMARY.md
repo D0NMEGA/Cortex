@@ -107,9 +107,9 @@ completed: 2026-06-20
 
 Each task committed atomically (`--no-verify`, isolated worktree executor running concurrently with Plan 02-02):
 
-1. **Task 1: FlatBuffers Sample schema + vendored codec (IPC-04)** — `f3ccf41` (feat)
-2. **Task 2: SessionCrypto — AES-GCM + HKDF subkeys + deterministic nonce (IPC-05)** — `0f6ab55` (feat)
-3. **Task 3: SessionKeychain — data-protection round-trip, CF#1 fallback (IPC-06)** — `3662456` (feat)
+1. **Task 1: FlatBuffers Sample schema + vendored codec (IPC-04)** — `897fa86` (feat)
+2. **Task 2: SessionCrypto — AES-GCM + HKDF subkeys + deterministic nonce (IPC-05)** — `2589527` (feat)
+3. **Task 3: SessionKeychain — data-protection round-trip, CF#1 fallback (IPC-06)** — `f8170e4` (feat)
 
 **Plan metadata:** committed with this SUMMARY (docs).
 
@@ -142,7 +142,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md / REQUIREMENTS.md writes afte
 - **Fix:** Downloaded the prebuilt `Mac.flatc.binary.zip` from the GitHub `v25.12.19` release, verified `flatc --version` == `25.12.19`, installed to `~/.local/bin/flatc`, ran `gen-flatbuffers.sh`. Generator == runtime.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCSession/generated/sample_generated.swift` (generated)
 - **Verification:** `flatc --version` == 25.12.19; SampleCodec compiles + 5 @Test pass against the real runtime.
-- **Committed in:** `f3ccf41` (Task 1)
+- **Committed in:** `897fa86` (Task 1)
 
 **2. [Rule 3 - Blocking] MainActor-default target made the codec + generated code unusable off the main actor → `nonisolated` (incl. a scripted gen post-process)**
 - **Found during:** Task 1 (first build)
@@ -150,7 +150,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md / REQUIREMENTS.md writes afte
 - **Fix:** Marked `SampleCodec`/`DecodedSample`/`SessionCrypto`/`SessionKeychain` + their error/Direction/Keys types `nonisolated`, and the two count constants `nonisolated let`. For the **generated** file (must not hand-edit), added a deterministic, idempotent `sed` step to `gen-flatbuffers.sh` that injects `nonisolated` on the `public struct Cortex_IPC_*` decl — keeping regen reproducible (committed file == flatc output + this one scripted transform). Package.swift was NOT edited (out of scope for the wave).
 - **Files modified:** all four Session sources; `Tools/scripts/gen-flatbuffers.sh`; `generated/sample_generated.swift`
 - **Verification:** clean build (no isolation errors, no warnings); 16 @Test pass; gate clean.
-- **Committed in:** `f3ccf41` (Task 1)
+- **Committed in:** `897fa86` (Task 1)
 
 **3. [Rule 3 - Blocking] Data-protection keychain unreachable from the unentitled swift-test host → Backend test-seam (production stays data-protection)**
 - **Found during:** Task 3 (running KeychainTests)
@@ -158,7 +158,7 @@ _Note: the orchestrator owns STATE.md / ROADMAP.md / REQUIREMENTS.md writes afte
 - **Fix:** Added a `SessionKeychain.Backend` enum. Production APIs default to `.dataProtection` (all IPC-06 attributes UNCHANGED — `kCFBooleanTrue`, `AfterFirstUnlockThisDeviceOnly`, no access group). `KeychainTests` inject `.legacyFile` to exercise the round-trip/not-found/idempotent **logic** on the unentitled host, PLUS a test that asserts `baseQuery(.dataProtection)` carries the data-protection attributes (CFBoolean true + AfterFirstUnlock + no access group). The directive's mandate ("the data-protection flag is the IPC-06 requirement — keep it") is honored: production is unchanged; only the test path is adapted. The full data-protection round-trip's item SHAPE was already built+signed+run on real M4 by the CF#1 spike, and its complete round-trip is exercised under enrollment in Phase 8.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCSession/SessionKeychain.swift`, `Packages/CortexIPC/Tests/CortexIPCSessionTests/KeychainTests.swift`
 - **Verification:** 5 @Test pass; the CF#8 negative grep (`! grep -qE 'kSecUseDataProtectionKeychain[^!]*:\s*true'`) passes; the production-query test confirms the data-protection attributes are wired.
-- **Committed in:** `3662456` (Task 3)
+- **Committed in:** `f8170e4` (Task 3)
 
 ---
 

@@ -318,7 +318,7 @@ The decisions above are preserved verbatim as the historical record of the discu
 falsified four factual premises inside them. The DECISIONS still stand; their RATIONALES and one
 literal spec are corrected here. Where this block and the text above disagree, **this block wins.**
 
-Source: `09-RESEARCH.md` (commit `12c9058`), all four verified by direct measurement of the real
+Source: `09-RESEARCH.md` (commit `d33128b`), all four verified by direct measurement of the real
 dataset, not by documentation.
 
 ### C-01 supersedes D-03's contingency framing - substitution is CERTAIN, and the set is chosen

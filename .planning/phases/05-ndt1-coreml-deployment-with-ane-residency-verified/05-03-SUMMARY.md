@@ -82,9 +82,9 @@ completed: 2026-06-21
 
 Each task was committed atomically (all `--no-verify` per the parallel-executor protocol):
 
-1. **Task 1: library + test target + DEC-07 build-failing compute-units gate** — `fc60167` (feat)
-2. **Task 2: zero-copy spike input over shared IOSurface + pointer-identity proof (DEC-09)** — `139ed2b` (feat)
-3. **Task 3: NeuralDecoder.decode -> (vx,vy) fp16 + _ANEClient CI grep gate (DEC-10/DEC-12)** — `e22d052` (feat)
+1. **Task 1: library + test target + DEC-07 build-failing compute-units gate** — `743eb8e` (feat)
+2. **Task 2: zero-copy spike input over shared IOSurface + pointer-identity proof (DEC-09)** — `6a732d0` (feat)
+3. **Task 3: NeuralDecoder.decode -> (vx,vy) fp16 + _ANEClient CI grep gate (DEC-10/DEC-12)** — `abb8a83` (feat)
 
 **Plan metadata:** this SUMMARY only — STATE.md / ROADMAP.md / REQUIREMENTS.md are owned by the orchestrator after the wave merges (NOT touched here).
 
@@ -115,7 +115,7 @@ Each task was committed atomically (all `--no-verify` per the parallel-executor 
 - **Fix:** Annotated the test suites (`ComputeUnitsTests`, `ZeroCopyInputTests`, `VelocityOutputTests`) with `@MainActor`. This is the canonical way to reach a MainActor-isolated library from Swift Testing; the production library isolation is unchanged.
 - **Files modified:** the three test files (test-side only).
 - **Verification:** `swift test` builds and runs green (10/3).
-- **Committed in:** `fc60167` / `139ed2b` / `e22d052` (each test file's own task commit).
+- **Committed in:** `743eb8e` / `6a732d0` / `abb8a83` (each test file's own task commit).
 
 **2. [Rule 1 - Bug] DEC-12 CI grep would false-positive on the negative-control tests**
 - **Found during:** Task 3 (designing the `ci.yml` `_ANEClient` gate)
@@ -123,7 +123,7 @@ Each task was committed atomically (all `--no-verify` per the parallel-executor 
 - **Fix:** Scoped the gate to production source via `--exclude-dir=Tests --exclude-dir=tests`, assembled the forbidden token from fragments (`"_ANE""Client"`) so the workflow line itself is not a hit, and added an explanatory comment. The Swift-side mirror likewise assembles the token.
 - **Files modified:** `.github/workflows/ci.yml`, `Packages/CortexDecoder/Tests/CortexDecoderTests/VelocityOutputTests.swift`.
 - **Verification:** gate negative control — injected `_ANEClient` into `NeuralDecoder.swift` (production) → gate exits 1; removed → clean. Production-source scan clean; `swift test` green.
-- **Committed in:** `e22d052` (Task 3 commit).
+- **Committed in:** `abb8a83` (Task 3 commit).
 
 **3. [Rule 1 - Bug] Self-introduced timing-token in a comment tripped the plan's acceptance grep**
 - **Found during:** Task 3 (acceptance-criteria check)
@@ -131,7 +131,7 @@ Each task was committed atomically (all `--no-verify` per the parallel-executor 
 - **Fix:** Reworded the comment to convey the same correctness-only intent without the forbidden tokens (the Phase-4 literal-grep-comment-rewording pattern).
 - **Files modified:** `Packages/CortexDecoder/Tests/CortexDecoderTests/VelocityOutputTests.swift`.
 - **Verification:** the acceptance grep returns nothing; `swift test` green.
-- **Committed in:** `e22d052` (Task 3 commit).
+- **Committed in:** `abb8a83` (Task 3 commit).
 
 ---
 
@@ -171,7 +171,7 @@ No stub patterns. `NeuralDecoder.decode` is a real prediction path; `SpikeInputB
 ## Self-Check: PASSED
 
 - All 5 created files + 3 modified files present on disk (`NeuralDecoder.swift`, `ZeroCopyInput.swift`, the 3 test files; `Package.swift`, `CortexDecoder.swift`, `ci.yml`).
-- All 3 task commits found in git history (`fc60167`, `139ed2b`, `e22d052`).
+- All 3 task commits found in git history (`743eb8e`, `6a732d0`, `abb8a83`).
 - Plan-level verification green: `swift test --package-path Packages/CortexDecoder` = 10 tests / 3 suites pass (incl. the build-failing `!= .all` gate, the `MLMultiArray(pixelBuffer:)` pointer-identity zero-copy test, and the clean model-skip); `swift build` exits 0; `ci.yml` valid YAML with the `_ANEClient` gate + CortexDecoder test step; production-source `_ANEClient` scan clean; no timing token in the tests.
 
 ---

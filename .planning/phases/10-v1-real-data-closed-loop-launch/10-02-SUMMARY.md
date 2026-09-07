@@ -94,11 +94,11 @@ completed: 2026-09-05
 
 Each task was committed atomically:
 
-1. **Task 1: target_pos through load_session and SessionLoad** - `121e6c0` (test, RED) then `881a48e` (feat, GREEN)
-2. **Task 2: ndt1.replay_export, the D-06 writer and reader** - `2425257` (test, RED) then `3c15428` (feat, GREEN)
-3. **Task 3: export_replay.py, the synthetic fixture and the gitignore entry** - `f573fd8` (feat)
+1. **Task 1: target_pos through load_session and SessionLoad** - `df46a24` (test, RED) then `3fbc3d0` (feat, GREEN)
+2. **Task 2: ndt1.replay_export, the D-06 writer and reader** - `66a361b` (test, RED) then `6024016` (feat, GREEN)
+3. **Task 3: export_replay.py, the synthetic fixture and the gitignore entry** - `5080450` (feat)
 
-**Provenance docstring follow-up:** `5d84b8b` (docs - the `source_sha256`-from-manifest link required by the plan's `key_links`)
+**Provenance docstring follow-up:** `4e85e98` (docs - the `source_sha256`-from-manifest link required by the plan's `key_links`)
 
 ## Files Created/Modified
 
@@ -219,7 +219,7 @@ Both are recorded rather than silently reconciled, per the evidence discipline. 
 - **Fix:** `count_trials` returns `changes + 1` and its docstring names `trial_bounds` as the definition it matches.
 - **Files modified:** `Decoder/scripts/export_replay.py`
 - **Verification:** The export sidecar reads `trials: 1025`, equal to `10-ceiling.json`.
-- **Committed in:** `f573fd8`
+- **Committed in:** `5080450`
 
 **2. [Rule 2 - Missing critical] `bin_target_track` rejects a non-monotone clock**
 - **Found during:** Task 1
@@ -227,7 +227,7 @@ Both are recorded rather than silently reconciled, per the evidence discipline. 
 - **Fix:** A `np.diff(clock) < 0` check that raises a `ValueError` naming the offending index pair, plus `test_bin_target_track_rejects_a_non_monotone_clock`.
 - **Files modified:** `Decoder/src/ndt1/data.py`, `Decoder/tests/test_target_track.py`
 - **Verification:** Test passes; the real session's clock is strictly increasing and is unaffected.
-- **Committed in:** `881a48e`
+- **Committed in:** `3fbc3d0`
 
 **3. [Rule 2 - Missing critical] The membership guard is a public tested function, not an inline assertion**
 - **Found during:** Task 1
@@ -235,7 +235,7 @@ Both are recorded rather than silently reconciled, per the evidence discipline. 
 - **Fix:** `first_off_grid_index(track, distinct)` is public and documented as the Pitfall-4 control; `load_session` calls it and raises naming the offending row and value. `test_first_off_grid_index_catches_the_mean_aggregation_artifact` feeds it the exact `(7.5, 0.0)` a mean aggregator would produce and asserts the reported index.
 - **Files modified:** `Decoder/src/ndt1/data.py`, `Decoder/tests/test_target_track.py`
 - **Verification:** The control test passes and fails if the guard is removed.
-- **Committed in:** `881a48e`
+- **Committed in:** `3fbc3d0`
 
 **4. [Rule 3 - Blocking] Worktree lacked the gitignored dataset and checkpoints**
 - **Found during:** Setup, before Task 1
@@ -251,7 +251,7 @@ Both are recorded rather than silently reconciled, per the evidence discipline. 
 - **Fix:** A `_tamper()` helper rewrites the written sidecar's header fields on disk. This is also the faithful threat: a hand-edited, truncated or substituted export, not a writer talked into emitting one.
 - **Files modified:** `Decoder/tests/test_replay_export.py`
 - **Verification:** All refusal tests pass and each names the field it refused.
-- **Committed in:** `3c15428`
+- **Committed in:** `6024016`
 
 **6. [Rule 3 - Blocking] Two acceptance greps are literal, so two constants dropped their annotations**
 - **Found during:** Task 2
@@ -259,7 +259,7 @@ Both are recorded rather than silently reconciled, per the evidence discipline. 
 - **Fix:** Both constants are written without the redundant `: int` annotation (inference gives `int` regardless). This is the documented literal-grep pattern from earlier phases.
 - **Files modified:** `Decoder/src/ndt1/replay_export.py`
 - **Verification:** Both greps match; ruff and the suite are green.
-- **Committed in:** `3c15428`
+- **Committed in:** `6024016`
 
 **Total deviations:** 6 auto-fixed (2 bug, 2 missing critical, 2 blocking)
 **Impact on plan:** No scope creep. Every fix is inside the plan's own file list, and the two that change a plan-specified value (`trials`, the constants' annotations) are recorded above with the number they produce.
@@ -299,7 +299,7 @@ Files claimed as created, all confirmed present:
 `Decoder/src/ndt1/replay_export.py`, `Decoder/scripts/export_replay.py`, `Decoder/scripts/make_tiny_replay.py`, `Decoder/tests/test_target_track.py`, `Decoder/tests/test_replay_export.py`, `Decoder/tests/fixtures/tiny_replay.bin`, `Decoder/tests/fixtures/tiny_replay.json`, `Decoder/exports/indy_20160630_01.replay.bin`, `Decoder/exports/indy_20160630_01.replay.json`.
 
 Commits claimed, all confirmed in `git log`:
-`121e6c0`, `881a48e`, `2425257`, `3c15428`, `f573fd8`, `5d84b8b`.
+`df46a24`, `3fbc3d0`, `66a361b`, `6024016`, `5080450`, `4e85e98`.
 
 *Phase: 10-v1-real-data-closed-loop-launch*
 *Completed: 2026-09-05*

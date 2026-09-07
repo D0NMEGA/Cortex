@@ -179,7 +179,7 @@ Each ground, expanded, with its citation:
    make the two the same metric.
 2. **Grid.** 4.16 is the dense 9x9 figure, not the 6x6 one.
 3. **Task.** The harness makes incorrect selections **structurally zero**. The comment carrying this
-   is `CortexReFITBench/main.swift:283-285` as cited in the pre-registration at commit `864259b`,
+   is `CortexReFITBench/main.swift:283-285` as cited in the pre-registration at commit `a72344b`,
    which is `:286-288` at this commit after Plan 10-05 removed a three-line block earlier in the
    same file: "There is NO wrong-cell outcome to count as Si (structurally 0)". `Si` is therefore
    always 0 and the metric cannot express the speed-accuracy tradeoff that a human point-and-click
@@ -307,7 +307,7 @@ Two facts sit beside that row and are for the later plans to weigh, not for this
   not an independent decoding result;
 - the two target-blind arms are 0 of 1,025, which is the shape row B describes.
 
-The disposition was fixed in writing before the measurement, the table is committed at `864259b`,
+The disposition was fixed in writing before the measurement, the table is committed at `a72344b`,
 and it is not reopened here. `sc2_disposition` and `sc2_rule` are keys of `10-replay.json`, not of
 this file (section 15 rule 3), so **this artifact draws no conclusion about SC#2**. Per section 15
 rule 2 no agent amends a success criterion; the amend-or-defer choice is confirmed by the user at

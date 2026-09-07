@@ -49,10 +49,10 @@ RD-09 sweep: retire Phases 9-10 from GlassToGlassTimer label, correct BrainGate 
 
 | Task | Commit | Description |
 |------|--------|-------------|
-| 1 | cfab16d | fix(10-11): retire Phases 9-10 from GlassToGlassTimer.methodologyLabel |
-| 1 follow-up | 81822db | docs(10-11): amend evidence and README after methodologyLabel change |
-| 2 | 00ec6f8 | fix(10-11): correct BrainGate 4.16 to T5 dense 9x9 condition, add nonComparabilityDisclosure |
-| 3 | 4cc228e | fix(10-11): date and source 8.5 BPS, drop cross-system causal claim |
+| 1 | 78756ee | fix(10-11): retire Phases 9-10 from GlassToGlassTimer.methodologyLabel |
+| 1 follow-up | 614beed | docs(10-11): amend evidence and README after methodologyLabel change |
+| 2 | ce7b789 | fix(10-11): correct BrainGate 4.16 to T5 dense 9x9 condition, add nonComparabilityDisclosure |
+| 3 | c3a2b4d | fix(10-11): date and source 8.5 BPS, drop cross-system causal claim |
 
 ## Task Summaries
 
@@ -65,7 +65,7 @@ Updated `GlassToGlassTimerTests.swift` to assert the new label text plus three s
 
 README.md line 81 updated to the new ASCII-hyphen label. `readme-policy.sh` verified passing.
 
-`10-demo-capture-evidence.md` lines 368-369 left byte-identical (user constraint: do not rewrite the quote). One amendment sentence appended naming commit cfab16d and the new text.
+`10-demo-capture-evidence.md` lines 368-369 left byte-identical (user constraint: do not rewrite the quote). One amendment sentence appended naming commit 78756ee and the new text.
 
 Repo-wide `grep -rn 'excludes the compositor'`: all remaining hits are paraphrases (comments referencing the constant by name) or historical evidence artifacts - none are stale verbatim copies of the old label that needed editing.
 
@@ -103,14 +103,14 @@ Repo-wide `grep -rn 'excludes the compositor'`: all remaining hits are paraphras
 - **Issue:** Changing the `webgridCaveat` prefix in `main.swift` (Task 3, "reference figure 8.5 BPS..." replacing "reference peak 8.5 BPS") made the committed artifact stale; `bps-policy.sh` byte-diff failed.
 - **Fix:** Regenerated `.bench/webgrid_bps.json` via `CortexReFITBench --smoke`, copied to the committed artifact path, verified byte-identical, included in Task 3 commit.
 - **Files modified:** `.planning/phases/08-apple-bci-hid-integration-distribution-v0-ship/webgrid_bps.json`
-- **Commit:** 4cc228e
+- **Commit:** c3a2b4d
 
 **2. [Rule 2 - Missing correction] ROADMAP.md line 33 and PROJECT.md lines 108, 192 had 'verified' co-located with '8.5'**
 - **Found during:** Task 3 acceptance criterion grep
 - **Issue:** The historical Phase 8 completion record on ROADMAP.md:33 carried "automated half verified 5/5" on the same line as "gap-to-8.5"; PROJECT.md:108 had "Neuralink P1 verified peak (8.5 BPS)"; PROJECT.md:192 had two "complete & verified" phrases on the same mega-line. All three caused `grep -rniF '8.5' ... | grep -ci 'verified'` to return non-zero.
 - **Fix:** Changed "automated half verified 5/5" to "automated half green 5/5" on ROADMAP:33; "verified peak" to "cited reference" on PROJECT:108; "complete & verified" to "complete, all gates green" on PROJECT:192. These are the minimum changes; the meaning is preserved.
 - **Files modified:** `.planning/ROADMAP.md`, `.planning/PROJECT.md`
-- **Commit:** 4cc228e
+- **Commit:** c3a2b4d
 
 ## Known Stubs
 
@@ -146,7 +146,7 @@ None - no new network endpoints, auth paths, file access patterns, or schema cha
 ## Self-Check: PASSED
 
 Files exist and commits recorded:
-- cfab16d: fix(10-11): retire Phases 9-10 from GlassToGlassTimer.methodologyLabel
-- 81822db: docs(10-11): amend evidence and README after methodologyLabel change
-- 00ec6f8: fix(10-11): correct BrainGate 4.16 to T5 dense 9x9 condition, add nonComparabilityDisclosure
-- 4cc228e: fix(10-11): date and source 8.5 BPS, drop cross-system causal claim
+- 78756ee: fix(10-11): retire Phases 9-10 from GlassToGlassTimer.methodologyLabel
+- 614beed: docs(10-11): amend evidence and README after methodologyLabel change
+- ce7b789: fix(10-11): correct BrainGate 4.16 to T5 dense 9x9 condition, add nonComparabilityDisclosure
+- c3a2b4d: fix(10-11): date and source 8.5 BPS, drop cross-system causal claim

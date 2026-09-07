@@ -250,8 +250,8 @@ decoded count interpretable, because without it a decoded zero says nothing abou
 the geometry alone already misses most trials.
 
 It was committed before any decoded number existed, and the git order is the audit trail:
-`10-PREREGISTRATION.md` landed in **`864259b`**, `10-ceiling.json` and `10-ceiling-evidence.md` in
-**`69ccd6f`**, and the ablation that produced every decoded count above in **`2436188`**, 39 commits
+`10-PREREGISTRATION.md` landed in **`a72344b`**, `10-ceiling.json` and `10-ceiling-evidence.md` in
+**`b3eeba2`**, and the ablation that produced every decoded count above in **`0b7ad67`**, 39 commits
 later.
 
 **Geometry context, from `10-RESEARCH` Correction 4 and reproduced exactly by Plan 10-01.** At dwell

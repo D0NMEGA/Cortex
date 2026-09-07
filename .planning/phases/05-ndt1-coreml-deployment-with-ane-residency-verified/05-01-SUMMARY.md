@@ -76,9 +76,9 @@ completed: 2026-06-21
 
 Each task was committed atomically:
 
-1. **Task 1: VelocityHead + closed-form ridge fit + load hook** — `da6f91b` (feat) — TDD (test+impl in one iteration; 5 unit tests + impl)
-2. **Task 2: NDT1ANEWithVelocity + tanh-GELU + convert.py fp16** — `9088dab` (feat) — TDD (1 fast + 2 slow tests + impl)
-3. **Task 3: 05-velocity-head-evidence.md** — `123231a` (docs)
+1. **Task 1: VelocityHead + closed-form ridge fit + load hook** — `e6a437c` (feat) — TDD (test+impl in one iteration; 5 unit tests + impl)
+2. **Task 2: NDT1ANEWithVelocity + tanh-GELU + convert.py fp16** — `c55471a` (feat) — TDD (1 fast + 2 slow tests + impl)
+3. **Task 3: 05-velocity-head-evidence.md** — `3185253` (docs)
 
 **Plan metadata:** (this SUMMARY + STATE.md + ROADMAP.md + REQUIREMENTS.md) — see final docs commit.
 
@@ -107,7 +107,7 @@ Each task was committed atomically:
 - **Fix:** Reworded the comment to avoid `residency` (and the other forbidden tokens) while preserving the fp16/precision-only intent — the documented Phase-4 "literal-grep comment rewording" project pattern.
 - **Files modified:** `Decoder/src/ndt1/convert.py`
 - **Verification:** forbidden-token scan returns NONE; `test_convert_source_targets_cpu_not_ane` passes.
-- **Committed in:** `9088dab` (Task 2 commit)
+- **Committed in:** `c55471a` (Task 2 commit)
 
 **2. [Rule 1 - Bug] Test fixture mis-indexed the last-bin assignment**
 - **Found during:** Task 1 (GREEN run of `test_load_ridge_reproduces_linear_map_and_records_r2`)
@@ -115,7 +115,7 @@ Each task was committed atomically:
 - **Fix:** Assigned into the slice `rates[..., -1:]` with `x_te` reshaped to `(N,96,1,1)`, keeping the height/last-bin singleton dims.
 - **Files modified:** `Decoder/tests/test_velocity_head.py`
 - **Verification:** the test passes and reproduces `X @ W.T + b` to 1e-4.
-- **Committed in:** `da6f91b` (Task 1 commit)
+- **Committed in:** `e6a437c` (Task 1 commit)
 
 ---
 
@@ -147,7 +147,7 @@ None — no external service configuration. (No `user_setup` block in the plan.)
 ## Self-Check: PASSED
 
 - All 4 created files + 2 modified files present on disk.
-- All 3 task commits found in git history (`da6f91b`, `9088dab`, `123231a`).
+- All 3 task commits found in git history (`e6a437c`, `c55471a`, `3185253`).
 - Plan-level verification green: 8 DEC-10 tests + 62 fast-suite tests + Phase-4 boundary test pass; ruff clean.
 
 ---

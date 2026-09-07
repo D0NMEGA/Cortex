@@ -66,7 +66,7 @@ completed: 2026-08-31
 
 ## Accomplishments
 
-### Task 1 - Manifest corrected to the four Option B sessions (commit `1e17684`)
+### Task 1 - Manifest corrected to the four Option B sessions (commit `8fa4e72`)
 
 `indy_20160407_02` and `indy_20160411_01` are 192-channel M1+S1 recordings that
 `ndt1.data.load_session` is designed to reject, so two of the four previously-manifested sessions
@@ -82,7 +82,7 @@ The `note` no longer claims `indy_20160630_01` is the NLB'21 `mc_rtt` benchmark 
 `mc_rtt` is `indy_20170202_02` and is absent from Zenodo record 3854034). No replacement
 session-identity claim was substituted.
 
-### Task 2 - Three pre-checks before any checksum (commits `660c1c5` RED, `784c619` GREEN)
+### Task 2 - Three pre-checks before any checksum (commits `98ca301` RED, `926e630` GREEN)
 
 Executed as TDD. RED committed a failing suite first: 3 failed (the new magic/size/md5 gates), 3
 passed (the pre-existing sha256 pin and its matching-payload discriminator) - which shows the suite
@@ -100,7 +100,7 @@ already factored into helpers.
 `except ValueError` clauses already carry the new failures, and no bare or blind `except` was
 introduced anywhere (ruff `BLE` gate clean).
 
-### Task 3 - Manifest and integrity contract pinned (commit `6a3267d`)
+### Task 3 - Manifest and integrity contract pinned (commit `e81d5d8`)
 
 `test_manifest.py` gained five additive tests (all existing tests kept): `size_bytes`/`zenodo_md5`
 shape, the four selected ids in order, both dropped sessions with a `192-channel` reason, the absence
@@ -146,7 +146,7 @@ in Plan 09-09. Three `PENDING` entries here are correct, not an omission.
 - **Fix:** changed to `dict[str, Any]` (matching how the test module already types it) and added the
   `typing.Any` import. `_check_payload` uses the same annotation.
 - **Files modified:** `Decoder/scripts/download_indy.py`
-- **Commit:** `784c619`
+- **Commit:** `926e630`
 
 ### Acceptance criterion superseded by the plan's own verbatim text
 
@@ -197,9 +197,9 @@ opened.
 
 | Task | Commit | Message |
 |------|--------|---------|
-| 1 | `1e17684` | fix(09-01): correct indy_sessions.json to the four confirmed M1-only sessions |
-| 2 (RED) | `660c1c5` | test(09-01): add failing magic-byte, size and md5 gates for download_indy |
-| 2 (GREEN) | `784c619` | feat(09-01): refuse a non-MATLAB, mis-sized or mis-md5 payload before checksumming |
-| 3 | `6a3267d` | test(09-01): pin the manifest contract and the missing-key refusals |
+| 1 | `8fa4e72` | fix(09-01): correct indy_sessions.json to the four confirmed M1-only sessions |
+| 2 (RED) | `98ca301` | test(09-01): add failing magic-byte, size and md5 gates for download_indy |
+| 2 (GREEN) | `926e630` | feat(09-01): refuse a non-MATLAB, mis-sized or mis-md5 payload before checksumming |
+| 3 | `e81d5d8` | test(09-01): pin the manifest contract and the missing-key refusals |
 
 ## Self-Check: PASSED

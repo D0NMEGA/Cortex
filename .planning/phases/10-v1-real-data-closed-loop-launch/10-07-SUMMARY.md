@@ -68,8 +68,8 @@ completed: 2026-09-05
 
 | # | Task | Commit | Type |
 |---|---|---|---|
-| 1 | Run the ablation and commit the metrics JSON | `2436188` | feat |
-| 2 | `10-refit-real-evidence.md`, the narrated result | `0af133f` | docs |
+| 1 | Run the ablation and commit the metrics JSON | `0b7ad67` | feat |
+| 2 | `10-refit-real-evidence.md`, the narrated result | `3fbd2b1` | docs |
 
 ## Task 1: the measurement
 
@@ -214,7 +214,7 @@ literally requires ("stated immediately beside it, in the same table row"). Re-c
   byte-identical across two independent release runs, and every value reproduces 10-05's independent
   run of the same bench.
 - **Files:** none (a command-line change, recorded in the runbook)
-- **Committed in:** `0af133f` (the runbook)
+- **Committed in:** `3fbd2b1` (the runbook)
 
 **2. [Rule 2 - Missing critical] `ticks_model_backed` and `ticks_total` were not in the emitted JSON**
 
@@ -231,7 +231,7 @@ literally requires ("stated immediately beside it, in the same table row"). Re-c
   section 11's pinned list, and fixing it in the bench source was out of bounds
   (`Packages/CortexDemo/` belongs to the concurrently-running Plan 10-06).
 - **Files:** `.planning/phases/10-v1-real-data-closed-loop-launch/10-refit-real.json`
-- **Committed in:** `2436188`
+- **Committed in:** `0b7ad67`
 
 **3. [Rule 2 - Missing critical] `ceiling_ref`'s key name imports the framing section 16 rejected**
 
@@ -246,7 +246,7 @@ literally requires ("stated immediately beside it, in the same table row"). Re-c
   decoder can achieve), and recording that the key name mirrors a filename that predates the framing
   decision while `10-replay.json` names the same quantity `replay_reference_hits`.
 - **Files:** `.planning/phases/10-v1-real-data-closed-loop-launch/10-refit-real.json`
-- **Committed in:** `2436188`
+- **Committed in:** `0b7ad67`
 
 **4. [Rule 1 - Bug] The pre-registered `CortexReFITBench/main.swift:283-285` citation no longer resolves**
 
@@ -254,14 +254,14 @@ literally requires ("stated immediately beside it, in the same table row"). Re-c
 - **Issue:** at HEAD, `:283-285` points at `endpointOnAxis`, `effectiveDistance` and `trial`, not at
   the structurally-zero comment, which sits at `:286-288`. Publishing the registered citation
   unchanged would have shipped a reference a reader cannot follow.
-- **Fix:** checked out `Packages/CortexReFIT/Sources/CortexReFITBench/main.swift` at `864259b`, the
+- **Fix:** checked out `Packages/CortexReFIT/Sources/CortexReFITBench/main.swift` at `a72344b`, the
   pre-registration commit, and confirmed `:283-285` **was** exactly the structural-Si comment there.
   Plan 10-05 removed a three-line `let source` block earlier in the same file, shifting it by three.
   The evidence carries both forms and says which commit each resolves against.
 - **Why not just correct it:** the pre-registration is a frozen contract and its citation was correct
   when registered. Silently replacing it would hide that the code moved.
 - **Files:** `.planning/phases/10-v1-real-data-closed-loop-launch/10-refit-real-evidence.md`
-- **Committed in:** `0af133f`
+- **Committed in:** `3fbd2b1`
 
 **Total: 4 auto-fixed (1 blocking, 2 missing-critical, 1 bug). No Rule 4 escalation, no fix-limit
 escalation, no auth gate, no checkpoint.**
@@ -301,7 +301,7 @@ escalation, no auth gate, no checkpoint.**
   `10-replay.json`'s `sc2_disposition` and to the user at Plan 10-10 Task 3.
 - **10-11 (`WebgridBPS.swift`'s doc comment):** the long-form non-comparability disclosure is written
   out in section 5 of the evidence with all four grounds and their citations. Reuse it verbatim. The
-  structural-Si citation must be given as `:283-285` at `864259b` **and** `:286-288` at HEAD.
+  structural-Si citation must be given as `:283-285` at `a72344b` **and** `:286-288` at HEAD.
 - **10-12 (the README headline, D-12):** the real-data headline attributable to the decode is
   **0.000000 BPS** on both normalisations, with 1.953 preserved beside it and labeled synthetic. The
   `refit` arm's 0.487984 is not a decoding result and must not become the headline.
@@ -385,15 +385,15 @@ Files claimed as created, both confirmed present on disk:
 - `.planning/phases/10-v1-real-data-closed-loop-launch/10-refit-real-evidence.md` (443 lines)
 
 Commits claimed, both resolving as commit objects on top of the expected base
-`b74c4ac0be51cc097203c88304125e04bb91498a`: `2436188`, `0af133f`. `git merge-base HEAD b74c4ac`
-returns `b74c4ac`.
+`b74c4ac0be51cc097203c88304125e04bb91498a`: `0b7ad67`, `3fbd2b1`. `git merge-base HEAD b53bd20`
+returns `b53bd20`.
 
 The load-bearing claims were executed, not asserted. The ablation was run twice and the two outputs
 `diff` clean. The Python round-trip used for the hand-edit was proven byte-identical to the Swift
 encoder output before it was used, and `diff` between the generated and committed artifact shows only
 the three intended hunks. All four provenance digests were compared against their sources in code,
 not read by eye. The drifted `CortexReFITBench` line citation was confirmed against the file as it
-stood at `864259b`. Twenty narrated numbers were matched back to the committed JSON by script.
+stood at `a72344b`. Twenty narrated numbers were matched back to the committed JSON by script.
 
 *Phase: 10-v1-real-data-closed-loop-launch*
 *Completed: 2026-09-05*

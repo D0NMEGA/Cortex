@@ -171,12 +171,12 @@ replication here; that is stated in the evidence rather than glossed.
 
 ## Task Commits
 
-1. **RED: the failing isolation test plus the behaviour-preserving extraction** - `186f710` (test)
-2. **The objective fix in train and eval** - `2866ce4` (fix)
-3. **The scoring paths that produce the published numbers** - `94fcdbd` (fix)
-4. **The retrain and every re-derived number** - `6fc194f` (feat)
-5. **A relative --checkpoint-dir aborting the run at the JSON write** - `29a415c` (fix)
-6. **The corrected artifacts, and the red slow gate reported** - `4d3f6b1` (docs)
+1. **RED: the failing isolation test plus the behaviour-preserving extraction** - `d7598de` (test)
+2. **The objective fix in train and eval** - `9f298c5` (fix)
+3. **The scoring paths that produce the published numbers** - `0d78cfe` (fix)
+4. **The retrain and every re-derived number** - `861384d` (feat)
+5. **A relative --checkpoint-dir aborting the run at the JSON write** - `4e00b81` (fix)
+6. **The corrected artifacts, and the red slow gate reported** - `b71ff2d` (docs)
 
 ## Files Created/Modified
 
@@ -213,7 +213,7 @@ replication here; that is stated in the evidence rather than glossed.
 - **Fix:** the generator now states what the derivation did and what the gate therefore asserts, and
   leaves the judgment to the reader with the observation printed beside it. **The margin value and
   the derivation rule are unchanged.**
-- **Committed in:** `6fc194f`
+- **Committed in:** `861384d`
 
 **2. [Rule 1 - Bug] A relative `--checkpoint-dir` aborted the run at the JSON write**
 
@@ -224,7 +224,7 @@ replication here; that is stated in the evidence rather than glossed.
 - **Fix:** `_repo_relative` resolves first and falls back to the absolute path outside the repo.
 - **Verification:** the reproducibility numbers were recovered from the log and the saved
   checkpoint; nothing was re-run to produce them.
-- **Committed in:** `29a415c`
+- **Committed in:** `4e00b81`
 
 **3. [Rule 2 - Missing critical] A diverged run reported a meaningless co-bps as a verdict**
 
@@ -238,7 +238,7 @@ replication here; that is stated in the evidence rather than glossed.
 - **Verification:** the gate was re-executed after the change rather than having its new output
   predicted. It reproduced the divergence to full precision and now reports "the loop did not
   train: final loss 4.67701e+22 is not below the first epoch's 0.603385".
-- **Committed in:** `4d3f6b1`
+- **Committed in:** `b71ff2d`
 
 ### Deliberate departures
 
@@ -372,7 +372,7 @@ Files claimed, verified present:
 - `.planning/phases/09-.../09-06-SUMMARY.md` FOUND (corrected)
 - `.planning/phases/09-.../deferred-items-09-06b.md` FOUND
 
-Commits claimed, verified in `git log`: `186f710`, `2866ce4`, `94fcdbd`, `6fc194f`, `29a415c` all
+Commits claimed, verified in `git log`: `d7598de`, `9f298c5`, `0d78cfe`, `861384d`, `4e00b81` all
 FOUND. `Decoder/data/` and `Decoder/checkpoints/` untracked throughout; no `.mat` and no `.pt`
 entered git.
 

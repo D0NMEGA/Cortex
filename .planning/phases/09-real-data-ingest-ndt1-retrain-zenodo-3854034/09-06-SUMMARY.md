@@ -151,10 +151,10 @@ data: `1 passed, 150 deselected in 1201.01s`, `held_out_co_bps = 2.3993`, source
 
 ## Task Commits
 
-1. **Task 1: the RD-02e per-session ingest report** - `891132b` (feat)
-2. **Task 2: pooled retrain, per-session co-bps, four-fold LOSO, metrics JSON** - `16c898e` (feat)
-3. **Task 3: evidence artifact, re-derived margin, guard tests** - `6fd2442` (docs)
-4. **Post-task fix: smoke mode no longer clobbers the published checkpoint** - `4189024` (fix)
+1. **Task 1: the RD-02e per-session ingest report** - `540b7d0` (feat)
+2. **Task 2: pooled retrain, per-session co-bps, four-fold LOSO, metrics JSON** - `08b4b46` (feat)
+3. **Task 3: evidence artifact, re-derived margin, guard tests** - `02d4428` (docs)
+4. **Post-task fix: smoke mode no longer clobbers the published checkpoint** - `6f69eed` (fix)
 
 ## Files Created/Modified
 
@@ -201,7 +201,7 @@ Recorded in the frontmatter `key-decisions`. The two worth restating:
   concatenated. Costs 2 windows of 7,134 (0.03%) and no cross-session window exists.
 - **Verification:** Window counts per session (624 / 4203 / 1829 / 476) sum to 7,132 against
   `floor(228288/32) = 7134` for the naive path.
-- **Committed in:** `16c898e`
+- **Committed in:** `08b4b46`
 
 **2. [Rule 2 - Missing critical] A third null, and the input-visibility diagnostic**
 
@@ -219,7 +219,7 @@ Recorded in the frontmatter `key-decisions`. The two worth restating:
   required nulls and the JSON schema the plan specified are unchanged.
 - **Verification:** `visible_*` reproduces the committed values to full double precision on an
   independently constructed mask and a checkpoint reloaded from disk.
-- **Committed in:** `16c898e`, published in `6fd2442`
+- **Committed in:** `08b4b46`, published in `02d4428`
 
 **3. [Rule 1 - Bug] A diverged fold poisoned the summary and emitted invalid JSON**
 
@@ -237,7 +237,7 @@ Recorded in the frontmatter `key-decisions`. The two worth restating:
   produce a JSON written by the fixed code.
 - **Verification:** `node -e "JSON.parse(...)"` accepts the committed file; `grep -c NaN` returns 0;
   the summary reports mean 2.2271 over 3 finite folds with `diverged_folds: 1`.
-- **Committed in:** `16c898e`
+- **Committed in:** `08b4b46`
 
 **4. [Rule 1 - Bug] `--smoke` overwrote the checkpoint whose sha256 is published**
 
@@ -248,7 +248,7 @@ Recorded in the frontmatter `key-decisions`. The two worth restating:
 - **Fix:** smoke writes `ndt1_real_pooled.smoke.pt`.
 - **Verification:** ran a full smoke pass after the artifact run; the artifact checkpoint's sha256
   is unchanged and still equals the published value.
-- **Committed in:** `4189024`
+- **Committed in:** `6f69eed`
 
 ### Deliberate departures from the plan's literal text
 
@@ -384,7 +384,7 @@ Files claimed, verified present:
 - `.planning/phases/09-.../deferred-items-09-06.md` FOUND
 
 Commits claimed, verified in `git log`:
-- `891132b` FOUND, `16c898e` FOUND, `6fd2442` FOUND, `4189024` FOUND
+- `540b7d0` FOUND, `08b4b46` FOUND, `02d4428` FOUND, `6f69eed` FOUND
 
 Working tree clean apart from this summary. `Decoder/data/` and `Decoder/checkpoints/` unstaged and
 untracked throughout; no `.mat` entered git.

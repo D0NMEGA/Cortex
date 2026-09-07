@@ -74,7 +74,7 @@ fixture on a clean clone so the new CI step cannot pass vacuously.
 
 ## What was built
 
-**Task 1, `RollingSpikeWindow` (commit `627db01`).** 10-RESEARCH Pitfall 9 is the reason it exists:
+**Task 1, `RollingSpikeWindow` (commit `6100311`).** 10-RESEARCH Pitfall 9 is the reason it exists:
 `SampleCodec.encode` takes exactly 96 `Float16` values, so one IPC frame carries one 20 ms bin, while
 the shipped NDT1 input is `(1, 96, 1, 32)`. Nothing in the repo bridged that gap. The accumulator
 refuses the two failures that would otherwise be silent. A time-reversed window is a well-formed
@@ -83,14 +83,14 @@ tests with distinguishable bins. A window straddling a sequence gap is not 32 co
 recorded session, so a gap RESETS the fill rather than bridging it or inserting zeros. 11 tests,
 dataset-free and model-free.
 
-**Task 2, the D-05 replay producer (commit `63849d5`).** `binF16(forSeq:)` returns the export bin at
+**Task 2, the D-05 replay producer (commit `cce92bd`).** `binF16(forSeq:)` returns the export bin at
 `seq % binCount` when `CORTEX_REPLAY_EXPORT` names a D-06 export, else the unchanged `patternF16`.
 `produce` changed by exactly one line. The crypto, framing, ring write, doorbell and ack-bounce are
 untouched, and no path bypasses AES-GCM. A SET but unloadable export THROWS from `Producer.init`
 rather than falling back, which is the D-05 form of the Pattern-2 trap Plan 10-04 removed from the
 closed loop.
 
-**Task 3, `CortexSeamBSmoke` plus its CI step (commit `95c7ae6`).** The Seam B executable, and the
+**Task 3, `CortexSeamBSmoke` plus its CI step (commit `807feb3`).** The Seam B executable, and the
 one CI step that makes it a gate. It asserts structure only, emits no `passed` key and compares
 nothing against any budget (D-09).
 
@@ -102,7 +102,7 @@ Every command below was run in this worktree on 2026-09-05, on an Apple M5 Pro u
 | Check | Result |
 |---|---|
 | `swift test --package-path Packages/CortexDemo` | 44 tests in 5 suites passed (33 before this plan, +11) |
-| Same, with `CORTEX_MODEL_URL` set to the shipped `.mlpackage` | 44 tests passed (the 10-05 repair at `b18c6fa` held) |
+| Same, with `CORTEX_MODEL_URL` set to the shipped `.mlpackage` | 44 tests passed (the 10-05 repair at `95c73c7` held) |
 | `swift test --package-path Packages/CortexIPC` | 26 tests in 5 suites passed, no Phase-2 regression |
 | `git diff --stat Packages/CortexIPC/` | empty; the consumer extension lives in the smoke, not the shipped session library |
 | `./Tools/scripts/hotpath-policy.sh` | exit 0 |
@@ -282,7 +282,7 @@ header states the deviation, the evidence and the Phase-2 precedent in full.
 `FDChannel` fileport handoff or the `SessionKeyChannel` key delivery. Those three legs remain covered
 only by the XCTSkip-guarded Phase-2 test. Everything else in section 9's list is covered.
 
-**Committed in:** `95c7ae6`
+**Committed in:** `807feb3`
 
 ### 2. [Rule 3 - Blocking] The plan's SwiftPM package name is backwards
 
@@ -298,7 +298,7 @@ for is still present and still mentions `CortexIPCPackage`, but now states the m
 than the assumed one. This is the first SwiftPM consumer of that package, so nothing in the repo had
 pinned the answer before.
 
-**Committed in:** `95c7ae6`
+**Committed in:** `807feb3`
 
 ### 3. [Rule 1 - Bug] The banner would have created a second, colliding Producer
 
@@ -316,7 +316,7 @@ exactly as `init` does so the banner can never announce a source the producer wo
 instance properties `isReplayBacked` and `replaySessionId` are still there and are what the smoke
 records.
 
-**Committed in:** `63849d5`
+**Committed in:** `cce92bd`
 
 ### 4. [Rule 2 - Missing critical] The doorbell leg was counted, not assumed
 
@@ -331,7 +331,7 @@ asserts the woken seq equals the written seq, counting `doorbell_wakes`. A final
 requires `doorbell_wakes == frames`. Measured 256 of 256 on the fixture and 512 of 512 on the real
 export.
 
-**Committed in:** `95c7ae6`
+**Committed in:** `807feb3`
 
 ### 5. [Rule 2 - Missing critical] `Int(seq)` could trap
 
@@ -343,7 +343,7 @@ export.
 **Fix.** The modulo is taken in `UInt64` first, so the `Int` conversion is of a value already less
 than `binCount` and cannot trap. Same value for every reachable `seq`.
 
-**Committed in:** `63849d5`
+**Committed in:** `cce92bd`
 
 ### 6. [Rule 3 - Blocking] `fill(_:)` had to be `@MainActor`
 
@@ -357,7 +357,7 @@ a `nonisolated` class, but `SpikeInputBuffer` is MainActor-isolated (CortexDecod
 accumulate off the main actor as `HarnessConsumer` does. Only the handoff crosses. The signature the
 plan pinned is otherwise unchanged, and the two `fill` tests carry `@MainActor`.
 
-**Committed in:** `627db01`
+**Committed in:** `6100311`
 
 ### 7. [Rule 3 - Blocking, environment only] Two artifacts symlinked into the worktree
 
@@ -432,7 +432,7 @@ FOUND: Packages/CortexDemo/.bench/seam_b.json
 Commits claimed, verified in `git log`:
 
 ```
-FOUND: 627db01  feat(10-06): add RollingSpikeWindow, the one-bin-in 32-bin-window-out accumulator
-FOUND: 63849d5  feat(10-06): point the daemon producer at the real export (D-05), AES-GCM unchanged
-FOUND: 95c7ae6  feat(10-06): add CortexSeamBSmoke, the D-05 chain end to end, and wire its CI gate
+FOUND: 6100311  feat(10-06): add RollingSpikeWindow, the one-bin-in 32-bin-window-out accumulator
+FOUND: cce92bd  feat(10-06): point the daemon producer at the real export (D-05), AES-GCM unchanged
+FOUND: 807feb3  feat(10-06): add CortexSeamBSmoke, the D-05 chain end to end, and wire its CI gate
 ```

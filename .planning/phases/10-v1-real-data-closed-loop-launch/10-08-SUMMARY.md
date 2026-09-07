@@ -79,9 +79,9 @@ metrics:
 
 | # | Task | Commit | Type |
 |---|---|---|---|
-| 1 | Seam B chain-latency and amplitude instrumentation | `a8e9452` | feat |
-| 1 | Both seams measured, `10-replay.json` assembled | `4c4f420` | feat |
-| 2 | `10-replay-evidence.md`, the narrated result | `4d1f8eb` | docs |
+| 1 | Seam B chain-latency and amplitude instrumentation | `a230f70` | feat |
+| 1 | Both seams measured, `10-replay.json` assembled | `9e29807` | feat |
+| 2 | `10-replay-evidence.md`, the narrated result | `af345a0` | docs |
 
 ## Task 1: both seams, measured
 
@@ -220,7 +220,7 @@ facts rather than an open question.
 - **Note for 10-09:** its plan line 177 also names `ceiling_hits` and `ceiling_ref`. Its schema test
   must bind to `replay_reference_hits` and `replay_reference_ref`, which is what 10-07's summary
   already handed off.
-- **Committed in:** `4c4f420`
+- **Committed in:** `9e29807`
 
 **2. [Rule 2 - Missing critical] Seam B reported counters but no latency, and no amplitude ratio existed**
 
@@ -237,7 +237,7 @@ facts rather than an open question.
   cannot be published.
 - **Verification:** the clean-clone CI path still exits 0 with the amplitude block omitted (no model
   configured, `n` = 0); 44 CortexDemo tests and 26 CortexIPC tests pass; `swiftformat --lint` clean.
-- **Committed in:** `a8e9452`
+- **Committed in:** `a230f70`
 
 **3. [Rule 1 - Bug] The cross-process clock concern the plan raised does not arise**
 
@@ -250,7 +250,7 @@ facts rather than an open question.
   applies: no cross-process wakeup, context switch or scheduling delay is included, so 0.136 ms is a
   **floor** on what the chain would cost across a real process boundary, never an estimate of it.
   `latency_caveat` and `process_boundary_note` carry that in the artifact.
-- **Committed in:** `a8e9452`, `4c4f420`
+- **Committed in:** `a230f70`, `9e29807`
 
 **4. [Rule 2 - Missing critical] The plan's 4096-frame Seam B run would not have covered the replay**
 
@@ -263,7 +263,7 @@ facts rather than an open question.
   wrap back to bin 0. That leaves 73,128 windows against the ablation's 73,129 decoded ticks, because
   the window ending at bin 31 needs bin 0 and bin 0 is never sent. Recorded in the artifact as
   `frames_note`.
-- **Committed in:** `4c4f420`
+- **Committed in:** `9e29807`
 
 **5. [Rule 2 - Missing critical] The refit arm's hits and distances alone would have hidden the finding**
 
@@ -276,7 +276,7 @@ facts rather than an open question.
   refit arm's, byte-equal and script-verified), and `hits_by_arm` plus
   `distance_to_target_mm.by_arm` carry all four arms beside them, each with the section-7 caveat. The
   evidence's single hit table leads with the two target-blind zero rows.
-- **Committed in:** `4c4f420`
+- **Committed in:** `9e29807`
 
 **6. [Rule 3 - Blocking, environment only] Gitignored directories absent from the worktree**
 
@@ -358,7 +358,7 @@ The plan's own STRIDE register is fully mitigated by executed controls:
 |---|---|
 | T-10-08-01 a Seam B number presented as the re-derived Phase-8 number | each seam carries `seam` and a distinct `boundary`; the evidence states the non-comparability in bold; `8318256` verified present in the Seam A section and absent from the Seam B section by script |
 | T-10-08-02 synthetic numbers published as real after a silent fallback | `ticks_model_backed == ticks_total == 2294` on every Seam A run, asserted by the bench's own `precondition` and re-asserted by the verification script |
-| T-10-08-03 a hit count published without its reference | `replay_reference_hits` asserted byte-equal to `10-ceiling.json`'s `canonical_hits`; the evidence names commits `864259b`, `69ccd6f` and `2436188` in order |
+| T-10-08-03 a hit count published without its reference | `replay_reference_hits` asserted byte-equal to `10-ceiling.json`'s `canonical_hits`; the evidence names commits `a72344b`, `b3eeba2` and `0b7ad67` in order |
 | T-10-08-04 acquisition parameters quietly relaxed | radius, dwell and timeout read from the pre-registered sidecar and the committed ablation; `not relaxed` present in the evidence; the ablation and this artifact share one replay |
 | T-10-08-05 a debug number compared against a release one | the Phase-8 configuration was read from `08-03-SUMMARY.md`, found to be debug by default, and BOTH configurations were run five times each and reported |
 | T-10-08-06 an unreliable cross-process latency published as sound | the run is single-process on one timebase, so the arithmetic is sound; the limitation that actually applies (no cross-process wakeup) is stated as a floor in `latency_caveat` |
@@ -427,15 +427,15 @@ FOUND: .planning/phases/10-v1-real-data-closed-loop-launch/10-replay.json (362 l
 FOUND: .planning/phases/10-v1-real-data-closed-loop-launch/10-replay-evidence.md (486 lines)
 ```
 
-File claimed as modified, confirmed changed in `a8e9452` (141 insertions, 0 deletions):
+File claimed as modified, confirmed changed in `a230f70` (141 insertions, 0 deletions):
 
 ```
 FOUND: Packages/CortexDemo/Sources/CortexSeamBSmoke/main.swift (774 lines)
 ```
 
 Commits claimed, all resolving as commit objects on top of the expected base
-`e1fda58f546b56ff1602ec0775a4450d0536f799`: `a8e9452`, `4c4f420`, `4d1f8eb`.
-`git merge-base HEAD e1fda58` returns `e1fda58f546b56ff1602ec0775a4450d0536f799`.
+`e1fda58f546b56ff1602ec0775a4450d0536f799`: `a230f70`, `9e29807`, `af345a0`.
+`git merge-base HEAD 599450b` returns `e1fda58f546b56ff1602ec0775a4450d0536f799`.
 
 The load-bearing claims were executed, not asserted. Seam A ran ten times across two configurations
 and reported 2294 of 2294 ticks model-backed on every one. Seam B ran five times over the full export

@@ -89,13 +89,13 @@ completed: 2026-09-07
 
 ## Task Commits
 
-1. **Task 1: the mechanical classes** - `9780d78` (fix)
-2. **Task 2a: identifier_name, the snake_case wire keys** - `f859c54` (refactor)
-3. **Task 2b: identifier_name min-length + nesting config** - `40e5b19` (chore)
-4. **Task 3a: the 12 force unwraps and force casts** - `7fcbf9d` (fix)
-5. **Task 3b: size and complexity classes** - `7d310ab` (refactor)
+1. **Task 1: the mechanical classes** - `80e46b7` (fix)
+2. **Task 2a: identifier_name, the snake_case wire keys** - `a1cd5af` (refactor)
+3. **Task 2b: identifier_name min-length + nesting config** - `c548aef` (chore)
+4. **Task 3a: the 12 force unwraps and force casts** - `6b17800` (fix)
+5. **Task 3b: size and complexity classes** - `e90e89a` (refactor)
 
-**Plan metadata:** `89885b6` (docs: the remediation evidence artifact)
+**Plan metadata:** `76f6db6` (docs: the remediation evidence artifact)
 
 ## Files Created/Modified
 
@@ -157,14 +157,14 @@ Twelve sites, three classes. This is the distinction a reviewer should check:
 - **Issue:** `swiftlint --fix --only-rule empty_count` rewrote `#expect(hist.count == 0)` to `hist.isEmpty`. `LatencyHistogram` had no `isEmpty` member, so `CortexDecoder` did not compile.
 - **Fix:** Added `public var isEmpty: Bool { samplesNs.isEmpty }` rather than reverting. A `count`-exposing type offering `isEmpty` is the idiomatic reason the rule exists.
 - **Verification:** `swift test --package-path Packages/CortexDecoder` passes.
-- **Committed in:** `9780d78`
+- **Committed in:** `80e46b7`
 
 **2. [Rule 1 - Bug] A rename silently removed a label the honesty gate depends on**
 - **Found during:** Task 3
 - **Issue:** `honesty-sweep.sh` failed: `ERROR [label] a superseded number appears WITHOUT a labeling token on its own line ... phase8SyntheticRefitBpsN900: 1.953047883714651`. The old identifier `phase8_synthetic_refit_bps_n900` contained the lowercase substring `synthetic`, one of the sweep's label tokens, and was carrying the label for a line stating the superseded 1.953 figure. CamelCasing it to `Synthetic` delabeled that line.
 - **Fix:** Fixed the CLAIM, not the label list (which the script explicitly forbids widening). The line now carries a comment stating the number is a synthetic Phase-8 seed-locked replay figure and superseded.
 - **Verification:** `honesty-sweep.sh` and `--self-test` both rc=0.
-- **Committed in:** `7d310ab`
+- **Committed in:** `e90e89a`
 - **Worth carrying forward:** a rename can remove a label a gate reads. Nothing but that gate would have caught it.
 
 **3. [Rule 2 - Missing Critical] The `CodingKeys` had no test protecting them**
@@ -172,7 +172,7 @@ Twelve sites, three classes. This is the distinction a reviewer should check:
 - **Issue:** The pre-existing `LatencyHistogram` round-trip test could NOT catch a dropped `CodingKeys` - encoder and decoder would simply agree on camelCase and the round-trip would still pass. The whole point of T-10-16-01 was unguarded in CI.
 - **Fix:** Added `LatencyHistogramTests.emittedKeysAreSnakeCase`, which reads the emitted bytes and fails if a wire key moved or a camelCase key appeared.
 - **Verification:** `CortexDecoder` suite is 20 tests, up from 19.
-- **Committed in:** `f859c54`
+- **Committed in:** `a1cd5af`
 
 **4. [Rule 3 - Blocking] The worktree could not run `xcodebuild` at all**
 - **Found during:** Task 1
@@ -206,12 +206,12 @@ Restored deterministically with `export_replay.py --session indy_20160630_01` an
 
 The restored export is provably bit-identical to the one that produced every committed Phase-10 artifact. No data lost, no number affected. Full account in section 9 of the evidence artifact. The rule that would have prevented it is already written in the Plan 10-07 and 10-11 runbooks: real directories holding symlinks, never bare directory symlinks.
 
-**A pre-existing reproducibility gap, found and logged.** `10-refit-real.json` contains `ceiling_ref`, `phase9_bounds` and two `env` entries that **no version of `CortexReplayBench` emits** - not HEAD's and not `c3d406a`'s. The diff is 17 added lines, zero modified, zero removed, so nothing this plan did caused it and no number is contradicted. But it means "regenerate and diff" is not currently a complete reproducibility check for that artifact. Out of scope; recorded in the evidence artifact and `deferred-items.md`.
+**A pre-existing reproducibility gap, found and logged.** `10-refit-real.json` contains `ceiling_ref`, `phase9_bounds` and two `env` entries that **no version of `CortexReplayBench` emits** - not HEAD's and not `46ab4c3`'s. The diff is 17 added lines, zero modified, zero removed, so nothing this plan did caused it and no number is contradicted. But it means "regenerate and diff" is not currently a complete reproducibility check for that artifact. Out of scope; recorded in the evidence artifact and `deferred-items.md`.
 
 ## Verification
 
 ```
-swiftlint --strict     BEFORE (main @ c3d406a): 471 violations
+swiftlint --strict     BEFORE (main @ 46ab4c3): 471 violations
 swiftlint --strict     AFTER:  Found 0 violations, 0 serious in 111 files      rc=0
 swiftformat --lint .   0/113 files require formatting, 17 files skipped        rc=0
 ```
@@ -233,7 +233,7 @@ diff -u manifest-before.txt manifest-after.txt
 diff <fresh>/refit_bps.json   <committed Phase-7>                  EMPTY
 diff <fresh>/webgrid_bps.json <committed Phase-8>                  EMPTY
 diff <fresh>/10-ceiling.json  <committed Phase-10>                 EMPTY
-CortexReplayBench  BASE(c3d406a) output vs HEAD output             EMPTY
+CortexReplayBench  BASE(46ab4c3) output vs HEAD output             EMPTY
 CortexSeamBSmoke   BASE vs HEAD, 73159 frames    31/31 keys, 28/31 values identical
 ```
 
@@ -311,8 +311,8 @@ All created and modified key artifacts exist on disk: `10-lint-remediation-evide
 `10-16-SUMMARY.md`, the appended `deferred-items.md`, `.swiftlint.yml`, and the new test case in
 `LatencyHistogramTests.swift`.
 
-All six commits are present in history and parented on the base `c3d406a`: `9780d78`, `f859c54`,
-`40e5b19`, `7fcbf9d`, `7d310ab`, `89885b6`.
+All six commits are present in history and parented on the base `46ab4c3`: `80e46b7`, `a1cd5af`,
+`c548aef`, `6b17800`, `e90e89a`, `76f6db6`.
 
 The plan's mechanical acceptance greps were re-run against the tree, not assumed:
 
@@ -362,7 +362,7 @@ Mechanism: XcodeGen *regenerates* `Info.plist` from `project.yml`'s `info.proper
 than merging into the existing file, so any key absent from `project.yml` is dropped on every run.
 
 Provenance, established from history rather than inferred: both keys entered the tracked plists in
-`2cdb878` (2026-06-23, Plan 08-01) and `project.yml` has **never** carried either one -- zero commits
+`647f14e` (2026-06-23, Plan 08-01) and `project.yml` has **never** carried either one -- zero commits
 across all refs touch them there. They were written to the generator's OUTPUT instead of its INPUT,
 so every `xcodegen generate` since 2026-06-23 has silently dropped them.
 

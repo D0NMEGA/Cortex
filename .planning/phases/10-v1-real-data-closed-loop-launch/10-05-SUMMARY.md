@@ -48,7 +48,7 @@ key-files:
     - Packages/CortexDemo/Tests/CortexDemoTests/ClosedLoopPipelineTests.swift
 
 key-decisions:
-  - "phase7BaselineK is COMPUTED in every generator run from default_noise(seed) through the same steady_state_gain call, not transcribed; it came out bit-identical to the Phase-7 gain committed at bd0deb4, which is the proof that the freeze is the real Phase-7 gain"
+  - "phase7BaselineK is COMPUTED in every generator run from default_noise(seed) through the same steady_state_gain call, not transcribed; it came out bit-identical to the Phase-7 gain committed at 5202a96, which is the proof that the freeze is the real Phase-7 gain"
   - "KalmanFilter.init() became a convenience forwarding to init(gain:), so there is exactly ONE unpacking implementation and a second gain source cannot drift from the first"
   - "CORTEX_REFIT_REPLAY_URL disposition: option (ii), the hook is KEPT and a present path exits 1 naming CortexReplayBench. Deleting it would have removed the discoverability; half-honouring it was the defect"
   - "CortexReplayBench decodes ONE tick per 20 ms bin on a trailing 32-bin window, not one per non-overlapping window. Non-overlapping windows advance the session clock 640 ms per tick, which collapses the pre-registered 0.30 s dwell to a single sample"
@@ -81,17 +81,17 @@ completed: 2026-09-05
 
 | # | Task | Commit | Type |
 |---|---|---|---|
-| 1 | Frozen-gain tests (RED) | `813daee` | test |
-| 1 | Freeze the Phase-7 gain for the synthetic fixture (GREEN) | `93cec1d` | fix |
-| 2 | ArmStatistics tests (RED) | `bd011e6` | test |
-| 2 | Realized gain and smoothing (GREEN) | `a77ac16` | feat |
-| 3 | CortexReplayBench, the four-arm real-data ablation | `9941a03` | feat |
-| - | The carried-in `ClosedLoopPipelineTests` repair | `b18c6fa` | test |
+| 1 | Frozen-gain tests (RED) | `2589a12` | test |
+| 1 | Freeze the Phase-7 gain for the synthetic fixture (GREEN) | `577f8e4` | fix |
+| 2 | ArmStatistics tests (RED) | `5ca22c1` | test |
+| 2 | Realized gain and smoothing (GREEN) | `ec64639` | feat |
+| 3 | CortexReplayBench, the four-arm real-data ablation | `855aac1` | feat |
+| - | The carried-in `ClosedLoopPipelineTests` repair | `95c73c7` | test |
 
 ## Task 1: the freeze, and the proof it is the real Phase-7 gain
 
 Both red gates are green. Neither committed fixture was touched:
-`git diff 4f07444..HEAD --stat` over `refit_bps.json` and `webgrid_bps.json` is empty.
+`git diff bab1a4e..HEAD --stat` over `refit_bps.json` and `webgrid_bps.json` is empty.
 
 `Decoder/scripts/fit_kalman_gain.py`'s `render_swift` now calls `default_noise(fit.seed)`
 unconditionally and runs the same `steady_state_gain` on it, so `phase7BaselineK` is GENERATED in
@@ -99,7 +99,7 @@ every run rather than transcribed. The provenance header gains one line naming w
 gains ships.
 
 **The load-bearing check, executed rather than argued.** The emitted `phase7BaselineK` is
-byte-identical to the `K` committed at `bd0deb4`, the original Phase-7 constants commit:
+byte-identical to the `K` committed at `5202a96`, the original Phase-7 constants commit:
 
 ```
 SIMD2<Float>(0.0392099203499935, 0.0)
@@ -259,7 +259,7 @@ stayed inside the authorized scope.
 the shipped fp16 model wired, `git checkout`-ing the file back to its pre-repair state and running
 `--filter modelBackedDecodePathPresent` fails at `ClosedLoopPipelineTests.swift:71` with
 `Expectation failed: anyModelTick`; restoring the repair makes it pass. Committed separately as
-`b18c6fa`.
+`95c73c7`.
 
 ## Deviations from Plan
 
@@ -280,7 +280,7 @@ the shipped fp16 model wired, `git checkout`-ing the file back to its pre-repair
 - **Why not the alternative:** resetting per trial to a position we do not have would fabricate
   cursor behavior, which is the same defect class 10-03a's containment argument exists to prevent.
 - **Files:** `Packages/CortexDemo/Sources/CortexReplayBench/main.swift`
-- **Committed in:** `9941a03`
+- **Committed in:** `855aac1`
 
 **2. [Rule 1 - Bug] Non-overlapping decode windows would have destroyed the dwell semantics**
 
@@ -298,7 +298,7 @@ the shipped fp16 model wired, `git checkout`-ing the file back to its pre-repair
   `RecordedSpikeSource.modelSeqLen` is still the one home for the 32.
 - **Cost:** 73,129 CoreML predictions instead of 2,286. Measured at 11.8 s wall in a release build.
 - **Files:** `Packages/CortexDemo/Sources/CortexReplayBench/main.swift`
-- **Committed in:** `9941a03`
+- **Committed in:** `855aac1`
 
 **3. [Rule 3 - Blocking] Top-level `let`s in `main.swift` are MainActor-isolated**
 
@@ -310,7 +310,7 @@ the shipped fp16 model wired, `git checkout`-ing the file back to its pre-repair
 - **Fix:** those three functions are marked `@MainActor`. No data was moved and no isolation was
   relaxed.
 - **Files:** `Packages/CortexDemo/Sources/CortexReplayBench/main.swift`
-- **Committed in:** `9941a03`
+- **Committed in:** `855aac1`
 
 **4. [Rule 2 - Missing critical] The `bps_*_label` siblings the plan did not list**
 
@@ -321,7 +321,7 @@ the shipped fp16 model wired, `git checkout`-ing the file back to its pre-repair
 - **Fix:** `bps_n900_label` and `bps_n64_label` carry the pre-registered strings verbatim, from two
   file-level `let`s so the two places they are emitted cannot diverge.
 - **Files:** `Packages/CortexDemo/Sources/CortexReplayBench/main.swift`
-- **Committed in:** `9941a03`
+- **Committed in:** `855aac1`
 
 **Total: 4 auto-fixed (2 blocking, 1 bug, 1 missing-critical). No Rule 4 escalation.** Deviation 1
 was the only one that came close, and it is a measurement-convention choice inside a pre-registered
@@ -337,7 +337,7 @@ track in it.
 with `--disable swiftTestingTestCaseNames`, which fires identically on the pre-existing suite).
 
 `CortexReFITBench/main.swift` is **not** `swiftformat --lint` clean and never has been. It carried
-35 violations at `4f07444` and carries 32 after this plan, in exactly the same eight rule classes
+35 violations at `bab1a4e` and carries 32 after this plan, in exactly the same eight rule classes
 (`wrap` 18, `docComments` 4, `conditionalAssignment` 7 to 4, `numberFormatting` 2, plus one each of
 `preferKeyPath`, `preferCountWhere`, `unusedArguments`, `wrapSingleLineComments`). The count fell
 because this plan removed the `let source: String` if/else. No new violation and no new rule class
@@ -398,7 +398,7 @@ swiftformat 0.61.1, python 3.12 under `uv`.
 | `CortexReplayBench --export ... --model ...` | 73,129 ticks, 0 fallbacks, **exit 0**, 11.8 s |
 | `CortexReplayBench` run twice, `diff` of `refit_real.json` | **byte-identical** |
 | `CORTEX_REFIT_REPLAY_URL=<real export> CortexReFITBench` | **exit 1**, names `CortexReplayBench` |
-| `git diff 4f07444..HEAD --stat` on both committed fixtures | **empty** |
+| `git diff bab1a4e..HEAD --stat` on both committed fixtures | **empty** |
 | `git status --short` | clean; nothing from `Decoder/{data,exports,checkpoints}` or `.bench/` |
 
 ### Acceptance greps
@@ -451,7 +451,7 @@ swiftformat 0.61.1, python 3.12 under `uv`.
 ## Notes for later plans
 
 - **10-06 and 10-09:** the `CortexDemo` suite is green with `CORTEX_MODEL_URL` set. The
-  `ClosedLoopPipelineTests` red they were warned about is repaired in `b18c6fa`.
+  `ClosedLoopPipelineTests` red they were warned about is repaired in `95c73c7`.
 - **10-07:** the artifact to publish is `Packages/CortexDemo/.bench/refit_real.json`. The five
   points under "The run" all belong in the evidence artifact, particularly point 1 (both
   decode-attributable arms are zero) and point 2 (the 70 hits are target-determined). The
@@ -478,11 +478,11 @@ Files claimed as modified, all confirmed changed in the commits below:
 `Packages/CortexDemo/Package.swift`, `ClosedLoopPipelineTests.swift`.
 
 Commits claimed, all resolving as commit objects on top of the expected base
-`4f074449567b2e1aa4642bbc59106df059918228`: `813daee`, `93cec1d`, `bd011e6`, `a77ac16`, `9941a03`,
-`b18c6fa`.
+`4f074449567b2e1aa4642bbc59106df059918228`: `2589a12`, `577f8e4`, `5ca22c1`, `ec64639`, `855aac1`,
+`95c73c7`.
 
 The three load-bearing claims were executed, not asserted: the regenerated `phase7BaselineK` was
-byte-compared against the `K` committed at `bd0deb4` and matches; `CortexReFITBench --smoke` produces
+byte-compared against the `K` committed at `5202a96` and matches; `CortexReFITBench --smoke` produces
 a `refit_bps.json` and a `webgrid_bps.json` that both `diff` clean against the committed copies with
 neither committed file modified; and the carried-in test repair was reproduced in BOTH directions in
 this worktree with the shipped model wired.

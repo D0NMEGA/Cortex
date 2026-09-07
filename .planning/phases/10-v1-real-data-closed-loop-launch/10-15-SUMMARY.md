@@ -77,25 +77,25 @@ completed: 2026-09-07
 
 ## Task commits
 
-1. **Task 1: pin the lint toolchain and gate the pin** - `2f80b2e` (chore)
-2. **Task 2: measure and commit the true pre-remediation baseline** - `bcab25b` (docs)
-3. *(pre-sweep config correction)* - `72661b5` (fix)
-4. *(pre-sweep config correction)* - `6e5db71` (fix)
-5. **Task 3: run the SwiftFormat sweep** - `7af0cad` (style)
+1. **Task 1: pin the lint toolchain and gate the pin** - `21e5179` (chore)
+2. **Task 2: measure and commit the true pre-remediation baseline** - `16a09d0` (docs)
+3. *(pre-sweep config correction)* - `8e91662` (fix)
+4. *(pre-sweep config correction)* - `3a64be5` (fix)
+5. **Task 3: run the SwiftFormat sweep** - `94c1b19` (style)
 
 ## Verification, verbatim
 
 ### Violation counts, per tool
 
 ```
-PRE-SWEEP  (commit 2f80b2e, clean tree, no .build anywhere)
+PRE-SWEEP  (commit 21e5179, clean tree, no .build anywhere)
   swiftformat --lint .   79/113 files require formatting, 16 files skipped.   exit 1
                          1869 reported violations
                          (with --header ignore: 73/113, 1551 violations)
   swiftlint --quiet      514                                                  exit 2
                          301 error / 213 warning
 
-POST-SWEEP (commit 7af0cad)
+POST-SWEEP (commit 94c1b19)
   swiftformat --lint .   0/113 files require formatting, 16 files skipped.    exit 0
   swiftlint --strict     546                                                  exit 2
                          376 error / 170 warning
@@ -225,7 +225,7 @@ the formatter provably never touched, and I am not claiming a run I did not do.
   branch. Verified: all three sampled headers survive verbatim, every other rule still applies.
 - **Files modified:** `.swiftformat`
 - **Verification:** re-ran the temp-copy format with the new config; headers byte-identical
-- **Committed in:** `72661b5`
+- **Committed in:** `8e91662`
 
 **Called out because it cuts against this plan's own headline:** this removes 315 violations without
 fixing anything. Post-correction the pre-sweep baseline is 73/113 files and 1,551 violations. Those
@@ -246,7 +246,7 @@ from a repo whose whole discipline is that published numbers carry their origin.
   the already-excluded `CortexCore/.build` scored 0 both ways. Re-confirmed after the real test
   battery created all eight `.build` dirs: 0 violations inside `.build`.
 - **Files modified:** `.swiftlint.yml`
-- **Committed in:** `72661b5`
+- **Committed in:** `8e91662`
 
 `.swiftformat` deliberately did **not** get the equivalent change: measured as a no-op, because
 SwiftFormat never descends into hidden directories (same 113 files with and without the probes, and
@@ -267,7 +267,7 @@ a cosmetic diff.
   was gone) was resolved by re-running the formatter to convergence.
 - **Verification:** `swift test --package-path Packages/CortexIPC` -> 26 tests, 5 suites, exit 0;
   `swiftformat --lint .` -> 0/113, exit 0
-- **Committed in:** `6e5db71` (config) and `7af0cad` (the two restored lines, per plan Task 3f)
+- **Committed in:** `3a64be5` (config) and `94c1b19` (the two restored lines, per plan Task 3f)
 
 ### 4. [Rule 3 - Blocking] CortexRing's Rust xcframework was absent
 
@@ -314,7 +314,7 @@ unexcluded (Deviation 2). Stated as a reading of the evidence, not an establishe
 ## Handoff to 10-16: the residual `swiftlint --strict` roster
 
 `swiftlint --strict` exits **2** with **546** violations (376 error, 170 warning). Measured at
-`7af0cad` under SwiftLint 0.63.3, on a tree with all eight `.build` directories present and 0
+`94c1b19` under SwiftLint 0.63.3, on a tree with all eight `.build` directories present and 0
 violations inside them.
 
 By rule:
@@ -423,9 +423,9 @@ disturb it than a formatter was.
 ## Self-Check: PASSED
 
 All four created/modified key artifacts exist on disk; `toolchain-policy.sh` is executable. All five
-commits are present in history (`2f80b2e`, `bcab25b`, `72661b5`, `6e5db71`, `7af0cad`), each
-reachable and parented on `87e3028`. The baseline commit `bcab25b` precedes the sweep commit
-`7af0cad`, satisfying the plan's ordering requirement that the baseline predate the change.
+commits are present in history (`21e5179`, `16a09d0`, `8e91662`, `3a64be5`, `94c1b19`), each
+reachable and parented on `4104a41`. The baseline commit `16a09d0` precedes the sweep commit
+`94c1b19`, satisfying the plan's ordering requirement that the baseline predate the change.
 
 ---
 
@@ -452,7 +452,7 @@ Three reasons, in order of weight:
 Disabling the rule restores the status quo ante; it does not impose a new convention.
 
 **Method.** Added the `--disable` with its rationale, restored every test source from the pre-sweep
-commit `87e3028`, then re-ran `swiftformat .` so the remaining rules re-applied without the rename.
+commit `4104a41`, then re-ran `swiftformat .` so the remaining rules re-applied without the rename.
 
 **Result, all re-measured on `main` after the fix:**
 
@@ -461,7 +461,7 @@ commit `87e3028`, then re-ran `swiftformat .` so the remaining rules re-applied 
 | `swiftformat --lint .` | exit 0 | exit 0 |
 | `swiftlint --strict` violations | 546 | **471** |
 | `@Test("` in `Packages/*/Tests/` | 3 | **182** (pre-sweep value) |
-| committed JSON + `*-evidence.md` changed vs `87e3028` | 0 | **0** |
+| committed JSON + `*-evidence.md` changed vs `4104a41` | 0 | **0** |
 | Swift tests | 44 / 32 / 19 | 44 / 32 / 19 |
 | pytest | 288 passed, 1 skipped | 289 passed, 10 deselected |
 | policy gates | 11/11 green | 11/11 green |

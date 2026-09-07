@@ -1,7 +1,7 @@
 # Phase 10 RD-08 evidence: the recorded-cursor webgrid replay reference
 
 **Date:** 2026-09-05 (Plan 10-01, Task 3). Read the pre-registration in
-`10-PREREGISTRATION.md`, committed in `864259b` before this run, before this number, and before any
+`10-PREREGISTRATION.md`, committed in `a72344b` before this run, before this number, and before any
 decoded number exists in this phase.
 
 **Result:** replaying the animal's own recorded cursor through this repo's dwell-to-select rule at
@@ -195,7 +195,7 @@ relaxed in any row, no agent amends a success criterion, and the disposition is 
 ## Pre-registration statement
 
 **This number was committed before any decoded hit count existed.** The pre-registration that
-governs it is commit `864259b` (`docs(10-01): pre-register every Phase 10 measurement convention`),
+governs it is commit `a72344b` (`docs(10-01): pre-register every Phase 10 measurement convention`),
 which fixes the workspace box, the canonical radius and dwell, the artifact schema and the RD-08
 hit contract. This artifact and `10-ceiling.json` land in the commit that carries this file, and
 that commit precedes every commit in this phase that touches `10-replay.json` or any decoded

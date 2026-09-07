@@ -28,8 +28,8 @@ human_verification: []
 
 | # | Truth | Status | Evidence |
 |---|-------|--------|----------|
-| SC#1 | CI builds every commit on macos-15 + Xcode 26.3 | VERIFIED (gate in place; first live run pending first PR) | `.github/workflows/ci.yml` pins `maxim-lobanov/setup-xcode@v1` at `xcode-version: '26.3'`; includes a fail-fast step that exits 1 if `xcodebuild -version` returns anything other than `Xcode 26.*`; runs three unsigned smoke builds (CortexMac, CortexiOS, CortexDaemon) via `CODE_SIGNING_ALLOWED=NO`; local builds under Xcode 26.3 confirmed SUCCESS (01-07-SUMMARY.md, commit `35dc1e8`). |
-| SC#2 | App Group container provisioned; cross-process shm_open between entitlement-carrying Mac binaries works | VERIFIED | `sc2-evidence.md` committed at `0807df2`. Two Personal-Team-signed, App-Group-entitled Mac binaries (`CortexMac.app` PID 41234, `CortexDaemon` PID 41220) opened `/cortex.samples` inside `~/Library/Group Containers/group.com.donovansantine.cortex.shared/`; CortexMac.app read the daemon's PID from the mmap sentinel (`0xC0DE20260000A104 -> pid 41220`). containermanagerd metadata plist present. No deprecated shared-memory exception. No sandbox. |
+| SC#1 | CI builds every commit on macos-15 + Xcode 26.3 | VERIFIED (gate in place; first live run pending first PR) | `.github/workflows/ci.yml` pins `maxim-lobanov/setup-xcode@v1` at `xcode-version: '26.3'`; includes a fail-fast step that exits 1 if `xcodebuild -version` returns anything other than `Xcode 26.*`; runs three unsigned smoke builds (CortexMac, CortexiOS, CortexDaemon) via `CODE_SIGNING_ALLOWED=NO`; local builds under Xcode 26.3 confirmed SUCCESS (01-07-SUMMARY.md, commit `eb6623e`). |
+| SC#2 | App Group container provisioned; cross-process shm_open between entitlement-carrying Mac binaries works | VERIFIED | `sc2-evidence.md` committed at `d959a59`. Two Personal-Team-signed, App-Group-entitled Mac binaries (`CortexMac.app` PID 41234, `CortexDaemon` PID 41220) opened `/cortex.samples` inside `~/Library/Group Containers/group.com.donovansantine.cortex.shared/`; CortexMac.app read the daemon's PID from the mmap sentinel (`0xC0DE20260000A104 -> pid 41220`). containermanagerd metadata plist present. No deprecated shared-memory exception. No sandbox. |
 | SC#3 | PrivacyInfo.xcprivacy validates against 2026 required-reason API list with CA92.1 for mach_absolute_time | VERIFIED | `validate-privacy-manifest.sh` run live during this verification against both `Apps/CortexMac/PrivacyInfo.xcprivacy` and `Apps/CortexiOS/PrivacyInfo.xcprivacy` — both returned `OK`. Both manifests contain `NSPrivacyAccessedAPICategorySystemBootTime` + `CA92.1`. CI gate invokes the same script in `.github/workflows/ci.yml` step "Validate PrivacyInfo manifests (FOUND-03)". |
 | SC#4 | SwiftPM dependency graph resolves from a clean clone with zero CocoaPods artifacts | VERIFIED | No `Podfile` or `Pods/` directory anywhere in the repo (`find` returned empty). All four packages (`CortexCore`, `CortexIPC`, `CortexRender`, `CortexDecoder`) build individually with `swift build`. CI includes a structural no-CocoaPods check and a `swift package resolve` step. 3/3 CortexCore unit tests pass under Swift Testing 6.2. |
 
@@ -75,7 +75,7 @@ Items not yet met but explicitly acknowledged and gated by first PR run.
 | `docs/adr/0001-foundation-and-2026-toolchain.md` | ADR-0001 documenting 8 decisions | VERIFIED | File exists |
 | `README.md` | Project README | VERIFIED | File exists |
 | `.github/pull_request_template.md` | PR template | VERIFIED | File exists |
-| `.planning/phases/01-foundation-2026-toolchain/sc2-evidence.md` | Committed SC#2 evidence | VERIFIED | Committed at `0807df2`; contains daemon-daemon and app-daemon mmap sentinel runs with full output, codesign entitlement audit, and container directory listing |
+| `.planning/phases/01-foundation-2026-toolchain/sc2-evidence.md` | Committed SC#2 evidence | VERIFIED | Committed at `d959a59`; contains daemon-daemon and app-daemon mmap sentinel runs with full output, codesign entitlement audit, and container directory listing |
 
 ---
 
@@ -119,7 +119,7 @@ Phase 1 is infrastructure-only — no dynamic data sources, no database queries,
 | Hotpath policy clean | `hotpath-policy.sh` | `OK: hot-path policy clean across 1 dir(s)` | PASS |
 | No CocoaPods artifacts | `find . -name Podfile -o -name Pods -type d` | No output | PASS |
 | No app-sandbox on Mac targets | `grep com.apple.security.app-sandbox Apps/CortexMac/Cortex.entitlements Apps/CortexDaemon/Cortex.entitlements` | No match | PASS |
-| Cross-process shm_open (SC#2) | Committed evidence in `sc2-evidence.md` (commit `0807df2`) | App read daemon PID 41220 from mmap; daemon-daemon run confirmed | PASS (human-verified, evidence committed) |
+| Cross-process shm_open (SC#2) | Committed evidence in `sc2-evidence.md` (commit `d959a59`) | App read daemon PID 41220 from mmap; daemon-daemon run confirmed | PASS (human-verified, evidence committed) |
 
 ---
 
@@ -151,7 +151,7 @@ No blockers. No stubs that affect goal achievement.
 
 ### Human Verification Required
 
-None. SC#2 required human verification per Plan 01-07's `type: checkpoint:human-verify`, and that verification was completed and committed (sc2-evidence.md, commit `0807df2`, 2026-06-19). All other success criteria are verifiable programmatically and have been verified above.
+None. SC#2 required human verification per Plan 01-07's `type: checkpoint:human-verify`, and that verification was completed and committed (sc2-evidence.md, commit `d959a59`, 2026-06-19). All other success criteria are verifiable programmatically and have been verified above.
 
 ---
 

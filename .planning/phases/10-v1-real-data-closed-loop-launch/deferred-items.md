@@ -65,10 +65,10 @@ buffer on every tick and the pipeline falls back. This IS RESEARCH Pattern 2: th
 "NDT1 genuinely in loop" against a configuration in which NDT1 structurally cannot be in the loop.
 
 **Proven pre-existing, not caused by this plan.** The identical failure reproduces on a clean
-checkout of commit `5bb164d`, which is before any `CortexDemo` file in this plan was touched:
+checkout of commit `4f96ace`, which is before any `CortexDemo` file in this plan was touched:
 
 ```
-git archive 5bb164d | tar -x -C <scratch>
+git archive 4f96ace | tar -x -C <scratch>
 CORTEX_MODEL_URL=<repo>/Decoder/checkpoints/ndt1_real_vel_sweep_fp16.mlpackage \
   swift test --package-path <scratch>/Packages/CortexDemo --filter modelBackedDecodePathPresent
 # -> Expectation failed: anyModelTick   (identical to the post-change tree)
@@ -102,7 +102,7 @@ CORTEX_MODEL_URL=<repo>/Decoder/checkpoints/ndt1_real_vel_sweep_fp16.mlpackage \
 # -> Test run with 44 tests in 5 suites passed
 ```
 
-The Plan 10-05 repair at `b18c6fa` held. Nothing is owed here; this note exists so the prediction
+The Plan 10-05 repair at `95c73c7` held. Nothing is owed here; this note exists so the prediction
 above is not read as still open.
 
 ### 2. `xcodegen generate` STRIPS hand-added Info.plist keys (not fixed, reverted)

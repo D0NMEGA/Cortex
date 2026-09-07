@@ -69,17 +69,17 @@ completed: 2026-06-21
 ## Accomplishments
 - `compute_plan.py`: `scan_ane_eligibility(compiled, CPU_AND_NE)` walks every schedulable op of the compiled model, classifies ANE eligibility via `MLNeuralEngineComputeDevice ∈ supported_compute_devices`, and computes the `all_eligible` / zero-`cpu_only_ops` verdict + an INFORMATIONAL `preferred_tally`; `compiled_model_path` produces a persistent `.mlmodelc`; `write_residency_artifacts` emits `runtime_plan.json` + `residency.txt`.
 - `test_ane_compute_plan.py`: the slow Mac DEC-06 gate — build `NDT1ANEWithVelocity` → `palettize_4bit` → compile → scan; asserts **226/226 ANE-eligible, 0 CPU-only** on the palettized package; palettized-vs-fp16 op-eligibility parity (Risk #5); the einsum disposition (60 einsum-derived ops, all `[CPU,NE]`); a fast `ANE_ATTENTION_EINSUM == "bchq,bkhc->bkhq"` pin.
-- **Einsum disposition resolved with evidence:** `bchq,bkhc->bkhq` lowers to ANE-eligible ops → **Task 3 NOT triggered**; `attention.py` byte-identical to base `7bd0306`.
+- **Einsum disposition resolved with evidence:** `bchq,bkhc->bkhq` lowers to ANE-eligible ops → **Task 3 NOT triggered**; `attention.py` byte-identical to base `812a1ab`.
 - `05-ane-eligibility-evidence.md`: committed DEC-06 verdict numbers + per-op residency + einsum disposition + the eligibility/placement split (with the meridian scale-trap rationale) + verbatim reproduce command.
 
 ## Task Commits
 
 Each task was committed atomically (all with `--no-verify` — parallel-executor protocol):
 
-1. **Task 1: `compute_plan.py` scanner (MLComputePlan)** — `4e802dc` (feat)
-2. **Task 2: slow Mac DEC-06 gate + `compute_plan` compile fix** — `8b6a405` (test)
+1. **Task 1: `compute_plan.py` scanner (MLComputePlan)** — `2abf653` (feat)
+2. **Task 2: slow Mac DEC-06 gate + `compute_plan` compile fix** — `d3db8b4` (test)
 3. **Task 3: meridian attention rewrite** — **NOT triggered** (no commit; `attention.py` unchanged — the einsum is ANE-eligible)
-4. **Task 4: `05-ane-eligibility-evidence.md`** — `61c67a2` (docs)
+4. **Task 4: `05-ane-eligibility-evidence.md`** — `1d5ef11` (docs)
 
 **Plan metadata:** this SUMMARY only (STATE.md / ROADMAP.md NOT touched — the orchestrator owns those after the wave merges).
 
@@ -103,7 +103,7 @@ Each task was committed atomically (all with `--no-verify` — parallel-executor
 - **Fix:** Rewrote `compiled_model_path` to use `coremltools.models.utils.compile_model(mlpackage, destination_path=…)`, which writes a **persistent** `.mlmodelc` next to the package (gitignored) and returns its path — verified by runtime introspection of the 9.0 API. The acceptance token `get_compiled_path` is retained in the docstring (explaining why it is deliberately avoided), so the grep still passes.
 - **Files modified:** `Decoder/src/ndt1/compute_plan.py`
 - **Verification:** the DEC-06 gate compiles + scans cleanly; 226/226 ANE-eligible.
-- **Committed in:** `8b6a405` (Task 2 commit, alongside the test).
+- **Committed in:** `d3db8b4` (Task 2 commit, alongside the test).
 
 **2. [Rule 1 - Bug] einsum-disposition matching missed coremltools' opset-prefixed op types (vacuous guard)**
 - **Found during:** Task 2 (inspecting the first green `runtime_plan.json`).
@@ -111,7 +111,7 @@ Each task was committed atomically (all with `--no-verify` — parallel-executor
 - **Fix:** Added `_is_einsum_derived(op_type)` matching on the last dotted segment (`op_type.rsplit(".",1)[-1]`), and an `assert einsum_ops` non-vacuity guard so the test fails if the einsum lowering is not observed at all.
 - **Files modified:** `Decoder/tests/test_ane_compute_plan.py`
 - **Verification:** the disposition now detects **60** einsum-derived ops (`einsum ×24`, `transpose ×12`, `reduce_mean ×24`), each `[CPU,NE]` → genuinely confirms no CPU-only einsum op.
-- **Committed in:** `8b6a405` (Task 2 commit).
+- **Committed in:** `d3db8b4` (Task 2 commit).
 
 ---
 
@@ -146,7 +146,7 @@ None — no external service configuration. (No `user_setup` block in the plan.)
 ## Self-Check: PASSED
 
 - All 3 created files present on disk (`compute_plan.py`, `test_ane_compute_plan.py`, `05-ane-eligibility-evidence.md`).
-- All 3 task commits found in git history (`4e802dc`, `8b6a405`, `61c67a2`); Task 3 correctly produced no commit (`attention.py` byte-identical to base `7bd0306`).
+- All 3 task commits found in git history (`2abf653`, `d3db8b4`, `1d5ef11`); Task 3 correctly produced no commit (`attention.py` byte-identical to base `812a1ab`).
 - Plan-level verification green: DEC-06 gate `4 passed`; full fast suite `63 passed, 1 skipped`; ruff clean over `Decoder/src` + `Decoder/tests`; `! grep assert.*preferred.*[Nn]eural` clean in both source files.
 
 ---

@@ -84,9 +84,9 @@ completed: 2026-06-20
 
 Each task committed atomically (`--no-verify`, isolated worktree executor running concurrently with the Plan 02-03 executor):
 
-1. **Task 1: Foundation-free shm ring + RingTests (5 @Test)** — `124c61a` (feat)
-2. **Task 2: socketpair + kqueue EVFILT_READ doorbell + DoorbellTests (4 @Test)** — `488160a` (feat)
-3. **Task 3: mach_msg+fileport FD-passing C shim + FDChannel; remove ShmCheck** — `ba9ccc3` (feat)
+1. **Task 1: Foundation-free shm ring + RingTests (5 @Test)** — `65484c8` (feat)
+2. **Task 2: socketpair + kqueue EVFILT_READ doorbell + DoorbellTests (4 @Test)** — `b9b5697` (feat)
+3. **Task 3: mach_msg+fileport FD-passing C shim + FDChannel; remove ShmCheck** — `d1612d9` (feat)
 
 **Plan metadata:** committed with this SUMMARY (docs).
 
@@ -120,7 +120,7 @@ _Note: TDD tasks (1 and 2) were each written tests-RED-first then implementation
 - **Fix:** Reworded to "NO mutex locks, NO cooperative-dispatch hops …" — intent preserved, no forbidden literal. The acceptance criterion "contains NO pthread_mutex" is now satisfied honestly (the ring genuinely uses no mutex).
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCTransport/ShmRing.swift`
 - **Verification:** `hotpath-policy.sh` exits 0; RingTests still 5/5 green.
-- **Committed in:** `124c61a` (Task 1)
+- **Committed in:** `65484c8` (Task 1)
 
 **2. [Rule 1 - SC#2-grep literal-token contradiction] Reworded three Doorbell comments to not embed `SCM_RIGHTS` / `cmsg`**
 - **Found during:** Task 2 (SC#2 grep check)
@@ -128,7 +128,7 @@ _Note: TDD tasks (1 and 2) were each written tests-RED-first then implementation
 - **Fix:** Reworded the three comment lines to describe "the no-rights-transfer invariant (SC#2)" / "no BSD socket control-message FD-passing path" without writing the literal tokens. The actual code has no control buffer (`msg_control = nil`) — the invariant holds; only the prose changed.
 - **Files modified:** `Packages/CortexIPC/Sources/CortexIPCTransport/Doorbell.swift`
 - **Verification:** both SC#2 grep variants return nothing across CortexIPC/Sources + CortexCoreC; DoorbellTests still 4/4 green.
-- **Committed in:** `488160a` (Task 2)
+- **Committed in:** `b9b5697` (Task 2)
 
 **3. [Rule 3 - Blocking] Cleared a stale CortexIPC build cache so the new CortexCoreC header resolved**
 - **Found during:** Task 3 (CortexIPC build with FDChannel)
@@ -168,7 +168,7 @@ None introduced by this plan. The pre-existing `Packages/CortexIPC/Sources/Corte
 
 - All 7 created source/test files exist on disk (ShmRing, Doorbell, FDChannel, cortex_fdmsg.h, cortex_fdmsg.c, RingTests, DoorbellTests) + this SUMMARY — VERIFIED
 - `ShmCheck.swift` is removed from disk and staged as a deletion — VERIFIED
-- All 3 task commits exist (`124c61a`, `488160a`, `ba9ccc3`) — VERIFIED via `git log`
+- All 3 task commits exist (`65484c8`, `b9b5697`, `d1612d9`) — VERIFIED via `git log`
 - Both packages build (CortexCore + CortexIPC exit 0); hot-path gate exits 0; SC#2 grep (`SCM_RIGHTS|cmsg(`) clean across CortexIPC/Sources + CortexCoreC — VERIFIED
 - 11 Transport tests pass (5 RingTests + 4 DoorbellTests + 2 Plan-02-01 placeholders); 3 CortexCore tests still pass after ShmCheck removal — VERIFIED
 

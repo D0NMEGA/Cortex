@@ -188,23 +188,23 @@ named in `velocity.supersedes`, and dissected in the new evidence so the replace
 
 ### Commit ordering as the audit trail
 
-`ba47798` commits the script, and therefore its four selection rules, before the run that produced
-any published number; `e9f3760` commits the numbers. `git merge-base --is-ancestor ba47798 e9f3760`
-exits 0, and the only thing executed before `ba47798` was a 3000-bin `--smoke` wiring check writing
+`790b664` commits the script, and therefore its four selection rules, before the run that produced
+any published number; `478c75c` commits the numbers. `git merge-base --is-ancestor 790b664 478c75c`
+exits 0, and the only thing executed before `790b664` was a 3000-bin `--smoke` wiring check writing
 to gitignored scratch paths.
 
 ## Task Commits
 
-1. **Task 1, pre-registration** - `ba47798` (feat): the script and its four rules, before the run
-2. **Task 1, the measurement** - `e9f3760` (feat): the `velocity` section, 240 insertions and 0
+1. **Task 1, pre-registration** - `790b664` (feat): the script and its four rules, before the run
+2. **Task 1, the measurement** - `478c75c` (feat): the `velocity` section, 240 insertions and 0
    deletions to the metrics JSON
-3. **Task 2** - `99c48d3` (docs): `09-velocity-evidence.md`
-4. **Deferred items and this summary** - `b9c0a48` (docs)
-5. **Rotation pre-registration** - `b4a2edb` (feat): the `--loso` mode and its R5 rules, before the
+3. **Task 2** - `8372111` (docs): `09-velocity-evidence.md`
+4. **Deferred items and this summary** - `c2fc9a5` (docs)
+5. **Rotation pre-registration** - `298cbbe` (feat): the `--loso` mode and its R5 rules, before the
    rotation ran
-6. **Rotation measurement** - `07ff695` (feat): 152 insertions and 0 deletions, adding only `loso`,
+6. **Rotation measurement** - `cf0a8a9` (feat): 152 insertions and 0 deletions, adding only `loso`,
    `loso_summary` and `wall_clock_loso_s`, with no previously published value changed
-7. **Rotation reporting** - `bba51de` (docs), plus the deferred-item closure and this revision
+7. **Rotation reporting** - `f6e827e` (docs), plus the deferred-item closure and this revision
 
 ## Deviations from Plan
 
@@ -225,7 +225,7 @@ to gitignored scratch paths.
 - **Files modified:** `Decoder/scripts/fit_velocity_real.py`
 - **Verification:** measured 4.8e-05 cm/s. Had the design matrix been exponentiated this gate would
   have failed by orders of magnitude rather than at the fp32 rounding floor.
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **2. [Rule 1 - Bug] Stride-1 design rows, not one row per non-overlapping window**
 
@@ -244,7 +244,7 @@ to gitignored scratch paths.
   session, before any forward pass runs.
 - **Cost, stated rather than hidden:** 21 minutes of CPU instead of about 40 seconds, which is why
   the run was detached and why the rates cache exists.
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **3. [Rule 2 - Missing critical] `apply_lag` per session, then concatenate**
 
@@ -257,7 +257,7 @@ to gitignored scratch paths.
   pooled matrix; a local composition performs the identical arithmetic through the same
   `apply_lag`, `ridge_fit` and `heldout_r2`, so there is still one definition of R2.
 - **Files modified:** `Decoder/scripts/fit_velocity_real.py`
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **4. [Rule 2 - Missing critical] Held-out rows begin a full window after the split**
 
@@ -267,7 +267,7 @@ to gitignored scratch paths.
 - **Fix:** held-out rows start at split + `SEQ_LEN` - 1, so no held-out prediction reads a single
   trained-on bin. Cost: 124 rows out of 285,235.
 - **Files modified:** `Decoder/scripts/fit_velocity_real.py`
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **5. [Rule 2 - Missing critical] Provenance is checked by hash, not by name**
 
@@ -278,7 +278,7 @@ to gitignored scratch paths.
 - **Fix:** every session's sha256 and the encoder checkpoint's sha256 must also match
   `09-decoder-metrics.json` before any number is produced. All five matched.
 - **Files modified:** `Decoder/scripts/fit_velocity_real.py`
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **6. [Rule 2 - Missing critical] The negative-offset alignment diagnostic**
 
@@ -291,7 +291,7 @@ to gitignored scratch paths.
   `velocity.lag_alignment_diagnostic` with a machine-generated verdict string. `apply_lag`'s refusal
   of negative offsets was NOT weakened; the diagnostic swaps its arguments instead.
 - **Verification:** two-sided maximum still at +20 ms, monotone decline on both sides.
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **7. [Rule 3 - Blocking] The lambda rule, because the plan's criterion cannot select**
 
@@ -308,7 +308,7 @@ to gitignored scratch paths.
   almost entirely by lambda 100 and 1000, and locked 0.1. Across 0.01 to 10 the train R2 moves
   3.7e-4 and the cross-validation score moves in its sixth significant figure. The evidence says the
   lock is immaterial.
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **8. [Rule 2 - Missing critical] `chronological_split` is called, not restated**
 
@@ -316,7 +316,7 @@ to gitignored scratch paths.
 - **Issue:** recomputing the split point inline would let the block the readout is scored on drift
   from the block the encoder was evaluated on under any future edit.
 - **Fix:** `_split_design` calls `chronological_split` and takes `len(train)`.
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 **9. [Rule 3 - Blocking] The run was detached and its expensive stage cached**
 
@@ -326,7 +326,7 @@ to gitignored scratch paths.
 - **Fix:** `nohup` plus a log file plus `caffeinate -dimsu -w <pid>`, and a `--reuse-rates` cache
   under `Decoder/checkpoints/09-07-rates/` guarded by the encoder sha256, the session sha256, the
   sequence length and the bin count. A mismatched cache recomputes rather than failing.
-- **Committed in:** `ba47798`
+- **Committed in:** `790b664`
 
 ### Non-issue deviations
 
@@ -335,15 +335,15 @@ request.** It is not in Plan 09-07's success criteria; it is this plan's own def
 executed rather than deferred. It stays inside the plan's `files_modified` (the script, the metrics
 JSON, the evidence) and it does not touch the shipped checkpoint: `--loso` merges into the velocity
 section a full run already wrote, exactly as `train_real.py --only-loso` does. Its rules were
-committed in `b4a2edb` before it ran, and that is a weaker guarantee than the main run's and is said
+committed in `298cbbe` before it ran, and that is a weaker guarantee than the main run's and is said
 so here: the rules were written after the within-pool numbers were known. What they mostly are is
 the already-committed R1, R2 and R3 applied per fold, and the genuinely new decisions (score the
 held-out session's own TEST tail, headline its own train mean, record rather than drop a failed
 fold) were fixed by the request before anything ran.
 
 **11. Task 1 landed as two commits rather than one.** The script, and therefore its four selection
-rules, is committed in `ba47798` before the run; the numbers follow in `e9f3760`. This mirrors
-Plan 09-06d's `06eb61f` before `967f38e` and makes the ordering checkable with
+rules, is committed in `790b664` before the run; the numbers follow in `478c75c`. This mirrors
+Plan 09-06d's `3f10714` before `3f47293` and makes the ordering checkable with
 `git merge-base --is-ancestor`.
 
 **12. The metrics `velocity` section carries five keys beyond the plan's sketch:**
@@ -515,13 +515,13 @@ Files claimed created, verified present on disk:
 - `.planning/phases/09-.../09-decoder-metrics.json` FOUND (modified, 392 insertions, 0 deletions)
 - `Decoder/checkpoints/ndt1_real_with_velocity.pt` FOUND (gitignored, sha256 verified)
 
-Commits claimed, verified in `git log 06e6fee..HEAD`: `ba47798`, `e9f3760`, `99c48d3`, `b9c0a48`,
-`b4a2edb`, `07ff695`, `bba51de` all FOUND.
+Commits claimed, verified in `git log 99dcf0b..HEAD`: `790b664`, `478c75c`, `8372111`, `c2fc9a5`,
+`298cbbe`, `cf0a8a9`, `f6e827e` all FOUND.
 
 Commit ORDERING verified, which is this task's load-bearing provenance claim:
-`git merge-base --is-ancestor ba47798 e9f3760` exits 0, so the four selection rules were committed
-before the commit carrying the numbers they produced, and `git merge-base --is-ancestor b4a2edb
-07ff695` exits 0 for the rotation's R5 rules. The only execution before either was a 3000-bin
+`git merge-base --is-ancestor 790b664 478c75c` exits 0, so the four selection rules were committed
+before the commit carrying the numbers they produced, and `git merge-base --is-ancestor 298cbbe
+cf0a8a9` exits 0 for the rotation's R5 rules. The only execution before either was a 3000-bin
 `--smoke` wiring check writing to gitignored scratch paths.
 
 Number provenance verified rather than trusted: every table in `09-velocity-evidence.md` was

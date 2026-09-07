@@ -83,9 +83,9 @@ completed: 2026-06-20
 
 Each task was committed atomically (`--no-verify`, per the parallel-executor protocol — the orchestrator validates hooks once after all wave agents complete):
 
-1. **Task 1: pthread USER_INTERACTIVE acquisition worker pushing to the Rust ring** — `34a33cb` (feat)
-2. **Task 2: extend hotpath-policy gate to CortexRingHotPath + .rs ring sources (SC#2, D-R7)** — `b42324c` (feat)
-3. **Task 3: wire CortexRingHotPath into CortexDaemon + author SC#1 instruments runbook** — `bdb86ae` (feat)
+1. **Task 1: pthread USER_INTERACTIVE acquisition worker pushing to the Rust ring** — `b750baa` (feat)
+2. **Task 2: extend hotpath-policy gate to CortexRingHotPath + .rs ring sources (SC#2, D-R7)** — `40a0da1` (feat)
+3. **Task 3: wire CortexRingHotPath into CortexDaemon + author SC#1 instruments runbook** — `2f0cef7` (feat)
 
 **Plan metadata:** (final docs commit — this SUMMARY + the deferred-items.md row)
 
@@ -129,7 +129,7 @@ Shared (the load-bearing idiom carried forward verbatim): raw `pthread_create`/`
 - **Fix:** Police the **call forms** `println!(` and `panic!(` (open-paren), mirroring the `.lock(` token the plan itself lists. This bites on a real macro **invocation**, not the word in prose, and is the more accurate hot-path invariant. The negative-control self-test injects `println!("x")`/`panic!("x")`, so the gate is still proven to bite on every token; the plan's verify command (`println!("no")` in a temp `.rs`) still triggers exit 1.
 - **Files modified:** Tools/scripts/hotpath-policy.sh
 - **Verification:** real tree exit 0; `--self-test` all-pass (11 tokens + clean); plan verify command emits `CLEAN_PASS`/`RUST_TOKEN_BITES`/`SWIFT_TOKEN_BITES`.
-- **Committed in:** `b42324c` (Task 2 commit)
+- **Committed in:** `40a0da1` (Task 2 commit)
 
 **2. [Rule 1 - Bug] Reworded Acquisition.swift forbidden-token comments to prose so the gate stays green on this file**
 - **Found during:** Task 1 (verify) — the same intent-vs-literal-token trap `Benchmark.swift`/Plan 02-04 document.
@@ -137,7 +137,7 @@ Shared (the load-bearing idiom carried forward verbatim): raw `pthread_create`/`
 - **Fix:** Reworded each comment to describe the forbidden constructs in prose (e.g. "the libdispatch async-enqueue call", "lazily-initialized storage") without the literal tokens — the documented `Benchmark.swift`/Plan 02-04 discipline. Intent preserved and explicitly noted in the file header.
 - **Files modified:** Packages/CortexRing/Sources/CortexRingHotPath/Acquisition.swift
 - **Verification:** all 5 Swift/C `grep -F` tokens absent from the file; the gate is clean on `CortexRingHotPath`.
-- **Committed in:** `34a33cb` (Task 1 commit)
+- **Committed in:** `b750baa` (Task 1 commit)
 
 **3. [Rule 1 - Bug] swiftformat/swiftlint conformance on Acquisition.swift (the Plan 03-01 lint precedent)**
 - **Found during:** Task 1 (running the repo's actual `swiftformat --lint`/`swiftlint --strict` CI commands)
@@ -145,7 +145,7 @@ Shared (the load-bearing idiom carried forward verbatim): raw `pthread_create`/`
 - **Fix:** `swiftformat` autofix (indented the `#if` body); renamed `a`→`args`, `rc`→`createResult`.
 - **Files modified:** Packages/CortexRing/Sources/CortexRingHotPath/Acquisition.swift
 - **Verification:** `swiftformat --lint` 0/1; `swiftlint --strict` 0 errors; `swift build` + tests 2/2 still green.
-- **Committed in:** `34a33cb` (Task 1 commit)
+- **Committed in:** `b750baa` (Task 1 commit)
 
 ---
 
@@ -183,7 +183,7 @@ None — no external service configuration. (Rust toolchain bootstrap `Tools/scr
 ## Self-Check: PASSED
 
 - All 7 claimed files verified present on disk (Acquisition.swift, Package.swift, hotpath-policy.sh, project.yml, instruments-evidence.md, 03-03-SUMMARY.md, deferred-items.md).
-- All 3 task commit hashes verified in git history: `34a33cb` (Task 1), `b42324c` (Task 2), `bdb86ae` (Task 3).
+- All 3 task commit hashes verified in git history: `b750baa` (Task 1), `40a0da1` (Task 2), `2f0cef7` (Task 3).
 - Overall verification re-run green: `swift build` CortexRing PASS; `hotpath-policy.sh` real-tree exit 0 + `--self-test` all-pass; QoS+push present / Foundation+Task+dispatch_async+NSLog absent in Acquisition.swift; instruments-evidence.md has System Trace + swift_task pass criterion.
 
 ---

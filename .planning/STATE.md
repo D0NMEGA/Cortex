@@ -83,7 +83,7 @@ Recent architectural commitments shaping all phases:
 - Manifest version stays at 6.2 verbatim per artifact contract; toolchain mismatch on local executor (Swift 6.0.3) is environmental — Plan 01-06 CI on macos-15 with Xcode 26.3 is the canonical execution environment for Swift-side smoke
 - `.defaultIsolation(MainActor.self)` retained on all four packages per Approachable Concurrency (drop only if Xcode 26.3 rejects, per Assumption A9 — no evidence of rejection yet)
 - `_Static_assert` diagnostic message includes the authoritative reference inline (cortex-spec.md §9 + the header path) so a silent regression is structurally impossible — proven via clang negative test (53 bytes → exit 1, expression evaluates to `'53 <= 32'`)
-- Used `git mv` for cortex-spec.md → docs/cortex-spec.md so rename is recorded as single R operation (not D+A); `git log --follow` traces back to commit 0818df0
+- Used `git mv` for cortex-spec.md → docs/cortex-spec.md so rename is recorded as single R operation (not D+A); `git log --follow` traces back to commit 4605b83
 
 **Plan 01-03:**
 
@@ -133,16 +133,16 @@ None yet.
 
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
-| 260621-32u | Set DEVELOPMENT_TEAM to 57YW6M29S7 on all three targets in project.yml and regenerate | 2026-06-21 | 921b2db | [260621-32u-set-development-team-to-y4a54395nz-on-al](./quick/260621-32u-set-development-team-to-y4a54395nz-on-al/) |
-| 260621-3y0 | Remove dead ShmCheck references from CortexMac ContentView so the target compiles | 2026-06-21 | aaf2c68 | [260621-3y0-remove-dead-shmcheck-references-from-cor](./quick/260621-3y0-remove-dead-shmcheck-references-from-cor/) |
-| 260621-iyg | Set CortexMac scheme run.executable=CortexMac so it launches the app window, not the daemon | 2026-06-21 | eab61b4 | [260621-iyg-set-cortexmac-scheme-run-executable-to-c](./quick/260621-iyg-set-cortexmac-scheme-run-executable-to-c/) |
+| 260621-32u | Set DEVELOPMENT_TEAM to 57YW6M29S7 on all three targets in project.yml and regenerate | 2026-06-21 | c9478e0 | [260621-32u-set-development-team-to-y4a54395nz-on-al](./quick/260621-32u-set-development-team-to-y4a54395nz-on-al/) |
+| 260621-3y0 | Remove dead ShmCheck references from CortexMac ContentView so the target compiles | 2026-06-21 | dd67fd0 | [260621-3y0-remove-dead-shmcheck-references-from-cor](./quick/260621-3y0-remove-dead-shmcheck-references-from-cor/) |
+| 260621-iyg | Set CortexMac scheme run.executable=CortexMac so it launches the app window, not the daemon | 2026-06-21 | c0a3b2c | [260621-iyg-set-cortexmac-scheme-run-executable-to-c](./quick/260621-iyg-set-cortexmac-scheme-run-executable-to-c/) |
 
 ## Deferred Items
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
 | Build config | `xcodebuild` of the CortexDaemon Xcode target fails on `'Float16' is unavailable in macOS` in CortexIPCSession (SampleCodec) — generated-project deployment/arch config, NOT a code defect (`swift build`/SwiftPM + CI `swift test` are clean) | Open — set the daemon target's macOS deployment/arch so Float16 is available (SwiftPM already does); needed for the daemon `bench`-mode run (Option A in sc1-evidence.md) | 2026-06-20 (Plan 02-05 finding; 02-05-SUMMARY.md + sc1-evidence.md anomaly #2) |
-| Security | ~~Phase 2 `SECURITY.md` not yet created~~ — RESOLVED: `02-SECURITY.md` created & verified (28/28 threats closed, ASVS L1, 2 accepted risks → Phase 8), committed `a593c15` | Resolved 2026-06-20 (`/gsd-secure-phase 02`) | 2026-06-20 (Phase 2 completion) |
+| Security | ~~Phase 2 `SECURITY.md` not yet created~~ — RESOLVED: `02-SECURITY.md` created & verified (28/28 threats closed, ASVS L1, 2 accepted risks → Phase 8), committed `02e2b9c` | Resolved 2026-06-20 (`/gsd-secure-phase 02`) | 2026-06-20 (Phase 2 completion) |
 | Verification | SC#1 timing measured on M5 Pro (≥ M4) under a live dev session; a quiet-machine / dedicated iPad-Pro-M4 re-run via the sc1-evidence.md runbook would refine the tail (not the sub-µs verdict) | Open — optional refinement | 2026-06-20 (Plan 02-05; sc1-evidence.md) |
 | Verification | Plan 01-02 dynamic xcodebuild build smoke (CortexMac/CortexiOS/CortexDaemon `BUILD SUCCEEDED` under `CODE_SIGNING_ALLOWED=NO` + four sibling overrides + two `-skip*Validation` flags; CortexDaemon.bundle artifact existence on disk; PrivacyInfo.xcprivacy presence in built `.app` bundles) | Waiting for Xcode 26 environment | 2026-04-30 (Plan 01-02 toolchain-deferral disposition) — closed by Plan 01-06 CI on macos-15 + Xcode 26.3, OR by human on Xcode 26 dev machine. Verbatim re-run command set captured in `.planning/phases/01-foundation-2026-toolchain/01-02-daemon-spm-smoke.md` |
 

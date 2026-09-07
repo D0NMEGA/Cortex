@@ -108,9 +108,9 @@ completed: 2026-04-30
 
 Each task was committed atomically with conventional-commits scope `({phase}-{plan})`:
 
-1. **Task 1: project.yml + entitlements + Info.plist for 3 Xcode targets** -- `1c13bc6` (feat)
-2. **Task 2: source stubs (App.swift / ContentView.swift / main.swift) for 3 targets** -- `a159acb` (feat)
-3. **Task 3: daemon-bundle SPM smoke evidence file (deferred xcodebuild re-run command set)** -- `2c12d56` (docs)
+1. **Task 1: project.yml + entitlements + Info.plist for 3 Xcode targets** -- `eb40950` (feat)
+2. **Task 2: source stubs (App.swift / ContentView.swift / main.swift) for 3 targets** -- `a61682b` (feat)
+3. **Task 3: daemon-bundle SPM smoke evidence file (deferred xcodebuild re-run command set)** -- `86beda5` (docs)
 
 **Plan metadata commit:** _to follow after STATE.md / ROADMAP.md / REQUIREMENTS.md updates_
 
@@ -156,14 +156,14 @@ The plan executed structurally as written. The following adjustments were applie
 - **Issue:** The plan's verbatim YAML included a comment block under the CortexMac entitlements that said "NOT enabling com.apple.security.app-sandbox in Phase 1." This contained the literal forbidden token, violating the acceptance criterion `File project.yml does NOT contain com.apple.security.app-sandbox ANYWHERE`.
 - **Fix:** Reworded the comment to "NOT enabling the app sandbox entitlement in Phase 1." -- intent preserved (sandbox deferred to Phase 8 per Critical Finding #1) without the literal forbidden token. The rest of the comment block (RESEARCH.md reference, Phase 8 path, ADR-0001 anchor) is unchanged.
 - **Files modified:** `project.yml` (one comment line, line 91)
-- **Commit:** `1c13bc6` (included in the Task 1 commit, not a separate commit)
+- **Commit:** `eb40950` (included in the Task 1 commit, not a separate commit)
 
 **2. [Rule 1 - Bug] Apps/CortexMac/App.swift comment contained literal `Catalyst` token (case-sensitive)**
 - **Found during:** Task 2 verification (negative grep)
 - **Issue:** The plan's verbatim Swift source for Mac App.swift had comments using `Mac Catalyst` and `Catalyst cannot surface` -- the case-sensitive `Catalyst` token. The acceptance criterion requires `File Apps/CortexMac/App.swift does NOT contain the string Catalyst or UIApplicationDelegate`.
 - **Fix:** Reworded the comments to use `iOS-bridged runtime` and `iOS-bridged path` -- intent preserved (this target uses native AppKit, not the bridged runtime path) without the literal token. The build-setting line `SUPPORTS_MACCATALYST: NO` in project.yml is allowed because it uses uppercase `MACCATALYST` which the case-sensitive `Catalyst` grep does not match.
 - **Files modified:** `Apps/CortexMac/App.swift` (comment block, lines 1-7)
-- **Commit:** `a159acb` (included in the Task 2 commit, not a separate commit)
+- **Commit:** `a61682b` (included in the Task 2 commit, not a separate commit)
 
 ### Toolchain-Deferral Disposition (NOT a deviation)
 
@@ -276,9 +276,9 @@ Verification of artifacts and commits claimed in this Summary:
 - FOUND: .planning/phases/01-foundation-2026-toolchain/01-02-daemon-spm-smoke.md
 
 **Commits exist (`git log --oneline`):**
-- FOUND: 1c13bc6 -- Task 1 (feat: project.yml + entitlements + Info.plist for 3 Xcode targets)
-- FOUND: a159acb -- Task 2 (feat: source stubs for 3 Xcode targets)
-- FOUND: 2c12d56 -- Task 3 (docs: daemon-bundle SPM smoke deferral and re-run command set)
+- FOUND: eb40950 -- Task 1 (feat: project.yml + entitlements + Info.plist for 3 Xcode targets)
+- FOUND: a61682b -- Task 2 (feat: source stubs for 3 Xcode targets)
+- FOUND: 86beda5 -- Task 3 (docs: daemon-bundle SPM smoke deferral and re-run command set)
 
 **Verification clauses re-executed:**
 - All six plist files lint clean (`plutil -lint` returns OK on each) -- PASS

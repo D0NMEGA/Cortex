@@ -96,10 +96,10 @@ completed: 2026-09-05
 
 ## Task Commits
 
-1. **Task 1 (RED): failing tests for the residual path** - `1c0254a` (test)
-2. **Task 1 (GREEN): the residual fit in fit_kalman_gain.py** - `da6ff1a` (feat)
-3. **Task 2: regenerate the constants and arm the two gates** - `f80e84f` (feat)
-4. **Task 3: the evidence artifact** - `cf605ee` (docs)
+1. **Task 1 (RED): failing tests for the residual path** - `2d7179c` (test)
+2. **Task 1 (GREEN): the residual fit in fit_kalman_gain.py** - `123d270` (feat)
+3. **Task 2: regenerate the constants and arm the two gates** - `33884ba` (feat)
+4. **Task 3: the evidence artifact** - `3dc3b20` (docs)
 
 **Plan metadata:** this summary (docs)
 
@@ -209,7 +209,7 @@ progress anywhere, and it is flagged as such in the evidence artifact.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`, `Decoder/tests/test_kalman_residual.py`
 - **Verification:** `test_workspace_side_mm_implements_the_preregistered_square_box`; the run printed
   `side_mm_source=10-PREREGISTRATION-section-3 (ndt1.replay_export not importable)`.
-- **Committed in:** `da6ff1a`
+- **Committed in:** `123d270`
 - **Residual risk:** 10-02's plan names the function twice with different signatures, at its line 281
   (`workspace_from_cursor(target_mm_track, planar_cm)`) and its line 320
   (`workspace_from_cursor(planar_cm) -> dict`). This code calls the line-320 form, which is the one in
@@ -230,7 +230,7 @@ progress anywhere, and it is flagged as such in the evidence artifact.
 - **Files modified:** `Packages/CortexReFIT/Tests/CortexReFITTests/KalmanConstantsTests.swift`
 - **Verification:** passes on the shipped gain (rho 0.8188); fails with a non-finite norm on the
   10x-perturbed control.
-- **Committed in:** `f80e84f`
+- **Committed in:** `33884ba`
 
 **3. [Rule 2 - Missing critical] Header tokens could be split across comment lines**
 
@@ -241,7 +241,7 @@ progress anywhere, and it is flagged as such in the evidence artifact.
 - **Fix:** `break_on_hyphens=False`, with the reason in a comment.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`
 - **Verification:** the emitted header keeps every token intact; `swiftformat --lint` still exits 0.
-- **Committed in:** `da6ff1a`
+- **Committed in:** `123d270`
 
 **4. [Rule 2 - Missing critical] The header's lag, lambda and checkpoint were asserted, not verified**
 
@@ -256,7 +256,7 @@ progress anywhere, and it is flagged as such in the evidence artifact.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`
 - **Verification:** the run printed the matching digest `9d542cb51d4a` and completed; the values now
   in the header came from the metrics file.
-- **Committed in:** `da6ff1a`
+- **Committed in:** `123d270`
 
 **5. [Rule 3 - Blocking] Private helpers imported instead of refactoring `fit_velocity_real.py`**
 
@@ -270,7 +270,7 @@ progress anywhere, and it is flagged as such in the evidence artifact.
 - **Files modified:** `Decoder/scripts/fit_kalman_gain.py`
 - **Verification:** the held-out R2 reproduces Phase 9's published value to six decimals, which is
   what proves the imported pipeline is the same pipeline.
-- **Committed in:** `da6ff1a`
+- **Committed in:** `123d270`
 
 **Total deviations:** 5 auto-fixed (2 blocking under Rule 3, 2 missing-critical under Rule 2, 1 bug
 under Rule 1).
@@ -317,7 +317,7 @@ default path and stays buildable.
 ## Self-Check: PASSED
 
 - All five plan files exist on disk.
-- All four task commits exist in this worktree's history on top of the expected base `dce82c7`.
+- All four task commits exist in this worktree's history on top of the expected base `d95b555`.
 - The working tree is clean; the two setup symlinks were removed.
 
 *Phase: 10-v1-real-data-closed-loop-launch*
@@ -368,4 +368,4 @@ raised loudly instead of quietly normalising R by the wrong constant.
 Separately, this plan's `SessionLoad(...)` call site was written in a worktree without Plan 10-02's
 `target_mm` / `target_distinct` fields, which are required with no default. On the merged tree the
 script raised `TypeError` before reaching the fit, so `KalmanConstants.swift` could not be
-regenerated from its own generator at all between `f80e84f` and the reconciliation. Fixed there.
+regenerated from its own generator at all between `33884ba` and the reconciliation. Fixed there.

@@ -163,7 +163,7 @@
     "canonical_dwell_s": 0.3,
     "canonical_hits": 147,
     "canonical_radius_mm": 2.8613660406415042,
-    "committed_in": "864259b, before any decoded number existed in this phase",
+    "committed_in": "a72344b, before any decoded number existed in this phase",
     "note": "open-loop replay of a recorded session; the subject was not in the loop",
     "trials": 1025,
     "what_it_is": "The hit count obtained by replaying the animal's OWN recorded cursor track through this repo's dwell-to-select rule at this radius and this dwell. A property of ONE recorded trajectory under ONE acceptance rule. It is NOT a bound on what a decoder can achieve: a decoder producing different trajectories, with straighter approaches or longer holds inside the radius, can exceed it (10-PREREGISTRATION section 16)."

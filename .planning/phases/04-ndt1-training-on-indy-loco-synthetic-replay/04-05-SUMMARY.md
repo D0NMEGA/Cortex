@@ -82,11 +82,11 @@ completed: 2026-06-21
 
 Each task was committed atomically (with `--no-verify`, per worktree-parallel execution):
 
-1. **Task 1: DEC-03 — trace + ct.convert encoder→rates to mlprogram .mlpackage** — `50c56bb` (feat)
-2. **Task 2: DEC-05 — 4-bit kmeans palettize + size characterization** — `8a26959` (feat)
-3. **Task 3: DEC-05 — fp16-vs-4bit reconstruction-loss delta + SC4 evidence note** — `c09835a` (test)
+1. **Task 1: DEC-03 — trace + ct.convert encoder→rates to mlprogram .mlpackage** — `9e65981` (feat)
+2. **Task 2: DEC-05 — 4-bit kmeans palettize + size characterization** — `3a7fa51` (feat)
+3. **Task 3: DEC-05 — fp16-vs-4bit reconstruction-loss delta + SC4 evidence note** — `210f404` (test)
 
-**Out-of-scope log:** `7a9fce6` (docs: deferred-items — cross-plan ruff I001 in 04-03's test_attention.py)
+**Out-of-scope log:** `000e348` (docs: deferred-items — cross-plan ruff I001 in 04-03's test_attention.py)
 
 _Plan metadata commit (SUMMARY) made separately after self-check._
 
@@ -116,7 +116,7 @@ _Plan metadata commit (SUMMARY) made separately after self-check._
 - **Fix:** Reworded `convert.py`'s docstring + the in-function comment to avoid the forbidden literals while preserving intent ("the converter's hardware-unit selector unset", "default engine selection", "we leave … unset and do NOT profile or assert on-chip placement"). In the loss-delta test, rewrote the self-grepping boundary check to (a) assemble the regex from string fragments (`"compute" + "Units"`, etc.) so the assertion does not contain a matchable copy of the forbidden literals, and (b) scan the two *production* modules rather than the test's own source (a test that greps for a token must contain it).
 - **Files modified:** `Decoder/src/ndt1/convert.py`, `Decoder/tests/test_palettization_loss_delta.py`
 - **Verification:** Task-1 and Task-3 boundary greps return empty against the contractual targets; the negative-control tests pass; the slow conversion/delta tests pass.
-- **Committed in:** `50c56bb` (Task 1), `c09835a` (Task 3)
+- **Committed in:** `9e65981` (Task 1), `210f404` (Task 3)
 
 **2. [Rule 1 - Bug] Added an explicit `nbits=4` reference in the loss-delta test**
 - **Found during:** Task 3
@@ -124,7 +124,7 @@ _Plan metadata commit (SUMMARY) made separately after self-check._
 - **Fix:** Imported `PALETTIZE_NBITS` and added `assert PALETTIZE_NBITS == 4  # nbits=4 — SC4b operates on the 4-bit package`, which both documents the subject and satisfies the grep meaningfully (no dead string).
 - **Files modified:** `Decoder/tests/test_palettization_loss_delta.py`
 - **Verification:** `grep -q 'nbits=4'` passes; the assertion is a real runtime check tied to the module constant.
-- **Committed in:** `c09835a` (Task 3)
+- **Committed in:** `210f404` (Task 3)
 
 ---
 
@@ -157,7 +157,7 @@ No threat flags: this plan introduces no new network/auth/file-access surface (o
 ## Self-Check: PASSED
 
 - All 7 created files + `04-05-SUMMARY.md` exist on disk (8/8 FOUND): `convert.py`, `palettize.py`, the three slow tests, `04-palettization-evidence.md`, `deferred-items.md`, this summary.
-- All 4 commits exist in git history: `50c56bb` (Task 1, DEC-03), `8a26959` (Task 2, DEC-05 palettize+size), `c09835a` (Task 3, Δloss + evidence), `7a9fce6` (deferred-items log).
+- All 4 commits exist in git history: `9e65981` (Task 1, DEC-03), `3a7fa51` (Task 2, DEC-05 palettize+size), `210f404` (Task 3, Δloss + evidence), `000e348` (deferred-items log).
 - Plan `<verification>` green: full slow suite `-k "convert or palettiz"` = 3 passed (SC4a size 3.471×, SC4b |Δ|=0.009114 ≤ 0.5); `convert_to="mlprogram"` in convert.py + `OpPalettizerConfig` in palettize.py (DEC-03→DEC-05 ordering); phase-boundary grep over `convert.py`/`palettize.py` returns EMPTY; no bare/blind except; full suite 50 passed / 1 skipped; all five 04-05 files individually ruff-clean. One out-of-scope cross-plan ruff I001 (04-03's `test_attention.py`) deferred.
 
 ---

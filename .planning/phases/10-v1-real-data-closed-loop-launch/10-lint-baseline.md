@@ -4,7 +4,7 @@
 **Result:** MEASURED. `swiftformat --lint .` reports **79 of 113 files require formatting** (1,869
 reported violations, 16 files skipped) under the config as committed. `swiftlint --quiet` reports
 **514 violations** on a clean tree. Both were taken under the versions now pinned in
-`Tools/toolchain-versions.env`, at commit `2f80b2e`, before a single line was reformatted.
+`Tools/toolchain-versions.env`, at commit `21e5179`, before a single line was reformatted.
 
 This artifact contains no decoder metric, no latency, and no BPS figure. Every number in it is a
 count of lint findings produced by a named tool at a named version against a named commit, so no
@@ -34,7 +34,7 @@ precedes the sweep commit, so the baseline provably predates the change it is a 
 | **SwiftFormat** | **0.61.1** (`swiftformat --version`) |
 | **SwiftLint** | **0.63.3** (`swiftlint version`) |
 | **Pin file** | `Tools/toolchain-versions.env`, asserted by `Tools/scripts/toolchain-policy.sh` |
-| **Commit at measurement** | `2f80b2e889b8d6f82b20f4269d75a67e63cfc0e7` (`2f80b2e`) |
+| **Commit at measurement** | `2f80b2e889b8d6f82b20f4269d75a67e63cfc0e7` (`21e5179`) |
 | **Working tree** | Clean except the two config edits described under "Config corrections" below |
 | **`.build` present?** | **No.** No SwiftPM build directory existed anywhere under `Packages/` at measurement time. This is load-bearing; see "The `.build` scope bug". |
 | **Determinism** | Both tools are deterministic over fixed input. Runs were repeated and produced identical counts. |
@@ -84,7 +84,7 @@ passes 100% of `swiftformat --lint .` and `swiftlint --strict` or it fails visib
 
 ## SwiftFormat baseline
 
-Measured against `.swiftformat` **as committed at `2f80b2e`** (i.e. including `--header strip`):
+Measured against `.swiftformat` **as committed at `21e5179`** (i.e. including `--header strip`):
 
 ```
 79/113 files require formatting, 16 files skipped.
@@ -304,7 +304,7 @@ each of the four unexcluded packages:
 
 | config | total | of which inside `.build` |
 |---|---|---|
-| as committed at `2f80b2e` | **522** | **8** |
+| as committed at `21e5179` | **522** | **8** |
 | with `Packages/*/.build` | **514** | **0** |
 
 Control: the same probe inside `Packages/CortexCore/.build`, which *was* excluded, produced 0 in
