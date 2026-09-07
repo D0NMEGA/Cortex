@@ -27,6 +27,26 @@ is checked against the environment it actually runs in. Not done here because it
 configuration change outside this plan's files, and changing it would touch the shared hook
 configuration while other Phase 10 worktrees are running.
 
+## `test_heldout_cobps_beats_mean_rate_null` fails on synthetic Poisson fallback
+
+**Found during:** Plan 10-09, Task 1 gates.
+
+**Symptom:** `pytest` reports `AssertionError: held-out co_bps -0.02177 did not beat the
+mean-rate null by the documented margin 0.054 (source: synthetic Poisson fallback (no .mat
+present))`.
+
+**Why it is not a defect in this plan's code.** The only files touched by Plan 10-09 are in
+`Tools/scripts/`. The failure fires on `Decoder/tests/test_heldout_cobps.py` which was
+unchanged. The failure is attributed to the NDT1 masking-objective fix (committed 2026-08-31):
+the masking defect caused the synthetic synthetic co-bps to be measured against self-reconstruction;
+after the fix the synthetic number is honest and lower. The threshold `CO_BPS_MARGIN = 0.054`
+pre-dates the fix. Running without the real Indy .mat dataset, the test uses the synthetic
+Poisson fallback, which no longer beats the pre-fix threshold.
+
+**Fix when someone picks it up:** Either update `CO_BPS_MARGIN` to the post-fix honest synthetic
+threshold, or mark the test `@pytest.mark.slow` so it only runs when the real dataset is present.
+Owner: whoever lands Phase 10 plan that re-verifies the synthetic training baseline.
+
 ## `ClosedLoopPipelineTests` Test 2 cannot pass against the shipped 32-bin model
 
 **Found during:** Plan 10-04, Task 3, while verifying that every pre-existing case still passes.
