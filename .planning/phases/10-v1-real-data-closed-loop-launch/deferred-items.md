@@ -235,3 +235,41 @@ Exit code is unaffected and no violation is reported, so `--strict` still passes
 deleting the two `opt_in_rules` entries is behaviour-neutral but unrelated to clearing the roster,
 and 10-16's `.swiftlint.yml` diff has to be read line by line for its deliberate exceptions. These
 two lines will appear in 10-17's first CI log and are cosmetic.
+
+## `TargetChannel` is MainActor-isolated by omission, unlike both its sibling channels
+
+**Found during:** `/donny-audit-phase 10 --validate`, filling the post-10-17 test gap on
+`TargetChannel` and `SelectionChannel`.
+
+**Symptom:** `Packages/CortexRender/Sources/CortexRender/TargetChannel.swift:28` declares
+`public final class TargetChannel: Sendable`. Its two siblings,
+`CursorPositionChannel.swift:40` and `SelectionChannel.swift:40`, both declare
+`public final nonisolated class`. The package sets `.defaultIsolation(MainActor.self)` in
+`Package.swift`, so the missing keyword makes `TargetChannel`'s `init`, `store`, `clear` and
+`load` MainActor-isolated. Confirmed empirically rather than by reading: a plain nonisolated test
+function calling `TargetChannel().load()` fails to compile with "call to main actor-isolated
+instance method 'load()' in a synchronous nonisolated context".
+
+**Why it is not a defect in the work that found it.** It does not break the build today. The only
+call site, `MacDisplayLinkAdapter`, is itself `@MainActor`, so the isolation is satisfied. The
+test file added by the audit works around it by annotating its `@Suite` with `@MainActor` - a
+test-authoring choice, not an implementation change. Nothing was modified in `Sources/`.
+
+**Why it is still worth fixing.** It contradicts the type's own header, which describes "a
+latest-value channel ... One atomic word, no queue, no back pressure" - the same lock-free
+cross-thread design as the two siblings that do declare `nonisolated`. The atomic is doing work
+that the actor isolation makes unnecessary, and the inconsistency reads as deliberate when it is
+not. It becomes a real defect the moment a non-MainActor caller is added, which is exactly what a
+render-thread read would be.
+
+**Fix when someone picks it up:** add `nonisolated` to the class declaration to match
+`SelectionChannel.swift:40`, then drop the `@MainActor` annotation from
+`TargetChannelTests.swift`'s `@Suite` and confirm the suite still compiles and passes. Not done
+here because the audit ran under a read-only-implementation constraint, and changing actor
+isolation on a renderer type is a code change that belongs in a plan, not in a validation pass.
+
+**Second, minor, from the same pass.** `TargetChannel.swift:41`'s guard carries `x.isFinite,
+y.isFinite` alongside `x >= 0, x < 1, y >= 0, y < 1`. The `isFinite` checks are redundant: under
+IEEE 754, NaN fails both comparisons and each infinity fails one. Proven by mutation - deleting
+either `isFinite` check changes no observable behavior, the only two surviving mutants of fourteen.
+Harmless, and arguably worth keeping for readability, but it is not load-bearing.
