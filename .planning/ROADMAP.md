@@ -248,7 +248,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
 | 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
-| 10. v1 Real-Data Closed Loop & Launch | v1 | 17/17 | Complete   | 2026-09-08 |
+| 10. v1 Real-Data Closed Loop & Launch | v1 | 17/17 | Complete    | 2026-09-08 |
 
 ---
 
