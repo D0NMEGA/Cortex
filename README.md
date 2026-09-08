@@ -221,6 +221,18 @@ swift run --package-path Packages/CortexReFIT CortexReFITBench --smoke
 
 ## Verification
 
+<!-- CI-STATUS-CLAIM -->
+As of 2026-09-08 the workflow has executed on hosted GitHub runners, and the run covering the current
+head of `main` passed both jobs: run 34182390856,
+https://github.com/D0NMEGA/Cortex/actions/runs/34182390856, 8m08s across `macos-26-arm64` and
+`macos-15`, 58 and 13 steps, no failures. The record is not clean and is not presented as one.
+CI first executed on 2026-09-07, at commit 497 of 529, and the first run in the project's history
+failed. The six oldest runs all failed, on real defects that ten phases of green local builds had
+never surfaced: a lint toolchain pin that did not match what Homebrew shipped, a `swift package
+resolve` invocation that could not have worked on any machine, and a `_ANEClient` negative control
+that had been broken since Phase 8. The full execution history, those failures included, is in
+`.planning/phases/10-v1-real-data-closed-loop-launch/10-first-ci-run-evidence.md`.
+
 Twelve policy gates run in CI, and each ships a `--self-test` that proves every check still bites by
 mutating the artifact and requiring failure. A gate whose required set changes without its self-test
 changing in the same commit is treated as silently disarmed.
