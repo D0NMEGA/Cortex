@@ -273,3 +273,23 @@ y.isFinite` alongside `x >= 0, x < 1, y >= 0, y < 1`. The `isFinite` checks are 
 IEEE 754, NaN fails both comparisons and each infinity fails one. Proven by mutation - deleting
 either `isFinite` check changes no observable behavior, the only two surviving mutants of fourteen.
 Harmless, and arguably worth keeping for readability, but it is not load-bearing.
+
+---
+
+## `.gitignore` claims a committed demo GIF that does not exist (Plan 10-17 Task 1, 2026-09-08)
+
+Found by the pre-push audit's 1d capture check (`10-prepush-audit.md`), out of that task's scope to
+fix. `.gitignore`'s final stanza reads:
+
+```
+# Demo capture output. The .mov is large and the .gif is committed deliberately under docs/media/.
+Tools/capture/out/
+```
+
+`docs/media/` does not exist, `git ls-files | grep -iE '\.(mov|mp4|gif|png|jpg)$'` returns nothing,
+and `git log --all --diff-filter=A --name-only` shows no media file was ever added in any of the
+525 commits. The ignore rule itself is correct and doing its job; only its comment is false.
+
+Left alone because Task 1 was a read-and-record audit and the plan forbids unrelated edits before
+the push checkpoint. **Fix when someone picks it up:** either drop the second sentence of the
+comment, or commit the capture the sentence promises.
