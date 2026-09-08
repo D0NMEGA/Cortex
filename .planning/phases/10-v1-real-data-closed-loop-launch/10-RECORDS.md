@@ -4,9 +4,9 @@ agent: donny-tools verify gate
 phase: 10-v1-real-data-closed-loop-launch
 slug: v1-real-data-closed-loop-launch
 verbs_run: 13
-errors: 3
+errors: 4
 warnings: 4
-not_yet: 1
+not_yet: 0
 not_applicable: 1
 passed: 4
 created: 2026-09-08
@@ -41,7 +41,7 @@ entirely is a sixth state, `not_run`, and never reads as a pass (D-10, GATE-02).
 | phase-completeness | phase | 1 | warning | Summaries without plans: 10-03a-RECONCILIATION |
 | plan-graph | phase | 1 | pass | 17 plan(s), acyclic, every dependency in an earlier wave |
 | phase-verified | phase | 1 | error | VERIFICATION.md status is "human_needed"; the engine matches the literal lowercase "passed" |
-| threats-clear | phase | 1 | not_yet | no SECURITY.md yet; /donny-audit-phase writes it after close |
+| threats-clear | phase | 1 | error | 2 open threat(s): T-10-12-01, T-10-12-07 |
 | ui-reviewed | phase | 1 | not_applicable | no UI-REVIEW.md; not a UI phase |
 | schema-drift | phase | 1 | pass | no schema drift |
 | milestone-coverage | phase | 1 | error | 4 of 8 requirement(s) not satisfied |
@@ -58,6 +58,7 @@ entirely is a sixth state, `not_run`, and never reads as a pass (D-10, GATE-02).
 |------|--------|----------|---------|
 | phase-completeness |  | warning | Summaries without plans: 10-03a-RECONCILIATION |
 | phase-verified |  | error | VERIFICATION.md status is "human_needed"; the engine matches the literal lowercase "passed" |
+| threats-clear |  | error | T-10-12-01; T-10-12-07 |
 | milestone-coverage |  | error | LAT-05: unsatisfied; LAT-06: unsatisfied; LAT-07: unsatisfied; LAT-08: unsatisfied; RD-07: partial (not listed in any SUMMARY's requirements-completed); RD-08: partial (not listed in any SUMMARY's ... |
 | references | 10-01-PLAN.md | warning | $HOME/.agent/donny/workflows/execute-plan.md; $HOME/.agent/donny/templates/summary.md; grep -c 'def test_' Decoder/tests/test_webgrid_ceiling.py; grep -c '@pytest.mark.slow' Decoder/tests/test_webg... |
 | references | 10-02-PLAN.md | warning | $HOME/.agent/donny/workflows/execute-plan.md; $HOME/.agent/donny/templates/summary.md; !Decoder/tests/fixtures/tiny_v73.mat; grep -c 'def test_' Decoder/tests/test_target_track.py; grep -F 'def bin... |
@@ -104,3 +105,4 @@ entirely is a sixth state, `not_run`, and never reads as a pass (D-10, GATE-02).
 | Run Date | Verbs | Errors | Warnings | Not yet | N/A | Verdict | Run By |
 |----------|-------|--------|----------|---------|-----|---------|--------|
 | 2026-09-08 | 13 | 3 | 4 | 1 | 1 | fail | donny-tools verify gate |
+| 2026-09-08 | 13 | 4 | 4 | 0 | 1 | fail | donny-tools verify gate |

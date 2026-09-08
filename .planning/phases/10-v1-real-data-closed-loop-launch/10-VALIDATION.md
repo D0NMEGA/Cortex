@@ -5,8 +5,8 @@ status: reconciled
 nyquist_compliant: true
 wave_0_complete: true
 created: 2026-09-05
-updated: 2026-09-07
-audited_by: /donny-audit-phase 10 --validate
+updated: 2026-09-08
+audited_by: /donny-audit-phase 10 --validate (2026-09-07); donny-nyquist-auditor gap-fill (2026-09-08)
 ---
 
 # Phase 10 - Validation Strategy
@@ -15,7 +15,11 @@ audited_by: /donny-audit-phase 10 --validate
 > Derived from `10-RESEARCH.md` "Validation Architecture" (line 1055). Written 2026-09-05 as the
 > plan-time seed, then **reconciled against the executed phase on 2026-09-07** by
 > `/donny-audit-phase 10 --validate`. Every status in the map below was set by running the row's
-> own command on this machine, not by reading a summary.
+> own command on this machine, not by reading a summary. **Gap-filled and re-verified on
+> 2026-09-08** by donny-nyquist-auditor: the last outstanding row (`10-17 T2`) is closed against the
+> user's recorded checkpoint decision, the stale 16/17 framing is corrected to 17/17, and every
+> command in the map was re-run on this machine rather than assumed still green. See "Validation
+> Audit 2026-09-08" at the end of this document.
 
 ---
 
@@ -128,10 +132,22 @@ check on the regenerated constants (SC#1h), the frame-cadence and renderer/HID d
 | 10-15 T3 (D-18) | 10-15 | 11 | RD-09 | T-10-15-02 | `swiftformat --lint .` clean, no gate disarmed | gate | `swiftformat --lint .` plus the eleven policy gates and their self-tests | existing | ✅ green |
 | 10-16 T2 (D-18) | 10-16 | 12 | RD-09 | T-10-16-01 | `identifier_name` clear with every JSON key byte-identical | gate | `swiftlint --strict`; byte-diff `refit_bps.json` and `webgrid_bps.json` | existing | ✅ green |
 | 10-17 T1/T3 (D-18) | 10-17 | 13 | RD-09 | T-10-17-01, T-10-17-05 | Nothing secret or licence-encumbered is published; the CI claim matches the real run | gate + evidence | pre-push audit greps; `gh api .../actions/runs`; `./Tools/scripts/readme-policy.sh --self-test` | 10-17 | ✅ green |
-| 10-17 T2 (D-18) | 10-17 | 13 | RD-09 | T-10-17-08, T-10-17-09 | Repository visibility is a SEPARATE user decision from the push; the repo is private today and stays private unless the user chooses otherwise | checkpoint | `checkpoint:decision`, `gate="blocking"`; the audit records `isPrivate` before and after as two lines; under `private-push` no `gh repo edit` runs at all | 10-17 | ⬜ outstanding |
+| 10-17 T2 (D-18) | 10-17 | 13 | RD-09 | T-10-17-08, T-10-17-09 | Repository visibility is a SEPARATE user decision from the push; the repo is private today and stays private unless the user chooses otherwise | checkpoint | `checkpoint:decision`, `gate="blocking"`; the audit records `isPrivate` before and after as two lines; under `private-push` no `gh repo edit` runs at all | 10-17 | ✅ green |
 | 10-10 T2 (D-16) | 10-10 | 6 | RD-08 | T-10-10-07, T-10-10-08 | CortexMac builds and runs under the free Personal team via a signing-only `CODE_SIGN_ENTITLEMENTS` override, with every committed entitlements file and `project.yml` byte-identical | gate + evidence | `xcodebuild ... CODE_SIGN_ENTITLEMENTS=Tools/capture/CortexMac.capture.entitlements` reaches BUILD SUCCEEDED; `git diff --stat` over the three entitlements files and `project.yml` is EMPTY; `./Tools/scripts/hid-surface-policy.sh --self-test` exits 0 | 10-10 | ✅ green |
 
-*Status: ✅ green (command run on this machine 2026-09-07, exit 0) · 📄 evidence (human-run, dataset-gated by D-07/D-21 - not a coverage gap) · ⬜ outstanding · ❌ red · ⚠️ flaky*
+*Status: ✅ green (command run on this machine 2026-09-07, re-verified 2026-09-08, exit 0) · 📄 evidence (human-run, dataset-gated by D-07/D-21 - not a coverage gap) · ⬜ outstanding · ❌ red · ⚠️ flaky*
+
+**10-17 T2 (D-18) closed 2026-09-08.** This row was `⬜ outstanding` at the 2026-09-07 audit because
+the `checkpoint:decision`, `gate="blocking"` on repository visibility had not yet been answered. It
+has since been resolved: the user was shown the verdict table and every FLAGGED row, and answered
+`private-push` (push, leave visibility unchanged), recorded verbatim in commit `710e729`
+(`docs(10-17): record the private-push decision and all five flag dispositions`,
+`.planning/phases/10-v1-real-data-closed-loop-launch/10-prepush-audit.md:514-527`). `gh repo view
+D0NMEGA/Cortex --json isPrivate,visibility` returns `{"isPrivate":true,"visibility":"PRIVATE"}` when
+re-run today, 2026-09-08, matching the BEFORE/AFTER pair the plan recorded and confirming no drift
+since the push. **This row is closed on the user's own recorded decision at a blocking checkpoint,
+not by this or any other agent.** The checkpoint held until the user answered; this audit's only
+contribution is re-verifying that today's live repository state still matches what was recorded.
 
 ---
 
@@ -265,7 +281,10 @@ constraint.
 
 **Approval:** planner-reconciled 2026-09-05 against the 17-plan set; **execution-reconciled
 2026-09-07** by `/donny-audit-phase 10 --validate`, which set every status above by running the
-row's own command.
+row's own command; **gap-filled and re-verified 2026-09-08** by donny-nyquist-auditor, which closed
+the last outstanding row (`10-17 T2`, against the user's recorded `private-push` decision), corrected
+the stale 16/17 phase-completion framing to 17/17, and re-ran every command in the map with zero
+regressions found. Zero rows are outstanding as of this pass.
 
 ---
 
@@ -312,22 +331,33 @@ Not inferred from the SUMMARY files. Each of these was executed on this machine 
    12 policy gates (seed said eleven).
 5. **The sign-off said 46/46** against its own 47-task header. It is 47/47.
 
-### Phase 10 is 16/17, and this document does not pretend otherwise
+### Phase 10 is 17/17 (updated 2026-09-08; this section originally read "16/17" on 2026-09-07)
 
-Plan `10-17` has a PLAN.md and no `10-17-SUMMARY.md`. Its work is partly done and partly not, so its
-two rows are split rather than averaged:
+Plan `10-17` now has both a PLAN.md and a `10-17-SUMMARY.md` (written 2026-09-07 22:31, committed
+alongside `7b47d67`). Its two rows are both closed:
 
-- **`10-17 T1/T3` is green.** The pre-push audit greps re-run clean during this audit (0 keys, 0
-  personal emails, 0 tracked worktree paths; the single tracked `.mat` is `tiny_v73.mat`, the
-  committed synthetic fixture, not dataset). The push happened, CI ran 24 times, `readme-policy
-  --self-test` is green, and `10-launch-evidence.md` records all of it.
-- **`10-17 T2` is outstanding.** It is a `checkpoint:decision`, `gate="blocking"` on repository
-  visibility. The repo is private today and no decision has been recorded. **An agent must not
-  close this row**; the seed says so and this audit does not override it.
+- **`10-17 T1/T3` is green**, unchanged since 2026-09-07: the pre-push audit greps re-run clean (0
+  keys, 0 personal emails, 0 tracked worktree paths; the single tracked `.mat` is `tiny_v73.mat`,
+  the committed synthetic fixture, not dataset). The push happened, CI has now run 28 times (was 24
+  on 2026-09-07), `readme-policy --self-test` is green, and `10-launch-evidence.md` /
+  `10-first-ci-run-evidence.md` record it.
+- **`10-17 T2` is now green**, closed 2026-09-08 against the user's `private-push` decision in
+  commit `710e729`. See the closure note on the Per-Task Verification Map above and "Validation
+  Audit 2026-09-08" below for the full evidence chain. **This audit does not close it by inference
+  from `10-17-SUMMARY.md` existing** - it is closed against the user's own recorded checkpoint
+  answer, cited by commit, cross-checked against a live `gh repo view` re-read.
 
-The `*SUMMARY*` glob that reports 17 matches counts `10-03a-RECONCILIATION-SUMMARY.md`, which is a
-real executor artifact but not a numbered plan summary. That miscount already flipped the phase to
-complete once and was repaired by `fb778e7`. Recount with `10-[0-9][0-9]-SUMMARY.md`, which gives 16.
+The `*SUMMARY*` glob defect described here on 2026-09-07 is real and **still live today** - it is a
+property of the glob pattern, not of any single day's file count, so more files landing does not fix
+it. The bare `*SUMMARY*` glob still over-counts: it now returns **18** (grep -ci match count),
+because it still counts `10-03a-RECONCILIATION-SUMMARY.md` alongside all 17 real plan summaries
+(on 2026-09-07 this was 16 real summaries + 1 non-plan artifact = 17; today it is 17 + 1 = 18, since
+`10-17-SUMMARY.md` landed in the meantime). The correct pattern remains `10-[0-9][0-9]-SUMMARY.md`,
+which today gives **17**, matching `ROADMAP.md`'s own
+`10. v1 Real-Data Closed Loop & Launch | v1 | 17/17 | Complete | 2026-09-08` row and `STATE.md`'s
+`Phase 10 complete`. Anyone reconciling phase completion must keep using the anchored pattern, not
+the bare glob; the earlier miscount (`fb778e7`) is exactly the failure mode of trusting the bare
+glob, and it would recur today if `18` were read as "18 plan summaries."
 
 ### Gaps found outside the map, and filled
 
@@ -346,4 +376,85 @@ tier split - it needs the dataset, and CI never trains.
 contradicting its own "lock-free latest-value channel" header. It is not a live defect (its only
 call site is already `@MainActor`) and it was left untouched under the read-only-implementation
 constraint. It becomes real the moment a render-thread caller reads it. Logged to
-`deferred-items.md`.
+`deferred-items.md`. **Re-confirmed still unfixed and still correct 2026-09-08:** `swift test
+--package-path Packages/CortexRender` was re-run this pass and the `TargetChannel`/`SelectionChannel`
+suites both still pass (see "Validation Audit 2026-09-08" below); `git log` shows no commit touching
+either file since `d400947` (2026-09-07), so the flag and its two mutation kill rates (85.7% / 90.9%)
+are unchanged and not re-measured.
+
+---
+
+## Validation Audit 2026-09-08
+
+Scope: three gaps in the 2026-09-07 map, assigned by the orchestrator. Nothing below was inferred
+from a SUMMARY file; every result is a command re-run on this machine today, 2026-09-08. This trail
+is appended after, not written over, the 2026-09-07 trail above; the two subsections that were
+factually stale (the `10-17 T2` row and "Phase 10 is 16/17") were corrected in place where they live,
+with a forward pointer to here, and are cross-referenced from "Gaps closed" below.
+
+| Metric | Count |
+|--------|-------|
+| Gaps assigned | 3 |
+| Resolved | 3 |
+| Escalated | 0 |
+| Rows in the per-task map | 35 (unchanged) |
+| Green (command run, exit 0) | 33 (was 32; `10-17 T2` newly closed) |
+| Evidence (human-run, dataset-gated) | 2 (unchanged) |
+| Outstanding | 0 (was 1) |
+| Regressions found vs. 2026-09-07 | 0 |
+
+### What was run
+
+| Command | Result | vs. 2026-09-07 |
+|---------|--------|-----------------|
+| `uv sync --project Decoder --extra dev` | resolved 53 packages, checked 32 | unchanged |
+| `uv run --project Decoder pytest Decoder/tests -m "not slow" -q` | 289 passed, 10 deselected | unchanged |
+| `swift test --package-path Packages/CortexReFIT` | 32 tests, 5 suites, exit 0 | unchanged |
+| `swift test --package-path Packages/CortexCore` | 15 tests, 1 suite, exit 0 | unchanged |
+| `swift test --package-path Packages/CortexDecoder` | 25 tests, 5 suites, exit 0 | unchanged |
+| `swift test --package-path Packages/CortexBCIHID` | 24 tests, 4 suites, exit 0 | unchanged |
+| `swift test --package-path Packages/CortexRender` | 48 tests, 10 suites, exit 0 (`TargetChannel` and `SelectionChannel` suites both pass) | unchanged |
+| `swift test --package-path Packages/CortexDemo` | 58 tests, 8 suites, exit 0 | unchanged |
+| 12 gate scripts (11 `*-policy.sh` + `honesty-sweep.sh`), each plain + `--self-test` | 24/24 exit 0 | unchanged |
+| `readme-policy.sh --self-test \| grep -c 'PASS \['` | 19 | unchanged |
+| `readme-policy.sh --self-test \| grep 'corpus/'` | 8 lines, 8 PASS, 0 FAIL | unchanged |
+| `swift run --package-path Packages/CortexDemo CortexSeamBSmoke` | 256 frames / 225 windows; `cursor_updates == pointer_reports_encoded == windows_completed == 225` | unchanged |
+| `CortexSeamBSmoke --frames 8` | exit 133 (`Precondition failed: windows_completed is 0 after 8 accepted frames`) | unchanged |
+| `CortexSeamBSmoke --tamper` | exit 1 (`AES-GCM open FAILED CLOSED at seq 128`) | unchanged |
+| `Packages/CortexDemo/.bench/glass_to_glass_real.json` inspection | no `passed`, no `budget_ns`, `frame_period_ns == 8333333` | unchanged |
+| `python3 Tools/scripts/check_refit_uplift.py` | exit 0, `refit_bps=0.3744 >= raw_bps=0.1609` | unchanged |
+| `swiftlint --strict` | 0 violations, 119 files | unchanged |
+| `swiftformat --lint .` | 0/121 need formatting, 19 skipped | unchanged |
+| `gh api repos/D0NMEGA/Cortex/actions/runs --jq '.total_count'` | **28** | **+4** since 2026-09-07 (was 24); new runs `710e729`, `7089692`, `7b47d67`, `3a5054e` all `success` |
+| `gh repo view --json isPrivate,visibility` | `{"isPrivate":true,"visibility":"PRIVATE"}` | unchanged |
+| `git status --short` | 1 line: `10-RECORDS.md` modified (uncommitted local append from an unrelated `donny-tools verify gate` run - not a code or evidence artifact, not touched by this pass, out of scope for these 3 gaps) | new; noted, not acted on |
+
+No mutation-testing step applies to this pass: no new test file was written. GAP 1 and GAP 2 are
+documentation reconciliation against evidence already on disk and on GitHub, not missing test
+coverage, and GAP 3 is re-execution of existing commands. The "Post-10-17 gap fill" mutation kill
+rates recorded 2026-09-07 (TargetChannel 85.7%, SelectionChannel 90.9%, both above the 80% bar) are
+carried forward unchanged, confirmed by `git log` showing no commit touching either source file since
+`d400947`.
+
+### Gaps closed
+
+1. **`10-17 T2 (D-18)` row.** Was `⬜ outstanding`. Closed to `✅ green` against commit `710e729`
+   (the user's recorded `private-push` decision: push, leave visibility unchanged) and a fresh
+   `gh repo view` read today (`{"isPrivate":true,"visibility":"PRIVATE"}`). **Closed on the user's
+   decision, recorded at a blocking checkpoint - not closed by an agent.** See the closure note on
+   the Per-Task Verification Map above.
+2. **"Phase 10 is 16/17" section.** Was false: `10-17-SUMMARY.md` now exists (written 2026-09-07
+   22:31, committed in `7b47d67`), and the phase is 17/17, matching `ROADMAP.md`'s own
+   `10. v1 Real-Data Closed Loop & Launch | v1 | 17/17 | Complete | 2026-09-08` row and `STATE.md`'s
+   `Phase 10 complete`. Rewritten in place above under its own heading; the `*SUMMARY*` glob-miscount
+   warning is preserved and re-verified still live (bare glob now over-counts to 18, anchored pattern
+   `10-[0-9][0-9]-SUMMARY.md` correctly gives 17).
+3. **Stale map commands.** No command in the map had been re-executed since 2026-09-07 at the start
+   of this pass, and 13 commits had landed since (`96168ba` .. `3a5054e`, `git log 9861c28..HEAD`).
+   Every row in "What was run" above was re-executed today; all match the 2026-09-07 results or
+   improve on them (CI run count 24 -> 28), and none regressed.
+
+### Escalated
+
+None. No implementation defect was found in this pass; nothing needed a fix outside
+`10-VALIDATION.md` itself.
