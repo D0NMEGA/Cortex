@@ -347,6 +347,27 @@ history, so it needs no run citation. Note for a future reader that the `_ANECli
 broken from Phase 8 until 2026-09-07; that history is above and in `ci.yml`'s own step comment, not
 in the README sentence, which describes the current state.
 
+## Follow-on runs from this plan's own commits
+
+Run 34182390856 covers commit `710e729`, the head of the audited push. This plan then made two more
+commits, the one carrying this artifact and the README reconciliation, and the one carrying
+`10-17-SUMMARY.md`. Each of those pushes triggers its own run, so `origin/main` moves past `710e729`
+and the run this file records stops being the run for the head.
+
+That is why the README sentence names the commit rather than "the current head". It stays true as
+the branch advances, which a head-relative claim would not.
+
+The regress terminates by construction rather than by choice: a record of a run cannot contain the
+result of the run its own commit triggers. So the split is:
+
+- **34182390856** (commit `710e729`, the audited push): recorded in full above.
+- The run for this artifact's own commit: watched to completion and recorded in `10-17-SUMMARY.md`.
+- The run for the SUMMARY's commit: watched to completion and reported by the executor to the
+  orchestrator, since by then there is no artifact left in this plan that could hold it.
+
+None of the three is treated as covering the others. A green run for `710e729` says nothing about a
+later commit, and this file does not claim otherwise.
+
 ## Self-scan
 
 This file quotes `/Users/d0nmega/Developer/Cortex` once in its run header, matching the FLAG-04

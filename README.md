@@ -222,8 +222,8 @@ swift run --package-path Packages/CortexReFIT CortexReFITBench --smoke
 ## Verification
 
 <!-- CI-STATUS-CLAIM -->
-As of 2026-09-08 the workflow has executed on hosted GitHub runners, and the run covering the current
-head of `main` passed both jobs: run 34182390856,
+As of 2026-09-08 the workflow has executed on hosted GitHub runners, and the run for commit
+`710e729` passed both jobs: run 34182390856,
 https://github.com/D0NMEGA/Cortex/actions/runs/34182390856, 8m08s across `macos-26-arm64` and
 `macos-15`, 58 and 13 steps, no failures. The record is not clean and is not presented as one.
 CI first executed on 2026-09-07, at commit 497 of 529, and the first run in the project's history
