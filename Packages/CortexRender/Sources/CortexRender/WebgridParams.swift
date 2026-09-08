@@ -47,6 +47,35 @@ public nonisolated struct GridLattice: Sendable, Equatable {
   }
 }
 
+/// The finite board of whole cells the task uses, grid-normalised.
+///
+/// A lattice alone is infinite. Drawn to the pane edge it cuts cells in half at the left, the right
+/// and the centre seam, and a viewer cannot tell how large the board is supposed to be. This names
+/// it: a square of whole cells, centred on the targets, with background around it.
+public nonisolated struct Board: Sendable, Equatable {
+  public let centreX: Float
+  public let centreY: Float
+  /// Half the board's side. 0 draws no board and no rules.
+  public let half: Float
+
+  public init(centreX: Float, centreY: Float, half: Float) {
+    self.centreX = centreX
+    self.centreY = centreY
+    self.half = half
+  }
+
+  /// The whole grid-normalised square, for a caller with no task board of its own.
+  public static let wholeGrid = Board(centreX: 0.5, centreY: 0.5, half: 0.5)
+
+  /// A board of `cells` whole cells at `pitch`, centred on `centre`.
+  public static func cells(_ cells: Int, pitch: Float, centre: SIMD2<Float>) -> Board {
+    guard cells > 0, pitch > 0, pitch.isFinite, centre.x.isFinite, centre.y.isFinite else {
+      return .wholeGrid
+    }
+    return Board(centreX: centre.x, centreY: centre.y, half: Float(cells) * pitch / 2)
+  }
+}
+
 /// Uniforms describing the webgrid + cursor for one frame, shared Swift↔Metal.
 ///
 /// `Sendable` because it crosses into the display-link callback (Plan 03) under the package's
@@ -116,19 +145,26 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
   /// onto the target positions rather than onto the workspace corner.
   public var gridPhaseX: Float
   public var gridPhaseY: Float
-  /// Dwell-to-select progress in `[0, 1]`; the kernel shrinks the cursor ring as it climbs.
+  /// The click animation in `[0, 1]`; the kernel pinches the cursor ring as it decays.
+  public var clickPulse: Float
+  /// The green hit marker: where the last click landed a hit, grid-normalised. See ``hitFade``.
+  public var hitX: Float
+  public var hitY: Float
+  /// How recently that hit happened, `1 → 0`. 0 draws no marker.
   ///
-  /// The standard webgrid selection affordance: holding on a target contracts the ring, and
-  /// committing the selection releases it back to full size. 0 draws the resting cursor.
-  public var dwellProgress: Float
-  /// 1 once this trial's target has been acquired, 0 before. Greens the target and HOLDS it green.
+  /// The click lands at the trial boundary, so the square it hit is no longer the active target.
+  /// This is what keeps it on screen, green, beside the new red target, long enough to read.
+  public var hitFade: Float
+  /// The BOARD: the finite region of whole cells the task actually uses, grid-normalised.
   ///
-  /// A latch rather than a fading value, because the cursor ring releases to full size both on a
-  /// commit and on a broken hold: green is the only thing on screen that distinguishes them, and a
-  /// viewer scrubbing a recording has to be able to see which trials were acquired.
-  public var targetAcquired: Float
-  /// How recently the acquisition happened, decaying `1 → 0`. Swells the target briefly.
-  public var targetSwell: Float
+  /// The lattice is infinite and used to be drawn to the pane edge, which cut cells in half at the
+  /// left, right and centre seam and left no way to tell how big the board was meant to be. This
+  /// session presents 64 targets on an 8x8 lattice at a 15 mm pitch: the board is 8 cells across,
+  /// centred on the targets, and everything outside it is background.
+  public var boardCentreX: Float
+  public var boardCentreY: Float
+  /// Half the board's side, in the same units. 0 draws no board and no rules.
+  public var boardHalf: Float
 
   /// Memberwise initializer (explicit so the public API is stable across the FFI/MSL mirror).
   public init(
@@ -152,9 +188,13 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     gridPitchY: Float = 1.0 / 30.0,
     gridPhaseX: Float = 0,
     gridPhaseY: Float = 0,
-    dwellProgress: Float = 0,
-    targetAcquired: Float = 0,
-    targetSwell: Float = 0
+    clickPulse: Float = 0,
+    hitX: Float = 0,
+    hitY: Float = 0,
+    hitFade: Float = 0,
+    boardCentreX: Float = 0.5,
+    boardCentreY: Float = 0.5,
+    boardHalf: Float = 0.5
   ) {
     self.gridColumns = gridColumns
     self.gridRows = gridRows
@@ -176,9 +216,13 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     self.gridPitchY = gridPitchY
     self.gridPhaseX = gridPhaseX
     self.gridPhaseY = gridPhaseY
-    self.dwellProgress = dwellProgress
-    self.targetAcquired = targetAcquired
-    self.targetSwell = targetSwell
+    self.clickPulse = clickPulse
+    self.hitX = hitX
+    self.hitY = hitY
+    self.hitFade = hitFade
+    self.boardCentreX = boardCentreX
+    self.boardCentreY = boardCentreY
+    self.boardHalf = boardHalf
   }
 
   /// The modern 30×30 webgrid (D-01) — 900 cells, NOT the rejected 6×6 (REQUIREMENTS Out-of-Scope).
@@ -200,9 +244,8 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
     target: ActiveTarget? = nil,
     lattice: GridLattice = .uniform30,
     targetHalfExtent: Float = 0.5 / 30.0,
-    dwellProgress: Float = 0,
-    targetAcquired: Float = 0,
-    targetSwell: Float = 0
+    selection: SelectionState = .idle,
+    board: Board = .wholeGrid
   ) -> WebgridParams {
     WebgridParams(
       gridColumns: 30,
@@ -225,9 +268,13 @@ public nonisolated struct WebgridParams: Sendable, Equatable {
       gridPitchY: lattice.pitchY,
       gridPhaseX: lattice.phaseX,
       gridPhaseY: lattice.phaseY,
-      dwellProgress: dwellProgress,
-      targetAcquired: targetAcquired,
-      targetSwell: targetSwell
+      clickPulse: selection.clickPulse,
+      hitX: selection.hitX,
+      hitY: selection.hitY,
+      hitFade: selection.hitFade,
+      boardCentreX: board.centreX,
+      boardCentreY: board.centreY,
+      boardHalf: board.half
     )
   }
 }

@@ -14,7 +14,7 @@ import Foundation
 import simd
 import Testing
 
-@Suite("Replay cadence: window stride and the streaming dwell readout")
+@Suite("Replay cadence: window stride and the streaming click readout")
 @MainActor
 struct ReplayCadenceTests {
   static func loadFixture() throws -> ReplayExport {
@@ -81,110 +81,127 @@ struct ReplayCadenceTests {
   @Test("the selection channel clamps every field and resolves non-finite input to idle")
   func selectionChannelClampsAndRoundTrips() {
     let channel = SelectionChannel()
-    #expect(channel.load() == .idle, "a fresh channel reads as no hold and nothing acquired")
+    #expect(channel.load() == .idle, "a fresh channel reads as no click and no hit marker")
 
-    // The fractions cross as 16-bit fixed point, so they come back within 1/65535 rather than
-    // bit-exact. That is finer than the ring radius or the colour blend they drive can resolve; the
-    // three values sharing ONE atomic word is what matters, so a frame can never draw a green
-    // target beside a stale dwell.
-    channel.store(dwell: 0.5, acquired: true, swell: 0.25)
+    // Every field crosses as 16-bit fixed point, so values come back within 1/65535 rather than
+    // bit-exact. That is finer than a pixel at any plausible window size; the four values sharing
+    // ONE atomic word is what matters, so a frame can never draw a marker at a stale position
+    // beside a fresh fade.
+    channel.store(clickPulse: 0.5, hitX: 0.25, hitY: 0.75, hitFade: 0.5)
     let mid = channel.load()
-    #expect(abs(mid.dwell - 0.5) < 1e-4)
-    #expect(abs(mid.swell - 0.25) < 1e-4)
-    #expect(mid.acquired)
+    #expect(abs(mid.clickPulse - 0.5) < 1e-4)
+    #expect(abs(mid.hitX - 0.25) < 1e-4)
+    #expect(abs(mid.hitY - 0.75) < 1e-4)
+    #expect(abs(mid.hitFade - 0.5) < 1e-4)
 
     // 0 and 1 are the values the shader branches on, and both must survive exactly.
-    channel.store(dwell: 0, acquired: false, swell: 1)
-    #expect(channel.load() == SelectionState(dwell: 0, acquired: false, swell: 1))
+    channel.store(clickPulse: 0, hitX: 1, hitY: 0, hitFade: 1)
+    #expect(channel.load() == SelectionState(clickPulse: 0, hitX: 1, hitY: 0, hitFade: 1))
 
     // Out of range clamps; non-finite resolves to 0, NOT to 1. A garbage value must draw a resting
-    // cursor and an unacquired target rather than a completed selection, since both are read as
-    // evidence that an acquisition happened.
-    channel.store(dwell: 2.0, acquired: false, swell: -1.0)
-    #expect(channel.load() == SelectionState(dwell: 1, acquired: false, swell: 0))
-    channel.store(dwell: .nan, acquired: false, swell: .infinity)
+    // cursor and NO green marker rather than a hit, since a green square is read as evidence that
+    // a click landed on target.
+    channel.store(clickPulse: 2.0, hitX: -1, hitY: 0.5, hitFade: -1.0)
+    let clamped = channel.load()
+    #expect(clamped.clickPulse == 1)
+    #expect(clamped.hitX == 0)
+    #expect(clamped.hitFade == 0)
+    // Non-finite resolves to 0 rather than clamping into range, INFINITY INCLUDED. Clamping it to
+    // the top would paint a full-strength green square from a garbage value, and a green square is
+    // read as evidence that a click landed on target.
+    channel.store(clickPulse: .nan, hitX: .nan, hitY: .nan, hitFade: .infinity)
     #expect(channel.load() == .idle)
   }
 
-  @Test("a pipeline that never reaches its target reports no dwell and no selections")
-  func dwellStaysZeroOffTarget() throws {
+  @Test("a click with the cursor off the target counts nothing and marks nothing")
+  func clickOffTargetCountsNothing() throws {
     let source = try RecordedSpikeSource(export: Self.loadFixture(), stride: 1)
     let pipeline = ReplayPipeline(source: source, seed: 0xC0FFEE)
 
     // The synthetic decode fallback runs (no model in a clean clone), so this asserts the READOUT's
-    // resting state, not a decoding result: an off-target cursor holds no dwell.
+    // resting state, not a decoding result.
     for _ in 0 ..< 50 {
-      let state = pipeline.tick()
-      if !state.onTarget {
-        #expect(pipeline.dwellProgress == 0, "the dwell must reset the moment the cursor is outside")
-      }
+      pipeline.tick()
     }
-    #expect(pipeline.dwellProgress >= 0 && pipeline.dwellProgress <= 1)
-    #expect(pipeline.selectionCount >= 0)
+    pipeline.setTarget(SIMD2<Float>(0.02, 0.98)) // a corner the cursor is nowhere near
+    #expect(!pipeline.registerClick(), "a click off the cell is a miss")
+    #expect(pipeline.selectionCount == 0)
+    #expect(pipeline.selectionSwell == 0, "a miss leaves no green marker")
+    #expect(pipeline.clickPulse == 1, "the cursor still shows that a click happened")
+    #expect(pipeline.lastMiss != nil, "a miss is measured, not discarded")
   }
 }
 
-@Suite("Trial re-anchoring")
+@Suite("The trial: one click, no repositioning")
 @MainActor
-struct ReanchorTests {
+struct TrialTests {
   static func loadFixture() throws -> ReplayExport {
     try ReplayExport(sidecarURL: RecordedSpikeSourceTests.fixtureSidecar)
   }
 
-  @Test("reanchor moves the cursor and the filter agrees with the integrator")
-  func reanchorMovesTheCursor() throws {
-    let pipeline = try ReplayPipeline(
-      source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
-      seed: 0xC0FFEE
-    )
+  private func freshPipeline() throws -> ReplayPipeline {
+    try ReplayPipeline(source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1), seed: 0xC0FFEE)
+  }
+
+  @Test("a new trial does not move the cursor")
+  func trialBoundaryLeavesTheCursorAlone() throws {
+    let pipeline = try freshPipeline()
     for _ in 0 ..< 20 {
       pipeline.tick()
     }
-
-    pipeline.reanchor(to: SIMD2<Float>(0.25, 0.75))
-    // The next tick integrates FROM the re-anchored position, so it lands within one tick's travel
-    // of it rather than back where the free-running cursor had drifted to.
-    let after = pipeline.tick()
-    #expect(abs(after.position.x - 0.25) < 0.2)
-    #expect(abs(after.position.y - 0.75) < 0.2)
+    // The whole claim of an open-loop replay is that nothing repositions the cursor. A trial
+    // boundary is the one place a correction would be easy to slip in, so assert it does not.
+    let before = pipeline.cursorPosition
+    pipeline.registerClick()
+    pipeline.beginTrial()
+    #expect(pipeline.cursorPosition == before, "a trial boundary must not move the cursor")
   }
 
-  @Test("reanchor clamps to the grid and refuses a non-finite position")
-  func reanchorClampsAndRefuses() throws {
-    let pipeline = try ReplayPipeline(
-      source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
-      seed: 0xC0FFEE
-    )
-    pipeline.reanchor(to: SIMD2<Float>(5.0, -3.0))
-    var state = pipeline.tick()
-    #expect(state.position.x >= 0 && state.position.x <= 1)
-    #expect(state.position.y >= 0 && state.position.y <= 1)
-
-    // A non-finite anchor must be REFUSED outright, not clamped to a bound: clamping would silently
-    // park the cursor in a corner and call it a re-anchor.
-    pipeline.reanchor(to: SIMD2<Float>(0.4, 0.6))
-    pipeline.reanchor(to: SIMD2<Float>(.nan, 0.6))
-    state = pipeline.tick()
-    #expect(state.position.x.isFinite && state.position.y.isFinite)
-    #expect(abs(state.position.x - 0.4) < 0.2, "the NaN anchor left the 0.4 anchor in place")
+  @Test("a trial can be clicked once, and the next trial re-arms it")
+  func oneClickPerTrial() throws {
+    let pipeline = try freshPipeline()
+    pipeline.tick()
+    pipeline.setTarget(pipeline.cursorPosition) // put the target under the cursor
+    #expect(pipeline.registerClick(), "a click with the cursor in the cell is a hit")
+    #expect(pipeline.selectionCount == 1)
+    #expect(!pipeline.registerClick(), "the same trial cannot be clicked twice")
+    #expect(pipeline.selectionCount == 1)
+    pipeline.beginTrial()
+    pipeline.setTarget(pipeline.cursorPosition)
+    #expect(pipeline.registerClick(), "the next trial can be clicked")
+    #expect(pipeline.selectionCount == 2)
   }
 
-  @Test("reanchor clears any dwell in progress")
-  func reanchorClearsDwell() throws {
-    let pipeline = try ReplayPipeline(
-      source: RecordedSpikeSource(export: Self.loadFixture(), stride: 1),
-      seed: 0xC0FFEE
-    )
-    for _ in 0 ..< 10 {
-      pipeline.tick()
-    }
-    // A hold cannot survive being teleported: the dwell must be CONTINUOUS on one target.
-    pipeline.reanchor(to: SIMD2<Float>(0.5, 0.5))
-    #expect(pipeline.dwellProgress == 0)
+  @Test("the green marker survives the trial boundary that produced it")
+  func markerOutlivesItsTrial() throws {
+    let pipeline = try freshPipeline()
+    pipeline.tick()
+    pipeline.setTarget(pipeline.cursorPosition)
+    pipeline.registerClick()
+    #expect(pipeline.selectionSwell == 1)
+    // The click lands AT the boundary, so clearing the marker when the next trial opens would erase
+    // it on the frame it appeared.
+    pipeline.beginTrial()
+    #expect(pipeline.selectionSwell == 1, "the marker fades on its own, not on the boundary")
+  }
+
+  @Test("the miss distance is recorded for every click, hit or miss")
+  func missIsAlwaysMeasured() throws {
+    let pipeline = try freshPipeline()
+    pipeline.tick()
+    pipeline.setTarget(SIMD2<Float>(0.02, 0.98))
+    #expect(!pipeline.registerClick())
+    let far = try #require(pipeline.lastMiss)
+    pipeline.beginTrial()
+    pipeline.setTarget(pipeline.cursorPosition)
+    #expect(pipeline.registerClick())
+    let near = try #require(pipeline.lastMiss)
+    #expect(near < far, "a hit's miss distance is smaller than a miss's")
+    #expect(pipeline.medianMiss != nil, "the median is available once clicks have happened")
   }
 }
 
-@Suite("Selection commit: one per trial, the counter and the latch")
+@Suite("The click: the cell, the pulse and the marker")
 @MainActor
 struct SelectionCommitTests {
   private func freshPipeline() throws -> ReplayPipeline {
@@ -192,93 +209,34 @@ struct SelectionCommitTests {
     return ReplayPipeline(source: source, seed: 0xC0FFEE)
   }
 
-  /// Run `ticks` ticks with the target re-pointed at the cursor each time, so the continuous-hold
-  /// condition holds throughout. This exercises the READOUT, not a decoding result: it asserts that
-  /// a satisfied dwell moves the tally a viewer reads off the screen.
-  @discardableResult
-  private func holdOnTarget(_ pipeline: ReplayPipeline, ticks: Int) -> SIMD2<Float> {
-    var position = pipeline.tick().position
-    for _ in 0 ..< ticks {
-      pipeline.setTarget(position)
-      position = pipeline.tick().position
-    }
-    return position
-  }
-
-  @Test("a dwell short of the threshold does not commit")
-  func shortHoldDoesNotCommit() throws {
+  @Test("the click pinch decays to zero and does not re-arm on its own")
+  func clickPulseDecays() throws {
     let pipeline = try freshPipeline()
-    // 0.30 s at 20 ms is 15 ticks; 14 is one short, and the threshold must be a threshold.
-    holdOnTarget(pipeline, ticks: 14)
-    #expect(pipeline.selectionCount == 0)
-    #expect(!pipeline.acquired)
-    #expect(pipeline.selectionSwell == 0)
-    #expect(pipeline.dwellProgress > 0, "a partial hold shows partial progress")
-  }
-
-  @Test("a satisfied dwell commits once, latches acquired and lights the swell")
-  func dwellCommitsOnce() throws {
-    let pipeline = try freshPipeline()
-    holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.selectionCount == 1, "15 continuous on-target ticks is exactly one commit")
-    #expect(pipeline.acquired, "the commit latches the target green for the rest of the trial")
-    #expect(pipeline.selectionSwell == 1, "a commit lights the swell fully")
-    #expect(pipeline.dwellProgress == 0, "the counter restarts after committing")
-  }
-
-  @Test("one acquisition per trial: parking on the target never banks a second")
-  func oneAcquisitionPerTrial() throws {
-    let pipeline = try freshPipeline()
-    // Six times the 15-tick requirement, parked on the same target the whole time. This used to
-    // bank a fresh selection every 15 ticks, so a single 1.3 s trial could contribute four counts
-    // for one square and the tally's numerator could pass its denominator.
-    holdOnTarget(pipeline, ticks: 90)
-    #expect(pipeline.selectionCount == 1, "a square cannot be selected twice in one trial")
-    #expect(pipeline.acquired)
-    #expect(pipeline.dwellProgress == 0, "no partial hold accumulates after the trial is acquired")
-  }
-
-  @Test("the next trial re-arms the dwell, so a second trial can be acquired")
-  func nextTrialReArms() throws {
-    let pipeline = try freshPipeline()
-    holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.selectionCount == 1)
-    pipeline.beginTrial()
-    #expect(!pipeline.acquired, "a new trial releases the latch")
-    holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.selectionCount == 2, "the second trial commits on its own 15-tick hold")
-  }
-
-  @Test("the swell decays to zero while the acquired latch holds")
-  func swellDecaysButGreenHolds() throws {
-    let pipeline = try freshPipeline()
-    holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.selectionSwell == 1)
-
-    // Break the hold and watch the swell fall. The latch must NOT fall with it: the square stays
-    // green until the next trial, which is the only unambiguous "that one counted" on screen.
-    let committed = pipeline.selectionCount
-    pipeline.setTarget(SIMD2<Float>(0.99, 0.01))
-    var previous = pipeline.selectionSwell
+    pipeline.tick()
+    pipeline.setTarget(pipeline.cursorPosition)
+    pipeline.registerClick()
+    #expect(pipeline.clickPulse == 1)
+    var previous = pipeline.clickPulse
     for _ in 0 ..< 10 {
       pipeline.tick()
-      #expect(pipeline.selectionSwell < previous, "swell did not fall: \(pipeline.selectionSwell)")
-      previous = pipeline.selectionSwell
+      #expect(pipeline.clickPulse <= previous, "the pinch must not grow: \(pipeline.clickPulse)")
+      previous = pipeline.clickPulse
     }
-    #expect(pipeline.selectionCount == committed, "no second commit inside the trial")
-    #expect(pipeline.acquired, "the target stays green for the rest of the trial")
-    #expect(previous < 1, "the swell is still at full size")
+    #expect(pipeline.clickPulse == 0, "200 ms is 10 ticks, so the pinch is fully released")
   }
 
-  @Test("a re-anchor releases the latch so green cannot bleed into the next trial")
-  func reanchorClearsAcquired() throws {
+  @Test("the green marker fades to zero on its own")
+  func markerFades() throws {
     let pipeline = try freshPipeline()
-    holdOnTarget(pipeline, ticks: 15)
-    #expect(pipeline.acquired)
-    pipeline.reanchor(to: SIMD2<Float>(0.5, 0.5))
-    #expect(!pipeline.acquired)
-    #expect(pipeline.selectionSwell == 0)
-    #expect(pipeline.dwellProgress == 0)
+    pipeline.tick()
+    pipeline.setTarget(pipeline.cursorPosition)
+    pipeline.registerClick()
+    #expect(pipeline.selectionSwell == 1)
+    for _ in 0 ..< 25 {
+      pipeline.tick()
+    }
+    #expect(pipeline.selectionSwell == 0, "500 ms is 25 ticks, so the marker is gone")
+    #expect(pipeline.selectionCount == 1, "and nothing re-counted while it faded")
   }
 
   @Test("the cell is the target: a cursor in a corner of the square counts")
@@ -298,17 +256,15 @@ struct SelectionCommitTests {
   @Test("a target that is not on screen is not scored")
   func hiddenTargetIsNotScored() throws {
     let pipeline = try freshPipeline()
-    holdOnTarget(pipeline, ticks: 14)
-    #expect(pipeline.dwellProgress > 0)
+    pipeline.tick()
     // The task can put a target outside the pre-registered workspace box, and the GUI draws nothing
-    // for it. A hold must not keep banking against a square the viewer cannot see.
-    pipeline.clearTarget()
-    #expect(pipeline.dwellProgress == 0, "clearing the target drops the partial hold")
+    // for it. A click must not land on a square the viewer cannot see, wherever the cursor is.
+    pipeline.setTarget(pipeline.cursorPosition)
     let target = pipeline.target
-    for _ in 0 ..< 60 {
-      pipeline.tick()
-    }
-    #expect(pipeline.selectionCount == 0, "no acquisition while no target is on screen")
+    pipeline.clearTarget()
+    #expect(!pipeline.isOnTarget(pipeline.cursorPosition), "an unseen target cannot be on target")
+    #expect(!pipeline.registerClick(), "and it cannot be clicked")
+    #expect(pipeline.selectionCount == 0)
     #expect(pipeline.target == target, "the steering target is left alone; only scoring stops")
   }
 }

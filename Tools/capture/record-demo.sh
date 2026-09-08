@@ -35,8 +35,12 @@ WIN_W=1120          # window points; the capture is cropped to the content area 
 # request has to clear the minimum rather than fight it.
 WIN_H=920          # slack over the layout minimum, so the bottom trim below does not clip the
                    # methodology label -- the line that qualifies the latency number
-GIF_WIDTH=900       # final GIF width in px
-FPS=12              # 12 is plenty for a cursor demo and roughly halves the size versus 24
+# The GIF budget is GitHub's 10 MB, and a 900px 12fps encode was spending 2.8 MB of it. These
+# settings use the budget: 1400px is the window's full content width in points (the capture is 2x
+# that, so the GIF is a clean downscale rather than an upscale), and 20 fps resolves the click
+# pinch, which is 200 ms. The step-down loop below still guarantees the result uploads.
+GIF_WIDTH=1400      # final GIF width in px
+FPS=20              # fast enough to show the 200 ms click pinch as more than one frame
 SECONDS_TO_RECORD=20
 DO_BUILD=1
 # The decoder the capture runs. `ridge` is the app's own default and the one that wins the matched
@@ -245,7 +249,7 @@ encode "$GIF_WIDTH" "$FPS"
 # GitHub rejects images and GIFs over 10 MB. Step down rather than hand back a file that will not
 # upload; each step is reported so the final settings are known and reproducible.
 LIMIT=$((10 * 1024 * 1024))
-for attempt in "800 10" "700 10" "640 8"; do
+for attempt in "1200 18" "1000 15" "900 12" "800 10" "640 8"; do
   size=$(stat -f%z "$GIF")
   [[ "$size" -le "$LIMIT" ]] && break
   set -- $attempt

@@ -33,9 +33,13 @@ struct WebgridParams {
   float gridPitchY;
   float gridPhaseX;       // offset of the first rule, so the lattice can be phased onto the targets
   float gridPhaseY;
-  float dwellProgress;    // dwell-to-select progress in [0,1]; contracts the ring
-  float targetAcquired;   // 1 once this trial's target is acquired; HOLDS the target green
-  float targetSwell;      // how recently that happened, [0,1] decaying; swells the target
+  float clickPulse;       // click animation in [0,1], decaying; pinches the cursor ring
+  float hitX;             // green hit marker position, grid-normalised
+  float hitY;
+  float hitFade;          // how recently the hit landed, [0,1] decaying; 0 draws no marker
+  float boardCentreX;     // the finite board of whole cells the task uses
+  float boardCentreY;
+  float boardHalf;        // half the board's side; 0 draws no board
 };
 
 // Signed distance to a rounded box centered at the origin with half-size `halfExtent` and corner
@@ -82,61 +86,79 @@ kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
 
   // Only shade inside the centered square; outside stays background.
   if (g.x >= 0.0 && g.x <= 1.0 && g.y >= 0.0 && g.y <= 1.0) {
-    // Rule spacing and offset, so the ruled lattice can be phased onto the TASK's target lattice
-    // instead of the workspace corner. `max` is the DoS guard: never divide by zero
-    // (T-06-01-03 cheap guard).
-    const float2 cellPitch = float2(max(p.gridPitchX, 1e-4), max(p.gridPitchY, 1e-4));
-    const float2 phase = float2(p.gridPhaseX, p.gridPhaseY);
+    // The BOARD: the finite square of whole cells the task presents, with background all around it.
+    // Drawing the lattice to the pane edge instead cut cells in half at the left, the right and the
+    // centre seam, so the two panes ran together and there was no way to read the board's size off
+    // the screen. This session presents 64 targets on an 8x8 lattice, so the board is 8 cells.
+    const float2 boardCentre = float2(p.boardCentreX, p.boardCentreY);
+    const float boardHalf = max(p.boardHalf, 1e-5);
+    const float2 fromBoard = abs(g - boardCentre);
+    const float boardEdge = max(fromBoard.x, fromBoard.y) - boardHalf;
 
-    // Local position within the cell this pixel falls in, [0,1)^2.
-    const float2 cellLocal = fract((g - phase) / cellPitch);
-
-    // (4) Ruled grid lines (D-06): the field is drawn as thin white rules on the cell boundaries
-    //     rather than as 900 filled tiles, so the cursor and the target are the only bright things
-    //     on screen. Line half-width is derived from the pixel size so the rule stays ~1px at any
-    //     resolution instead of thickening as the window grows.
     const float2 pixelInGrid = float2(1.0 / side, 1.0 / side);   // one px in grid-normalised units
-    const float lineHalf = max(pixelInGrid.x, pixelInGrid.y) * 0.5;
-    // Distance to the nearest cell boundary on each axis, in grid-normalised units.
-    const float2 toEdge = min(cellLocal, 1.0 - cellLocal) * cellPitch;
-    const float edgeDist = min(toEdge.x, toEdge.y);
     const float aa = max(pixelInGrid.x, pixelInGrid.y);
-    const float lineMask = 1.0 - smoothstep(lineHalf, lineHalf + aa, edgeDist);
-
-    // (5) Subtle cursor-proximity brighten (D-09): lift the rule's alpha near the cursor with a
-    //     smooth falloff over proximityRadius. Pure visual — no selection/scoring logic (D-01).
     const float2 cursor = float2(p.cursorX, p.cursorY);
     const float distToCursor = distance(g, cursor);
-    const float prox = 1.0 - smoothstep(0.0, max(p.proximityRadius, 1e-4), distToCursor);
-    const float lineAlpha = kGridLineAlpha * (1.0 + 1.4 * prox);   // brighter rule near the cursor
 
-    if (lineMask > 0.0) {
-      color = mix(color, kGridLineColor, saturate(lineMask * lineAlpha));
+    if (boardEdge <= aa) {
+      // Rule spacing and offset, so the ruled lattice sits on the TASK's target lattice. `max` is
+      // the DoS guard: never divide by zero (T-06-01-03 cheap guard).
+      const float2 cellPitch = float2(max(p.gridPitchX, 1e-4), max(p.gridPitchY, 1e-4));
+      const float2 phase = float2(p.gridPhaseX, p.gridPhaseY);
+
+      // Local position within the cell this pixel falls in, [0,1)^2.
+      const float2 cellLocal = fract((g - phase) / cellPitch);
+
+      // (4) Ruled grid lines (D-06): the field is drawn as thin white rules on the cell boundaries
+      //     rather than as filled tiles, so the cursor and the target are the only bright things on
+      //     screen. Line half-width is derived from the pixel size so the rule stays ~1px at any
+      //     resolution instead of thickening as the window grows.
+      const float lineHalf = aa * 0.5;
+      // Distance to the nearest cell boundary on each axis, in grid-normalised units.
+      const float2 toEdge = min(cellLocal, 1.0 - cellLocal) * cellPitch;
+      const float edgeDist = min(toEdge.x, toEdge.y);
+      float lineMask = 1.0 - smoothstep(lineHalf, lineHalf + aa, edgeDist);
+      // The board's OWN border, so the outermost cells are closed rather than fading into the
+      // background. Same weight as a rule.
+      const float borderMask = 1.0 - smoothstep(lineHalf, lineHalf + aa, abs(boardEdge));
+      lineMask = max(lineMask, borderMask);
+
+      // (5) Subtle cursor-proximity brighten (D-09): lift the rule's alpha near the cursor with a
+      //     smooth falloff over proximityRadius. Pure visual — no selection/scoring logic (D-01).
+      const float prox = 1.0 - smoothstep(0.0, max(p.proximityRadius, 1e-4), distToCursor);
+      const float lineAlpha = kGridLineAlpha * (1.0 + 1.4 * prox);   // brighter rule near the cursor
+
+      if (lineMask > 0.0) {
+        color = mix(color, kGridLineColor, saturate(lineMask * lineAlpha));
+      }
     }
 
-    // `hasTarget == 0` draws nothing, so an absent target is a visual no-op.
+    // (6) The green HIT MARKER, drawn first so the live target sits over it if they overlap. The
+    //     click lands at the trial boundary -- the instant the recorded task moved its target on --
+    //     so the square that was hit is no longer the active one, and without this the green would
+    //     appear and vanish on the same frame.
+    const float hitFade = clamp(p.hitFade, 0.0, 1.0);
+    const float extent = max(p.targetHalfExtent, 1e-5);
+    const float aaT = max(1.0 / side, 1.0 / side);
+    if (hitFade > 0.0) {
+      const float2 fromHit = g - float2(p.hitX, p.hitY);
+      const float dH = rounded_box_sdf(fromHit, float2(extent), 0.0);
+      const float hitMask = (1.0 - smoothstep(-aaT, aaT, dH)) * hitFade;
+      color = mix(color, kAcquiredColor, hitMask);
+    }
+
+    // (6b) The active target CELL, drawn as exactly the region the click is scored against. The
+    //      criterion is `max(|dx|, |dy|) <= targetHalfExtent`: the cursor's centre is inside the
+    //      cell. So the square IS the rule -- no rounding, no inset, no separate tolerance shape.
+    //      Whatever a viewer sees the white dot sitting inside is what counts on the next click.
+    //      `hasTarget == 0` draws nothing, so an absent target is a visual no-op.
     if (p.hasTarget != 0u) {
-      // (6) The target CELL, drawn as exactly the region the criterion tests. The criterion is
-      //     `max(|dx|, |dy|) <= targetHalfExtent`: the cursor's centre is inside the cell. So the
-      //     square IS the rule -- no rounding, no inset, no separate tolerance shape. Whatever a
-      //     viewer sees the white dot sitting inside is what counts, which is the only version of
-      //     this a viewer can check.
-      //
-      //     Acquiring it turns the square green and HOLDS it green for the rest of the trial. Red
-      //     means not yet selected, green means selected; that is the whole of the colour rule. The
-      //     brief swell marks the instant, because the cursor ring releases to full size both on a
-      //     commit and on a broken hold and so cannot say on its own that anything counted.
-      const float acquired = clamp(p.targetAcquired, 0.0, 1.0);
-      const float swell = clamp(p.targetSwell, 0.0, 1.0);
-      const float4 faceColor = mix(kTargetColor, kAcquiredColor, acquired);
       const float2 fromCenter = g - float2(p.targetX, p.targetY);
-      const float extent = max(p.targetHalfExtent, 1e-5) * (1.0 + 0.12 * swell);
-      const float aaT = max(pixelInGrid.x, pixelInGrid.y);
       // A sharp box, so the drawn edge and the scored edge are the same line. `rounded_box_sdf`
       // with a zero corner radius is the plain box SDF.
       const float dT = rounded_box_sdf(fromCenter, float2(extent), 0.0);
       const float targetMask = 1.0 - smoothstep(-aaT, aaT, dT);
-      color = mix(color, faceColor, targetMask);
+      color = mix(color, kTargetColor, targetMask);
     }
 
     // (7) Ring cursor with an inner dot (D-08), drawn last so it sits on top — NO trail. The ring is
@@ -145,18 +167,15 @@ kernel void webgrid(texture2d<float, access::write> out [[texture(0)]],
     //     draws nothing (T-06-01-01: defensive — the authoritative clamp lives upstream at the
     //     integrator seam, Plan 02 D-04).
     //
-    //     DWELL-TO-SELECT: holding inside the acquisition radius contracts the ring toward the dot,
-    //     and committing the selection releases it back to full size (the producer resets progress
-    //     to 0 on the committing tick). The contraction is the standard webgrid selection
-    //     affordance, and it is driven by the SAME 0.30 s continuous-hold criterion the run is
-    //     scored with — so a viewer sees selections happen at the rate they actually happen, which
-    //     for a target-blind decode is the honest answer whatever that rate is.
-    const float dwell = clamp(p.dwellProgress, 0.0, 1.0);
-    const float aaC = max(pixelInGrid.x, pixelInGrid.y) * 1.0;
-    // Contract to 35% of the resting radius at a full hold, never below the dot.
+    //     THE CLICK: the ring pinches toward the dot on the clicking tick and releases as the pulse
+    //     decays. A click here is instantaneous -- the recorded task supplies its timing -- so this
+    //     animation is the only thing that marks the moment on the cursor itself.
+    const float pulse = clamp(p.clickPulse, 0.0, 1.0);
+    const float aaC = max(pixelInGrid.x, pixelInGrid.y);
+    // Contract to 35% of the resting radius at the peak of the click, never below the dot.
     const float restingOuter = max(p.cursorRadius, 1e-5);
     const float minOuter = max(max(p.cursorDotRadius, 1e-5) * 1.6, restingOuter * 0.35);
-    const float ringOuter = mix(restingOuter, min(minOuter, restingOuter), dwell);
+    const float ringOuter = mix(restingOuter, min(minOuter, restingOuter), pulse);
     const float ringInner = max(ringOuter - max(p.cursorRingWidth, 1e-5), 0.0);
     // Inside the outer edge AND outside the inner edge.
     const float ringMask =

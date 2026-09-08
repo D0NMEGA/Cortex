@@ -102,16 +102,23 @@ here is an upper bound, and Neuralink's published score adds a click-type term t
 single-click-type harness omits.
 
 **The runnable demo scores a different rule, and says so.** `CortexMac` makes the CELL the target,
-the way Webgrid does: the grid is ruled at the task's own 15 mm target pitch, and a selection is the
-cursor's centre held inside that cell for 0.30 s. The square drawn on screen is that cell exactly --
-same edge, no inset, no separate tolerance shape -- so any selection can be settled by looking at
-where the dot is. A target is acquired at most once per trial and stays green for the rest of it.
+the way Webgrid does. The board is the task's own: 64 targets on an 8x8 lattice at a 15 mm pitch,
+drawn as 8x8 whole cells with background around them. A trial is CLICKED at the moment the recorded
+task moved its target on -- the instant the animal selected it, which is a real event in the data --
+and it counts if the decoded cursor's centre was inside the cell then. The task supplies the click's
+timing; the decode supplies the cursor's position, and only the position is under test. The square
+drawn on screen is that cell exactly, same edge, no inset, so any selection can be settled by
+looking at where the dot is.
 
-The published table above is a different rule and is unchanged: a 2.861 mm RADIUS, the 30x30 Webgrid
-half-cell, with no re-anchoring. The demo names which rule is in force on screen beside its tally.
-Under the demo's rule, over all 1,025 trials with per-trial re-anchoring, the target-assisted arm
-acquires 405 (39.5%) and the decode-only arm 41 (4.0%). The decode-only arm reaches the cell on 103
-trials and holds it on 41 of those, which is the distinction a bare zero cannot make.
+Nothing repositions the cursor. It integrates decoded velocity open-loop for the whole replay, which
+is why the decode-only pane drifts to an edge and stays there: a replay cannot close the loop, since
+the animal was watching its own hand and never saw this cursor.
+
+The published table above is a different rule and is unchanged: a 2.861 mm RADIUS with a 0.30 s
+dwell. Under the demo's rule, over all 1,024 clicks, the target-assisted arm lands 619 (60.4%) and
+the decode-only arm 9 (0.9%). The demo names the rule in force beside its tally, and reports the
+median cursor-to-target distance at the click -- 7.6 mm assisted, 74.6 mm decode-only -- because a
+bare zero cannot say whether the cursor was landing just outside the cell or nowhere near it.
 
 ## Why the acquisition count is zero
 

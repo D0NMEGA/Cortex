@@ -20,7 +20,8 @@
 //      continuous replay loop is never reset, 07-RESEARCH §2).
 //   4. INTEGRATE — `CursorIntegrator.integrate(latest:dt:)` → clamped, always-finite [0,1] position
 //      (the single NaN/Inf-reject + clamp seam, Phase-6 T-06-02-01, reused unchanged).
-//   5. WEBGRID — push the position; `WebgridAcquisition` detects a HIT against the active target cell.
+//   5. WEBGRID — push the position; a click at each trial boundary scores it against the target cell
+//      (the streaming demo). `WebgridAcquisition` keeps the radial dwell rule for `runToHit`.
 //
 // ## Determinism (D-13, the load-bearing reproducibility contract)
 // NO RNG, NO wall-clock on the SIMULATION path. The synthetic decoded-velocity is a closed-form
@@ -48,8 +49,8 @@ public nonisolated struct CursorState: Sendable, Equatable {
   /// True if this tick routed the spike window through `NeuralDecoder.decode` (NDT1 genuinely in loop);
   /// false if it used the deterministic synthetic decoded-velocity fallback (no model present).
   public let decodedByModel: Bool
-  /// True if the cursor is within the acquisition radius of the active target this tick (a webgrid HIT
-  /// is registered when this holds continuously for the dwell — see ``ReplayPipeline/runToHit``).
+  /// True if the cursor's centre is inside the active target CELL this tick. The streaming demo
+  /// scores a click against this; `runToHit` keeps the radial dwell rule.
   public let onTarget: Bool
 
   public init(position: SIMD2<Float>, velocity: SIMD2<Float>, decodedByModel: Bool, onTarget: Bool) {
@@ -109,8 +110,6 @@ public final class ReplayPipeline {
   private let filter: KalmanFilter
   /// The renderer-owned integrator (the single [0,1] clamp + NaN/Inf reject seam).
   private let integrator: CursorIntegrator
-  /// The dwell-to-select webgrid HIT model (30×30 geometry).
-  private let acquisition: WebgridAcquisition
 
   // MARK: - Streaming state (for the GUI `tick()` path)
 
@@ -144,21 +143,21 @@ public final class ReplayPipeline {
   /// The monotonic streaming tick index (drives the deterministic synthetic decode).
   private var tickIndex: Int = 0
 
-  // MARK: - Streaming dwell-to-select (display state; scoring lives in WebgridAcquisition)
+  // MARK: - Streaming click-to-select (display state; the published rule lives in WebgridAcquisition)
 
-  /// Consecutive ticks the cursor has been inside the acquisition radius of the active target.
-  private var continuousOnTarget = 0
-  /// Fraction of the pre-registered continuous dwell accumulated, in `[0, 1]`.
+  /// The cursor-to-target distance at the last click, in grid units. `nil` before the first click.
+  private(set) var lastMiss: Float?
+  /// Every click's miss distance so far, for the on-screen median. Display state, never fed back.
+  private var misses = [Float]()
+  /// The click animation: 1 on the clicking tick, decaying to 0. Contracts the cursor ring.
   ///
-  /// This is the SAME criterion `WebgridAcquisition` scores with -- 0.30 s continuous inside half a
-  /// cell -- read out per tick so a viewer can see a selection being committed instead of inferring
-  /// it. It resets to 0 the moment the cursor leaves the radius, because the dwell must be
-  /// continuous, and snaps back to 0 on commit.
+  /// A click is instantaneous here, so this exists purely to make it visible -- the ring pinches and
+  /// releases, the way a selection reads on a cursor that has no button.
   ///
-  /// Display state only: it is derived from the loop, never fed back into it, and no published
-  /// number is computed from it. The scored figures come from `WebgridAcquisition.runTrial` over a
-  /// whole trial's positions in `CortexReplayBench`.
-  public private(set) var dwellProgress: Float = 0
+  /// Display state only: derived from the loop, never fed back into it, and no published number is
+  /// computed from it. The scored figures come from `WebgridAcquisition.runTrial` over a whole
+  /// trial's positions in `CortexReplayBench`, which keeps the dwell rule.
+  public private(set) var clickPulse: Float = 0
   /// Selections committed since the pipeline was created, under that same criterion.
   ///
   /// A LIVE count over however much of the session has replayed. It is not the published per-session
@@ -172,18 +171,22 @@ public final class ReplayPipeline {
   /// cursor parked inside the radius used to bank another selection every 15 ticks and a 1.3 s trial
   /// could contribute four counts for one square. Cleared by ``beginTrial()``.
   public private(set) var acquired = false
-  /// The commit "splash": 1 on the acquiring tick, decaying to 0 over ``swellTicks``.
+  /// How recently the click landed, decaying `1 → 0` over ``swellTicks``. Fades the green square.
   ///
-  /// Separate from ``acquired`` because they answer different questions. The latch says the trial
-  /// was acquired; the swell says it happened JUST NOW, which is what makes the moment legible in a
-  /// recording. The square stays green either way.
+  /// The click happens AT the trial boundary -- the moment the recorded task moved its target on --
+  /// so the acquired square would otherwise vanish on the same frame it turned green. This holds it
+  /// on screen, beside the new red target, for long enough to read.
   public private(set) var selectionSwell: Float = 0
-  /// The longest continuous hold reached so far, as a fraction of the dwell requirement.
+  /// The median cursor-to-target distance at a click, over the clicks so far, in grid units.
   ///
-  /// A run that reports 0 acquisitions is ambiguous on its own: the cursor may never reach the
-  /// target, or it may reach it and fail to hold. This distinguishes them, and it is the number to
-  /// look at before concluding anything from a zero.
-  public private(set) var peakDwell: Float = 0
+  /// A run that reports 0 acquisitions is ambiguous on its own: the cursor may be landing just
+  /// outside the cell every time, or nowhere near it. This says which, and it is the number to look
+  /// at before concluding anything from a zero. `nil` until the first click.
+  public var medianMiss: Float? {
+    guard !misses.isEmpty else { return nil }
+    let sorted = misses.sorted()
+    return sorted[sorted.count / 2]
+  }
 
   /// The authoritative cursor position: the one the filter, the steering and the dwell all read.
   ///
@@ -195,11 +198,13 @@ public final class ReplayPipeline {
     SIMD2<Float>(integrator.position.x, integrator.position.y)
   }
 
-  /// Ticks the commit swell takes to decay. 15 at 20 ms is 300 ms.
+  /// Ticks the green hit marker stays up after a click. 25 at 20 ms is 500 ms.
   ///
-  /// Shorter than the 600 ms this was when the green itself decayed, because the green no longer
-  /// does: ``acquired`` holds it for the trial, so the swell only has to mark the instant.
-  private static let swellTicks = 15
+  /// Long enough to read in a 15 fps recording (about 7 frames) and short enough to be gone well
+  /// before the 1.3 s median trial ends.
+  private static let swellTicks = 25
+  /// Ticks the click pinch takes to release. 10 at 20 ms is 200 ms.
+  private static let pulseTicks = 10
 
   // MARK: - Model-in-loop accounting (Phase 10, RD-08 — the Pattern-2 mitigation)
 
@@ -314,12 +319,6 @@ public final class ReplayPipeline {
     filter.setState([start.x, start.y, 0, 0, 0, 0])
     filter.setCursorPosition(start)
     integrator = CursorIntegrator(start: .init(x: start.x, y: start.y))
-    acquisition = WebgridAcquisition(
-      dwellSeconds: 0.30,
-      acquisitionRadius: scoringHalfExtent,
-      timeoutSeconds: 5.0,
-      dt: Self.dt
-    )
   }
 
   /// The v0 replay loop over the deterministic `SyntheticSpikeSource` (the Phase-8 call shape, kept
@@ -498,8 +497,6 @@ public final class ReplayPipeline {
   /// because a hold interrupted by the target disappearing is not a continuous hold.
   public func clearTarget() {
     targetVisible = false
-    continuousOnTarget = 0
-    dwellProgress = 0
   }
 
   /// Advance the continuous replay loop by ONE 20ms tick and return the new `CursorState`. The GUI
@@ -529,10 +526,10 @@ public final class ReplayPipeline {
     let position = SIMD2<Float>(pos.x, pos.y)
 
     tickIndex &+= 1
-    let onTarget = isOnTarget(position)
-    decaySwell()
-    updateDwell(onTarget: onTarget)
-    return CursorState(position: position, velocity: refined, decodedByModel: byModel, onTarget: onTarget)
+    decayMarkers()
+    return CursorState(
+      position: position, velocity: refined, decodedByModel: byModel, onTarget: isOnTarget(position)
+    )
   }
 }
 
@@ -558,30 +555,23 @@ public extension ReplayPipeline {
     ridge != nil || decoder != nil
   }
 
-  /// Move the cursor to `position` and re-seat the filter's position state on it.
-  ///
-  /// TRIAL RE-ANCHORING. The streaming loop integrates decoded velocity open-loop: nothing observes
-  /// where the cursor actually is, so decode error accumulates without bound. On this dataset the
-  /// free-running cursor is about 26 cells from the recorded hand after 30 s and a median 96 cells
-  /// over the test split, on a grid 30 cells wide -- past the first minute its absolute position
-  /// carries no information and it sits on the `[0,1]` clamp. A live subject closes that loop by
-  /// watching the cursor and correcting; a replay of recorded spikes cannot, because the subject was
-  /// watching its own hand and never saw this cursor.
-  ///
-  /// Re-anchoring at each trial boundary bounds the error to one trial, so what the viewer sees is
-  /// the decode's WITHIN-TRIAL behaviour rather than accumulated integration error. The velocity
-  /// state is deliberately left warm: only position is being corrected, and the velocity estimate is
-  /// what is under test.
-  ///
-  /// This changes what the displayed track means, so a caller must label it. It is a DISPLAY path:
-  /// `runToHit` and `CortexReplayBench` do not use it, and no published number comes from it.
-  func reanchor(to position: SIMD2<Float>) {
-    guard position.x.isFinite, position.y.isFinite else { return }
-    integrator.reset(to: CursorPosition(x: position.x, y: position.y))
-    let clamped = SIMD2<Float>(integrator.position.x, integrator.position.y)
-    filter.setCursorPosition(clamped)
-    beginTrial()
-  }
+  // Move the cursor to `position` and re-seat the filter's position state on it.
+  //
+  // TRIAL RE-ANCHORING. The streaming loop integrates decoded velocity open-loop: nothing observes
+  // where the cursor actually is, so decode error accumulates without bound. On this dataset the
+  // free-running cursor is about 26 cells from the recorded hand after 30 s and a median 96 cells
+  // over the test split, on a grid 30 cells wide -- past the first minute its absolute position
+  // carries no information and it sits on the `[0,1]` clamp. A live subject closes that loop by
+  // watching the cursor and correcting; a replay of recorded spikes cannot, because the subject was
+  // watching its own hand and never saw this cursor.
+  //
+  // Re-anchoring at each trial boundary bounds the error to one trial, so what the viewer sees is
+  // the decode's WITHIN-TRIAL behaviour rather than accumulated integration error. The velocity
+  // state is deliberately left warm: only position is being corrected, and the velocity estimate is
+  // what is under test.
+  //
+  // This changes what the displayed track means, so a caller must label it. It is a DISPLAY path:
+  // `runToHit` and `CortexReplayBench` do not use it, and no published number comes from it.
 
   /// Whether the cursor's centre is inside the target CELL.
   ///
@@ -598,54 +588,51 @@ public extension ReplayPipeline {
     return max(d.x, d.y) <= scoringHalfExtent
   }
 
-  /// Start a new trial: drop any partial hold and release the acquired latch.
+  /// Start a new trial: release the acquired latch so the next target can be clicked.
   ///
-  /// Separate from ``reanchor(to:)`` because the FIRST trial of a run has no preceding target to
-  /// re-anchor onto and would otherwise never be opened, leaving the tally's denominator one short
-  /// of the trials it is counting acquisitions over. Position is untouched here; this is only the
-  /// per-trial scoring state.
+  /// The green hit marker is deliberately NOT cleared. The click lands at the trial boundary, so
+  /// clearing it here would erase it on the frame it appeared; it fades on its own instead, beside
+  /// the new red target. The cursor is untouched -- it carries straight on from where the decode
+  /// left it, which is the whole point of an open-loop replay.
   func beginTrial() {
-    continuousOnTarget = 0
-    dwellProgress = 0
     acquired = false
-    selectionSwell = 0
   }
 
-  /// Advance the streaming dwell counter for one tick.
+  /// Register the click that ends this trial, and report whether it landed on the target.
   ///
-  /// Same rule as `WebgridAcquisition.runTrial`: the counter increments while the cursor is inside
-  /// the radius and RESETS on any tick it is outside, so the hold must be continuous. On reaching
-  /// `dwellTicks` a selection is committed and the counter restarts, which is what makes the
-  /// on-screen cursor pop back to full size the instant it commits.
-  private func updateDwell(onTarget: Bool) {
-    // One acquisition per trial. The cursor is not asked to leave and come back to stop counting:
-    // it cannot select the same square twice, the way a real selection task consumes its target.
-    guard !acquired else { return }
-    guard onTarget else {
-      continuousOnTarget = 0
-      dwellProgress = 0
-      return
-    }
-    continuousOnTarget += 1
-    let required = acquisition.dwellTicks
-    if continuousOnTarget >= required {
-      peakDwell = 1
-      selectionCount += 1
-      acquired = true
-      selectionSwell = 1
-      continuousOnTarget = 0
-      dwellProgress = 0
-    } else {
-      dwellProgress = Float(continuousOnTarget) / Float(required)
-    }
-    peakDwell = max(peakDwell, dwellProgress)
+  /// ## Why a click and not a dwell
+  /// The recorded task ends a trial when the ANIMAL selects its target: the target moves on, and
+  /// that instant is a real selection event in the data. Scoring there asks the one question the
+  /// replay can actually answer -- where had the decode put the cursor at the moment of selection --
+  /// instead of imposing a 0.30 s hold rule the task never had. The task supplies the click's
+  /// TIMING; the decode supplies its POSITION, and only the position is under test.
+  ///
+  /// A trial can be clicked once. `CortexReplayBench` keeps the dwell rule and its published
+  /// numbers do not move.
+  @discardableResult
+  func registerClick() -> Bool {
+    guard !acquired else { return false }
+    let position = SIMD2<Float>(integrator.position.x, integrator.position.y)
+    let miss = simd_distance(position, target)
+    lastMiss = miss
+    misses.append(miss)
+    clickPulse = 1
+    guard isOnTarget(position) else { return false }
+    selectionCount += 1
+    acquired = true
+    selectionSwell = 1
+    return true
   }
 
-  /// Decay the commit swell by one tick. Linear, so the on-screen duration is exactly
-  /// `swellTicks * dt` rather than an exponential tail that never quite reaches zero.
-  private func decaySwell() {
-    guard selectionSwell > 0 else { return }
-    selectionSwell = max(0, selectionSwell - 1.0 / Float(Self.swellTicks))
+  /// Decay the click pinch and the green hit marker by one tick. Linear, so each is on screen for
+  /// exactly its tick count rather than trailing off exponentially.
+  private func decayMarkers() {
+    if selectionSwell > 0 {
+      selectionSwell = max(0, selectionSwell - 1.0 / Float(Self.swellTicks))
+    }
+    if clickPulse > 0 {
+      clickPulse = max(0, clickPulse - 1.0 / Float(Self.pulseTicks))
+    }
   }
 }
 
