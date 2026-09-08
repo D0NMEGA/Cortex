@@ -467,6 +467,40 @@ occurred", which would be false. *Decide:* confirm that Task 3's acceptance crit
 and confirm the standing prohibition stands: no rebase, amend, `filter-repo` or force push under
 any Task-2 option, including as a remedy for FLAG-04.
 
+## Self-scan: this audit is now the third unpushed commit
+
+Written after the audit was committed as `96168ba`, because committing it changed the payload the
+sections above describe and leaving that unsaid would be the same defect this milestone exists to
+remove. The push is now three commits, not two:
+
+```
+$ git push --dry-run origin main
+   cd87d6f..96168ba  main -> main
+$ git log origin/main..HEAD --oneline
+96168ba docs(10-17): audit what is already on GitHub, and what the next push adds
+9861c28 docs(phase-10): audit validation
+d400947 test(phase-10): cover the two render channels the demo work shipped untested
+```
+
+By quoting its own findings verbatim, this file adds matches for three of the six scanned patterns:
+
+| pattern | lines added by `96168ba` | what they are |
+|---|---|---|
+| PEM private-key header | 3 | quotations of `asc_api_key.json.example:5` and the FLAG-01 rows |
+| email ERE | 9 (6x `D0NMEGA@users.noreply.github.com`, 3x `git@github.com`) | quotations in FLAG-02 and the rewrite-fingerprint block |
+| absolute `/Users/` path | 13 (10x `/Users/donmega`, 3x `/Users/d0nmega`) | the FLAG-04 sample hits and this file's own run header |
+| `MATCH_PASSWORD =` / ASC issuer UUID / token shapes | 0 | not quoted as literals |
+
+```
+$ git diff origin/main..HEAD | grep -E '^\+.*(AKIA…|ghp_…|sk-…|xox[baprs]-)'
+clean: none
+```
+
+Every added match is a quotation of content already in `origin/main`. No new secret, path or
+address enters the repository through this commit, and the incremental disclosure of the push
+remains zero. It does mean FLAG-04's count rises from 68 to 81 lines once this file is pushed, and
+that a scrub disposition on FLAG-04 would have to cover this artifact too.
+
 ## Status
 
 Task 1 complete. **Nothing has been pushed. No `gh repo edit` has been run. Repository visibility
