@@ -37,7 +37,7 @@ second, still-unmade decision at Task 2.
 ### Repository visibility
 
 - **BEFORE (verified 2026-09-08):** `isPrivate: true`, `visibility: PRIVATE`.
-- **AFTER:** not yet determined - Task 2 has not been answered and no push or `gh repo edit` has run.
+- **AFTER:** unchanged. Task 2 was answered `private-push` on 2026-09-08 and no `gh repo edit` was run; both readings are in the Decision section at the end of this file.
 
 ## What the push would actually add
 
@@ -506,3 +506,69 @@ that a scrub disposition on FLAG-04 would have to cover this artifact too.
 Task 1 complete. **Nothing has been pushed. No `gh repo edit` has been run. Repository visibility
 is unchanged at `isPrivate: true`.** Task 2's checkpoint is presented to the user with the five
 FLAGGED rows above; the "Decision" section is appended to this file only after the user answers.
+
+## Decision
+
+**Date:** 2026-09-08.
+
+**Chosen option, recorded verbatim:** `private-push`
+
+The user was shown the verdict table and every one of the five FLAGGED rows before answering, and
+chose `private-push`: push, and leave visibility UNCHANGED, so the repository stays private.
+
+**No `gh repo edit` was run at all.** Under `private-push`, "unchanged" means no visibility command
+is issued, not that one was issued and returned the same value. The repository was already private,
+so there was nothing to change and nothing was changed. The only command touching visibility in this
+plan is the read-only `gh repo view --json isPrivate`, run once before the push and once after.
+
+### Repository visibility
+
+- **BEFORE (pre-push, verified 2026-09-08 with `gh repo view D0NMEGA/Cortex --json isPrivate,visibility`):** `{"isPrivate":true,"visibility":"PRIVATE"}`.
+- **AFTER:** re-read with the same command immediately after the push and recorded in `10-first-ci-run-evidence.md`; no visibility command is issued between the two readings, so the two lines differ only in when they were taken.
+
+### Dispositions, one per FLAGGED row
+
+All five are "accept as-is", stated by the user. None is a leak of live credential material.
+
+**FLAG-01 - PEM header in a committed template. ACCEPT.** Keep `fastlane/asc_api_key.json.example`
+as it is; its payload is the literal `REPLACE_WITH_P8_CONTENTS`. The plan's Task-1 verify line
+`test -z "$(git ls-files ... grep -lE '-----BEGIN...')"` is recorded as **MIS-SPECIFIED**: it cannot
+pass against a deliberately committed placeholder template. The acceptance criterion "No tracked
+file contains a PEM private-key header" is therefore recorded as **not met as literally written**,
+and the classification (placeholder, not key material) is the reason it is accepted rather than
+fixed. This is carried forward into `10-17-SUMMARY.md` as a deviation, not quietly dropped.
+
+**FLAG-02 - 13 email-shaped strings. ACCEPT.** Twelve are the literal `git@github.com`, quoted by
+the policy gates that forbid that remote form; removing them would break the gates that exist to
+catch it. The thirteenth is `D0NMEGA@users.noreply.github.com`, which is already the author and
+committer identity in all 525 commits' metadata. No personal address exists in any tracked file.
+
+**FLAG-03 - personal email domain named in a regex. ACCEPT.** `@utexas\.edu` at
+`.planning/phases/08-apple-bci-hid-integration-distribution-v0-ship/08-06-PLAN.md:145` stays, as a
+record of what the README gate was built to catch. It is a domain inside a documented grep pattern,
+with no local part.
+
+**FLAG-04 - two local account names and a former project path. ACCEPT as-is.** 68 lines across 23
+files at audit time, rising to 81 lines across 24 files once this audit file is itself pushed (see
+the self-scan above); the user's answer covers both counts. All are under `.planning/`, all are
+already in `origin/main`. They are development-log paths, no credential sits at any of them, and the
+fastlane certs directory was never created. Scrubbing them would damage the `.planning/` record the
+project's evidence discipline depends on. The risk is bounded because the repository stays private.
+
+**FLAG-05 - the 2026-09-07 full-history rewrite. ACCEPT.** Task 3's criterion is read as "THIS PLAN
+performs no rewrite". The standing prohibition stands in full: no rebase, no amend, no
+`filter-repo`, no force push, under any circumstance, including as a remedy for any flag.
+
+### What this authorizes, and what it does not
+
+It authorizes a fast-forward push of the unpushed commits to `origin/main`. It does not authorize a
+visibility change, and it does not authorize a history rewrite. Those two remain exactly where they
+were before the answer.
+
+### Self-scan of this section
+
+Recorded for the same reason the section above it exists: this text quotes `git@github.com` once,
+`D0NMEGA@users.noreply.github.com` once, `/Users/donmega` and `/Users/d0nmega` once each, and the
+`-----BEGIN` fragment zero times as a full PEM header. Every one is a quotation of a string already
+in `origin/main`, so the incremental disclosure of the push remains zero on all six scanned
+patterns.
