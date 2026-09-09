@@ -293,3 +293,34 @@ and `git log --all --diff-filter=A --name-only` shows no media file was ever add
 Left alone because Task 1 was a read-and-record audit and the plan forbids unrelated edits before
 the push checkpoint. **Fix when someone picks it up:** either drop the second sentence of the
 comment, or commit the capture the sentence promises.
+
+---
+
+## Plan acceptance greps never become standing gates (security audit, 2026-09-09)
+
+Found by `/donny-audit-phase 10`, which reported `T-10-12-01` and `T-10-12-07` open. Both were
+adjudicated closed by different means (see `10-SECURITY.md`, Superseded Mitigations), but the
+structural gap that let them break is real and unfixed.
+
+Plan 10-12 pinned two README invariants in its `<acceptance_criteria>`:
+
+```
+grep -cF '1.953' README.md      # >= 1, every occurrence beside the word "synthetic"
+grep -cF 'over 10 BPS' README.md # >= 1, dated, beside the historical 8.5
+```
+
+Both returned 0 after commit `30217d4` ("docs: rewrite README as current state", 2026-09-07), an
+out-of-plan rewrite that landed between Plans 10-13 and 10-17. Neither grep was ever wired into
+`Tools/scripts/readme-policy.sh`, which requires only the bare token `8.5`. An acceptance criterion
+runs once, at execution time, and then stops protecting anything - so the rewrite passed all 12
+policy gates and both `--self-test` suites while voiding two threat mitigations as written.
+
+**Fix when someone picks it up:** promote whichever README invariants survive the current wording
+into `readme-policy.sh` as standing controls, each with a `--self-test` negative control proving it
+bites, following the pattern Plan 10-13 established for the three 24.7 rules. Then re-run
+`/donny-audit-phase 10 --security`. `README.md` and `readme-policy.sh` are repository files, so this
+is a `/donny-quick`, not an audit-workflow edit.
+
+The general lesson is worth carrying into future plans: if an acceptance grep encodes an invariant
+that must hold **after** the plan closes, the plan should also wire it into a policy script, or it
+protects nothing past its own commit.

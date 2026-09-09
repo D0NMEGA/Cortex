@@ -1,9 +1,9 @@
 ---
-status: PARTIAL
+status: SECURED
 agent: donny-security-auditor
 phase: 10-v1-real-data-closed-loop-launch
-threats_closed: 131
-threats_open: 2
+threats_closed: 133
+threats_open: 0
 asvs_level: 1
 ---
 
@@ -127,13 +127,13 @@ itself specified is not currently present in the tree.
 | T-10-11-05 | Tampering | mitigate | closed | `./Tools/scripts/bps-policy.sh` run live: exit 0; artifact regenerated and re-committed in the same commit per summary |
 | T-10-11-06 | Repudiation | mitigate | closed | live check: `08-bps-evidence.md:13 "## Amendment (2026-09-07..."` block; `git diff ce7b789^..ce7b789 -- webgrid_bps.json` shows only a key rename (`brain_gate_6x6_bps` -> `brain_gate_dense_9x9_bps`, value unchanged 4.16) plus one added key; every measured field (`correct`, etc.) byte-identical |
 | T-10-11-07 | Repudiation | mitigate | closed | live check: `git grep "4.16 -> 8.5"` over `docs/cortex-spec.md .planning/PROJECT.md .planning/ROADMAP.md` = 0 |
-| T-10-12-01 | Repudiation | mitigate | open | see Open Threats |
+| T-10-12-01 | Repudiation | mitigate | closed | Closed by ELIMINATION, not by the planned labelling. `1.953` no longer appears in `README.md` at all (commit `30217d4` removed the Phase-8 comparison table rather than mislabelling it), so a synthetic number cannot be read as real from a number that is absent. The general policy sentence survives at `README.md:246-247`; the figure stays banner-labelled in `08-bps-evidence.md`; `honesty-sweep.sh` re-run live catches any unlabelled reintroduction. See Superseded Mitigations |
 | T-10-12-02 | Repudiation | mitigate | closed | live check: `README.md:268` "Glass-to-glass latency 24.7 +/- 1.3 ms ... is a retired spec target, never measured." |
 | T-10-12-03 | Repudiation | mitigate | closed | live check: `README.md:224-227` `<!-- CI-STATUS-CLAIM -->` hook present, wording now cites the actual run (`34182390856`, commit `710e729`) after Plan 10-17's execution |
 | T-10-12-04 | Information disclosure | mitigate | closed | `readme-policy.sh` run live: all four forbidden-absent checks (PEM/MATCH_PASSWORD/email/issuer-UUID) report `ok` |
 | T-10-12-05 | Tampering | mitigate | closed | live check: `git show --stat f6c82b3` ("add Phase-10 superseded banners to five evidence files") is a banner-only additions commit |
 | T-10-12-06 | Tampering | mitigate | closed | live check: `LAT-0[1-8]` present in both `ROADMAP.md` and `REQUIREMENTS.md`; `honesty-sweep.sh` "preserve" check `ok` |
-| T-10-12-07 | Spoofing | mitigate | open | see Open Threats |
+| T-10-12-07 | Spoofing | mitigate | closed | Closed by a STRONGER caveat than the planned pairing. `README.md:278-280` heads the table "None of these is a claim about this project" and marks 8.5 "not independently sourceable to a Neuralink primary" - the spoofing core (an external figure carried in as authoritative) is denied outright. The dropped `over 10 BPS` anchor was anti-staleness only, and the superseded text itself conceded "an access date does not authenticate a number". `docs/cortex-spec.md:54,172,317` still carries the dated wording. See Superseded Mitigations |
 | T-10-13-01 | Tampering | mitigate | closed | `readme-policy.sh --self-test` run live: 19 `PASS` lines, 8/8 corpus cases, 0 `FAIL` |
 | T-10-13-02 | Repudiation | mitigate | closed | live self-test: `retired-B` achievement rule `ok`; corpus/3,4,5,8 (the four dishonest sentences) each bite |
 | T-10-13-03 | Tampering | mitigate | closed | live self-test: corpus/1,2 (retired-context occurrences) both `PASS` |
@@ -177,19 +177,37 @@ itself specified is not currently present in the tree.
 
 ## Open Threats
 
-| Threat ID | Category | Mitigation Expected | Files Searched |
-|---|---|---|---|
-| T-10-12-01 | Repudiation | Plan 10-12's own acceptance criterion required `grep -cF '1.953' README.md` to return at least 1, with every occurrence on a line/table carrying the word `synthetic` (the Phase-8 synthetic BPS triple, headered as synthetic, sitting beside the real-data headline). Current `README.md` contains zero occurrences of `1.953` anywhere; the comparison table was removed, not mislabeled, by the later out-of-plan rewrite in commit `30217d4` ("docs: rewrite README as current state", 2026-09-07) and never restored. The narrowest form of the threat (a synthetic number actively presented as real) cannot currently manifest because the number is simply absent, and `honesty-sweep.sh`'s structural label-scan (which would catch a future unlabeled reintroduction) was re-run live in this audit and is proven functioning via its own negative control. But the specific artifact the plan committed and pinned by acceptance grep is gone, so this is reported open rather than silently carried forward as closed. | `README.md` (live, 0 occurrences of `1.953`); `.planning/phases/10-v1-real-data-closed-loop-launch/10-12-PLAN.md:294` (the acceptance criterion); `.planning/phases/08-apple-bci-hid-integration-distribution-v0-ship/08-bps-evidence.md` (the source figure, still correctly banner-labeled superseded, unaffected) |
-| T-10-12-07 | Spoofing | Plan 10-12's own acceptance criterion required `grep -cF 'over 10 BPS' README.md` to return at least 1 (Neuralink's current public wording, dated, standing beside the historical 8.5 figure per D-17's canonical wording). Current `README.md`'s reference-points table states "8.5 BPS, as cited by this repo since its earliest Webgrid work; not independently sourceable to a Neuralink primary" — the non-sourceability disclaimer survives (so the more severe form of the threat, false authority via the word "verified", remains closed per T-10-11-09/T-10-13-07, both independently re-verified live), but the current-public-wording-plus-date requirement that keeps the citation from going stale invisibly is gone. `Tools/scripts/readme-policy.sh` (rewritten in Plan 10-13 to focus on the three 24.7 rules) never enforced `over 10 BPS` as a standing gate requirement for `README.md` in the first place — only Plan 10-12's acceptance criteria did, as a one-time check. `docs/cortex-spec.md` (T-10-11-02's actual scope) still correctly carries `over 10 BPS` and the `2026-09-05` retrieval date at three sites, confirmed live. | `README.md` (live, 0 occurrences of `over 10 BPS`); `Tools/scripts/readme-policy.sh` (confirmed: requires only the bare token `8.5`, not the dated current-wording pairing); `docs/cortex-spec.md:54,172,317` (unaffected, still correct) |
+None. `threats_open: 0`.
 
-Both open items stem from the same root cause: a well-reasoned, honest README rewrite that happened
-outside the 17 numbered plans this audit's `<files_to_read>` scope covers, was reconciled in
-`10-VALIDATION.md` for the threats that gate covers (`T-10-14-01/02`, `T-10-11-08`, `T-10-13-09`,
-etc., all independently re-confirmed live above), but was never checked against these two specific
-Plan-10-12 acceptance criteria. Restoring either requires either reinstating the specific literal
-(the synthetic-labeled comparison table; the dated "over 10 BPS" pairing) in the current `README.md`,
-or a deliberate, recorded decision that the newer wording is an accepted equivalent and updating the
-threat register's mitigation-plan text to match — not a silent carry-forward.
+## Superseded Mitigations
+
+Two rows were reported `open` by the auditor because the literal artifact Plan 10-12 pinned by
+acceptance grep is absent from the current tree. Both were adjudicated by the user on 2026-09-09 and
+recorded as `closed` by different means. The adjudication is recorded here rather than applied
+silently, and neither row was closed by restoring text to `README.md`.
+
+Root cause, shared: commit `30217d4` ("docs: rewrite README as current state", 2026-09-07) landed
+between Plans 10-13 and 10-17, outside the 17 numbered plans. It was reconciled in `10-VALIDATION.md`
+for the threats a standing gate covers, but a plan's `<acceptance_criteria>` grep runs ONCE at
+execution time and never becomes a standing gate unless someone wires it into a policy script.
+Neither of these two was wired in, so the rewrite passed every gate that exists and still voided
+both mitigations as written.
+
+| Threat ID | Mitigation as planned | What protects it now | Why the new form is not weaker |
+|---|---|---|---|
+| T-10-12-01 | `grep -cF '1.953' README.md` >= 1, every occurrence beside the word `synthetic` (`10-12-PLAN.md:290`) | The number is gone from `README.md` entirely (0 occurrences). The general labelling policy stands at `README.md:246-247`; `08-bps-evidence.md` still carries the figure under its superseded banner; `honesty-sweep.sh` (re-run live, negative control biting) catches an unlabelled reintroduction | The threat is a synthetic number presented as real. Removing the number eliminates the threat at its source; labelling only manages it. Elimination is the stronger closure, and it aligns with the 2026-08-28 v1 re-point that drove synthetic figures out of headline positions |
+| T-10-12-07 | `grep -cF 'over 10 BPS' README.md` >= 1, dated, beside the historical 8.5 (`10-12-PLAN.md:294`) | `README.md:276` heads the table "None of these is a claim about this project"; `README.md:280` marks 8.5 "not independently sourceable to a Neuralink primary". `docs/cortex-spec.md:54,172,317` retains `over 10 BPS` with its 2026-09-05 retrieval date | The threat is an unsourced external figure carried in as authoritative. The current wording denies sourceability outright, which is a stronger disclaimer than a dated pairing. The superseded line itself said "an access date does not authenticate a number", and the omitted figure is HIGHER than the one cited, so its absence cannot flatter this project |
+
+Residual, accepted with the closure: `README.md` no longer tells a reader that the vendor's current
+public claim exceeds the 8.5 it cites. The exposure is low - the direction of the omission works
+against this project, not for it - and `docs/cortex-spec.md` still carries the dated wording for
+anyone following the citation. Recorded so the trade is visible rather than assumed away.
+
+Queued follow-up (user-approved 2026-09-09, NOT done in this audit): promote the surviving README
+invariants into `Tools/scripts/readme-policy.sh` as standing controls with `--self-test` negative
+controls, so the next out-of-plan rewrite cannot silently void a mitigation the way this one did.
+`README.md` is a repository file, so that work belongs in a separate `/donny-quick`, not here.
+Logged to `deferred-items.md`.
 
 ## Unregistered Flags
 
@@ -217,15 +235,16 @@ invented):
 
 ## Summary
 
-131 of 133 threat-register rows (132 unique IDs) are closed with live, independently reproduced
-evidence: a file:line match for the declared code-level mitigation, a gate script plus its
-`--self-test` run in this session, or a git-ancestor/diff check for the process- and
+All 133 threat-register rows (132 unique IDs) are closed. 131 closed on the audit of 2026-09-08 with
+live, independently reproduced evidence: a file:line match for the declared code-level mitigation, a
+gate script plus its `--self-test` run in session, or a git-ancestor/diff check for the process- and
 documentation-level controls this phase relies on heavily given its subject matter (scientific-claim
-integrity). 2 rows (`T-10-12-01`, `T-10-12-07`) are open: their literal, plan-pinned evidence has
-been superseded by an out-of-plan-scope but honest README rewrite that satisfies every currently
-active structural gate. No `mitigate` threat was found unevidenced and silently carried as closed;
-no `accept` disposition was demoted or given an invented rationale; the one ID collision
-(`T-10-03-06`) is preserved as two distinct rows per instruction.
+integrity). The remaining 2 (`T-10-12-01`, `T-10-12-07`) were reported open because their literal,
+plan-pinned evidence had been superseded by an out-of-plan but honest README rewrite; both were
+adjudicated by the user on 2026-09-09 and closed by different means, with the reasoning and the
+accepted residual recorded under Superseded Mitigations. No `mitigate` threat was found unevidenced
+and silently carried as closed; no `accept` disposition was demoted or given an invented rationale;
+the one ID collision (`T-10-03-06`) is preserved as two distinct rows per instruction.
 
 ## Security Audit 2026-09-08
 
@@ -255,3 +274,32 @@ left silent:
 
 `verify threats-clear` after the rename: `clear: false`, `threats_open: 2`, `declared: 2`,
 `consistent: true`, `has_register: true`. The table and the frontmatter agree.
+
+## Security Audit 2026-09-09
+
+| Metric | Count |
+|--------|-------|
+| Threats found | 133 |
+| Closed | 133 |
+| Open | 0 |
+
+Re-disposition pass, no re-verification of the 131 rows already closed on 2026-09-08. The two rows
+`T-10-12-01` and `T-10-12-07` moved from `open` to `closed` by a user decision recorded at this
+audit's accept/block gate, on the reasoning set out under Superseded Mitigations: each threat's
+planned mitigation was voided by commit `30217d4`, and in each case what replaced it denies the
+threat more strongly than the planned control did. The register's mitigation-plan text was amended
+to describe what actually protects each row now; the dispositions themselves (`mitigate`) and the
+STRIDE categories were NOT altered, and no row was reclassified as an accepted risk.
+
+One residual is accepted rather than closed away, and is stated in the table above: `README.md` no
+longer records that the vendor's current public claim exceeds the 8.5 figure it cites. The dated
+wording survives in `docs/cortex-spec.md:54,172,317`.
+
+Structural finding, queued and not fixed here: a plan's `<acceptance_criteria>` grep is a one-shot
+check at execution time, not a standing gate. Neither pinned grep was ever wired into
+`readme-policy.sh`, which is why an out-of-plan rewrite could void two mitigations while passing
+every gate the repository actually runs. Promoting the surviving invariants into `readme-policy.sh`
+with `--self-test` controls is logged to `deferred-items.md` for a separate `/donny-quick`.
+
+`verify threats-clear` after this pass: `clear: true`, `threats_open: 0`, `declared: 0`,
+`consistent: true`, `has_register: true`.
