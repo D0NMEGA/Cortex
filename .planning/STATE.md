@@ -5,7 +5,7 @@ milestone_name: Real-Data Decoding
 status: executing
 stopped_at: Phase 10 complete - v1 milestone phases all executed and verified
 last_updated: "2026-09-08T04:41:32.586Z"
-last_activity: 2026-09-08 -- Phase 10 complete; verification human_needed, no gaps
+last_activity: 2026-09-15 -- Completed quick task 260915-fk9: Land the Phase 10 radius-rule figure and analysis scripts
 progress:
   total_phases: 10
   completed_phases: 10
@@ -137,6 +137,7 @@ None yet.
 | 260621-32u | Set DEVELOPMENT_TEAM to 57YW6M29S7 on all three targets in project.yml and regenerate | 2026-06-21 | c9478e0 | [260621-32u-set-development-team-to-y4a54395nz-on-al](./quick/260621-32u-set-development-team-to-y4a54395nz-on-al/) |
 | 260621-3y0 | Remove dead ShmCheck references from CortexMac ContentView so the target compiles | 2026-06-21 | dd67fd0 | [260621-3y0-remove-dead-shmcheck-references-from-cor](./quick/260621-3y0-remove-dead-shmcheck-references-from-cor/) |
 | 260621-iyg | Set CortexMac scheme run.executable=CortexMac so it launches the app window, not the daemon | 2026-06-21 | c0a3b2c | [260621-iyg-set-cortexmac-scheme-run-executable-to-c](./quick/260621-iyg-set-cortexmac-scheme-run-executable-to-c/) |
+| 260915-fk9 | Land the Phase 10 radius-rule figure and analysis scripts | 2026-09-15 | cf2ba1e | [260915-fk9-land-the-phase-10-radius-rule-figure-and](./quick/260915-fk9-land-the-phase-10-radius-rule-figure-and/) |
 
 ## Deferred Items
 
