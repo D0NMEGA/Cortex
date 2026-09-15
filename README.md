@@ -131,6 +131,25 @@ directly. Replaying the animal's **own recorded cursor track** through the same 
 | 7.50 mm | **951 / 1,025 (92.8%)** | 1,007 / 1,025 (98.2%) |
 | 15.00 mm | 1,023 / 1,025 (99.8%) | 1,025 / 1,025 (100%) |
 
+![Two acceptance rules applied to the same recorded hand track](docs/media/radius-rule.gif)
+
+**Both panes are the animal's own recorded hand from `indy_20160630_01`, and neither is a decoder output.** This is an open-loop replay of a recorded session, and the subject was not in the loop.
+
+The same track, scored twice. On the left the published 2.861 mm radius, the 30x30 Webgrid
+half-cell; on the right 7.50 mm, exactly half the task's own 15 mm target pitch. The left grid is
+phased so the excerpt's first target is exactly centred, which is what makes the drift visible:
+15 mm is not an integer multiple of the 5.723 mm Webgrid cell, so a grid synced to one target
+cannot centre the rest, and no global shift centres more than one of the 64 targets. The excerpt is
+contiguous trials 29-42, chosen mechanically as the window whose hit rate deviates least from the
+full session under both rules, and the full-session totals stay on screen throughout. Stills:
+[first target centred](docs/media/radius-rule-synced-first-target.png) and
+[drifted](docs/media/radius-rule-drifted.png).
+
+The figure is rendered by `Decoder/scripts/radius_rule_figure.py` and the shift search by
+`Decoder/scripts/grid_shift_search.py`; the session hashes, resolved library versions and artifact
+checksums are in
+`.planning/phases/10-v1-real-data-closed-loop-launch/10-radius-rule-figure-evidence.md`.
+
 The dataset's task was self-paced reaches to a grid of 64 targets at 15 mm pitch, without gaps. The
 30x30 Webgrid is a different geometry imposed on top of it, and its 2.861 mm radius is derived from
 the grid cell, not from the task. At that radius the recorded hand itself succeeds on 14.3% of

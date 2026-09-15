@@ -113,5 +113,8 @@ Decoder/.ruff_cache/
 # local and uncommitted.
 .*/worktrees/
 
-# Demo capture output. The .mov is large and the .gif is committed deliberately under docs/media/.
+# Demo capture output. The .mov is large and nothing under here is committed.
+# Committed figures live in docs/media/ instead -- see docs/media/radius-rule.gif, which is a
+# rendered analysis figure produced by Decoder/scripts/radius_rule_figure.py, not a screen capture
+# taken from this directory.
 Tools/capture/out/

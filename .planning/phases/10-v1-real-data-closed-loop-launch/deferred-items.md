@@ -294,6 +294,20 @@ Left alone because Task 1 was a read-and-record audit and the plan forbids unrel
 the push checkpoint. **Fix when someone picks it up:** either drop the second sentence of the
 comment, or commit the capture the sentence promises.
 
+**RESOLVED 2026-09-15 (quick task `260915-fk9`).** `docs/media/` now exists and holds three
+committed files: `radius-rule.gif` plus the stills `radius-rule-synced-first-target.png` and
+`radius-rule-drifted.png`. The generator was committed alongside them
+(`Decoder/scripts/radius_rule_figure.py`, with `grid_shift_search.py` and `grid_sync_drift.py`), so
+the figure is reproducible from committed code rather than being an orphaned binary; rerunning it
+reproduced the shipped GIF byte for byte, recorded in `10-radius-rule-figure-evidence.md`.
+
+The nuance, because it is the difference between fixing this and merely satisfying it: the comment
+was **corrected, not made true**. What landed is a rendered analysis figure, not the demo screen
+capture the old sentence promised, and nothing under `Tools/capture/out/` is committed. Taking the
+second option offered above ("commit the capture the sentence promises") would have left the comment
+describing a file that still does not exist. The ignore rule itself is untouched and still doing its
+job.
+
 ---
 
 ## Plan acceptance greps never become standing gates (security audit, 2026-09-09)
