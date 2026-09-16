@@ -86,8 +86,9 @@ documented at `ScanInfoRoundTrip.swift:39-42`; noted inline on SYS-06.
 11 partial / 0 unsatisfied. Reproducible at `02-01-SUMMARY.md:60`. Until fixed, `verify gate` cannot
 gate this repo.
 
-**CI has not run on HEAD.** Last CI run was `3a5054e` (2026-09-08). All 12 policy gates, 235 Swift
-tests, and 289 Python tests pass locally at the tagged commit.
+**CI on HEAD: closed 2026-09-16.** Run 35135889892 is green on both jobs (`decoder-python`,
+`build-and-lint`) at `9f6569f`, the commit tag `v1.0` points to. The gap the audit recorded (last
+run `3a5054e`, 2026-09-08) no longer stands.
 
 ### Note on v0
 
