@@ -197,7 +197,7 @@ chain.
 | decision | why the obvious alternative was rejected | measured outcome |
 |---|---|---|
 | CoreML for inference | `MLX` has unbounded p99 and no ANE residency | 239/239 ops **ANE-eligible** (MLComputePlan, reproduced on iPad Air M2); p99 under 2 ms (approx 0.5 ms iPad-M2, 0.14 ms M5 Pro). Runtime placement measures **CPU** at the 1.29M-param scale. |
-| pthread + `QOS_CLASS_USER_INTERACTIVE` | Swift `Task` cooperative scheduling cannot meet 1 ms deadlines | QoS is the worker's first action, `import Darwin` only, enforced by a CI gate. |
+| pthread + `QOS_CLASS_USER_INTERACTIVE` | Swift `Task` cooperative scheduling cannot meet 1 ms deadlines | QoS is the worker's first action, `import Darwin` only, enforced by a CI gate. **Structural, not a runtime measurement:** the hot path is built and gated but is not on the replay demo's path, which drives decoding from a `@MainActor` timer by design (D-03) because v1 has no acquisition hardware. |
 | `shm_open` + `kqueue`/`recvmsg` | `Network.framework` adds 50 to 200 us | shm round trip p99 **208 ns**, sigma 89.7 ns, n = 199k on M5 Pro. |
 | `CAMetalDisplayLink` | `CADisplayLink` cannot bundle drawable, encode and present for beam racing | GPU p99 **0.162 ms** against a 0.4 ms budget; 60 s soak, 243,724 frames, 0 dropped. |
 | AES-GCM via CryptoKit | `ChaCha20-Poly1305` is slower on Apple Silicon `FEAT_AES` | HKDF per-direction subkeys, deterministic 96-bit nonce, fail-closed tamper tests, kept off the measured hot path. |

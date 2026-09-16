@@ -29,12 +29,20 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### Threading (THREAD)
 
-- [x] **THREAD-01**: Acquisition/DSP hot path runs on a pthread, never on Swift `Task`
-- [x] **THREAD-02**: Hot-path thread uses `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)` _(code-side verified as first action; SC#1 runtime `.trace` M4-gated, tracked in 03-HUMAN-UAT.md per D-18)_
-- [x] **THREAD-03**: Hot path obeys audio-callback rules — no `dispatch_async`, no Obj-C runtime, no locks, no ARC retain/release _(enforced by `hotpath-policy.sh` CI gate, SC#2)_
-- [x] **THREAD-04**: Lock-free SPSC ring buffer (in-house loom-verifiable Rust SPSC, rtrb-quality cross-checked — D-R3) bridges decoder thread to UI
+> **Scope note (INT-01, recorded at v1.0 completion 2026-09-16).** The pthread hot path and the
+> Rust SPSC ring below are built, loom-verified and enforced on every CI run by `hotpath-policy.sh`.
+> They are **not on the v1 replay demo's execution path**: with no acquisition hardware in scope for
+> v1, `Apps/CortexMac/ReplayDriver.swift:158` drives decoding from a `@MainActor` timer, and Phase 6
+> mirrors the ring design in a separate Swift `VelocityRing` per D-03 rather than reusing the Rust
+> artifact (`10-06-PLAN.md:186`). Read THREAD-01, -02, -03, -04 and -06 as claims about the committed
+> artifact and its CI gate, not about the running demo.
+
+- [x] **THREAD-01**: Acquisition/DSP hot path runs on a pthread, never on Swift `Task` _(artifact-level; not on the v1 demo path, see scope note)_
+- [x] **THREAD-02**: Hot-path thread uses `pthread_set_qos_class_self_np(QOS_CLASS_USER_INTERACTIVE, 0)` _(code-side verified as first action; SC#1 runtime `.trace` M4-gated, tracked in 03-HUMAN-UAT.md per D-18; artifact-level, not on the v1 demo path, see scope note)_
+- [x] **THREAD-03**: Hot path obeys audio-callback rules — no `dispatch_async`, no Obj-C runtime, no locks, no ARC retain/release _(enforced by `hotpath-policy.sh` CI gate, SC#2; artifact-level, not on the v1 demo path, see scope note)_
+- [x] **THREAD-04**: Lock-free SPSC ring buffer (in-house loom-verifiable Rust SPSC, rtrb-quality cross-checked — D-R3) bridges decoder thread to UI _(artifact-level; the v1 demo uses the Phase-6 Swift `VelocityRing` per D-03, see scope note)_
 - [x] **THREAD-05**: Ring buffer uses cache-line-padded atomics (128B, Apple Silicon — D-R4) with Acquire/Release memory ordering (no SeqCst)
-- [x] **THREAD-06**: Rust SPSC bridged to Swift via `cbindgen`-generated header (preferred over C++ for `loom` model-checking)
+- [x] **THREAD-06**: Rust SPSC bridged to Swift via `cbindgen`-generated header (preferred over C++ for `loom` model-checking) _(bridge built and tested; no production caller in v1, see scope note)_
 - [x] **THREAD-07**: Memory ordering verified with `loom` permutation testing
 
 ### Decoder Pipeline (DEC)
@@ -72,19 +80,26 @@ All requirements are hypotheses until shipped and validated against the v1 relea
 
 ### System Integration (SYS)
 
+> **Unchecked-box convention (v1.0).** SYS-01, SYS-02, DIST-01, DIST-02 and DIST-03 carry a
+> SATISFIED (structural) verdict in `08-VERIFICATION.md` with their live half DEFERRED to a
+> never-auto-approved HUMAN-UAT gate (D-17). PERF-04 is the same shape. They stay `[ ]` because
+> the live measurement does not exist, not because the work is missing. Blockers: an
+> Apple-granted `com.apple.developer.hid.virtual.device` entitlement (SYS-01, SYS-02), a paid
+> Apple Developer enrollment (DIST-01..03), and an iPad Pro M4 (PERF-04).
+
 - [ ] **SYS-01**: Cortex registers as a HID provider via Apple's May 2025 BCI HID protocol
 - [ ] **SYS-02**: Switch Control + Accessibility framework integration links Cortex as first-class input modality
-- [ ] **SYS-03**: Bidirectional context sharing — app sends UI state (cursor position, target list) to Cortex
-- [ ] **SYS-04**: Cortex returns intent; app applies refinement (closed-loop decoding round trip)
-- [ ] **SYS-05**: Entitlement and `Info.plist` surface mirrors Synchron's Vision Pro reference integration
-- [ ] **SYS-06**: End-to-end synthetic-spike → decoder → ReFIT-Kalman → cursor → webgrid hit demonstrated at 120Hz
+- [x] **SYS-03**: Bidirectional context sharing — app sends UI state (cursor position, target list) to Cortex
+- [x] **SYS-04**: Cortex returns intent; app applies refinement (closed-loop decoding round trip)
+- [x] **SYS-05**: Entitlement and `Info.plist` surface mirrors Synchron's Vision Pro reference integration
+- [x] **SYS-06**: End-to-end synthetic-spike → decoder → ReFIT-Kalman → cursor → webgrid hit demonstrated at 120Hz _(closed-loop pipeline verified 08-VERIFICATION.md; INT-03: the decoded-position → `BCIInputPointerReport` leg is exercised by the CI-only `CortexSeamBSmoke` tool, not by the GUI apps, which drive `ScanInfoRoundTrip` from a sequence counter by design)_
 
 ### Distribution (DIST)
 
 - [ ] **DIST-01**: Build signs and notarizes via `notarytool submit` + `xcrun stapler staple` (no `altool`)
 - [ ] **DIST-02**: `fastlane match` with App Store Connect API key (`.p8` JWT) handles signing
 - [ ] **DIST-03**: TestFlight distribution configured for 100 internal / 10,000 external testers (90-day build expiry)
-- [ ] **DIST-04**: README documents the architectural commitments and rejected-alternatives table
+- [x] **DIST-04**: README documents the architectural commitments and rejected-alternatives table
 
 ### Real-Data Validation (RD) — v1
 
@@ -121,9 +136,9 @@ achieved a build failure.
 
 ### Performance Targets (PERF)
 
-- [ ] **PERF-01**: Report Webgrid BPS against the BrainGate reference, stating its condition: 4.16 +/- 0.39 bps is Pandarinath 2017 (eLife 18554) participant T5 on the DENSE 9x9 grid, not 6x6; the 6x6 figure for T5 is 3.7 +/- 0.4 bps. Reported honestly, never engineered toward as a pass bar. (Wording corrected Phase 10 / RD-09.)
-- [ ] **PERF-02**: Document path toward the Neuralink P1 cited reference (8.5 BPS, as cited by this repo since Phase 7; not independently sourceable to a Neuralink primary — D-17) — what gaps remain
-- [ ] **PERF-03**: Webgrid metric methodology mirrors Soukoreff & MacKenzie 2004 ISO 9241-9 Fitts throughput
+- [x] **PERF-01**: Report Webgrid BPS against the BrainGate reference, stating its condition: 4.16 +/- 0.39 bps is Pandarinath 2017 (eLife 18554) participant T5 on the DENSE 9x9 grid, not 6x6; the 6x6 figure for T5 is 3.7 +/- 0.4 bps. Reported honestly, never engineered toward as a pass bar. (Wording corrected Phase 10 / RD-09.)
+- [x] **PERF-02**: Document path toward the Neuralink P1 cited reference (8.5 BPS, as cited by this repo since Phase 7; not independently sourceable to a Neuralink primary — D-17) — what gaps remain
+- [x] **PERF-03**: Webgrid metric methodology mirrors Soukoreff & MacKenzie 2004 ISO 9241-9 Fitts throughput
 - [ ] **PERF-04**: P99 decoder + render + present budget remains under 25ms glass-to-glass
 
 ---
@@ -163,7 +178,7 @@ achieved a build failure.
 
 ## Traceability
 
-Coverage: 65/65 v1 requirements mapped to phases (100%).
+Coverage: 67/67 in-scope v1 requirements mapped to phases (100%). The traceability table has 75 rows; LAT-01..LAT-08 were retired to ROADMAP "Future work" on 2026-08-28 and are excluded by that decision. (Corrected at v1.0 completion: the previous "65/65" predated RD-09 and RD-10, added at the re-point.)
 
 | REQ-ID | Phase | Plan |
 |--------|-------|------|

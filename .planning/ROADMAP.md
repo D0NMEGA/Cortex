@@ -31,7 +31,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 6: CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid** - Beam-raced ProMotion presentation, ≤0.4ms GPU compute, zero-copy `storageModeShared` drawables — completed 2026-06-22 (RENDER-01..09; M5 Pro GPU p99=0.162ms ~2.5× under ≤0.4ms, 60s soak 243,724 frames / 0 dropped; iPad-M4 canonical capture deferred per D-11/D-12)
 - [x] **Phase 7: ReFIT-Kalman Closed-Loop Recalibration** - Swift-side 6-DOF Kalman with per-update intent-rotation step delivering BPS uplift over raw NDT1 — completed 2026-06-23 (REFIT-01/02/03 verified 6/6; 3-way ablation on synthetic data refit_bps 0.374 ≥ raw 0.161, +133% S&M-2004 Fitts-TP uplift; SC#3 filter step ~292ns p99 over 10k inline ticks, Mac-corroborating; iPad-M4 canonical latency Manual-Only/deferred)
 - [x] **Phase 8: Apple BCI HID Integration, Distribution & v0 Ship** - Switch Control HID provider registration, Synchron-mirror entitlements, notarized TestFlight build, software-timed latency claim — **v0 milestone** — completed 2026-06-23 (automated half green 5/5: 59 Swift tests + 5 `*-policy.sh` gates + benches; software-timed glass-to-glass p99 ≈ 8.32ms M5-corroborating; ReFIT 1.953 BPS synthetic, honest gap-to-8.5 (as cited since Phase 7; not independently sourceable); 3 never-auto-approve HUMAN-UAT gates — live TestFlight / iPad-M4 canonical latency / on-device HID registration — DEFERRED, tracked in 08-HUMAN-UAT.md)
-- [ ] **Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034)** - Materialize and checksum-pin the four Indy M1 sessions, retrain NDT1 on real spikes, re-derive co-bps / palettization / ANE eligibility on the real-data checkpoint
+- [x] **Phase 9: Real-Data Ingest & NDT1 Retrain (Zenodo 3854034)** - Materialize and checksum-pin the four Indy M1 sessions, retrain NDT1 on real spikes, re-derive co-bps / palettization / ANE eligibility on the real-data checkpoint — completed 2026-09-03 (RD-01..RD-06; 5/5 SC verified in 09-VERIFICATION.md, verdict human_needed; real-data co-bps 0.4096, palettization 3.4134x, 239/239 ANE-eligible; RD-06b canonical iPad-M4 p99 deferred, iPad Air M2 corroborating capture p99 0.5790 ms)
 - [x] **Phase 10: v1 Real-Data Closed Loop & Launch** - ReFIT re-fit and ablation on real data, end-to-end real-session replay, synthetic-number sweep with a CI gate, README republish retiring the photodiode claim — **v1 milestone** (completed 2026-09-08)
 
 ## Phase Details
@@ -247,7 +247,7 @@ Phases 4-5 (decoder) and Phase 6 (renderer) are dependency-parallelizable — bo
 | 6. CAMetalDisplayLink 120Hz Renderer with 30×30 Webgrid | v0 | 6/6 | ✓ Complete | 2026-06-22 |
 | 7. ReFIT-Kalman Closed-Loop Recalibration | v0 | 3/3 | ✓ Complete | 2026-06-23 |
 | 8. Apple BCI HID Integration, Distribution & v0 Ship | v0 | 7/7 | ✓ Complete (3 HUMAN-UAT gates deferred) | 2026-06-23 |
-| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Executed (verification pending; canonical iPad-M4 gate deferred) | - |
+| 9. Real-Data Ingest & NDT1 Retrain (Zenodo 3854034) | v1 | 11/11 | Complete (RD-06b canonical iPad-M4 gate deferred) | 2026-09-03 |
 | 10. v1 Real-Data Closed Loop & Launch | v1 | 17/17 | Complete    | 2026-09-08 |
 
 ---
