@@ -339,7 +339,8 @@ jobs:
       # ONE file; this polices the tree. Seven assertions: (1) every one of the five enumerated
       # superseded numbers outside the excluded paths carries a labeling token on its own line;
       # (2) every superseded *-evidence.md carries a forward-pointing banner; (3) all eight
-      # LAT-01..LAT-08 identifiers survive in ROADMAP.md AND REQUIREMENTS.md so the photodiode
+      # LAT-01..LAT-08 identifiers survive in ROADMAP.md AND the archived v1 requirement set
+      # (milestones/v1.0-REQUIREMENTS.md since the 2026-09-16 archive) so the photodiode
       # RETIREMENT cannot become a DELETION; (4) ADR-0003 exists with the four required headings, a
       # Status line, an index link and both retirement-rationale literals; (5) README.md and
       # docs/cortex-spec.md each state all four BPS non-comparability grounds; (6) every ADR excluded

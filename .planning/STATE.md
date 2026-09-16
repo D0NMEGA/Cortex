@@ -2,10 +2,10 @@
 donny_state_version: 1.0
 milestone: v1.0
 milestone_name: Real-Data Decoding
-status: executing
-stopped_at: Phase 10 complete - v1 milestone phases all executed and verified
-last_updated: "2026-09-08T04:41:32.586Z"
-last_activity: 2026-09-15 -- Completed quick task 260915-fk9: Land the Phase 10 radius-rule figure and analysis scripts
+status: complete
+stopped_at: v1.0 milestone complete - all 10 phases shipped, archived and tagged
+last_updated: "2026-09-16T18:27:41.598Z"
+last_activity: 2026-09-16 -- Completed and archived the v1.0 Real-Data Decoding milestone
 progress:
   total_phases: 10
   completed_phases: 10
@@ -21,18 +21,21 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-28)
 
 **Core value:** A real-neural-data decoder running end-to-end under 25ms, reproducibly — NDT1 decoding real primate M1 spikes (O'Doherty/Makin Indy, Zenodo 3854034) through the sub-25ms software-timed pipeline. *Re-pointed 2026-08-28: the photodiode-instrumented "24.7 ± 1.3 ms" claim is RETIRED to Future work (hardware-gated); it stays a spec target and may not be cited as achieved.*
-**Current focus:** Phase 10 — v1-real-data-closed-loop-launch
+**Current focus:** v1.0 shipped 2026-09-16. Next milestone not yet defined (`/donny-init`).
 
 **Re-plan 2026-08-28 (user-directed).** Phases 9-10 were the photodiode rig build + 10k-trial campaign. Both are retired to ROADMAP "Future work" (LAT-01..08 preserved, not deleted) — hardware-gated on the ~$110 BOM plus the provisioned iPad Pro M4 that already deferred three Phase-8 HUMAN-UAT gates. Replaced by real-data work, because the repo's largest credibility hole is that **every decoder number was produced on a synthetic Poisson fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"), so co-bps 0.3804, ReFIT 0.374-vs-0.161 and 1.953 BPS are all synthetic-data numbers. New requirements RD-01..RD-10. Infrastructure is already in place and unused: `download_indy.py` works, `data.py` is a real h5py v7.3 loader, the manifest lists 4 sessions with `sha256: "PENDING"`, and Zenodo is live (verified 2026-08-28: HTTP 200, ~1.5 GB total). Known blocker for Phase 10: `Tools/scripts/readme-policy.sh` **requires** the tokens `photodiode` and `24.7` in the README and its `--self-test` proves the gate bites when they are stripped — retiring the claim means rewriting the gate and its negative controls in lockstep (RD-10).
 
 ## Current Position
 
-Phase: 10 (v1-real-data-closed-loop-launch) - COMPLETE
-Plan: 17 of 17
-Status: Phase 10 verified (human_needed, no gaps); v1 is the last phase in the milestone
-Last activity: 2026-09-08
+Milestone: v1.0 Real-Data Decoding - SHIPPED 2026-09-16 (tag `v1.0`)
+Phase: 10 of 10 (v1-real-data-closed-loop-launch) - COMPLETE
+Status: All 10 phases executed, verified and archived to .planning/milestones/
+Last activity: 2026-09-16
 
-Progress: Phase 9 [██████████] 100% (11/11 plans executed) · Project [█████████░] 9/10 phases
+Progress: Milestone v1.0 [██████████] 100% (10/10 phases, 70/70 plans)
+
+Next: no milestone defined. Run `/donny-init` to start the next one (it creates a fresh
+REQUIREMENTS.md, which this milestone's completion deliberately removed).
 
 ## Performance Metrics
 
@@ -143,13 +146,13 @@ None yet.
 
 | Category | Item | Status | Deferred At |
 |----------|------|--------|-------------|
-| Build config | `xcodebuild` of the CortexDaemon Xcode target fails on `'Float16' is unavailable in macOS` in CortexIPCSession (SampleCodec) — generated-project deployment/arch config, NOT a code defect (`swift build`/SwiftPM + CI `swift test` are clean) | Open — set the daemon target's macOS deployment/arch so Float16 is available (SwiftPM already does); needed for the daemon `bench`-mode run (Option A in sc1-evidence.md) | 2026-06-20 (Plan 02-05 finding; 02-05-SUMMARY.md + sc1-evidence.md anomaly #2) |
+| Build config | `xcodebuild` of the CortexDaemon Xcode target fails on `'Float16' is unavailable in macOS` in CortexIPCSession (SampleCodec) — generated-project deployment/arch config, NOT a code defect (`swift build`/SwiftPM + CI `swift test` are clean) | RESOLVED 2026-09-16 — CI run 34188028835 shows "Build CortexDaemon scheme" and "Verify CortexDaemon bundle artifact exists" both green under Xcode 26.3 | 2026-06-20 (Plan 02-05 finding; 02-05-SUMMARY.md + sc1-evidence.md anomaly #2) |
 | Security | ~~Phase 2 `SECURITY.md` not yet created~~ — RESOLVED: `02-SECURITY.md` created & verified (28/28 threats closed, ASVS L1, 2 accepted risks → Phase 8), committed `02e2b9c` | Resolved 2026-06-20 (`/gsd-secure-phase 02`) | 2026-06-20 (Phase 2 completion) |
 | Verification | SC#1 timing measured on M5 Pro (≥ M4) under a live dev session; a quiet-machine / dedicated iPad-Pro-M4 re-run via the sc1-evidence.md runbook would refine the tail (not the sub-µs verdict) | Open — optional refinement | 2026-06-20 (Plan 02-05; sc1-evidence.md) |
-| Verification | Plan 01-02 dynamic xcodebuild build smoke (CortexMac/CortexiOS/CortexDaemon `BUILD SUCCEEDED` under `CODE_SIGNING_ALLOWED=NO` + four sibling overrides + two `-skip*Validation` flags; CortexDaemon.bundle artifact existence on disk; PrivacyInfo.xcprivacy presence in built `.app` bundles) | Waiting for Xcode 26 environment | 2026-04-30 (Plan 01-02 toolchain-deferral disposition) — closed by Plan 01-06 CI on macos-15 + Xcode 26.3, OR by human on Xcode 26 dev machine. Verbatim re-run command set captured in `.planning/phases/01-foundation-2026-toolchain/01-02-daemon-spm-smoke.md` |
+| Verification | Plan 01-02 dynamic xcodebuild build smoke (CortexMac/CortexiOS/CortexDaemon `BUILD SUCCEEDED` under `CODE_SIGNING_ALLOWED=NO` + four sibling overrides + two `-skip*Validation` flags; CortexDaemon.bundle artifact existence on disk; PrivacyInfo.xcprivacy presence in built `.app` bundles) | RESOLVED 2026-09-16 — closed by CI run 34188028835 on macos-15 / Xcode 26.3; CortexMac, CortexiOS and CortexDaemon schemes all build green | 2026-04-30 (Plan 01-02 toolchain-deferral disposition) — closed by Plan 01-06 CI on macos-15 + Xcode 26.3, OR by human on Xcode 26 dev machine. Verbatim re-run command set captured in `.planning/phases/01-foundation-2026-toolchain/01-02-daemon-spm-smoke.md` |
 
 ## Session Continuity
 
-Last session: 2026-09-05T05:08:48.283Z
-Stopped at: Phase 10 context gathered
-Resume file: .planning/phases/10-v1-real-data-closed-loop-launch/10-CONTEXT.md
+Last session: 2026-09-16
+Stopped at: v1.0 milestone complete - archived, tagged, nothing in flight
+Resume file: .planning/MILESTONES.md (v1.0 entry, including its Known Gaps)

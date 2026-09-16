@@ -28,9 +28,10 @@
 #                  a case-insensitive `supersed` marker, i.e. a forward pointer to what replaced it.
 #                  Historical evidence is never retroactively edited; it is bannered. (a) excludes
 #                  that tree precisely so (b) can own it.
-#   (c) preserve   All eight LAT-01..LAT-08 identifiers survive in BOTH ROADMAP.md and
-#                  REQUIREMENTS.md. They are RETIRED, not deleted; deleting one converts a deferral
-#                  into an erasure and rewrites what the project said it would do.
+#   (c) preserve   All eight LAT-01..LAT-08 identifiers survive in BOTH ROADMAP.md and the archived
+#                  v1 requirement set (milestones/v1.0-REQUIREMENTS.md since the 2026-09-16 archive;
+#                  .planning/REQUIREMENTS.md before it). They are RETIRED, not deleted; deleting one
+#                  converts a deferral into an erasure and rewrites what the project said it would do.
 #   (d) adr        ADR-0003 exists, carries the four required headings and a Status line, is linked
 #                  from the ADR index, AND states the retirement RATIONALE (`hardware-gated`,
 #                  `largest credibility hole`). Headings and an index link establish that an ADR was
@@ -78,7 +79,12 @@ set -euo pipefail
 SWEEP_ROOT="${SWEEP_ROOT:-.}"
 SWEEP_PHASES_DIR="${SWEEP_PHASES_DIR:-.planning/phases}"
 SWEEP_ROADMAP="${SWEEP_ROADMAP:-.planning/ROADMAP.md}"
-SWEEP_REQUIREMENTS="${SWEEP_REQUIREMENTS:-.planning/REQUIREMENTS.md}"
+# v1.0 was archived on 2026-09-16, which moves the v1 requirement set (and with it the LAT-01..08
+# retirement block assertion (c) preserves) from .planning/REQUIREMENTS.md to the milestone archive.
+# The live REQUIREMENTS.md is deleted at each milestone boundary and recreated by the next
+# /donny-init, so pointing at it would make this gate stop biting exactly when a milestone closes.
+# Point at the archive that actually holds the retired block. The self-test repoints this.
+SWEEP_REQUIREMENTS="${SWEEP_REQUIREMENTS:-.planning/milestones/v1.0-REQUIREMENTS.md}"
 SWEEP_ADR_DIR="${SWEEP_ADR_DIR:-docs/adr}"
 SWEEP_README="${SWEEP_README:-README.md}"
 SWEEP_SPEC="${SWEEP_SPEC:-docs/cortex-spec.md}"
@@ -86,7 +92,7 @@ SWEEP_SPEC="${SWEEP_SPEC:-docs/cortex-spec.md}"
 # into .planning/ on purpose: the 2026-09-07 defect was in a REQUIREMENT's own text, and excluding
 # .planning/ from the token scan (see EXCLUDED_PATH_PREFIXES) must not make .planning/ invisible to
 # the whole gate. Space-separated so the self-test can repoint it.
-SWEEP_CITED_FILES="${SWEEP_CITED_FILES:-README.md docs/cortex-spec.md .planning/REQUIREMENTS.md .planning/PROJECT.md}"
+SWEEP_CITED_FILES="${SWEEP_CITED_FILES:-README.md docs/cortex-spec.md .planning/milestones/v1.0-REQUIREMENTS.md .planning/PROJECT.md}"
 
 # ---- Constants -------------------------------------------------------------------------------
 
