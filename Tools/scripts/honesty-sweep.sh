@@ -92,7 +92,7 @@ SWEEP_SPEC="${SWEEP_SPEC:-docs/cortex-spec.md}"
 # into .planning/ on purpose: the 2026-09-07 defect was in a REQUIREMENT's own text, and excluding
 # .planning/ from the token scan (see EXCLUDED_PATH_PREFIXES) must not make .planning/ invisible to
 # the whole gate. Space-separated so the self-test can repoint it.
-SWEEP_CITED_FILES="${SWEEP_CITED_FILES:-README.md docs/cortex-spec.md .planning/milestones/v1.0-REQUIREMENTS.md .planning/PROJECT.md}"
+SWEEP_CITED_FILES="${SWEEP_CITED_FILES:-README.md docs/cortex-spec.md .planning/milestones/v1.0-REQUIREMENTS.md .planning/PROJECT.md docs/architecture-walkthrough.md}"
 
 # ---- Constants -------------------------------------------------------------------------------
 

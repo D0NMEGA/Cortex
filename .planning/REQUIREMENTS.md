@@ -48,6 +48,17 @@ distinction has to survive into the published wording.
 
 ### Sequential technical walkthrough (Phase 12)
 
+> **Retargeted 2026-09-17.** `docs/architecture-walkthrough.md` (290 lines, stages 0-9) already
+> existed untracked in the worktree, written by a concurrent session (`neurorust-8c`), not by this
+> one. Rather than author a duplicate against a one-day deadline, Phase 12 verifies, hardens and
+> commits that draft. NAR-01..07 are unchanged as acceptance criteria; what changed is that they are
+> now applied to an existing artifact instead of to one written from scratch. Authorship is the
+> user's either way: this repo's history carries a single author by explicit decision.
+
+- [ ] **NAR-00**: Every quantitative claim in the draft is checked against its committed
+  `*-evidence.md` or `.planning/` source, and any claim that cannot be traced is either corrected,
+  sourced, or removed. Discrepancies are reported, not silently patched
+
 - [ ] **NAR-01**: A single document walks the pipeline in data-flow order with one section per
   stage: acquisition hot path, IPC transport, lock-free SPSC ring, decoder, ReFIT-Kalman, renderer,
   BCI HID surface, evidence and gate layer
@@ -106,6 +117,7 @@ this repo.
 | GAP-06 | Phase 11 | Pending |
 | GAP-07 | Phase 11 | Pending |
 | GAP-08 | Phase 11 | Pending |
+| NAR-00 | Phase 12 | Pending |
 | NAR-01 | Phase 12 | Pending |
 | NAR-02 | Phase 12 | Pending |
 | NAR-03 | Phase 12 | Pending |
@@ -115,8 +127,8 @@ this repo.
 | NAR-07 | Phase 12 | Pending |
 
 **Coverage:**
-- v1.1 requirements: 15 total
-- Mapped to phases: 15
+- v1.1 requirements: 16 total
+- Mapped to phases: 16
 - Unmapped: 0
 
 ---

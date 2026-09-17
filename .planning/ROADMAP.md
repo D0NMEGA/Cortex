@@ -66,7 +66,7 @@ Audience research: `.planning/research/NEURALINK-JD.md`.
   **Dependency note.** Reads only committed artifacts and the already-materialized, checksum-pinned
   `indy_20160630_01.mat`. Trains nothing, re-fits nothing, and writes no checkpoint.
 
-- [ ] **Phase 12: Sequential technical walkthrough** - One document walking the pipeline in
+- [ ] **Phase 12: Sequential technical walkthrough (verify and commit)** - Retargeted 2026-09-17: `docs/architecture-walkthrough.md` already exists untracked, authored by a concurrent session. Phase 12 fact-checks every number in it against committed evidence, runs it through the gate context rules, closes gaps against NAR-01..07, and commits it. Originally scoped as: one document walking the pipeline in
   data-flow order, each stage carrying the decision, the rejected alternative and its quantitative
   reason, the measured number with its device and method, and the weakness named before a reviewer
   names it. Closes on the Phase 11 result. Requirements: NAR-01..NAR-07
