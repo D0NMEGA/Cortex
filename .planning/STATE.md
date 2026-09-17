@@ -1,41 +1,51 @@
 ---
 donny_state_version: 1.0
-milestone: v1.0
-milestone_name: Real-Data Decoding
-status: complete
-stopped_at: v1.0 milestone complete - all 10 phases shipped, archived and tagged
-last_updated: "2026-09-16T18:27:41.598Z"
-last_activity: 2026-09-16 -- Completed and archived the v1.0 Real-Data Decoding milestone
+milestone: v1.1
+milestone_name: Technical Narrative and Decode-Gap Analysis
+status: planning
+stopped_at: v1.1 started - requirements and roadmap being defined
+last_updated: "2026-09-17T15:50:58.000Z"
+last_activity: 2026-09-17 -- Started milestone v1.1 (hard deadline 2026-09-18, Neuralink onsite)
 progress:
-  total_phases: 10
-  completed_phases: 10
-  total_plans: 70
-  completed_plans: 70
-  percent: 100
+  total_phases: 2
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-28)
+See: .planning/PROJECT.md (updated 2026-09-17)
 
 **Core value:** A real-neural-data decoder running end-to-end under 25ms, reproducibly — NDT1 decoding real primate M1 spikes (O'Doherty/Makin Indy, Zenodo 3854034) through the sub-25ms software-timed pipeline. *Re-pointed 2026-08-28: the photodiode-instrumented "24.7 ± 1.3 ms" claim is RETIRED to Future work (hardware-gated); it stays a spec target and may not be cited as achieved.*
-**Current focus:** v1.0 shipped 2026-09-16. Next milestone not yet defined (`/donny-init`).
+**Current focus:** v1.1 Technical Narrative and Decode-Gap Analysis, started 2026-09-17, hard deadline 2026-09-18. Compilation plus one bounded measurement; no product capability added, no shipped code path touched.
 
 **Re-plan 2026-08-28 (user-directed).** Phases 9-10 were the photodiode rig build + 10k-trial campaign. Both are retired to ROADMAP "Future work" (LAT-01..08 preserved, not deleted) — hardware-gated on the ~$110 BOM plus the provisioned iPad Pro M4 that already deferred three Phase-8 HUMAN-UAT gates. Replaced by real-data work, because the repo's largest credibility hole is that **every decoder number was produced on a synthetic Poisson fallback** (`04-training-evidence.md`: "No real `.mat` was present under `Decoder/data/`"), so co-bps 0.3804, ReFIT 0.374-vs-0.161 and 1.953 BPS are all synthetic-data numbers. New requirements RD-01..RD-10. Infrastructure is already in place and unused: `download_indy.py` works, `data.py` is a real h5py v7.3 loader, the manifest lists 4 sessions with `sha256: "PENDING"`, and Zenodo is live (verified 2026-08-28: HTTP 200, ~1.5 GB total). Known blocker for Phase 10: `Tools/scripts/readme-policy.sh` **requires** the tokens `photodiode` and `24.7` in the README and its `--self-test` proves the gate bites when they are stripped — retiring the claim means rewriting the gate and its negative controls in lockstep (RD-10).
 
 ## Current Position
 
-Milestone: v1.0 Real-Data Decoding - SHIPPED 2026-09-16 (tag `v1.0`)
-Phase: 10 of 10 (v1-real-data-closed-loop-launch) - COMPLETE
-Status: All 10 phases executed, verified and archived to .planning/milestones/
-Last activity: 2026-09-16
+Milestone: v1.1 Technical Narrative and Decode-Gap Analysis (started 2026-09-17)
+Phase: Not started (defining requirements and roadmap)
+Plan: -
+Status: Defining requirements
+Last activity: 2026-09-17 -- milestone v1.1 started
 
-Progress: Milestone v1.0 [██████████] 100% (10/10 phases, 70/70 plans)
+**Hard deadline: 2026-09-18**, onsite with Neuralink engineers. One working day. Phase 12 (the
+sequential technical walkthrough) is the must-ship deliverable; Phase 11 (decode-gap analysis) is
+time-boxed so it cannot consume the day. No edits to shipped v1.0 code paths this milestone.
 
-Next: no milestone defined. Run `/donny-init` to start the next one (it creates a fresh
-REQUIREMENTS.md, which this milestone's completion deliberately removed).
+Progress: Milestone v1.1 [..........] 0% (0/2 phases)
+
+CI on HEAD `f2f42ad` is GREEN: run 35137114434, both jobs, 8m9s, 2026-09-17. The prior red on this
+same commit was a GitHub spending-limit rejection ("The job was not started because recent account
+payments have failed or your spending limit needs to be increased"), zero steps executed, no code
+defect. Cleared by adding Actions budget. Note for cost: both jobs run on macOS runners, which bill
+at 10x against the allotment, so the free tier is roughly 200 real macOS minutes per month.
+`decoder-python` has no Xcode dependency and is a candidate to move to a Linux runner at 1x.
+
 
 ## Performance Metrics
 

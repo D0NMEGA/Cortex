@@ -14,6 +14,7 @@ Two milestones anchor the roadmap:
 
 - ✅ **v0 Software-Timed** — Phases 1-8, shipped 2026-06-23 (internal checkpoint; never archived separately, its phases are inside the v1.0 archive). Closed-loop synthetic-spike → cursor → 30×30 webgrid hit at 120Hz, software-side `mach_absolute_time` latency claim, TestFlight-ready notarized build.
 - ✅ **v1.0 Real-Data Decoding** — Phases 1-10, shipped 2026-09-16. Four real Indy M1 sessions checksum-pinned and ingested, NDT1 retrained and re-converted on real spikes, ReFIT ablation and closed loop re-run on a real session, README republished with the photodiode claim retired. Headline result is negative and published as such: 0/1025 target acquisition. Full detail: [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md) · [MILESTONES.md](MILESTONES.md)
+- 🚧 **v1.1 Technical Narrative and Decode-Gap Analysis** — Phases 11-12, started 2026-09-17, hard deadline 2026-09-18 (Neuralink onsite). A compilation milestone plus one bounded measurement: decompose the published 0 of 1,025 into a geometry term and a decode term, and produce a sequential decision-by-decision walkthrough of the pipeline. Adds no product capability and touches no shipped v1.0 code path.
 
 ## Phases
 
@@ -35,24 +36,68 @@ Per-phase goals, plan lists, success criteria and dependency notes: [milestones/
 
 </details>
 
-### Next milestone
+### Milestone v1.1: Technical Narrative and Decode-Gap Analysis (in progress)
 
-Not yet defined. Run `/donny-init` to scope it (questioning → research → requirements → roadmap).
+Scoped 2026-09-17 against a one-working-day deadline. Phase 12 is the must-ship deliverable;
+Phase 11 is time-boxed so it cannot consume the day. Requirements: `.planning/REQUIREMENTS.md`.
+Audience research: `.planning/research/NEURALINK-JD.md`.
 
-> **Tooling note.** With no `🚧 **vX.Y Name**` bullet in the Milestones list above, donny's
-> `getMilestoneInfo` falls through to its bare-version fallback and returns
-> `{version: v1.0, name: "milestone"}`. STATE.md, not this file, is authoritative until the next
-> milestone is defined; if a donny command stamps `milestone_name: milestone` into STATE.md before
-> then, restore it. `/donny-init` fixes this by writing the next `🚧` bullet.
-Open work is recorded as Known Gaps in [MILESTONES.md](MILESTONES.md): six device- and account-gated
-requirements, INT-02 and INT-03, and the `summary-extract` parser defect. The cheapest credibility
-item is Phase 3's SC#1 Instruments System Trace, which needs no new hardware.
+- [ ] **Phase 11: Decode-attributable gap analysis** - Score the decoded trajectory through the same
+  acceptance machinery `webgrid_ceiling.py` already applies to the recorded hand, sweep the
+  acceptance radius, and report the decoder's effective acceptance radius in mm. Decompose the
+  published zero into the geometry loss (1,025 to 147, already established for the recorded hand)
+  and the decode loss (147 to 0, never measured). Quantify velocity variance shrinkage against the
+  shrinkage a held-out R2 of 0.4238 predicts, and the angular error distribution. Requirements:
+  GAP-01..GAP-08
+
+  **Success criteria**
+  1. A decoded counterpart to `10-ceiling.json` exists, covering the same radius and dwell grid, and
+     reproduces 0 of 1,025 at the canonical 2.8614 mm / 0.30 s cell from committed artifacts
+  2. The decoder's effective acceptance radius is stated in mm, as a multiple of the 2.8614 mm
+     canonical radius, and as a multiple of the task's own 7.50 mm half-pitch
+  3. The zero is decomposed into a geometry term and a decode term, each stated separately with its
+     own trial count
+  4. Velocity shrinkage and angular error are reported as distributions with the method that
+     produced them, not as point assertions
+  5. `11-decode-gap-evidence.md` carries machine, OS, pinned wheel versions, determinism statement,
+     session id, source sha256 and a copy-pasteable runbook, and every artifact repeats the
+     open-loop disclosure verbatim
+
+  **Dependency note.** Reads only committed artifacts and the already-materialized, checksum-pinned
+  `indy_20160630_01.mat`. Trains nothing, re-fits nothing, and writes no checkpoint.
+
+- [ ] **Phase 12: Sequential technical walkthrough** - One document walking the pipeline in
+  data-flow order, each stage carrying the decision, the rejected alternative and its quantitative
+  reason, the measured number with its device and method, and the weakness named before a reviewer
+  names it. Closes on the Phase 11 result. Requirements: NAR-01..NAR-07
+
+  **Success criteria**
+  1. Eight stage sections exist in data-flow order: acquisition hot path, IPC transport, SPSC ring,
+     decoder, ReFIT-Kalman, renderer, BCI HID surface, evidence and gate layer
+  2. Each section names a specific rejected alternative and the quantitative reason it was rejected
+  3. Every number traces to a committed `*-evidence.md` and carries its device and method; no
+     Mac-measured number is presented as an iPad-M4 number
+  4. The weak results are stated plainly and not softened: 0 of 1,025, leave-one-session-out
+     negative on all four folds, ReFIT uplift not surviving real spikes, NDT1 losing to a linear
+     ridge baseline, INT-01/02/03, and the six device- and account-gated deferrals
+  5. The document passes `readme-policy.sh` and `honesty-sweep.sh` context rules, and the 24.7 ms
+     figure appears only as a retired spec target
+
+  **Dependency note.** Depends on Phase 11 for its closing section only. The other seven sections
+  are independent and can be drafted while Phase 11 runs.
+
+Open work not addressed in v1.1 stays recorded as Known Gaps in [MILESTONES.md](MILESTONES.md): six
+device- and account-gated requirements, INT-02 and INT-03, and the `summary-extract` parser defect.
+The cheapest remaining credibility item is Phase 3's SC#1 Instruments System Trace, which needs no
+new hardware and is the first candidate for v1.2, alongside the manifold / population-dynamics
+analysis that `research/NEURALINK-JD.md` records as a real gap.
 
 ## Progress
 
 | Milestone | Phases | Plans | Status | Shipped |
 | --------- | ------ | ----- | ------ | ------- |
 | v1.0 Real-Data Decoding | 1-10 | 70/70 | Complete (11 partials deferred, none auto-approved) | 2026-09-16 |
+| v1.1 Technical Narrative and Decode-Gap Analysis | 11-12 | 0/0 | In progress (started 2026-09-17) | - |
 
 Per-phase progress rows are preserved in [milestones/v1.0-ROADMAP.md](milestones/v1.0-ROADMAP.md).
 

@@ -35,6 +35,39 @@ survive real spikes, and the encoder does not transfer to sessions it has never 
 Eleven requirements carry a deferred half needing an iPad Pro M4, a paid Apple enrollment, or an
 Apple-granted HID entitlement. None was auto-approved. Full record: `.planning/MILESTONES.md`.
 
+## Current Milestone: v1.1 Technical Narrative and Decode-Gap Analysis
+
+**Started:** 2026-09-17. **Hard deadline:** 2026-09-18 (onsite with Neuralink engineers).
+
+**Goal:** Be able to defend every architectural decision in Cortex sequentially and technically, and
+answer the hardest question about the artifact with a measured number rather than a shrug.
+
+This milestone adds no product capability. It is a compilation milestone plus one bounded
+measurement, scoped deliberately to one working day and to work that cannot destabilize the shipped
+v1.0 artifact. No edits to shipped code paths.
+
+**Target features:**
+- A decode-attributable gap analysis that decomposes the published 0 of 1,025 into a geometry term
+  already quantified (the recorded hand scores 147 of 1,025 under the same rule) and a decode term
+  that has never been measured. Headline output is the decoder's effective acceptance radius in mm.
+- A sequential technical walkthrough of the whole pipeline: hot path, IPC, SPSC ring, decoder,
+  ReFIT, renderer, HID, evidence layer. Each stage carries the decision, the rejected alternative
+  and why, the measured number with the device and method that produced it, and the weakness named
+  before a reviewer names it.
+
+**Audience context.** The three live Neuralink internship postings were read on 2026-09-17 from the
+Greenhouse board API and are archived in `.planning/research/NEURALINK-JD.md`. Software Engineer
+Intern, BCI Applications names "low latency concurrency programming, memory management and
+networking" as a preferred qualification, which is the most direct description of this repo's hot
+path that exists in any job posting. Neuroengineer Intern names manifold analysis of neural
+population dynamics, which this repo genuinely does not have; that gap is recorded, not papered
+over, and is a candidate for a later milestone.
+
+**Standing constraints carried in from v1.0.** The pre-registration in `10-PREREGISTRATION.md`
+governs. Nothing in this milestone relaxes a radius, dwell or timeout to manufacture a hit. Phase 11
+measures the tolerance the decoder would require and reports it, which is the opposite operation.
+The 24.7 ms photodiode figure remains a retired spec target and may not be cited as achieved.
+
 ## Requirements
 
 ### Validated
@@ -232,7 +265,7 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-09-16 after the v1.0 Real-Data Decoding milestone.*
+*Last updated: 2026-09-17 at the start of the v1.1 Technical Narrative and Decode-Gap Analysis milestone.*
 
 v1.0 shipped 2026-09-16: 10 phases, 70 plans, 193 tasks, 141 days, 546 commits. NDT1 decodes real
 primate M1 spikes (O'Doherty/Makin Indy, Zenodo 3854034) end to end through CoreML, ReFIT-Kalman and a
