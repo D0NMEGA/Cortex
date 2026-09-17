@@ -228,8 +228,9 @@ Neuralink's published score adds a click-type term this single-click harness omi
 
 ## Why the acquisition count is zero
 
-Two causes, and only the first is a decoder defect. The repository measures the second directly by
-replaying the animal's **own recorded hand track** through the same acceptance rule:
+Two causes. The repository measures the first directly, by replaying the animal's **own recorded
+hand track** through the same acceptance rule, which isolates how much of the zero the geometry
+alone explains:
 
 | acquisition radius | dwell 0.30 s | dwell 0.10 s |
 |---|---|---|

@@ -2,16 +2,16 @@
 donny_state_version: 1.0
 milestone: v1.1
 milestone_name: Technical Narrative and Decode-Gap Analysis
-status: planning
-stopped_at: v1.1 started - requirements and roadmap being defined
+status: executing
+stopped_at: Phases 11 and 12 delivered and committed; milestone deliverables complete
 last_updated: "2026-09-17T15:50:58.000Z"
 last_activity: 2026-09-17 -- Started milestone v1.1 (hard deadline 2026-09-18, Neuralink onsite)
 progress:
   total_phases: 2
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  completed_phases: 2
+  total_plans: 2
+  completed_plans: 2
+  percent: 100
 ---
 
 # Project State
@@ -27,24 +27,45 @@ See: .planning/PROJECT.md (updated 2026-09-17)
 
 ## Current Position
 
-Milestone: v1.1 Technical Narrative and Decode-Gap Analysis (started 2026-09-17)
-Phase: Not started (defining requirements and roadmap)
-Plan: -
-Status: Defining requirements
-Last activity: 2026-09-17 -- milestone v1.1 started
+Milestone: v1.1 Technical Narrative and Decode-Gap Analysis
+Phase: 12 of 12 - both phases delivered 2026-09-17
+Status: Deliverables complete and committed; onsite is 2026-09-18
+Last activity: 2026-09-17
 
-**Hard deadline: 2026-09-18**, onsite with Neuralink engineers. One working day. Phase 12 (the
-sequential technical walkthrough) is the must-ship deliverable; Phase 11 (decode-gap analysis) is
-time-boxed so it cannot consume the day. No edits to shipped v1.0 code paths this milestone.
+Progress: Milestone v1.1 [##########] 100% (2/2 phases)
 
-Progress: Milestone v1.1 [..........] 0% (0/2 phases)
+**Delivered**
+- `773f6df` milestone scoped (PROJECT/STATE/ROADMAP/REQUIREMENTS + research/NEURALINK-JD.md, all 7
+  postings from the Greenhouse API; three of seven name Rust, which was under-weighted before)
+- `054cdd3` Phase 12. `docs/architecture-walkthrough.md` was found already drafted and UNTRACKED,
+  authored by the concurrent `neurorust-8c` session, not this one. Verified rather than rewritten:
+  all 19 numeric claims traced to committed sources, architectural claims (CORTEX_DECODER default,
+  export probe-window parity test, 64 targets at 15 mm pitch) traced to code. Added to
+  `SWEEP_CITED_FILES` so honesty-sweep now gate-covers it; `--self-test` still bites all 14 controls
+- `f3a7fb2` Phase 11. `11-decode-gap-evidence.md`: the 0 of 1,025 decomposes into a geometry term
+  (1,025 -> 147, the recorded hand's own score at the canonical radius) and a decode term
+  (147 -> 0). The decode term is not marginal: target-blind p1 distance is 16.58 mm, 5.80x the
+  2.8614 mm acceptance radius and 1.11x even the 15 mm radius where the recorded hand scores
+  1,023/1,025. Correcting the mis-specified geometry would not produce a hit
+- Walkthrough Stage 4 now discloses that this is NOT a Wu/Gilja neural-observation Kalman decoder.
+  `full_measurement()` returns `H = [0 I 0]`, a velocity-only observation of an already-decoded
+  `(vx, vy)`, so it is a post-decoder kinematic smoother plus intent rotation. The repo had no
+  public disclosure of that distinction. Flagged by the `project-moltgrid-5a` session and verified
+  here before acting on it
 
-CI on HEAD `f2f42ad` is GREEN: run 35137114434, both jobs, 8m9s, 2026-09-17. The prior red on this
-same commit was a GitHub spending-limit rejection ("The job was not started because recent account
-payments have failed or your spending limit needs to be increased"), zero steps executed, no code
-defect. Cleared by adding Actions budget. Note for cost: both jobs run on macOS runners, which bill
-at 10x against the allotment, so the free tier is roughly 200 real macOS minutes per month.
-`decoder-python` has no Xcode dependency and is a candidate to move to a Linux runner at 1x.
+**Open, deliberately not done**
+- Exact per-sample radius sweep. Phase 11 bounds the 7.50 and 15.00 mm claims from distance
+  percentiles rather than proving them; percentiles carry no run-length information and dwell needs
+  75 consecutive samples. Converting the bound to an exact sweep is the natural next task
+- Manifold / population-dynamics analysis. A real gap against the Neuroengineer posting, cut for
+  time, first candidate for v1.2
+- Phase 3 SC#1 Instruments System Trace, INT-02, INT-03. All out of scope this milestone
+
+**Note.** `Decoder/scripts/ane_scale_sweep.py` and `Decoder/artifacts/` are untracked in-flight work
+belonging to the `neurorust-8c` session and were deliberately left uncommitted by this one.
+
+CI on HEAD is green (run 35137114434, both jobs, 8m9s). The earlier red was a GitHub spending-limit
+rejection with zero steps executed, not a code defect. All 12 policy gates pass locally.
 
 
 ## Performance Metrics
