@@ -107,10 +107,30 @@ claimed.
 
 **What.** ReFIT-Kalman filter, then open-loop velocity integration to cursor position.
 
-**The naming discipline.** The scoring arm that succeeds is labelled **target-assisted**, not
-ReFIT, on purpose. ReFIT uses target-informed intention to retrain decoder parameters; it does not
-supply target knowledge during online control. Calling the arm ReFIT would borrow credibility from
-a method that is not what is running.
+**The naming discipline, part one.** The scoring arm that succeeds is labelled
+**target-assisted**, not ReFIT, on purpose. ReFIT uses target-informed intention to retrain decoder
+parameters; it does not supply target knowledge during online control. Calling the arm ReFIT would
+borrow credibility from a method that is not what is running.
+
+**The naming discipline, part two, and say this before anyone asks.** This is **not a Kalman
+decoder in the Wu 2006 / Gilja 2012 sense**. In that architecture the state is kinematic and the
+*observation is neural*: firing rates observe the kinematic state through a tuning model, and the
+filter performs the decoding. Here the state is the 6-DOF kinematic vector `[px, py, vx, vy, ax,
+ay]` and the measurement matrix is `H = [0 I 0]`, a **velocity-only observation of an
+already-decoded `(vx, vy)`**. So this is a steady-state kinematic smoother sitting *downstream* of
+the decoder, plus the Gilja intent-rotation step, not a neural-observation Kalman decoder.
+
+The shorthand "ReFIT-Kalman" is how the repo names it and the intent-rotation genuinely is the
+ReFIT idea, but a reviewer who knows the literature will assume the canonical decoder and should be
+corrected immediately rather than allowed to infer it. The honest one-liner: "it is a post-decoder
+kinematic Kalman smoother with ReFIT-style intent rotation; I never fit a neural-observation Kalman
+decoder, and that comparison against the ridge baseline is a real gap."
+
+**Why the observability caveat is not hand-waving.** The 6-DOF state is *not observable* from a
+velocity-only measurement, because position is a pure integrator no measurement corrects. The
+implementation solves the steady-state DARE on the observable `[vx, vy, ax, ay]` sub-block and
+embeds the 4x2 result into a 6x2 gain with **zero rows for position**, which is the correct handling
+rather than a convenient one, and the closed loop is Schur-stable at max|lambda| approximately 0.93.
 
 ## Stage 5: inter-process transport
 
@@ -217,15 +237,34 @@ replaying the animal's **own recorded hand track** through the same acceptance r
 | 7.50 mm | **951 / 1,025 (92.8%)** | 1,007 / 1,025 (98.2%) |
 | 15.00 mm | 1,023 / 1,025 (99.8%) | 1,025 / 1,025 (100%) |
 
-1. **The decoder is weak.** Held-out R2 of 0.14 within session is not enough for reliable
-   acquisition.
-2. **The evaluator is mis-specified relative to the source task.** The 30x30 Webgrid geometry and
-   its 2.861 mm radius are derived from the grid cell, not from the task, whose real target pitch
-   is 15 mm. At that radius the recorded hand itself succeeds on 14.3% of trials; at half the real
-   pitch it succeeds on 92.8%.
+1. **The evaluator is mis-specified relative to the source task.** The 30x30 Webgrid geometry
+   and its 2.861 mm radius are derived from the grid cell, not from the task, whose real target
+   pitch is 15 mm. At that radius the recorded hand itself succeeds on 14.3% of trials; at half the
+   real pitch it succeeds on 92.8%. **878 of the 1,025 trials are lost before decoding is
+   involved.**
+2. **The decoder does not put the cursor near the target**, and this term dominates. Held-out R2 is
+   0.1446 on this session, integrated open-loop with no feedback path.
 
-Fixing the geometry would not turn this into closed-loop evidence. Recorded spikes cannot react to
-a decoded cursor, so no replay of this dataset establishes online control at any radius.
+**The decomposition, and the part that matters.** Measured in `11-decode-gap-evidence.md`: for the
+two target-blind arms, the cursor's **closest 1% of samples sit 16.58 mm from the target**. That is
+**5.80x** the 2.861 mm acceptance radius, **2.21x** the task's own 7.50 mm half-pitch, and **1.11x**
+even the 15.00 mm radius at which the recorded hand scores 1,023 of 1,025. Median distance is
+97.98 mm in a workspace 171.68 mm on a side, 57% of the workspace width.
+
+So the honest answer to "your evaluator is mis-specified, fix the geometry and re-score" is: it is
+mis-specified, by roughly 2.6x in radius, **and correcting it fully would still not produce a hit.**
+There is no radius at which the decoder scores and the task geometry still discriminates. The
+geometry critique is correct and is not load-bearing. (Stated precisely: the zero at 2.861 mm is
+measured; the claim at 7.50 and 15.00 mm is a strong bound from the distance percentiles, not a
+deductive proof, because percentiles say nothing about whether inside-samples cluster into the 75
+consecutive needed for dwell. The full per-sample sweep is the obvious next task.)
+
+Note also that the 70-hit `refit` arm is **target-determined by construction** -- its rotation reads
+the true target track -- and its reversed-target control collapses to 2. Neither is a decode result.
+
+Fixing the geometry would not turn any of this into closed-loop evidence either. Recorded spikes
+cannot react to a decoded cursor, so no replay of this dataset establishes online control at any
+radius.
 
 ## What makes this architecture strong
 
