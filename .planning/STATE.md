@@ -3,9 +3,9 @@ donny_state_version: 1.0
 milestone: v1.1
 milestone_name: Technical Narrative and Decode-Gap Analysis
 status: executing
-stopped_at: Phases 11 and 12 delivered and committed; milestone deliverables complete
+stopped_at: Deliverables complete; dwell-clock error found and corrected 2026-09-18
 last_updated: "2026-09-17T15:50:58.000Z"
-last_activity: 2026-09-17 -- Started milestone v1.1 (hard deadline 2026-09-18, Neuralink onsite)
+last_activity: 2026-09-18 -- Corrected the decoded arms dwell from 75 samples to 15 ticks
 progress:
   total_phases: 2
   completed_phases: 2
@@ -52,6 +52,16 @@ Progress: Milestone v1.1 [##########] 100% (2/2 phases)
   `(vx, vy)`, so it is a post-decoder kinematic smoother plus intent rotation. The repo had no
   public disclosure of that distinction. Flagged by the `project-moltgrid-5a` session and verified
   here before acting on it
+
+**Correction landed 2026-09-18 (`fc1e515`).** The Phase 11 evidence and the walkthrough stated the
+decoded arms' 0.30 s dwell as **75 consecutive samples**. That is the recorded-hand figure.
+`webgrid_ceiling.py` scores the recorded cursor on the 250 Hz Indy behavior clock (0.30 s = 75
+samples); `CortexReplayBench` decodes once per 20 ms bin (`dt = 0.020`, measured 50.77 Hz over 73,129
+ticks in 1,440.26 s), so 0.30 s = **15 consecutive ticks**. Same rule in time, different counts. The
+conclusion is unchanged and the corrected bar is lower, so the correction is stated in the artifact
+rather than quietly amended: 0.71 inside-ticks per trial against 15 consecutive required is still a
+roughly twentyfold margin. Cross-scorer consistency was then re-verified end to end: both scorers use
+the same 1,025 trials, the same 2.8613660 mm radius, and radius/side is exactly 0.5/30.
 
 **Open, deliberately not done**
 - Exact per-sample radius sweep. Phase 11 bounds the 7.50 and 15.00 mm claims from distance
