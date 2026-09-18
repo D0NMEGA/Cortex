@@ -257,8 +257,10 @@ mis-specified, by roughly 2.6x in radius, **and correcting it fully would still 
 There is no radius at which the decoder scores and the task geometry still discriminates. The
 geometry critique is correct and is not load-bearing. (Stated precisely: the zero at 2.861 mm is
 measured; the claim at 7.50 and 15.00 mm is a strong bound from the distance percentiles, not a
-deductive proof, because percentiles say nothing about whether inside-samples cluster into the 75
-consecutive needed for dwell. The full per-sample sweep is the obvious next task.)
+deductive proof, because percentiles say nothing about whether inside-samples cluster into the 15
+consecutive ticks the decoded arms' dwell needs. The full per-sample sweep is the obvious next task.
+Note the two scorers run on different clocks: the recorded-hand ceiling is scored at 250 Hz where
+0.30 s is 75 samples, while the decoded arms decode once per 20 ms bin where 0.30 s is 15 ticks.)
 
 Note also that the 70-hit `refit` arm is **target-determined by construction** -- its rotation reads
 the true target track -- and its reversed-target control collapses to 2. Neither is a decode result.

@@ -47,7 +47,9 @@ no number here bounds what a decoder could achieve.
 | **Canonical acceptance radius** | **2.8614 mm** | half-cell |
 | Task target pitch | 15.0 mm | the dataset's own 8x8 lattice of 64 targets |
 | Task half-pitch | 7.50 mm | the disc inscribed in a real task cell |
-| Dwell | 0.30 s | **75 consecutive samples** inside the radius at 250 Hz; a single excursion resets the run |
+| Dwell | 0.30 s | Both scorers use 0.30 s, on **different clocks**. See the note below. |
+| Dwell, recorded-hand ceiling | **75 consecutive samples** | `webgrid_ceiling.py` scores the recorded cursor on the 250 Hz Indy behavior clock |
+| Dwell, decoded arms | **15 consecutive ticks** | `CortexReplayBench` decodes once per 20 ms bin (`dt = 0.020`, about 50 Hz), so 0.30 s is 15 ticks |
 
 The 2.8614 mm radius is derived from the cursor bounding box cut into a 30x30 Webgrid, not from the
 task. It is about 2.6x tighter than the task's own geometry. That mismatch is real and is documented
@@ -102,8 +104,17 @@ geometry still means anything**, because the radius the decoder would need is la
 at which the task stops discriminating.
 
 The dwell requirement makes this starker. At 16.58 mm at most 1 percent of 73,129 samples are
-inside, at most 731 in total, a mean of 0.71 samples per trial against the **75 consecutive** the
-0.30 s dwell demands.
+inside, at most 731 in total, a mean of 0.71 ticks per trial against the **15 consecutive** the
+0.30 s dwell demands of the decoded arms. (A trial averages 71 ticks, so 15 consecutive is a real
+requirement, not a formality.)
+
+**Correction, 2026-09-18.** An earlier revision of this file gave the decoded arms' dwell as 75
+consecutive samples. That is the recorded-hand figure. `webgrid_ceiling.py` scores the recorded
+cursor on the 250 Hz behavior clock, where 0.30 s is 75 samples; `CortexReplayBench` decodes once per
+20 ms bin (`dt = 0.020`, measured 50.77 Hz over 73,129 ticks in 1,440.26 s), where 0.30 s is 15
+ticks. The two rules are equivalent in time and differ only in sample count. The conclusion is
+unchanged and the corrected bar is lower, so it is stated here rather than quietly amended: at
+0.71 inside-ticks per trial against 15 consecutive required, the margin is still roughly twenty-fold.
 
 **Stated precisely, with its limit.** Percentiles bound the sweep, they do not replace it. From p1
 alone it follows that under 1 percent of samples lie inside 15.00 mm; it does not follow deductively
